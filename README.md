@@ -9,7 +9,7 @@ PAWS provides simple, dependency-free command-line utilities (`cats` and `dogs`)
 
 The primary goal is to enable a seamless workflow for project-wide analysis, refactoring, or content generation by LLMs:
 
-1.  **Bundle with `cats`**:
+1.  **🧶🐈 Bundle with `cats`**:
     Use `cats` to package your entire project (or relevant parts) into one text artifact (`cats_out.bundle`).
 
     **NOTE:** Although `sys_human.txt` will be included automatically if present, its good practice to add to system prompt. Default excludes are applied.
@@ -43,7 +43,7 @@ The primary goal is to enable a seamless workflow for project-wide analysis, ref
     **Example LLM Task (Delta Output):**
     "In `large_file.py` from `cats_out.bundle`, replace lines 500-510 with the provided code snippet and insert another snippet after line 600. Output a `dogs_in.bundle` using `🐕 DOGS_` markers and `PAWS_CMD` delta instructions for `large_file.py`."
 
-4.  **Extract with `dogs`**:
+4.  **🥏🐕 Extract with `dogs`**:
     Use `dogs` to extract the LLM's output bundle (`dogs_in.bundle`) back into a functional project. Use `-d <original_bundle>` if the LLM used delta commands.
 
     ```bash
@@ -70,9 +70,9 @@ The primary goal is to enable a seamless workflow for project-wide analysis, ref
 - **Python `dogs.py` Power:** Advanced heuristic parsing for LLM outputs, plus robust delta application.
 - **Node.js `dogs.js`:** Parses strict `🐕`/`🐈` markers and implements delta application.
 
-## `cats` - Bundling Your Project
+## `cats` - Bundling your source code 🧶🐈
 
-**Command Syntax (Nearly Identical for Python/Node.js):**
+**Command Syntax:**
 
 ```bash
 python cats.py [PATH...] [options]
@@ -103,7 +103,7 @@ node cats.js [PATH...] [options]
     node cats.js ./src -x ./src/tests -N -E utf16le -o app_utf16.bundle
     ```
 
-## `dogs` - Reconstructing from a Bundle
+## `dogs` - Reconstructing from a bundle 🥏🐕
 
 **Command Syntax (Identical for Python/Node.js):**
 
