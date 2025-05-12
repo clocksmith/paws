@@ -1,11 +1,11 @@
 # [PAWS](#PAWS): Prepare Artifacts With **SWAP** (Streamlined Write After [PAWS](#PAWS))
 
-PAWS provides simple, dependency-free command-line utilities (`cats` and `dogs`) to bundle your project files for interaction with Large Language Models (LLMs) and then reconstruct them, for a quick code SWAP. The tools are available in both Python and Node.js, offering nearly identical command-line APIs and behavior for their core bundling and extraction tasks.
+**PAWS** provides simple, dependency-free command-line utilities (`cats` and `dogs`) to bundle your project files for interaction with Large Language Models (LLMs) and then reconstruct them, for a quick code **SWAP**. The tools are available in both Python and Node.js, offering nearly identical command-line APIs and behavior for their core bundling and extraction tasks.
 
 - **`cats`**: Bundles specified project files/directories into a single text artifact. **By convention, `cats` will also automatically include a file named `sys_human.txt` if it exists in the current working directory**, prepending it to the bundle. It applies default excludes (`.git`, `node_modules/`, `gem/`, `__pycache__`) which can be disabled.
 - **`dogs`**: Extracts files from such a bundle back into a directory structure. It can apply delta changes specified in the bundle if invoked with the `--apply-delta` flag. The default input bundle name is `dogs_in.bundle`.
 
-## Core Idea & LLM Workflow
+## Workflow
 
 The primary goal is to enable a seamless workflow for project-wide analysis, refactoring, or content generation by LLMs:
 
@@ -56,7 +56,7 @@ The primary goal is to enable a seamless workflow for project-wide analysis, ref
     # node dogs.js dogs_in.bundle ./project_v2 -y -d cats_out.bundle
     ```
 
-## Key Features
+## Key Features `🐈`/`🐕`
 
 - **Comprehensive Context:** Bundles multiple files and directories.
 - **Automatic `sys_human.txt` Inclusion (`cats`):** Prepended if exists in CWD and not excluded.
@@ -67,8 +67,6 @@ The primary goal is to enable a seamless workflow for project-wide analysis, ref
 - **Safe Extraction (`dogs`):** Sanitizes paths, prevents traversal.
 - **Delta Application (`dogs`):** Applies line-based changes using `--apply-delta (-d)` flag and `@@ PAWS_CMD [...] @@` syntax.
 - **Overwrite Control (`dogs`):** User control over overwriting existing files (`-y`, `-n`, prompt).
-- **Python `dogs.py` Power:** Advanced heuristic parsing for LLM outputs, plus robust delta application.
-- **Node.js `dogs.js`:** Parses strict `🐕`/`🐈` markers and implements delta application.
 
 ## `cats` - Bundling your source code 🧶🐈
 
