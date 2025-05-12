@@ -1,6 +1,7 @@
 # [PAWS](#PAWS): Prepare Artifacts With **SWAP** (Streamlined Write After [PAWS](#PAWS))
 
-**PAWS** provides simple, dependency-free command-line utilities (`cats` and `dogs`) to bundle your project files for interaction with Large Language Models (LLMs) and then reconstruct them, for a quick code **SWAP**. The tools are available in both Python and Node.js, offering nearly identical command-line APIs and behavior for their core bundling and extraction tasks.
+
+**🐾 PAWS** provides simple, dependency-free command-line utilities (`cats` and `dogs`) to bundle your project files for interaction with Large Language Models (LLMs) and then reconstruct them, for a quick code **SWAP**. The tools are available in both Python and Node.js, offering nearly identical command-line APIs and behavior for their core bundling and extraction tasks.
 
 - **`cats`**: Bundles specified project files/directories into a single text artifact. **By convention, `cats` will also automatically include a file named `sys_human.txt` if it exists in the current working directory**, prepending it to the bundle. It applies default excludes (`.git`, `node_modules/`, `gem/`, `__pycache__`) which can be disabled.
 - **`dogs`**: Extracts files from such a bundle back into a directory structure. It can apply delta changes specified in the bundle if invoked with the `--apply-delta` flag. The default input bundle name is `dogs_in.bundle`.
