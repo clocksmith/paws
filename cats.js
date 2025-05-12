@@ -3,138 +3,141 @@
 const fs = require("fs");
 const path = require("path");
 const { Buffer } = require("buffer");
-const readline = require("readline"); // For CLI prompt
+const readline = require("readline");
 
-const FILE_START_MARKER_TEMPLATE = "--- CATS_START_FILE: {} ---";
-const FILE_END_MARKER = "--- CATS_END_FILE ---";
-const DEFAULT_ENCODING = "utf-8";
-const DEFAULT_OUTPUT_FILENAME = "cats_out.bundle"; // For CLI default
+const FILE_START_MARKER_TEMPLATE = "🐈 --- CATS_START_FILE: {} ---";
+const FILE_END_MARKER = "🐈 --- CATS_END_FILE ---";
+const DEFAULT_ENCODING = "utf-8"; // Default *text* encoding
+const DEFAULT_OUTPUT_FILENAME = "cats_out.bundle";
 const BUNDLE_HEADER_PREFIX = "# Cats Bundle";
 const BUNDLE_FORMAT_PREFIX = "# Format: ";
+const DEFAULT_EXCLUDES = ['.git', 'node_modules', 'gem', '__pycache__'];
 
 /**
  * @typedef {Object} FileObjectNode
  * @property {string} path - Absolute real path of the source file.
  * @property {string} relativePath - Relative path used in the bundle marker.
  * @property {Buffer} contentBytes - File content as a Buffer.
- * @property {boolean} isUtf8 - Whether the content is likely UTF-8.
+ * @property {string|null} encoding - Detected: 'utf-8', 'utf16le', or null for binary.
+ * @property {boolean} isUtf8 - Kept for compatibility, derived from encoding.
  */
 
 /**
- * Checks if file content is likely UTF-8 by attempting to decode.
+ * Detects if content is likely UTF-8 or UTF-16LE.
  * @param {Buffer} fileContentBytes
- * @returns {boolean}
+ * @returns {string|null} 'utf-8', 'utf16le', or null for binary.
  */
-function isLikelyUtf8Node(fileContentBytes) {
+function detectTextEncodingNode(fileContentBytes) {
   if (!fileContentBytes || fileContentBytes.length === 0) {
-    return true; // Empty files are UTF-8 compatible
+    return DEFAULT_ENCODING; // Empty is text compatible
   }
+  // Check for UTF-16LE BOM
+  if (fileContentBytes.length >= 2 && fileContentBytes[0] === 0xFF && fileContentBytes[1] === 0xFE) {
+    try { fileContentBytes.toString('utf16le'); return 'utf16le'; } catch (e) { /* fall through */ }
+  }
+  // Check for UTF-16BE BOM
+   if (fileContentBytes.length >= 2 && fileContentBytes[0] === 0xFE && fileContentBytes[1] === 0xFF) {
+     try { fileContentBytes.toString('utf16le'); return 'utf16le'; } catch (e) { /* fall through */ } // Node might handle BE via utf16le
+   }
+
+  // Try decoding as UTF-8
   try {
-    fileContentBytes.toString(DEFAULT_ENCODING);
-    return true;
+    // Node's toString is lenient, stricter check needed. Look for null bytes.
+    if (fileContentBytes.includes(0x00)) throw new Error('Null byte found');
+    // Simple test: decode and re-encode, check length? Might be slow.
+    // For now, assume if it doesn't contain null bytes, it *might* be UTF-8.
+    fileContentBytes.toString(DEFAULT_ENCODING); // Basic check
+    return DEFAULT_ENCODING;
   } catch (e) {
-    // Node.js Buffer.toString doesn't throw for invalid UTF-8 in the same way Python's decode does.
-    // A more robust check might involve looking for replacement characters or specific byte patterns,
-    // but for this utility, we'll assume if it doesn't error spectacularly, it might be.
-    // For stricter check, one might use a library or more complex validation.
-    // A simple check: if it contains null bytes, it's likely not plain UTF-8 text.
-    if (fileContentBytes.includes(0x00)) return false;
-    return true; // Simplified check for Node.js
+    // Try decoding as UTF-16LE (without BOM)
+    try {
+      fileContentBytes.toString('utf16le');
+      return 'utf16le';
+    } catch (e2) {
+      return null; // Assume binary if neither works well
+    }
   }
 }
 
 /**
  * Determines the final list of absolute, canonical file paths to include.
- * Handles exclusions and output file skipping.
+ * Handles exclusions (user + default) and output file skipping.
  * @param {string[]} includePathsRaw - Raw input paths.
- * @param {string[]} excludePathsRaw - Raw exclusion paths.
+ * @param {string[]} excludePathsRaw - User-specified exclusion paths.
+ * @param {boolean} useDefaultExcludes - Whether to apply default excludes.
  * @param {string|null} [outputFileAbsPath=null] - Absolute path of the output file.
- * @param {string[]} [originalUserPaths=[]] - Paths originally specified by user (for warning logic).
+ * @param {string[]} [originalUserPaths=[]] - Paths originally specified by user.
  * @param {boolean} [verbose=false] - Verbose logging.
  * @returns {string[]} Sorted list of absolute file real paths.
  */
 function getFinalPathsToProcessNode(
   includePathsRaw,
   excludePathsRaw,
+  useDefaultExcludes,
   outputFileAbsPath = null,
   originalUserPaths = [],
   verbose = false
 ) {
   const candidateFileRealpaths = new Set();
+  let allExcludePaths = [...excludePathsRaw];
+  if (useDefaultExcludes) {
+      const cwd = process.cwd();
+      for (const defaultExcl of DEFAULT_EXCLUDES) {
+           const potentialPath = path.join(cwd, defaultExcl);
+           // Only add if it exists to avoid overly broad excludes
+           if (fs.existsSync(potentialPath)) {
+                allExcludePaths.push(potentialPath);
+                if (verbose) console.log(`  Debug: Applying default exclude for existing path: ${potentialPath}`);
+           } else if (verbose) {
+               // console.log(`  Debug: Default exclude '${defaultExcl}' not found, not applying.`);
+           }
+      }
+  }
+
+
   const absExcludedRealpathsSet = new Set(
-    excludePathsRaw
+    allExcludePaths
       .map((p) => path.resolve(p))
-      .map((p) => fs.realpathSync(p, { throwIfNoEntry: false }) || p)
+      .map((p) => { try { return fs.realpathSync(p); } catch { return p; }}) // Get realpath, fallback to abspath
   );
+
   const absExcludedDirsForPruningSet = new Set(
     Array.from(absExcludedRealpathsSet).filter((pReal) => {
-      try {
-        return fs.existsSync(pReal) && fs.statSync(pReal).isDirectory();
-      } catch {
-        return false;
-      }
+      try { return fs.existsSync(pReal) && fs.statSync(pReal).isDirectory(); }
+      catch { return false; }
     })
   );
   const processedTopLevelInputRealpaths = new Set();
 
   for (const inclPathRaw of includePathsRaw) {
-    const absInclPath = path.resolve(inclPathRaw);
     let currentInputRealPath;
-    try {
-      currentInputRealPath = fs.realpathSync(absInclPath);
-    } catch (e) {
-      // If realpath fails (e.g. broken symlink, or path doesn't exist yet but might be created by another process)
-      // We still use the resolved absolute path for existence checks.
-      currentInputRealPath = absInclPath;
-    }
+    const absInclPath = path.resolve(inclPathRaw);
+    try { currentInputRealPath = fs.realpathSync(absInclPath); }
+    catch { currentInputRealPath = absInclPath; } // Fallback
 
     if (
       processedTopLevelInputRealpaths.has(currentInputRealPath) &&
       originalUserPaths.includes(inclPathRaw)
     ) {
-      if (verbose)
-        console.log(
-          `  Debug: Skipping already processed top-level input: ${currentInputRealPath}`
-        );
       continue;
     }
     processedTopLevelInputRealpaths.add(currentInputRealPath);
 
-    if (outputFileAbsPath && currentInputRealPath === outputFileAbsPath) {
-      if (verbose)
-        console.log(
-          `  Debug: Skipping output file itself: ${currentInputRealPath}`
-        );
-      continue;
-    }
-    if (absExcludedRealpathsSet.has(currentInputRealPath)) {
-      if (verbose)
-        console.log(`  Debug: Skipping excluded path: ${currentInputRealPath}`);
-      continue;
-    }
+    if (outputFileAbsPath && currentInputRealPath === outputFileAbsPath) continue;
+    if (absExcludedRealpathsSet.has(currentInputRealPath)) continue;
 
     const isInsideExcludedDir = Array.from(absExcludedDirsForPruningSet).some(
       (excludedDirRp) =>
+        currentInputRealPath === excludedDirRp || // Exclude the dir itself
         currentInputRealPath.startsWith(excludedDirRp + path.sep)
     );
-    if (isInsideExcludedDir) {
-      if (verbose)
-        console.log(
-          `  Debug: Skipping path inside excluded dir: ${currentInputRealPath}`
-        );
-      continue;
-    }
+    if (isInsideExcludedDir) continue;
 
     if (!fs.existsSync(currentInputRealPath)) {
       if (originalUserPaths.includes(inclPathRaw)) {
-        // Only warn for paths user explicitly provided
-        console.warn(
-          `  Warning: Input path '${inclPathRaw}' not found. Skipping.`
-        );
+        console.warn(`  Warning: Input path '${inclPathRaw}' not found. Skipping.`);
       } else if (verbose && inclPathRaw === "sys_human.txt") {
-        console.log(
-          `  Debug: Conventionally included '${inclPathRaw}' not found. Skipping.`
-        );
+         // console.log(`  Debug: Conventionally included '${inclPathRaw}' not found. Skipping.`);
       }
       continue;
     }
@@ -147,25 +150,25 @@ function getFinalPathsToProcessNode(
         const items = fs.readdirSync(dir, { withFileTypes: true });
         for (const item of items) {
           const itemPath = path.join(dir, item.name);
-          const itemRealPath =
-            fs.realpathSync(itemPath, { throwIfNoEntry: false }) || itemPath;
+          let itemRealPath;
+          try { itemRealPath = fs.realpathSync(itemPath); }
+          catch { itemRealPath = itemPath; } // Fallback
 
           if (outputFileAbsPath && itemRealPath === outputFileAbsPath) continue;
           if (absExcludedRealpathsSet.has(itemRealPath)) continue;
-          const isInsideExclDirWalk = Array.from(
-            absExcludedDirsForPruningSet
-          ).some((excludedDirRp) =>
-            itemRealPath.startsWith(excludedDirRp + path.sep)
-          );
+
+          const isInsideExclDirWalk = Array.from(absExcludedDirsForPruningSet).some(
+             (excludedDirRp) => itemRealPath === excludedDirRp || itemRealPath.startsWith(excludedDirRp + path.sep)
+           );
           if (isInsideExclDirWalk) continue;
 
           if (item.isFile()) {
             candidateFileRealpaths.add(itemRealPath);
           } else if (item.isDirectory()) {
-            if (!absExcludedDirsForPruningSet.has(itemRealPath)) {
-              // Check if dir itself is excluded for pruning
-              walk(itemPath);
-            }
+              // Check if dir itself is excluded before recursing
+              if (!absExcludedRealpathsSet.has(itemRealPath) && !isInsideExclDirWalk) {
+                 walk(itemPath);
+              }
           }
         }
       };
@@ -175,6 +178,7 @@ function getFinalPathsToProcessNode(
   return Array.from(candidateFileRealpaths).sort();
 }
 
+
 /**
  * Generates a relative path for the bundle marker, using forward slashes.
  * @param {string} fileRealPath - Absolute real path of the file.
@@ -183,37 +187,23 @@ function getFinalPathsToProcessNode(
  */
 function generateBundleRelativePathNode(fileRealPath, commonAncestorPath) {
   let relPath;
-  if (
-    commonAncestorPath === path.dirname(fileRealPath) &&
-    fs.statSync(fileRealPath).isFile()
-  ) {
-    // If common ancestor is the direct parent of the file (e.g. single file input)
-    relPath = path.basename(fileRealPath);
-  } else if (fileRealPath.startsWith(commonAncestorPath + path.sep)) {
-    relPath = path.relative(commonAncestorPath, fileRealPath);
-  } else if (
-    commonAncestorPath === fileRealPath &&
-    fs.statSync(fileRealPath).isFile()
-  ) {
-    // Case where the common ancestor IS the file itself (e.g. cats.js myFile.txt)
-    relPath = path.basename(fileRealPath);
-  } else {
-    // Fallback: if not directly under, usually means commonAncestorPath is a peer or unrelated.
-    // In this case, using basename is safer to avoid '..' if commonAncestorPath is not truly an ancestor.
-    // However, path.relative should handle this; if it produces '..' it means setup was complex.
-    // Forcing basename might be too aggressive. Let path.relative do its job.
-    // If common_ancestor is not truly an ancestor, path.relative will give '..'
-    // We want paths relative to the bundle root.
-    // If common_ancestor is CWD, and file is CWD/src/file.txt -> src/file.txt
-    // If common_ancestor is CWD/src, and file is CWD/src/file.txt -> file.txt
-    relPath = path.relative(commonAncestorPath, fileRealPath);
-    if (relPath === "" || relPath === ".") {
-      // relpath can return empty if paths are identical
+  try {
+      if (commonAncestorPath === fileRealPath && fs.statSync(fileRealPath).isFile()) {
+          relPath = path.basename(fileRealPath);
+      } else if (commonAncestorPath === path.dirname(fileRealPath) && fs.statSync(fileRealPath).isFile()) {
+          relPath = path.basename(fileRealPath);
+      } else {
+          relPath = path.relative(commonAncestorPath, fileRealPath);
+          if (relPath === "" || relPath === ".") {
+              relPath = path.basename(fileRealPath);
+          }
+      }
+  } catch (e) { // Handle potential stat errors on complex paths
       relPath = path.basename(fileRealPath);
-    }
   }
   return relPath.replace(/\\/g, "/"); // Ensure forward slashes
 }
+
 
 /**
  * Finds the longest common ancestor directory for a list of absolute paths.
@@ -221,86 +211,73 @@ function generateBundleRelativePathNode(fileRealPath, commonAncestorPath) {
  * @returns {string} The common ancestor path.
  */
 function findCommonAncestorNode(absFilePaths) {
-  if (!absFilePaths || absFilePaths.length === 0) {
-    return process.cwd();
-  }
-  if (absFilePaths.length === 1) {
-    const pStat = fs.statSync(absFilePaths[0]);
-    return pStat.isDirectory()
-      ? absFilePaths[0]
-      : path.dirname(absFilePaths[0]);
-  }
+    if (!absFilePaths || absFilePaths.length === 0) { return process.cwd(); }
+    if (absFilePaths.length === 1) {
+        try {
+            const pStat = fs.statSync(absFilePaths[0]);
+            return pStat.isDirectory() ? absFilePaths[0] : path.dirname(absFilePaths[0]);
+        } catch { return path.dirname(absFilePaths[0]); } // Fallback if stat fails
+    }
 
-  const dirPaths = absFilePaths.map((p) => {
+    const dirPaths = absFilePaths.map((p) => {
+        try { return fs.statSync(p).isDirectory() ? p : path.dirname(p); }
+        catch { return path.dirname(p); } // Fallback
+    });
+
+    let commonPath = dirPaths[0];
+    for (let i = 1; i < dirPaths.length; i++) {
+        let currentPath = dirPaths[i];
+        // Normalize separators for reliable comparison
+        const normCommon = commonPath.split(path.sep).join('/');
+        const normCurrent = currentPath.split(path.sep).join('/');
+        const commonParts = normCommon === '/' ? [''] : normCommon.split('/');
+        const currentParts = normCurrent === '/' ? [''] : normCurrent.split('/');
+
+        let k = 0;
+        while(k < commonParts.length && k < currentParts.length && commonParts[k] === currentParts[k]) {
+            k++;
+        }
+        // Reconstruct common path ensuring correct root handling ('/' or 'C:/')
+        let newCommon = commonParts.slice(0, k).join('/');
+         if (newCommon === '' && commonParts[0] === '') newCommon = '/'; // Handle root Unix
+         else if (!newCommon && commonParts[0] && commonParts[0].endsWith(':')) newCommon = commonParts[0] + '/'; // Handle root Windows Drive C:/
+         else if (!newCommon) newCommon = '.'; // Relative fallback
+
+        commonPath = path.normalize(newCommon); // Back to OS specific
+    }
+
+    // If the result isn't actually a directory (e.g., common prefix of files), use its parent
     try {
-      return fs.statSync(p).isDirectory() ? p : path.dirname(p);
-    } catch {
-      // Path might not exist if it was a broken symlink that got filtered out later
-      return path.dirname(p); // Best guess
-    }
-  });
-
-  let commonPath = dirPaths[0];
-  for (let i = 1; i < dirPaths.length; i++) {
-    let currentPath = dirPaths[i];
-    while (
-      !currentPath.startsWith(commonPath + path.sep) &&
-      commonPath !== path.dirname(commonPath)
-    ) {
-      if (currentPath === commonPath) break; // They are the same
-      commonPath = path.dirname(commonPath);
-      if (commonPath === path.sep || commonPath === ".") {
-        // Reached root or relative dot
-        const driveMatchWin = commonPath.match(/^[a-zA-Z]:\\$/); // C:\
-        const driveMatchUnix = commonPath === "/";
-        if (driveMatchWin || driveMatchUnix) break; // Stop at drive root
+      if (!fs.statSync(commonPath).isDirectory()) {
+        commonPath = path.dirname(commonPath);
       }
+    } catch {
+       // If stat fails, maybe it's a non-existent common root? Fallback.
+       if (commonPath !== process.cwd()) { // Avoid going above CWD
+          commonPath = path.dirname(commonPath);
+       }
     }
-    if (!currentPath.startsWith(commonPath)) {
-      // If after loop, still no commonality
-      // This can happen if paths are on different drives (Windows) or completely disparate
-      // Fallback to current working directory or an empty string to signify no deep common root
-      return process.cwd();
-    }
-  }
-  // Final check: if commonPath is not a directory (e.g. if all inputs were files in CWD)
-  // then the actual common ancestor for relative paths is its parent.
-  // However, if commonPath is the result of common prefix of dirs, it IS the common ancestor dir.
-  // This logic is tricky. `path.commonPrefix` is not in Node.js core.
-  // The Python `os.path.commonpath` is more robust.
-  // For now, this simplified approach:
-  if (
-    absFilePaths.every((p) => fs.statSync(p).isFile()) &&
-    absFilePaths.length > 1
-  ) {
-    let firstDir = path.dirname(absFilePaths[0]);
-    if (absFilePaths.every((p) => path.dirname(p) === firstDir)) {
-      return firstDir;
-    }
-  }
-  return commonPath;
+
+    return commonPath;
 }
+
 
 /**
  * Prepares file objects from paths.
  * @param {string[]} absFilePaths - Absolute real file paths.
  * @param {string} commonAncestorForRelpath - Path to make relative paths from.
- * @returns {{fileObjects: FileObjectNode[], anyNonUtf8Found: boolean}}
+ * @returns {{fileObjects: FileObjectNode[]}}
  */
 function prepareFileObjectsFromPathsNode(
   absFilePaths,
   commonAncestorForRelpath
 ) {
   const fileObjects = [];
-  let anyNonUtf8Found = false;
 
   for (const fileAbsPath of absFilePaths) {
     try {
-      const contentBytes = fs.readFileSync(fileAbsPath); // Returns Buffer
-      const isUtf8 = isLikelyUtf8Node(contentBytes);
-      if (!isUtf8) {
-        anyNonUtf8Found = true;
-      }
+      const contentBytes = fs.readFileSync(fileAbsPath);
+      const detectedEncoding = detectTextEncodingNode(contentBytes);
       const relativePath = generateBundleRelativePathNode(
         fileAbsPath,
         commonAncestorForRelpath
@@ -309,7 +286,8 @@ function prepareFileObjectsFromPathsNode(
         path: fileAbsPath,
         relativePath: relativePath,
         contentBytes: contentBytes,
-        isUtf8: isUtf8,
+        encoding: detectedEncoding,
+        isUtf8: detectedEncoding === 'utf-8',
       });
     } catch (e) {
       console.warn(
@@ -317,29 +295,55 @@ function prepareFileObjectsFromPathsNode(
       );
     }
   }
-  return { fileObjects, anyNonUtf8Found };
+  return { fileObjects };
 }
 
 /**
  * Creates the bundle string from prepared file objects.
  * @param {FileObjectNode[]} fileObjects
- * @param {boolean} forceBase64Bundle
- * @param {boolean} anyNonUtf8AlreadyDetected
+ * @param {string} encodingMode - 'auto', 'utf8', 'utf16le', 'b64'.
  * @returns {{bundleString: string, formatDescription: string}}
  */
 function createBundleStringFromObjectsNode(
   fileObjects,
-  forceBase64Bundle,
-  anyNonUtf8AlreadyDetected
+  encodingMode // 'auto', 'utf8', 'utf16le', 'b64'
 ) {
   const bundleParts = [];
-  const useBase64ForAll = forceBase64Bundle || anyNonUtf8AlreadyDetected;
+  let finalBundleFormat = 'Raw UTF-8';
+  let finalEncodingForWrite = 'utf8'; // Node encoding names
 
-  const formatDescription = forceBase64Bundle
-    ? "Base64 (Forced)"
-    : anyNonUtf8AlreadyDetected
-    ? "Base64 (Auto-Detected due to non-UTF-8 content)"
-    : `Raw ${DEFAULT_ENCODING} (All files appear UTF-8 compatible)`;
+  if (encodingMode === 'b64') {
+    finalBundleFormat = 'Base64';
+    finalEncodingForWrite = 'base64';
+  } else if (encodingMode === 'utf16le') {
+    finalBundleFormat = 'Raw UTF-16LE';
+    finalEncodingForWrite = 'utf16le';
+  } else if (encodingMode === 'utf8') {
+    finalBundleFormat = 'Raw UTF-8';
+    finalEncodingForWrite = 'utf8';
+  } else if (encodingMode === 'auto') {
+    const hasBinary = fileObjects.some(f => f.encoding === null);
+    const hasUtf16 = fileObjects.some(f => f.encoding === 'utf16le');
+    if (hasBinary) {
+        finalBundleFormat = 'Base64';
+        finalEncodingForWrite = 'base64';
+    } else if (hasUtf16) {
+        finalBundleFormat = 'Raw UTF-16LE';
+        finalEncodingForWrite = 'utf16le';
+    } else {
+        finalBundleFormat = 'Raw UTF-8';
+        finalEncodingForWrite = 'utf8';
+    }
+  } else { // Default fallback
+    finalBundleFormat = 'Raw UTF-8';
+    finalEncodingForWrite = 'utf8';
+  }
+
+  let formatDescription = finalBundleFormat;
+  if (encodingMode !== 'auto') formatDescription += ` (Forced by user: ${encodingMode})`;
+  else if (finalBundleFormat === 'Base64') formatDescription += " (Auto-Detected binary content)";
+  else if (finalBundleFormat === 'Raw UTF-16LE') formatDescription += " (Auto-Detected UTF-16LE content)";
+  else formatDescription += " (All files appear UTF-8 compatible)";
 
   bundleParts.push(BUNDLE_HEADER_PREFIX);
   bundleParts.push(`${BUNDLE_FORMAT_PREFIX}${formatDescription}`);
@@ -350,15 +354,23 @@ function createBundleStringFromObjectsNode(
       FILE_START_MARKER_TEMPLATE.replace("{}", fileObj.relativePath)
     );
 
-    let contentToWrite;
-    if (useBase64ForAll) {
-      contentToWrite = fileObj.contentBytes.toString("base64");
-    } else {
-      contentToWrite = fileObj.contentBytes.toString(DEFAULT_ENCODING);
+    let contentToWrite = "";
+    try {
+        if (finalEncodingForWrite === 'base64') {
+            contentToWrite = fileObj.contentBytes.toString('base64');
+        } else if (finalEncodingForWrite === 'utf16le') {
+            contentToWrite = fileObj.contentBytes.toString('utf16le');
+        } else { // utf8
+            contentToWrite = fileObj.contentBytes.toString('utf8');
+        }
+    } catch (e) {
+         console.warn(`  Warning: Unexpected error encoding file '${fileObj.relativePath}' for bundle format '${finalBundleFormat}'. Falling back to Base64 for this file. Error: ${e.message}`);
+         contentToWrite = fileObj.contentBytes.toString('base64');
     }
     bundleParts.push(contentToWrite);
     bundleParts.push(FILE_END_MARKER);
   }
+  // Write bundle file itself as UTF-8
   return { bundleString: bundleParts.join("\n") + "\n", formatDescription };
 }
 
@@ -366,8 +378,9 @@ function createBundleStringFromObjectsNode(
  * High-level function to create a bundle string from paths (Node.js).
  * @param {Object} params
  * @param {string[]} params.includePaths - Paths to include.
- * @param {string[]} params.excludePaths - Paths to exclude.
- * @param {boolean} params.forceBase64 - Force Base64 encoding.
+ * @param {string[]} params.excludePaths - User paths to exclude.
+ * @param {string} params.encodingMode - 'auto', 'utf8', 'utf16le', 'b64'.
+ * @param {boolean} params.useDefaultExcludes - Apply default excludes.
  * @param {string} [params.outputFileAbsPath] - Absolute path of output file for self-exclusion.
  * @param {string} [params.baseDirForRelpath] - Optional base directory for relative paths.
  * @param {string[]} [params.originalUserPaths] - For warning logic.
@@ -377,57 +390,81 @@ function createBundleStringFromObjectsNode(
 async function bundleFromPathsNode({
   includePaths,
   excludePaths,
-  forceBase64,
+  encodingMode = 'auto',
+  useDefaultExcludes = true,
   outputFileAbsPath,
   baseDirForRelpath,
   originalUserPaths = [],
   verbose = false,
 }) {
+  // Handle sys_human.txt automatically for library too? Yes, consistent with Python.
+  let finalIncludePaths = [...includePaths];
+  const sysHumanPath = "sys_human.txt";
+  const sysHumanAbsPath = path.resolve(sysHumanPath);
+  let sysHumanRealPath = null;
+   try {
+       if (fs.existsSync(sysHumanAbsPath) && fs.statSync(sysHumanAbsPath).isFile()) {
+            sysHumanRealPath = fs.realpathSync(sysHumanAbsPath);
+            const alreadyListed = finalIncludePaths.some((pRaw) => {
+                try { return fs.realpathSync(path.resolve(pRaw)) === sysHumanRealPath; }
+                catch { return path.resolve(pRaw) === sysHumanAbsPath; }
+            });
+            if (!alreadyListed) {
+                 // Check if excluded by user rules or default rules (if active)
+                 let isExcluded = excludePaths.some(excl => {
+                     try { return fs.realpathSync(path.resolve(excl)) === sysHumanRealPath; } catch { return false; }
+                 });
+                 if (!isExcluded && useDefaultExcludes) {
+                     isExcluded = DEFAULT_EXCLUDES.some(defExcl => {
+                         const potentialPath = path.join(process.cwd(), defExcl);
+                          try { return fs.existsSync(potentialPath) && fs.realpathSync(potentialPath) === sysHumanRealPath; } catch { return false; }
+                     });
+                 }
+
+                 if (!isExcluded) {
+                     finalIncludePaths.unshift(sysHumanPath); // Prepend if found and not excluded
+                      if (verbose) console.log(`  Debug: Library prepending sys_human.txt: ${sysHumanPath}`);
+                 } else if (verbose) {
+                     console.log(`  Debug: Library found sys_human.txt but it is excluded: ${sysHumanPath}`);
+                 }
+            }
+       }
+   } catch (e) { if (verbose) console.log(`  Debug: Error checking sys_human.txt: ${e.message}`); }
+
+
   const absFilePathsToBundle = getFinalPathsToProcessNode(
-    includePaths,
+    finalIncludePaths, // Use potentially modified list
     excludePaths,
+    useDefaultExcludes,
     outputFileAbsPath,
-    originalUserPaths, // Pass this for warning logic
+    originalUserPaths,
     verbose
   );
 
   if (absFilePathsToBundle.length === 0) {
-    return {
-      bundleString: "",
-      formatDescription: "No files selected",
-      filesAdded: 0,
-    };
+    return { bundleString: "", formatDescription: "No files selected", filesAdded: 0 };
   }
 
   let commonAncestor;
   if (baseDirForRelpath) {
     commonAncestor = path.resolve(baseDirForRelpath);
-    try {
-      commonAncestor = fs.realpathSync(commonAncestor);
-    } catch {
-      /* Use as is if not exist */
-    }
+    try { commonAncestor = fs.realpathSync(commonAncestor); } catch { /* Use as is */ }
   } else {
     commonAncestor = findCommonAncestorNode(absFilePathsToBundle);
   }
 
-  const { fileObjects, anyNonUtf8Found } = prepareFileObjectsFromPathsNode(
+  const { fileObjects } = prepareFileObjectsFromPathsNode(
     absFilePathsToBundle,
     commonAncestor
   );
 
   if (fileObjects.length === 0) {
-    return {
-      bundleString: "",
-      formatDescription: "No files successfully processed",
-      filesAdded: 0,
-    };
+    return { bundleString: "", formatDescription: "No files successfully processed", filesAdded: 0 };
   }
 
   const { bundleString, formatDescription } = createBundleStringFromObjectsNode(
     fileObjects,
-    forceBase64,
-    anyNonUtf8Found
+    encodingMode
   );
   return { bundleString, formatDescription, filesAdded: fileObjects.length };
 }
@@ -437,8 +474,9 @@ function parseCliArgsCats(argv) {
     paths: [],
     output: DEFAULT_OUTPUT_FILENAME,
     exclude: [],
-    forceB64: false,
-    yes: false, // For Node, this might mean "non-interactive"
+    forceEncoding: 'auto',
+    noDefaultExcludes: false,
+    yes: false,
     help: false,
     verbose: false,
   };
@@ -446,32 +484,22 @@ function parseCliArgsCats(argv) {
   let i = 0;
   while (i < cliArgs.length) {
     const arg = cliArgs[i];
-    if (arg === "-h" || arg === "--help") {
-      args.help = true;
-      break;
-    } else if (arg === "-o" || arg === "--output") {
-      if (i + 1 < cliArgs.length && !cliArgs[i + 1].startsWith("-")) {
-        args.output = cliArgs[++i];
-      } else {
-        throw new Error(`Argument ${arg} requires a value.`);
-      }
+    if (arg === "-h" || arg === "--help") { args.help = true; break; }
+    else if (arg === "-o" || arg === "--output") {
+      if (i + 1 < cliArgs.length && !cliArgs[i + 1].startsWith("-")) args.output = cliArgs[++i];
+      else throw new Error(`Argument ${arg} requires a value.`);
     } else if (arg === "-x" || arg === "--exclude") {
-      if (i + 1 < cliArgs.length && !cliArgs[i + 1].startsWith("-")) {
-        args.exclude.push(cliArgs[++i]);
-      } else {
-        throw new Error(`Argument ${arg} requires a value.`);
-      }
-    } else if (arg === "--force-b64") {
-      args.forceB64 = true;
-    } else if (arg === "-y" || arg === "--yes") {
-      args.yes = true;
-    } else if (arg === "-v" || arg === "--verbose") {
-      args.verbose = true;
-    } else if (!arg.startsWith("-")) {
-      args.paths.push(arg);
-    } else {
-      throw new Error(`Unknown option: ${arg}`);
-    }
+      if (i + 1 < cliArgs.length && !cliArgs[i + 1].startsWith("-")) args.exclude.push(cliArgs[++i]);
+      else throw new Error(`Argument ${arg} requires a value.`);
+    } else if (arg === "-E" || arg === "--force-encoding") {
+       if (i + 1 < cliArgs.length && ['auto', 'utf8', 'utf16le', 'b64'].includes(cliArgs[i + 1].toLowerCase())) {
+            args.forceEncoding = cliArgs[++i].toLowerCase();
+       } else throw new Error(`Argument ${arg} requires a value (auto, utf8, utf16le, b64).`);
+    } else if (arg === "-N" || arg === "--no-default-excludes") { args.noDefaultExcludes = true; }
+    else if (arg === "-y" || arg === "--yes") { args.yes = true; }
+    else if (arg === "-v" || arg === "--verbose") { args.verbose = true; }
+    else if (!arg.startsWith("-")) { args.paths.push(arg); }
+    else { throw new Error(`Unknown option: ${arg}`); }
     i++;
   }
   if (args.paths.length === 0 && !args.help) {
@@ -483,20 +511,21 @@ function parseCliArgsCats(argv) {
 function printCliHelpCats() {
   console.log(`cats.js : Bundles project files into a single text artifact for LLMs.
 
-Syntax: node cats.js [PATH_TO_INCLUDE_1] [PATH_TO_INCLUDE_2...] [options]
+Syntax: node cats.js [PATH...] [options]
 
 Arguments:
   PATH                    Files or directories to include in the bundle.
 
 Options:
   -o, --output BUNDLE_FILE  Output bundle file name (default: ${DEFAULT_OUTPUT_FILENAME}).
-  -x, --exclude EXCLUDE_PATH Path to exclude (file or directory). Can be used multiple times.
-  --force-b64             Force Base64 encoding for all files, even if all are UTF-8.
-  -y, --yes               Automatically confirm and proceed (if a prompt would occur, e.g. overwrite).
+  -x, --exclude EXCLUDE_PATH Path to exclude (file/directory). Applied in addition to defaults. Multiple allowed.
+  -N, --no-default-excludes Disable default excludes: ${DEFAULT_EXCLUDES.join(', ')}.
+  -E, --force-encoding MODE Force bundle encoding: auto (default), utf8, utf16le, b64.
+  -y, --yes               Automatically confirm and proceed (if a prompt would occur).
   -v, --verbose           Enable verbose logging.
   -h, --help              Show this help message and exit.
 
-Example: node cats.js ./src ./docs -x ./.git -x ./node_modules -o my_project.bundle`);
+Example: node cats.js ./src ./docs -x .git -x node_modules -o my_project.bundle`);
 }
 
 async function mainCliCatsNode() {
@@ -509,96 +538,48 @@ async function mainCliCatsNode() {
     process.exit(1);
   }
 
-  if (args.help) {
-    printCliHelpCats();
-    process.exit(0);
-  }
+  if (args.help) { printCliHelpCats(); process.exit(0); }
 
   const absOutputFilePath = path.resolve(args.output);
-  let pathsToProcessExplicit = [...args.paths];
-  const originalUserPathsForWarning = [...args.paths]; // Keep a copy
-
-  const sysHumanPath = "sys_human.txt";
-  const sysHumanAbsPath = path.resolve(sysHumanPath);
-
-  if (fs.existsSync(sysHumanAbsPath) && fs.statSync(sysHumanAbsPath).isFile()) {
-    const sysHumanRealPath = fs.realpathSync(sysHumanAbsPath);
-    const alreadyListed = pathsToProcessExplicit.some((pRaw) => {
-      try {
-        return fs.realpathSync(path.resolve(pRaw)) === sysHumanRealPath;
-      } catch {
-        return path.resolve(pRaw) === sysHumanAbsPath;
-      } // Fallback if pRaw doesn't exist yet
-    });
-    if (!alreadyListed) {
-      pathsToProcessExplicit.unshift(sysHumanPath); // Prepend
-      if (args.verbose)
-        console.log(
-          `  Info: Conventionally including '${sysHumanPath}' from CWD.`
-        );
-    } else if (args.verbose) {
-      console.log(
-        `  Debug: '${sysHumanPath}' already listed by user or resolves to an existing path.`
-      );
-    }
-  } else if (args.verbose) {
-    console.log(
-      `  Debug: Conventional file '${sysHumanPath}' not found in CWD, not added.`
-    );
-  }
+  const originalUserPathsForWarning = [...args.paths];
 
   console.log("Phase 1: Collecting and filtering files...");
   const { bundleString, formatDescription, filesAdded } =
     await bundleFromPathsNode({
-      includePaths: pathsToProcessExplicit,
+      includePaths: args.paths, // sys_human.txt handled inside
       excludePaths: args.exclude,
-      forceBase64: args.forceB64,
-      outputFileAbsPath: absOutputFilePath, // For self-exclusion
+      encodingMode: args.forceEncoding,
+      useDefaultExcludes: !args.noDefaultExcludes,
+      outputFileAbsPath: absOutputFilePath,
       originalUserPaths: originalUserPathsForWarning,
       verbose: args.verbose,
     });
 
   if (filesAdded === 0) {
-    console.log(
-      `No files selected for bundling. ${formatDescription}. Exiting.`
-    );
+    console.log(`No files selected for bundling. ${formatDescription}. Exiting.`);
     return;
   }
 
   console.log(`  Files to be bundled: ${filesAdded}`);
-  if (args.forceB64) {
-    console.log("  Encoding: All files will be Base64 encoded (user forced).");
-  } else {
-    console.log(
-      `  Bundle format determined: ${formatDescription.split("(")[0].trim()}`
-    );
-  }
+  console.log(`  Bundle format determined: ${formatDescription.split("(")[0].trim()}`);
+   if (args.forceEncoding !== 'auto') {
+       console.log(`  (Encoding forced by user: ${args.forceEncoding})`);
+   }
 
   let proceed = args.yes;
   if (!proceed && process.stdin.isTTY) {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     const answer = await new Promise((resolve) =>
-      rl.question(
-        `Output will be written to: ${absOutputFilePath}\nProceed with bundling? [Y/n]: `,
-        resolve
-      )
+      rl.question(`Output will be written to: ${absOutputFilePath}\nProceed with bundling? [Y/n]: `, resolve)
     );
     rl.close();
-    if (answer.trim().toLowerCase() === "y" || answer.trim() === "") {
-      proceed = true;
-    } else {
-      console.log("Bundling cancelled by user.");
-      return;
+    if (answer.trim().toLowerCase() !== "y" && answer.trim() !== "") {
+       console.log("Bundling cancelled by user."); return;
     }
+     proceed = true;
   } else if (!process.stdin.isTTY && !args.yes) {
-    if (args.verbose)
-      console.log(
-        "  Info: Non-interactive mode, proceeding without confirmation prompt."
-      );
-    proceed = true; // Proceed in non-interactive if -y not given
+    if (args.verbose) console.log("  Info: Non-interactive mode, proceeding without confirmation prompt.");
+    proceed = true;
   }
 
   if (!proceed) return;
@@ -611,9 +592,8 @@ async function mainCliCatsNode() {
     if (outputParentDir && !fs.existsSync(outputParentDir)) {
       fs.mkdirSync(outputParentDir, { recursive: true });
     }
-    fs.writeFileSync(absOutputFilePath, bundleString, {
-      encoding: DEFAULT_ENCODING,
-    });
+    // Write bundle file itself as UTF-8
+    fs.writeFileSync(absOutputFilePath, bundleString, { encoding: DEFAULT_ENCODING });
     console.log(`\nBundle created successfully: '${args.output}'`);
     console.log(`  Files added: ${filesAdded}`);
   } catch (e) {
@@ -622,16 +602,13 @@ async function mainCliCatsNode() {
   }
 }
 
-// Export for library use
 module.exports = {
   bundleFromPathsNode,
-  // Potentially export other helper functions if useful as a library
-  // For browser, one would typically create a separate entry point or use a bundler
 };
 
 if (require.main === module) {
   mainCliCatsNode().catch((error) => {
-    console.error("CLI Error:", error.message);
+    console.error("CLI Error:", error);
     process.exit(1);
   });
 }
