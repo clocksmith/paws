@@ -10,7 +10,9 @@ PAWS provides simple, dependency-free command-line utilities (`cats` and `dogs`)
 The primary goal is to enable a seamless workflow for project-wide analysis, refactoring, or content generation by LLMs:
 
 1.  **Bundle with `cats`**:
-    Use `cats` to package your entire project (or relevant parts) into one text artifact (`cats_out.bundle`). `sys_human.txt` will be included automatically if present. Default excludes are applied.
+    Use `cats` to package your entire project (or relevant parts) into one text artifact (`cats_out.bundle`).
+
+    **NOTE:** Although `sys_human.txt` will be included automatically if present, its good practice to add to system prompt. Default excludes are applied.
 
     ```bash
     # Bundle current dir, excluding defaults AND custom dir 'dist'
@@ -22,7 +24,7 @@ The primary goal is to enable a seamless workflow for project-wide analysis, ref
     # node cats.js . -N -o my_project_context.bundle
     ```
 
-2.  **Interact with LLM**:
+3.  **Interact with LLM**:
     Provide this bundle (`cats_out.bundle`) to an LLM. Give clear instructions:
 
     - **Identify Structure**: "This is a bundle of files. Each file starts with `🐈 --- CATS_START_FILE: path/to/file.ext ---` (or `🐕 --- DOGS_START_FILE: ... ---` if processed) and ends with the corresponding `END_FILE` marker. The first file may be `sys_human.txt` providing context."
@@ -41,7 +43,7 @@ The primary goal is to enable a seamless workflow for project-wide analysis, ref
     **Example LLM Task (Delta Output):**
     "In `large_file.py` from `cats_out.bundle`, replace lines 500-510 with the provided code snippet and insert another snippet after line 600. Output a `dogs_in.bundle` using `🐕 DOGS_` markers and `PAWS_CMD` delta instructions for `large_file.py`."
 
-3.  **Extract with `dogs`**:
+4.  **Extract with `dogs`**:
     Use `dogs` to extract the LLM's output bundle (`dogs_in.bundle`) back into a functional project. Use `-d <original_bundle>` if the LLM used delta commands.
 
     ```bash
