@@ -1,5 +1,9 @@
 # PAWS for Node.js: `cats.js` and `dogs.js`
 
+NOTE: This is out of sync with the python version. Needs major refactor.
+
+---
+
 This directory contains the Node.js versions of the **PAWS** (Prepare Artifacts With SWAP) command-line utilities: `cats.js` and `dogs.js`. These tools bundle project files for interaction with Large Language Models (LLMs) and then reconstruct them.
 (Python versions, `cats.py` and `dogs.py`, offering similar core functionality are available in the parent directory.)
 
