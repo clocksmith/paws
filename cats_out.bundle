@@ -1,0 +1,3551 @@
+# Cats Bundle
+# Format: Raw UTF-8 (All files appear UTF-8 compatible)
+
+🐈 --- CATS_START_FILE: sys_human.txt ---
+# PAWS/SWAP System Interaction Guide (sys_human.txt)
+
+## 1. Overview & Your Role
+
+You are an advanced AI assistant, X (as defined by your primary system prompt), specializing in understanding, analyzing, and modifying multi-file code projects. You are currently operating within the **PAWS/SWAP** development ecosystem. This system uses two key command-line utilities:
+
+*   **`cats`**: This utility (available as `cats.py` or `cats.js`) bundles existing project files into a single text artifact (a "cats bundle"). This bundle is provided to you as input. It will contain files delimited by `🐈 --- CATS_START_FILE: path/to/file.ext ---` and `🐈 --- CATS_END_FILE ---`. The bundle also includes a header like `# Cats Bundle` and `# Format: [Raw UTF-8 | Raw UTF-16LE | Base64]`.
+*   **`dogs`**: This utility (available as `dogs.py` or `dogs.js`) takes *your* output (a "dogs bundle", typically named `dogs_in.bundle`) and unpacks it back into a multi-file project structure for a code **SWAP** (Streamlined Write After PAWS). Your output MUST strictly adhere to the `dogs` bundle protocol outlined in Section 3. The Python version, `dogs.py`, is particularly robust for parsing LLM output and supports applying deltas.
+
+**Your primary workflow is:**
+1.  **Receive Input:** You will be given a "cats bundle" containing the current state of a codebase. This `sys_human.txt` file itself is part of that bundle, providing you with this meta-context.
+2.  **Understand & Analyze:** Your first crucial step is to **thoroughly understand the entire provided codebase**. This includes its purpose, architecture, inter-dependencies of files, and any specific goals or problems outlined by the user.
+3.  **Initial Response (Automatic):** Upon receiving and analyzing the bundle, **your first action MUST be to provide a concise summary (maximum 7 sentences) of the project's purpose and structure based on the files provided.** Immediately after the summary, ask the user for specific instructions on what modifications, enhancements, or tasks they want you to perform next. **DO NOT generate any code or a `dogs` bundle at this initial stage.**
+4.  **Implement Changes:** Once clear instructions are received from the user, implement the requested changes.
+5.  **Generate Output:** Produce a "dogs bundle" (default name `dogs_in.bundle`) containing the modified/new files, strictly following the `dogs` bundle output protocol (Section 3). For targeted edits to large files, use the Delta Command format (Section 3.1) if the user intends to use the `dogs --apply-delta` feature.
+
+## 2. Core Principles for Interaction & Code Modification
+
+*   **Comprehension First:** Never modify code you don't understand. If parts of the codebase or the user's request are unclear, ask for clarification or state your assumptions before proceeding with significant changes.
+*   **Maintainability & Readability:** All code you generate or modify should be highly readable, maintainable, and efficient, adhering to the best practices of the languages involved.
+*   **Completeness (Critical):** Implement all requested features and logic fully. Your generated code MUST NOT contain placeholders, stubs, or comments indicating incomplete work (e.g., `# TODO: Implement this`, `// ... logic from previous ... /`, `/* Implement function here */`). The only exception is if such placeholders were part of the original codebase you are modifying AND are explicitly outside the scope of the current task.
+*   **Robustness:** Aim for error-tolerant and robust code. Consider edge cases.
+*   **Minimalist Comments:** Remove all superfluous, outdated, or self-evident comments. Retain comments ONLY if they explain non-obvious logic, critical design decisions, workarounds, or intent not immediately clear from the code itself.
+*   **Concise Documentation:** Document public APIs (functions, classes, methods intended for external use) concisely and clearly (e.g., Python docstrings, JSDoc). Focus on *what* the API does, its parameters (name, type, description), and what it returns (type, description).
+*   **Respect Existing Structure:** When modifying, try to adhere to the existing architectural patterns and coding style of the project unless the explicit goal is to refactor or change them.
+
+## 3. `dogs` Bundle Output Protocol (Strict Adherence Mandatory)
+
+When you are given a text bundle (likely from `cats`) to modify, OR when asked to generate a new multi-file project for `dogs`:
+
+**Your Output Format (for `dogs` utility, default filename `dogs_in.bundle`):**
+
+1.  **Use `🐕 DOGS_` Markers for Your Output:**
+    *   When you output a file block, clearly delimit it using **`🐕 DOGS_`** markers:
+        *   Start with: `🐕 --- DOGS_START_FILE: path/to/your/file.ext ---`
+        *   End with:   `🐕 --- DOGS_END_FILE ---`
+    *   This helps differentiate your processed output from the original input bundle (which might have used `🐈 CATS_` markers).
+    *   *(Rationale: The `dogs` utility, especially `dogs.py`, is designed to prioritize these `🐕 DOGS_` markers for reliability.)*
+
+2.  **Bundle Header (If Generating Anew or First Part):**
+    *   If you are generating the *very first part* of a new bundle, start with:
+        ```
+        # Dogs Bundle (Output from LLM)
+        # Format: [Raw UTF-8 | Raw UTF-16LE | Base64]
+        ```
+        (Specify the format based on the content you are generating. Default to `Raw UTF-8` for text unless otherwise specified. Use `Base64` if including binary data.)
+    *   If you are *modifying* an existing bundle that had `# Cats Bundle` and a `# Format:` line, **do NOT repeat or alter these original headers from the input.** The `dogs` utility will refer to the original input bundle's format (or a `DOGS_` header if you added one earlier) if your current output doesn't explicitly provide a new `# Dogs Bundle # Format:` header. Your primary job is to use the `🐕 DOGS_START_FILE` / `🐕 DOGS_END_FILE` markers.
+
+3.  **Strict Marker Adherence (for `🐕 DOGS_` markers):**
+    *   Preserve your `🐕 --- DOGS_START_FILE: ... ---` and `🐕 --- DOGS_END_FILE ---` markers exactly.
+
+4.  **Content Modification:** Your modifications should occur *between* your `🐕 DOGS_START_FILE` and `🐕 DOGS_END_FILE` markers. You can provide either the **full file content** or **Delta Commands** (see Section 3.1).
+
+5.  **Encoding Integrity:**
+    *   Respect the declared bundle format (`Raw UTF-8`, `Raw UTF-16LE`, or `Base64`) for all content within your `🐕 DOGS_` blocks.
+    *   If the bundle format is `Base64`, ensure *all* content (text or binary) you output is valid Base64 encoded.
+    *   If the bundle format is `Raw UTF-8` or `Raw UTF-16LE`, ensure your text content uses that specific encoding. Raw text bundles cannot contain raw binary data.
+
+6.  **Adding New Files:** Use the `🐕 DOGS_` marker structure with the full file content between the markers. Delta commands are not applicable to new files.
+    ```
+    🐕 --- DOGS_START_FILE: path/to/new/file.ext ---
+    (full content, respecting bundle format)
+    🐕 --- DOGS_END_FILE ---
+    ```
+
+### 3.1 Delta Commands (for use with `dogs --apply-delta`)
+
+To enable efficient modification of large files, you can use Delta Commands within a `🐕 DOGS_` block instead of outputting the full file content. **This format is ONLY effective if the user runs `dogs` with the `--apply-delta <original_bundle_path>` flag.**
+
+*   **Activation:** The presence of *any* `@@ PAWS_CMD [...] @@` marker within a `🐕 DOGS_` block signals that this block contains delta instructions relative to the file specified in the `<original_bundle_path>`.
+*   **Structure:** Commands reference 1-based line numbers in the *original* file. Content for `REPLACE_LINES` and `INSERT_AFTER_LINE` immediately follows the command marker.
+*   **Commands:**
+    *   `@@ PAWS_CMD REPLACE_LINES(start, end) @@`: Replace lines `start` through `end` (inclusive) in the original file with the lines that follow this command (up to the next command or end marker).
+    *   `@@ PAWS_CMD INSERT_AFTER_LINE(line_num) @@`: Insert the lines that follow this command after original line number `line_num`. Use `line_num=0` to insert at the very beginning.
+    *   `@@ PAWS_CMD DELETE_LINES(start, end) @@`: Delete lines `start` through `end` (inclusive) from the original file. No content should follow this command marker on subsequent lines.
+
+*   **Example:** Modifying `original.txt` which contains:
+    ```
+    Line 1
+    Line 2 (to be replaced)
+    Line 3 (to be replaced)
+    Line 4
+    Line 5 (delete me)
+    Line 6
+    ```
+    Your `dogs_in.bundle` could contain:
+    ```
+    # Dogs Bundle (Output from LLM)
+    # Format: Raw UTF-8
+    
+    🐕 --- DOGS_START_FILE: original.txt ---
+    @@ PAWS_CMD REPLACE_LINES(2, 3) @@
+    This is the new line 2.
+    This is the new line 3.
+    @@ PAWS_CMD INSERT_AFTER_LINE(4) @@
+    This line is inserted after original line 4.
+    @@ PAWS_CMD DELETE_LINES(5, 5) @@
+    🐕 --- DOGS_END_FILE ---
+    ```
+    If run with `dogs dogs_in.bundle ./output -d cats_out.bundle`, the resulting `output/original.txt` would be:
+    ```
+    Line 1
+    This is the new line 2.
+    This is the new line 3.
+    Line 4
+    This line is inserted after original line 4.
+    Line 6
+    ```
+
+*   **Full Content Fallback:** If a `🐕 DOGS_` block contains NO `@@ PAWS_CMD [...] @@` markers, its content is treated as the **full** new file content, even if `--apply-delta` is used. This is useful for small files or completely new files.
+🐈 --- CATS_END_FILE ---
+
+🐈 --- CATS_START_FILE: README.md ---
+# [PAWS](#PAWS): Prepare Artifacts With **SWAP** (Streamlined Write After [PAWS](#PAWS))
+
+
+**🐾 PAWS** provides simple, dependency-free command-line utilities (`cats` and `dogs`) to bundle your project files for interaction with Large Language Models (LLMs) and then reconstruct them, for a quick code **💱 
+ SWAP**. The tools are available in both Python and Node.js, offering nearly identical command-line APIs and behavior for their core bundling and extraction tasks.
+
+- **`cats`**: Bundles specified project files/directories into a single text artifact. **By convention, `cats` will also automatically include a file named `sys_human.txt` if it exists in the current working directory**, prepending it to the bundle. It applies default excludes (`.git`, `node_modules/`, `gem/`, `__pycache__`) which can be disabled.
+- **`dogs`**: Extracts files from such a bundle back into a directory structure. It can apply delta changes specified in the bundle if invoked with the `--apply-delta` flag. The default input bundle name is `dogs_in.bundle`.
+
+## Workflow
+
+The primary goal is to enable a seamless workflow for project-wide analysis, refactoring, or content generation by LLMs:
+
+1.  **🧶🐈 Bundle with `cats`**:
+    Use `cats` to package your entire project (or relevant parts) into one text artifact (`cats_out.bundle`).
+
+    **NOTE:** Although `sys_human.txt` will be included automatically if present, its good practice to add to system prompt. Default excludes are applied.
+
+    ```bash
+    # Bundle current dir, excluding defaults AND custom dir 'dist'
+    # python cats.py . -x dist -o my_project_context.bundle
+    # node cats.js . -x dist -o my_project_context.bundle
+
+    # Bundle current dir, but DO NOT use default excludes
+    # python cats.py . -N -o my_project_context.bundle
+    # node cats.js . -N -o my_project_context.bundle
+    ```
+
+3.  **Interact with LLM**:
+    Provide this bundle (`cats_out.bundle`) to an LLM. Give clear instructions:
+
+    - **Identify Structure**: "This is a bundle of files. Each file starts with `🐈 --- CATS_START_FILE: path/to/file.ext ---` (or `🐕 --- DOGS_START_FILE: ... ---` if processed) and ends with the corresponding `END_FILE` marker. The first file may be `sys_human.txt` providing context."
+    - **Note Encoding**: "The bundle's first lines might include a `# Format: ...` header (e.g., `Raw UTF-8`, `Raw UTF-16LE`, `Base64`). Respect this encoding for modifications. UTF-8 is the default for text."
+    - **Preserve/Use Markers**:
+      - "**VERY IMPORTANT: Only modify content _between_ the start and end file markers.**"
+      - "**Use `🐕 --- DOGS_START_FILE: path/to/your/file.ext ---` and `🐕 --- DOGS_END_FILE ---` for each file you output.** This helps the `dogs` utility parse your output most reliably."
+      - "Do NOT alter the original `🐈 CATS_START_FILE` / `🐈 CATS_END_FILE` markers or any `# Format:` headers if you are only making minor changes _within_ existing file blocks of an input bundle."
+    - **Maintain Encoding**: "If the bundle format is Base64, your output must be valid Base64. If Raw UTF-8 or Raw UTF-16LE, ensure valid text in that encoding."
+    - **New Files**: "For new files, use `🐕 DOGS_START_FILE: path/to/new_file.ext ---`, its full content, then `🐕 DOGS_END_FILE ---`. Use relative paths with forward slashes `/`."
+    - **Delta Changes (Optional, for `dogs --apply-delta`):** "If modifying large existing files, you can specify changes using delta commands within the `🐕 DOGS_` block. Use `@@ PAWS_CMD REPLACE_LINES(start, end) @@`, `@@ PAWS_CMD INSERT_AFTER_LINE(line_num) @@`, or `@@ PAWS_CMD DELETE_LINES(start, end) @@`. These refer to 1-based line numbers in the *original* file (from `cats_out.bundle`). Ensure the user intends to run `dogs` with the `-d` flag."
+
+    **Example LLM Task (Full File Output):**
+    "Refactor all Python functions named `old_func` to `new_func` in the `cats_out.bundle`. Output the complete modified files in a `dogs_in.bundle` using `🐕 DOGS_` markers, assuming `Raw UTF-8`."
+
+    **Example LLM Task (Delta Output):**
+    "In `large_file.py` from `cats_out.bundle`, replace lines 500-510 with the provided code snippet and insert another snippet after line 600. Output a `dogs_in.bundle` using `🐕 DOGS_` markers and `PAWS_CMD` delta instructions for `large_file.py`."
+
+4.  **🥏🐕 Extract with `dogs`**:
+    Use `dogs` to extract the LLM's output bundle (`dogs_in.bundle`) back into a functional project. Use `-d <original_bundle>` if the LLM used delta commands.
+
+    ```bash
+    # Extract full file contents from dogs_in.bundle
+    # python dogs.py dogs_in.bundle ./project_v2 -y
+    # node dogs.js dogs_in.bundle ./project_v2 -y
+
+    # Apply delta changes from dogs_in.bundle using cats_out.bundle as reference
+    # python dogs.py dogs_in.bundle ./project_v2 -y -d cats_out.bundle
+    # node dogs.js dogs_in.bundle ./project_v2 -y -d cats_out.bundle
+    ```
+
+## Key Features `🐈`/`🐕`
+
+- **Comprehensive Context:** Bundles multiple files and directories.
+- **Automatic `sys_human.txt` Inclusion (`cats`):** Prepended if exists in CWD and not excluded.
+- **Default Excludes (`cats`):** Automatically excludes `.git`, `node_modules/`, `gem/`, `__pycache__`. Disable with `-N`.
+- **Robust Exclusion (`cats`):** Precisely exclude additional files/directories.
+- **Encoding Options (`cats`):** Handles UTF-8 (default), UTF-16LE. Auto-switches to Base64 for binary content unless text encoding is forced (`-E`).
+- **Clear Bundle Structure:** Includes format headers and `🐈`/`🐕` file markers.
+- **Safe Extraction (`dogs`):** Sanitizes paths, prevents traversal.
+- **Delta Application (`dogs`):** Applies line-based changes using `--apply-delta (-d)` flag and `@@ PAWS_CMD [...] @@` syntax.
+- **Overwrite Control (`dogs`):** User control over overwriting existing files (`-y`, `-n`, prompt).
+
+## `cats` - Bundling your source code 🧶🐈
+
+**Command Syntax:**
+
+```bash
+python cats.py [PATH...] [options]
+node cats.js [PATH...] [options]
+```
+
+**Key Options:**
+
+- `paths` (required): Files or directories to bundle.
+- `-o BUNDLE_FILE`, `--output BUNDLE_FILE`: Output bundle name (default: `cats_out.bundle`).
+- `-x EXCLUDE_PATH`, `--exclude EXCLUDE_PATH`: Path to exclude (multiple allowed). Applied *in addition* to default excludes.
+- `-N`, `--no-default-excludes`: Disable default excludes (`.git`, `node_modules/`, `gem/`, `__pycache__`).
+- `-E {auto,utf8,utf16le,b64}`, `--force-encoding {auto,utf8,utf16le,b64}`: Force bundle encoding (default: `auto` detects text/binary, preferring UTF-8 for text).
+- `-y`, `--yes`: Auto-confirm bundling process.
+- `-v`, `--verbose` (Node.js `cats.js` only; Python `cats.py` logs by default): Enable verbose logging.
+- `-h`, `--help`: Show help.
+
+**`cats` Examples:**
+
+1.  **Bundle current directory, using default excludes, output to default `cats_out.bundle`:**
+    ```bash
+    python cats.py .
+    node cats.js .
+    ```
+2.  **Bundle src, exclude tests, disable default excludes, force UTF-16LE:**
+    ```bash
+    python cats.py ./src -x ./src/tests -N -E utf16le -o app_utf16.bundle
+    node cats.js ./src -x ./src/tests -N -E utf16le -o app_utf16.bundle
+    ```
+
+## `dogs` - Reconstructing from a bundle 🥏🐕
+
+**Command Syntax (Identical for Python/Node.js):**
+
+```bash
+python dogs.py [BUNDLE_FILE] [OUTPUT_DIR] [options]
+node dogs.js [BUNDLE_FILE] [OUTPUT_DIR] [options]
+```
+
+**Key Options:**
+
+- `bundle_file` (optional): Bundle to extract (default: `dogs_in.bundle` if exists, else error).
+- `output_directory` (optional): Where to extract (default: current directory `./`).
+- `-d ORIGINAL_BUNDLE`, `--apply-delta ORIGINAL_BUNDLE`: Apply delta commands found in `bundle_file`, using `ORIGINAL_BUNDLE` (e.g., `cats_out.bundle`) as the reference for original line numbers.
+- `-i {auto,b64,utf8,utf16le}`, `--input-format {auto,b64,utf8,utf16le}`: Override bundle format detection.
+- `-y`, `--yes`: Overwrite existing files without asking.
+- `-n`, `--no`: Skip overwriting existing files without asking (if not `-y`, behavior depends on interactivity).
+- `-v`, `--verbose`: Enable verbose logging during parsing/extraction/delta application.
+- `-h`, `--help`: Show help.
+
+**`dogs` Examples:**
+
+1.  **Extract default `dogs_in.bundle` to `./output`, auto-overwrite:**
+    ```bash
+    python dogs.py -y -o ./output
+    node dogs.js -y -o ./output
+    ```
+2.  **Apply deltas from `llm_delta.bundle` using `project_v1.bundle` as base, verbose (Python):**
+    ```bash
+    python dogs.py llm_delta.bundle ./project_v2 -v -d project_v1.bundle
+    ```
+3.  **Extract specific bundle, forcing Base64 interpretation (Node.js):**
+    ```bash
+    node dogs.js needs_b64_decode.bundle ./extracted_stuff -i b64 -v
+    ```
+
+## Library Usage
+
+### Python (`cats.py`, `dogs.py`)
+
+```python
+# --- Using cats.py as a library ---
+from cats import create_bundle_from_paths
+
+# paths_to_bundle = ['./src', 'config.json']
+# # Default excludes applied automatically unless use_default_excludes=False
+# bundle_str, fmt_desc, files_count = create_bundle_from_paths(
+#     include_paths_raw=paths_to_bundle,
+#     exclude_paths_raw=['./src/temp'], # Additional excludes
+#     encoding_mode='auto', # 'auto', 'utf8', 'utf16le', 'b64'
+#     # use_default_excludes=True, # Default
+#     # sys_human_abs_realpath_to_include=None # Auto-handled from CWD by default
+# )
+# if files_count > 0:
+#     print(f"Python bundle created ({fmt_desc}), {files_count} files. Preview:\n{bundle_str[:300]}...")
+
+# --- Using dogs.py as a library ---
+from dogs import extract_bundle_from_string, extract_bundle_to_memory
+
+# # Option 1: Extract to disk (potentially applying deltas)
+# results_disk = extract_bundle_from_string(
+#     bundle_path="path/to/dogs_in.bundle", # Can provide path or content
+#     output_dir_base="./py_lib_extracted",
+#     overwrite_policy="yes", # "yes", "no", or "prompt"
+#     # apply_delta_from_original_bundle="path/to/cats_out.bundle", # Optional path to original bundle
+#     # input_format_override=None, # "b64", "utf8", "utf16le"
+#     # verbose_logging=True
+# )
+# for res in results_disk:
+#     print(f"Disk Op: Path: {res.get('path', 'N/A')}, Status: {res['status']}, Msg: {res.get('message', '')}")
+
+# # Option 2: Extract/parse to memory (does not apply deltas)
+# parsed_files_mem = extract_bundle_to_memory(
+#     bundle_path="path/to/dogs_in.bundle",
+#     # input_format_override=None,
+#     # verbose_logging=True
+# )
+# for pf in parsed_files_mem:
+#     print(f"Mem Op: Path: {pf['path_in_bundle']}, Size: {len(pf['content_bytes'])}")
+
+```
+
+### Node.js (`cats.js`, `dogs.js`)
+
+```javascript
+// --- Using cats.js (Node.js) as a library ---
+// const { bundleFromPathsNode } = require("./cats.js"); // CJS
+// // import { bundleFromPathsNode } from "./cats.js"; // ESM
+
+// async function catNodeLibExample() {
+//   try {
+//     const includePaths = ["./src", "package.json"]; // sys_human.txt handled automatically
+//     const { bundleString, formatDescription, filesAdded } =
+//       await bundleFromPathsNode({
+//         includePaths: includePaths,
+//         excludePaths: ["./src/node_modules"], // Added to default excludes
+//         // useDefaultExcludes: true, // Default
+//         // encodingMode: 'auto', // 'auto', 'utf8', 'utf16le', 'b64'
+//         // originalUserPaths: ["./src", "package.json"], // Match user-specified paths
+//         // verbose: true,
+//       });
+//     if (filesAdded > 0) {
+//       console.log(
+//         `Node.js bundle created (${formatDescription}), ${filesAdded} files. Preview:\n${bundleString.substring(0,300)}...`
+//       );
+//     }
+//   } catch (err) { console.error("Error:", err); }
+// }
+// // catNodeLibExample();
+
+// --- Using dogs.js (Node.js) as a library ---
+// const { extractToDiskNode, extractToMemory } = require("./dogs.js"); // CJS
+// // import { extractToDiskNode, extractToMemory } from "./dogs.js"; // ESM
+
+// async function dogNodeLibExample() {
+//   try {
+//     // Option 1: Extract to disk (potentially applying deltas)
+//     const summary = await extractToDiskNode({
+//       bundleFileContent: "🐕 --- DOGS_START_FILE: example.txt ---...", // or bundleFilePath
+//       outputDir: "./js_lib_extracted_node",
+//       overwritePolicy: "yes", // 'yes', 'no', 'prompt'
+//       // applyDeltaFromOriginalBundlePath: 'path/to/cats_out.bundle', // Optional
+//       // inputFormat: 'auto', // 'auto', 'b64', 'utf8', 'utf16le'
+//       // verbose: true,
+//     });
+//     console.log("Node.js library extraction summary (to disk):", summary);
+
+//     // Option 2: Extract/parse to memory (does not apply deltas)
+//     // const filesInMemory = await extractToMemory({ bundleFileContent: "...", verbose: true });
+//     // console.log("Node.js library extraction (to memory):", filesInMemory);
+
+//   } catch (err) { console.error("Error:", err); }
+// }
+// // dogNodeLibExample();
+```
+
+### Browser JavaScript (`cats.js`, `dogs.js`)
+
+Browser usage APIs remain conceptually similar but are outside the scope of these recent changes focused on CLI/Node.js consistency and the delta feature.
+
+---
+
+This utility aims for simplicity and robustness in bridging your codebase with LLMs, now with enhanced flexibility for encoding and targeted modifications.
+
+🐈 --- CATS_END_FILE ---
+
+🐈 --- CATS_START_FILE: cats.js ---
+#!/usr/bin/env node
+// cats.js - Bundles project files into a single text artifact.
+const fs = require("fs");
+const path = require("path");
+const { Buffer } = require("buffer");
+const readline = require("readline");
+
+const FILE_START_MARKER_TEMPLATE = "🐈 --- CATS_START_FILE: {} ---";
+const FILE_END_MARKER = "🐈 --- CATS_END_FILE ---";
+const DEFAULT_ENCODING = "utf-8"; // Default *text* encoding
+const DEFAULT_OUTPUT_FILENAME = "cats_out.bundle";
+const BUNDLE_HEADER_PREFIX = "# Cats Bundle";
+const BUNDLE_FORMAT_PREFIX = "# Format: ";
+const DEFAULT_EXCLUDES = ['.git', 'node_modules', 'gem', '__pycache__'];
+
+/**
+ * @typedef {Object} FileObjectNode
+ * @property {string} path - Absolute real path of the source file.
+ * @property {string} relativePath - Relative path used in the bundle marker.
+ * @property {Buffer} contentBytes - File content as a Buffer.
+ * @property {string|null} encoding - Detected: 'utf-8', 'utf16le', or null for binary.
+ * @property {boolean} isUtf8 - Kept for compatibility, derived from encoding.
+ */
+
+/**
+ * Detects if content is likely UTF-8 or UTF-16LE.
+ * @param {Buffer} fileContentBytes
+ * @returns {string|null} 'utf-8', 'utf16le', or null for binary.
+ */
+function detectTextEncodingNode(fileContentBytes) {
+  if (!fileContentBytes || fileContentBytes.length === 0) {
+    return DEFAULT_ENCODING; // Empty is text compatible
+  }
+  // Check for UTF-16LE BOM
+  if (fileContentBytes.length >= 2 && fileContentBytes[0] === 0xFF && fileContentBytes[1] === 0xFE) {
+    try { fileContentBytes.toString('utf16le'); return 'utf16le'; } catch (e) { /* fall through */ }
+  }
+  // Check for UTF-16BE BOM
+   if (fileContentBytes.length >= 2 && fileContentBytes[0] === 0xFE && fileContentBytes[1] === 0xFF) {
+     try { fileContentBytes.toString('utf16le'); return 'utf16le'; } catch (e) { /* fall through */ } // Node might handle BE via utf16le
+   }
+
+  // Try decoding as UTF-8
+  try {
+    // Node's toString is lenient, stricter check needed. Look for null bytes.
+    if (fileContentBytes.includes(0x00)) throw new Error('Null byte found');
+    // Simple test: decode and re-encode, check length? Might be slow.
+    // For now, assume if it doesn't contain null bytes, it *might* be UTF-8.
+    fileContentBytes.toString(DEFAULT_ENCODING); // Basic check
+    return DEFAULT_ENCODING;
+  } catch (e) {
+    // Try decoding as UTF-16LE (without BOM)
+    try {
+      fileContentBytes.toString('utf16le');
+      return 'utf16le';
+    } catch (e2) {
+      return null; // Assume binary if neither works well
+    }
+  }
+}
+
+/**
+ * Determines the final list of absolute, canonical file paths to include.
+ * Handles exclusions (user + default) and output file skipping.
+ * @param {string[]} includePathsRaw - Raw input paths.
+ * @param {string[]} excludePathsRaw - User-specified exclusion paths.
+ * @param {boolean} useDefaultExcludes - Whether to apply default excludes.
+ * @param {string|null} [outputFileAbsPath=null] - Absolute path of the output file.
+ * @param {string[]} [originalUserPaths=[]] - Paths originally specified by user.
+ * @param {boolean} [verbose=false] - Verbose logging.
+ * @returns {string[]} Sorted list of absolute file real paths.
+ */
+function getFinalPathsToProcessNode(
+  includePathsRaw,
+  excludePathsRaw,
+  useDefaultExcludes,
+  outputFileAbsPath = null,
+  originalUserPaths = [],
+  verbose = false
+) {
+  const candidateFileRealpaths = new Set();
+  let allExcludePaths = [...excludePathsRaw];
+  if (useDefaultExcludes) {
+      const cwd = process.cwd();
+      for (const defaultExcl of DEFAULT_EXCLUDES) {
+           const potentialPath = path.join(cwd, defaultExcl);
+           // Only add if it exists to avoid overly broad excludes
+           if (fs.existsSync(potentialPath)) {
+                allExcludePaths.push(potentialPath);
+                if (verbose) console.log(`  Debug: Applying default exclude for existing path: ${potentialPath}`);
+           } else if (verbose) {
+               // console.log(`  Debug: Default exclude '${defaultExcl}' not found, not applying.`);
+           }
+      }
+  }
+
+
+  const absExcludedRealpathsSet = new Set(
+    allExcludePaths
+      .map((p) => path.resolve(p))
+      .map((p) => { try { return fs.realpathSync(p); } catch { return p; }}) // Get realpath, fallback to abspath
+  );
+
+  const absExcludedDirsForPruningSet = new Set(
+    Array.from(absExcludedRealpathsSet).filter((pReal) => {
+      try { return fs.existsSync(pReal) && fs.statSync(pReal).isDirectory(); }
+      catch { return false; }
+    })
+  );
+  const processedTopLevelInputRealpaths = new Set();
+
+  for (const inclPathRaw of includePathsRaw) {
+    let currentInputRealPath;
+    const absInclPath = path.resolve(inclPathRaw);
+    try { currentInputRealPath = fs.realpathSync(absInclPath); }
+    catch { currentInputRealPath = absInclPath; } // Fallback
+
+    if (
+      processedTopLevelInputRealpaths.has(currentInputRealPath) &&
+      originalUserPaths.includes(inclPathRaw)
+    ) {
+      continue;
+    }
+    processedTopLevelInputRealpaths.add(currentInputRealPath);
+
+    if (outputFileAbsPath && currentInputRealPath === outputFileAbsPath) continue;
+    if (absExcludedRealpathsSet.has(currentInputRealPath)) continue;
+
+    const isInsideExcludedDir = Array.from(absExcludedDirsForPruningSet).some(
+      (excludedDirRp) =>
+        currentInputRealPath === excludedDirRp || // Exclude the dir itself
+        currentInputRealPath.startsWith(excludedDirRp + path.sep)
+    );
+    if (isInsideExcludedDir) continue;
+
+    if (!fs.existsSync(currentInputRealPath)) {
+      if (originalUserPaths.includes(inclPathRaw)) {
+        console.warn(`  Warning: Input path '${inclPathRaw}' not found. Skipping.`);
+      } else if (verbose && inclPathRaw === "sys_human.txt") {
+         // console.log(`  Debug: Conventionally included '${inclPathRaw}' not found. Skipping.`);
+      }
+      continue;
+    }
+
+    const stat = fs.statSync(currentInputRealPath);
+    if (stat.isFile()) {
+      candidateFileRealpaths.add(currentInputRealPath);
+    } else if (stat.isDirectory()) {
+      const walk = (dir) => {
+        const items = fs.readdirSync(dir, { withFileTypes: true });
+        for (const item of items) {
+          const itemPath = path.join(dir, item.name);
+          let itemRealPath;
+          try { itemRealPath = fs.realpathSync(itemPath); }
+          catch { itemRealPath = itemPath; } // Fallback
+
+          if (outputFileAbsPath && itemRealPath === outputFileAbsPath) continue;
+          if (absExcludedRealpathsSet.has(itemRealPath)) continue;
+
+          const isInsideExclDirWalk = Array.from(absExcludedDirsForPruningSet).some(
+             (excludedDirRp) => itemRealPath === excludedDirRp || itemRealPath.startsWith(excludedDirRp + path.sep)
+           );
+          if (isInsideExclDirWalk) continue;
+
+          if (item.isFile()) {
+            candidateFileRealpaths.add(itemRealPath);
+          } else if (item.isDirectory()) {
+              // Check if dir itself is excluded before recursing
+              if (!absExcludedRealpathsSet.has(itemRealPath) && !isInsideExclDirWalk) {
+                 walk(itemPath);
+              }
+          }
+        }
+      };
+      walk(currentInputRealPath);
+    }
+  }
+  return Array.from(candidateFileRealpaths).sort();
+}
+
+
+/**
+ * Generates a relative path for the bundle marker, using forward slashes.
+ * @param {string} fileRealPath - Absolute real path of the file.
+ * @param {string} commonAncestorPath - Absolute real path of the common ancestor.
+ * @returns {string} Relative path with forward slashes.
+ */
+function generateBundleRelativePathNode(fileRealPath, commonAncestorPath) {
+  let relPath;
+  try {
+      if (commonAncestorPath === fileRealPath && fs.statSync(fileRealPath).isFile()) {
+          relPath = path.basename(fileRealPath);
+      } else if (commonAncestorPath === path.dirname(fileRealPath) && fs.statSync(fileRealPath).isFile()) {
+          relPath = path.basename(fileRealPath);
+      } else {
+          relPath = path.relative(commonAncestorPath, fileRealPath);
+          if (relPath === "" || relPath === ".") {
+              relPath = path.basename(fileRealPath);
+          }
+      }
+  } catch (e) { // Handle potential stat errors on complex paths
+      relPath = path.basename(fileRealPath);
+  }
+  return relPath.replace(/\\/g, "/"); // Ensure forward slashes
+}
+
+
+/**
+ * Finds the longest common ancestor directory for a list of absolute paths.
+ * @param {string[]} absFilePaths - List of absolute, real file paths.
+ * @returns {string} The common ancestor path.
+ */
+function findCommonAncestorNode(absFilePaths) {
+    if (!absFilePaths || absFilePaths.length === 0) { return process.cwd(); }
+    if (absFilePaths.length === 1) {
+        try {
+            const pStat = fs.statSync(absFilePaths[0]);
+            return pStat.isDirectory() ? absFilePaths[0] : path.dirname(absFilePaths[0]);
+        } catch { return path.dirname(absFilePaths[0]); } // Fallback if stat fails
+    }
+
+    const dirPaths = absFilePaths.map((p) => {
+        try { return fs.statSync(p).isDirectory() ? p : path.dirname(p); }
+        catch { return path.dirname(p); } // Fallback
+    });
+
+    let commonPath = dirPaths[0];
+    for (let i = 1; i < dirPaths.length; i++) {
+        let currentPath = dirPaths[i];
+        // Normalize separators for reliable comparison
+        const normCommon = commonPath.split(path.sep).join('/');
+        const normCurrent = currentPath.split(path.sep).join('/');
+        const commonParts = normCommon === '/' ? [''] : normCommon.split('/');
+        const currentParts = normCurrent === '/' ? [''] : normCurrent.split('/');
+
+        let k = 0;
+        while(k < commonParts.length && k < currentParts.length && commonParts[k] === currentParts[k]) {
+            k++;
+        }
+        // Reconstruct common path ensuring correct root handling ('/' or 'C:/')
+        let newCommon = commonParts.slice(0, k).join('/');
+         if (newCommon === '' && commonParts[0] === '') newCommon = '/'; // Handle root Unix
+         else if (!newCommon && commonParts[0] && commonParts[0].endsWith(':')) newCommon = commonParts[0] + '/'; // Handle root Windows Drive C:/
+         else if (!newCommon) newCommon = '.'; // Relative fallback
+
+        commonPath = path.normalize(newCommon); // Back to OS specific
+    }
+
+    // If the result isn't actually a directory (e.g., common prefix of files), use its parent
+    try {
+      if (!fs.statSync(commonPath).isDirectory()) {
+        commonPath = path.dirname(commonPath);
+      }
+    } catch {
+       // If stat fails, maybe it's a non-existent common root? Fallback.
+       if (commonPath !== process.cwd()) { // Avoid going above CWD
+          commonPath = path.dirname(commonPath);
+       }
+    }
+
+    return commonPath;
+}
+
+
+/**
+ * Prepares file objects from paths.
+ * @param {string[]} absFilePaths - Absolute real file paths.
+ * @param {string} commonAncestorForRelpath - Path to make relative paths from.
+ * @returns {{fileObjects: FileObjectNode[]}}
+ */
+function prepareFileObjectsFromPathsNode(
+  absFilePaths,
+  commonAncestorForRelpath
+) {
+  const fileObjects = [];
+
+  for (const fileAbsPath of absFilePaths) {
+    try {
+      const contentBytes = fs.readFileSync(fileAbsPath);
+      const detectedEncoding = detectTextEncodingNode(contentBytes);
+      const relativePath = generateBundleRelativePathNode(
+        fileAbsPath,
+        commonAncestorForRelpath
+      );
+      fileObjects.push({
+        path: fileAbsPath,
+        relativePath: relativePath,
+        contentBytes: contentBytes,
+        encoding: detectedEncoding,
+        isUtf8: detectedEncoding === 'utf-8',
+      });
+    } catch (e) {
+      console.warn(
+        `  Warning: Error reading file '${fileAbsPath}': ${e.message}. Skipping.`
+      );
+    }
+  }
+  return { fileObjects };
+}
+
+/**
+ * Creates the bundle string from prepared file objects.
+ * @param {FileObjectNode[]} fileObjects
+ * @param {string} encodingMode - 'auto', 'utf8', 'utf16le', 'b64'.
+ * @returns {{bundleString: string, formatDescription: string}}
+ */
+function createBundleStringFromObjectsNode(
+  fileObjects,
+  encodingMode // 'auto', 'utf8', 'utf16le', 'b64'
+) {
+  const bundleParts = [];
+  let finalBundleFormat = 'Raw UTF-8';
+  let finalEncodingForWrite = 'utf8'; // Node encoding names
+
+  if (encodingMode === 'b64') {
+    finalBundleFormat = 'Base64';
+    finalEncodingForWrite = 'base64';
+  } else if (encodingMode === 'utf16le') {
+    finalBundleFormat = 'Raw UTF-16LE';
+    finalEncodingForWrite = 'utf16le';
+  } else if (encodingMode === 'utf8') {
+    finalBundleFormat = 'Raw UTF-8';
+    finalEncodingForWrite = 'utf8';
+  } else if (encodingMode === 'auto') {
+    const hasBinary = fileObjects.some(f => f.encoding === null);
+    const hasUtf16 = fileObjects.some(f => f.encoding === 'utf16le');
+    if (hasBinary) {
+        finalBundleFormat = 'Base64';
+        finalEncodingForWrite = 'base64';
+    } else if (hasUtf16) {
+        finalBundleFormat = 'Raw UTF-16LE';
+        finalEncodingForWrite = 'utf16le';
+    } else {
+        finalBundleFormat = 'Raw UTF-8';
+        finalEncodingForWrite = 'utf8';
+    }
+  } else { // Default fallback
+    finalBundleFormat = 'Raw UTF-8';
+    finalEncodingForWrite = 'utf8';
+  }
+
+  let formatDescription = finalBundleFormat;
+  if (encodingMode !== 'auto') formatDescription += ` (Forced by user: ${encodingMode})`;
+  else if (finalBundleFormat === 'Base64') formatDescription += " (Auto-Detected binary content)";
+  else if (finalBundleFormat === 'Raw UTF-16LE') formatDescription += " (Auto-Detected UTF-16LE content)";
+  else formatDescription += " (All files appear UTF-8 compatible)";
+
+  bundleParts.push(BUNDLE_HEADER_PREFIX);
+  bundleParts.push(`${BUNDLE_FORMAT_PREFIX}${formatDescription}`);
+
+  for (const fileObj of fileObjects) {
+    bundleParts.push("");
+    bundleParts.push(
+      FILE_START_MARKER_TEMPLATE.replace("{}", fileObj.relativePath)
+    );
+
+    let contentToWrite = "";
+    try {
+        if (finalEncodingForWrite === 'base64') {
+            contentToWrite = fileObj.contentBytes.toString('base64');
+        } else if (finalEncodingForWrite === 'utf16le') {
+            contentToWrite = fileObj.contentBytes.toString('utf16le');
+        } else { // utf8
+            contentToWrite = fileObj.contentBytes.toString('utf8');
+        }
+    } catch (e) {
+         console.warn(`  Warning: Unexpected error encoding file '${fileObj.relativePath}' for bundle format '${finalBundleFormat}'. Falling back to Base64 for this file. Error: ${e.message}`);
+         contentToWrite = fileObj.contentBytes.toString('base64');
+    }
+    bundleParts.push(contentToWrite);
+    bundleParts.push(FILE_END_MARKER);
+  }
+  // Write bundle file itself as UTF-8
+  return { bundleString: bundleParts.join("\n") + "\n", formatDescription };
+}
+
+/**
+ * High-level function to create a bundle string from paths (Node.js).
+ * @param {Object} params
+ * @param {string[]} params.includePaths - Paths to include.
+ * @param {string[]} params.excludePaths - User paths to exclude.
+ * @param {string} params.encodingMode - 'auto', 'utf8', 'utf16le', 'b64'.
+ * @param {boolean} params.useDefaultExcludes - Apply default excludes.
+ * @param {string} [params.outputFileAbsPath] - Absolute path of output file for self-exclusion.
+ * @param {string} [params.baseDirForRelpath] - Optional base directory for relative paths.
+ * @param {string[]} [params.originalUserPaths] - For warning logic.
+ * @param {boolean} [params.verbose] - Verbose logging.
+ * @returns {Promise<{bundleString: string, formatDescription: string, filesAdded: number}>}
+ */
+async function bundleFromPathsNode({
+  includePaths,
+  excludePaths,
+  encodingMode = 'auto',
+  useDefaultExcludes = true,
+  outputFileAbsPath,
+  baseDirForRelpath,
+  originalUserPaths = [],
+  verbose = false,
+}) {
+  // Handle sys_human.txt automatically for library too? Yes, consistent with Python.
+  let finalIncludePaths = [...includePaths];
+  const sysHumanPath = "sys_human.txt";
+  const sysHumanAbsPath = path.resolve(sysHumanPath);
+  let sysHumanRealPath = null;
+   try {
+       if (fs.existsSync(sysHumanAbsPath) && fs.statSync(sysHumanAbsPath).isFile()) {
+            sysHumanRealPath = fs.realpathSync(sysHumanAbsPath);
+            const alreadyListed = finalIncludePaths.some((pRaw) => {
+                try { return fs.realpathSync(path.resolve(pRaw)) === sysHumanRealPath; }
+                catch { return path.resolve(pRaw) === sysHumanAbsPath; }
+            });
+            if (!alreadyListed) {
+                 // Check if excluded by user rules or default rules (if active)
+                 let isExcluded = excludePaths.some(excl => {
+                     try { return fs.realpathSync(path.resolve(excl)) === sysHumanRealPath; } catch { return false; }
+                 });
+                 if (!isExcluded && useDefaultExcludes) {
+                     isExcluded = DEFAULT_EXCLUDES.some(defExcl => {
+                         const potentialPath = path.join(process.cwd(), defExcl);
+                          try { return fs.existsSync(potentialPath) && fs.realpathSync(potentialPath) === sysHumanRealPath; } catch { return false; }
+                     });
+                 }
+
+                 if (!isExcluded) {
+                     finalIncludePaths.unshift(sysHumanPath); // Prepend if found and not excluded
+                      if (verbose) console.log(`  Debug: Library prepending sys_human.txt: ${sysHumanPath}`);
+                 } else if (verbose) {
+                     console.log(`  Debug: Library found sys_human.txt but it is excluded: ${sysHumanPath}`);
+                 }
+            }
+       }
+   } catch (e) { if (verbose) console.log(`  Debug: Error checking sys_human.txt: ${e.message}`); }
+
+
+  const absFilePathsToBundle = getFinalPathsToProcessNode(
+    finalIncludePaths, // Use potentially modified list
+    excludePaths,
+    useDefaultExcludes,
+    outputFileAbsPath,
+    originalUserPaths,
+    verbose
+  );
+
+  if (absFilePathsToBundle.length === 0) {
+    return { bundleString: "", formatDescription: "No files selected", filesAdded: 0 };
+  }
+
+  let commonAncestor;
+  if (baseDirForRelpath) {
+    commonAncestor = path.resolve(baseDirForRelpath);
+    try { commonAncestor = fs.realpathSync(commonAncestor); } catch { /* Use as is */ }
+  } else {
+    commonAncestor = findCommonAncestorNode(absFilePathsToBundle);
+  }
+
+  const { fileObjects } = prepareFileObjectsFromPathsNode(
+    absFilePathsToBundle,
+    commonAncestor
+  );
+
+  if (fileObjects.length === 0) {
+    return { bundleString: "", formatDescription: "No files successfully processed", filesAdded: 0 };
+  }
+
+  const { bundleString, formatDescription } = createBundleStringFromObjectsNode(
+    fileObjects,
+    encodingMode
+  );
+  return { bundleString, formatDescription, filesAdded: fileObjects.length };
+}
+
+function parseCliArgsCats(argv) {
+  const args = {
+    paths: [],
+    output: DEFAULT_OUTPUT_FILENAME,
+    exclude: [],
+    forceEncoding: 'auto',
+    noDefaultExcludes: false,
+    yes: false,
+    help: false,
+    verbose: false,
+  };
+  const cliArgs = argv.slice(2);
+  let i = 0;
+  while (i < cliArgs.length) {
+    const arg = cliArgs[i];
+    if (arg === "-h" || arg === "--help") { args.help = true; break; }
+    else if (arg === "-o" || arg === "--output") {
+      if (i + 1 < cliArgs.length && !cliArgs[i + 1].startsWith("-")) args.output = cliArgs[++i];
+      else throw new Error(`Argument ${arg} requires a value.`);
+    } else if (arg === "-x" || arg === "--exclude") {
+      if (i + 1 < cliArgs.length && !cliArgs[i + 1].startsWith("-")) args.exclude.push(cliArgs[++i]);
+      else throw new Error(`Argument ${arg} requires a value.`);
+    } else if (arg === "-E" || arg === "--force-encoding") {
+       if (i + 1 < cliArgs.length && ['auto', 'utf8', 'utf16le', 'b64'].includes(cliArgs[i + 1].toLowerCase())) {
+            args.forceEncoding = cliArgs[++i].toLowerCase();
+       } else throw new Error(`Argument ${arg} requires a value (auto, utf8, utf16le, b64).`);
+    } else if (arg === "-N" || arg === "--no-default-excludes") { args.noDefaultExcludes = true; }
+    else if (arg === "-y" || arg === "--yes") { args.yes = true; }
+    else if (arg === "-v" || arg === "--verbose") { args.verbose = true; }
+    else if (!arg.startsWith("-")) { args.paths.push(arg); }
+    else { throw new Error(`Unknown option: ${arg}`); }
+    i++;
+  }
+  if (args.paths.length === 0 && !args.help) {
+    throw new Error("You must specify at least one PATH to include.");
+  }
+  return args;
+}
+
+function printCliHelpCats() {
+  console.log(`cats.js : Bundles project files into a single text artifact for LLMs.
+
+Syntax: node cats.js [PATH...] [options]
+
+Arguments:
+  PATH                    Files or directories to include in the bundle.
+
+Options:
+  -o, --output BUNDLE_FILE  Output bundle file name (default: ${DEFAULT_OUTPUT_FILENAME}).
+  -x, --exclude EXCLUDE_PATH Path to exclude (file/directory). Applied in addition to defaults. Multiple allowed.
+  -N, --no-default-excludes Disable default excludes: ${DEFAULT_EXCLUDES.join(', ')}.
+  -E, --force-encoding MODE Force bundle encoding: auto (default), utf8, utf16le, b64.
+  -y, --yes               Automatically confirm and proceed (if a prompt would occur).
+  -v, --verbose           Enable verbose logging.
+  -h, --help              Show this help message and exit.
+
+Example: node cats.js ./src ./docs -x .git -x node_modules -o my_project.bundle`);
+}
+
+async function mainCliCatsNode() {
+  let args;
+  try {
+    args = parseCliArgsCats(process.argv);
+  } catch (error) {
+    console.error(`Error: ${error.message}`);
+    printCliHelpCats();
+    process.exit(1);
+  }
+
+  if (args.help) { printCliHelpCats(); process.exit(0); }
+
+  const absOutputFilePath = path.resolve(args.output);
+  const originalUserPathsForWarning = [...args.paths];
+
+  console.log("Phase 1: Collecting and filtering files...");
+  const { bundleString, formatDescription, filesAdded } =
+    await bundleFromPathsNode({
+      includePaths: args.paths, // sys_human.txt handled inside
+      excludePaths: args.exclude,
+      encodingMode: args.forceEncoding,
+      useDefaultExcludes: !args.noDefaultExcludes,
+      outputFileAbsPath: absOutputFilePath,
+      originalUserPaths: originalUserPathsForWarning,
+      verbose: args.verbose,
+    });
+
+  if (filesAdded === 0) {
+    console.log(`No files selected for bundling. ${formatDescription}. Exiting.`);
+    return;
+  }
+
+  console.log(`  Files to be bundled: ${filesAdded}`);
+  console.log(`  Bundle format determined: ${formatDescription.split("(")[0].trim()}`);
+   if (args.forceEncoding !== 'auto') {
+       console.log(`  (Encoding forced by user: ${args.forceEncoding})`);
+   }
+
+  let proceed = args.yes;
+  if (!proceed && process.stdin.isTTY) {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    const answer = await new Promise((resolve) =>
+      rl.question(`Output will be written to: ${absOutputFilePath}\nProceed with bundling? [Y/n]: `, resolve)
+    );
+    rl.close();
+    if (answer.trim().toLowerCase() !== "y" && answer.trim() !== "") {
+       console.log("Bundling cancelled by user."); return;
+    }
+     proceed = true;
+  } else if (!process.stdin.isTTY && !args.yes) {
+    if (args.verbose) console.log("  Info: Non-interactive mode, proceeding without confirmation prompt.");
+    proceed = true;
+  }
+
+  if (!proceed) return;
+
+  console.log(`\nPhase 2: Writing bundle to '${absOutputFilePath}'...`);
+  console.log(`  Final Bundle Format: ${formatDescription}`);
+
+  try {
+    const outputParentDir = path.dirname(absOutputFilePath);
+    if (outputParentDir && !fs.existsSync(outputParentDir)) {
+      fs.mkdirSync(outputParentDir, { recursive: true });
+    }
+    // Write bundle file itself as UTF-8
+    fs.writeFileSync(absOutputFilePath, bundleString, { encoding: DEFAULT_ENCODING });
+    console.log(`\nBundle created successfully: '${args.output}'`);
+    console.log(`  Files added: ${filesAdded}`);
+  } catch (e) {
+    console.error(`\nFatal error writing bundle: ${e.message}`);
+    process.exit(1);
+  }
+}
+
+module.exports = {
+  bundleFromPathsNode,
+};
+
+if (require.main === module) {
+  mainCliCatsNode().catch((error) => {
+    console.error("CLI Error:", error);
+    process.exit(1);
+  });
+}
+🐈 --- CATS_END_FILE ---
+
+🐈 --- CATS_START_FILE: cats.py ---
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+import sys
+import os
+import argparse
+import base64
+from typing import List, Tuple, Dict, Optional, Union, Any
+
+FILE_START_MARKER_TEMPLATE = "🐈 --- CATS_START_FILE: {} ---"
+FILE_END_MARKER = "🐈 --- CATS_END_FILE ---"
+DEFAULT_ENCODING = "utf-8" # Default *text* encoding
+DEFAULT_OUTPUT_FILENAME = "cats_out.bundle"
+BUNDLE_HEADER_PREFIX = "# Cats Bundle"
+BUNDLE_FORMAT_PREFIX = "# Format: "
+DEFAULT_EXCLUDES = ['.git', 'node_modules', 'gem', '__pycache__']
+
+
+FileObject = Dict[str, Union[str, bytes, bool, Optional[str]]] # Added encoding
+
+
+def detect_text_encoding(file_content_bytes: bytes) -> Optional[str]:
+    """Checks if content is likely UTF-8 or UTF-16LE."""
+    if not file_content_bytes:
+        return DEFAULT_ENCODING # Empty is compatible with text formats
+    try:
+        file_content_bytes.decode(DEFAULT_ENCODING)
+        return DEFAULT_ENCODING
+    except UnicodeDecodeError:
+        try:
+            # Check for UTF-16 BOM first (LE or BE)
+            if file_content_bytes.startswith(b'\xff\xfe') or file_content_bytes.startswith(b'\xfe\xff'):
+                 # If BOM exists, attempt decode with utf-16
+                 try:
+                      file_content_bytes.decode('utf-16')
+                      return 'utf-16le' # Standardize on LE for bundle format name
+                 except UnicodeDecodeError:
+                      return None # BOM present but invalid utf-16
+
+            # Try UTF-16LE without BOM (more common than BE on many systems)
+            file_content_bytes.decode('utf-16le')
+            return 'utf-16le'
+        except UnicodeDecodeError:
+            # Could try other encodings, but for now, assume binary if not UTF-8/16LE
+            return None
+
+
+def get_final_paths_to_process(
+    include_paths_raw: List[str],
+    exclude_paths_raw: List[str],
+    use_default_excludes: bool,
+    output_file_abs_path: Optional[str] = None,
+    sys_human_abs_realpath_to_ignore: Optional[str] = None,
+    original_user_paths: Optional[List[str]] = None,
+) -> List[str]:
+    candidate_file_realpaths = set()
+    
+    all_exclude_paths = list(exclude_paths_raw)
+    if use_default_excludes:
+        # Get absolute paths for default excludes relative to CWD
+        # Only add defaults if they actually exist to avoid excluding unrelated paths
+        cwd = os.getcwd()
+        for default_excl in DEFAULT_EXCLUDES:
+             potential_path = os.path.join(cwd, default_excl)
+             if os.path.exists(potential_path): # Check existence before adding
+                 all_exclude_paths.append(potential_path)
+
+
+    abs_excluded_realpaths_set = {
+        os.path.realpath(os.path.abspath(p)) for p in all_exclude_paths
+    }
+
+    if sys_human_abs_realpath_to_ignore:
+        abs_excluded_realpaths_set.add(sys_human_abs_realpath_to_ignore)
+
+    abs_excluded_dirs_for_pruning_set = {
+        p_realpath
+        for p_realpath in abs_excluded_realpaths_set
+        if os.path.isdir(p_realpath)
+    }
+    processed_top_level_input_realpaths = set()
+    paths_to_check_for_warnings = original_user_paths if original_user_paths is not None else include_paths_raw
+
+    for incl_path_raw in include_paths_raw:
+        if incl_path_raw == "sys_human.txt" and sys_human_abs_realpath_to_ignore:
+             continue
+        try:
+            abs_incl_path = os.path.abspath(incl_path_raw)
+            current_input_realpath = os.path.realpath(abs_incl_path)
+            if current_input_realpath == sys_human_abs_realpath_to_ignore:
+                continue
+        except OSError:
+            current_input_realpath = os.path.abspath(incl_path_raw)
+            if not os.path.lexists(current_input_realpath):
+                 if incl_path_raw in paths_to_check_for_warnings:
+                     print(
+                         f"  Warning: Input path '{incl_path_raw}' not found. Skipping.",
+                         file=sys.stderr,
+                     )
+                 continue
+
+        if current_input_realpath in processed_top_level_input_realpaths:
+             if incl_path_raw in paths_to_check_for_warnings:
+                 continue
+        processed_top_level_input_realpaths.add(current_input_realpath)
+
+        if output_file_abs_path and current_input_realpath == output_file_abs_path:
+            continue
+        if current_input_realpath in abs_excluded_realpaths_set:
+            continue
+
+        is_inside_excluded_dir = any(
+            current_input_realpath == excluded_dir_rp or
+            current_input_realpath.startswith(excluded_dir_rp + os.path.sep)
+            for excluded_dir_rp in abs_excluded_dirs_for_pruning_set
+        )
+        if is_inside_excluded_dir:
+            continue
+
+        if not os.path.lexists(current_input_realpath):
+            if incl_path_raw in paths_to_check_for_warnings:
+                print(
+                    f"  Warning: Input path '{incl_path_raw}' not found or inaccessible. Skipping.",
+                    file=sys.stderr,
+                )
+            continue
+
+        if os.path.isfile(current_input_realpath):
+            candidate_file_realpaths.add(current_input_realpath)
+        elif os.path.isdir(current_input_realpath):
+            for dirpath, dirnames, filenames in os.walk(
+                current_input_realpath, topdown=True, followlinks=False
+            ):
+                current_walk_dir_realpath = os.path.realpath(dirpath)
+
+                dirs_to_remove = []
+                for d_name in dirnames:
+                    dir_realpath_in_walk = os.path.realpath(
+                        os.path.join(current_walk_dir_realpath, d_name)
+                    )
+                    # Check against exact excluded dir or if inside an excluded dir
+                    if dir_realpath_in_walk in abs_excluded_dirs_for_pruning_set or \
+                       any(dir_realpath_in_walk.startswith(ex_dir + os.path.sep) for ex_dir in abs_excluded_dirs_for_pruning_set):
+                        dirs_to_remove.append(d_name)
+
+                if dirs_to_remove:
+                    dirnames[:] = [d for d in dirnames if d not in dirs_to_remove]
+
+                for f_name in filenames:
+                    file_abs_path_in_walk = os.path.join(current_walk_dir_realpath, f_name)
+                    try:
+                        if not os.path.lexists(file_abs_path_in_walk): continue
+                        file_realpath_in_walk = os.path.realpath(file_abs_path_in_walk)
+                    except OSError:
+                        continue
+
+                    if (
+                        (output_file_abs_path and file_realpath_in_walk == output_file_abs_path)
+                        or (file_realpath_in_walk in abs_excluded_realpaths_set)
+                        or any(
+                            file_realpath_in_walk.startswith(ex_dir + os.path.sep)
+                            for ex_dir in abs_excluded_dirs_for_pruning_set
+                        )
+                    ):
+                        continue
+
+                    if os.path.isfile(file_realpath_in_walk):
+                        candidate_file_realpaths.add(file_realpath_in_walk)
+
+    return sorted(list(candidate_file_realpaths))
+
+
+def generate_bundle_relative_path(file_realpath: str, common_ancestor_path: str) -> str:
+    try:
+        if common_ancestor_path == file_realpath and os.path.isfile(file_realpath):
+            return os.path.basename(file_realpath)
+        if common_ancestor_path == os.path.dirname(file_realpath) and os.path.isfile(file_realpath):
+           return os.path.basename(file_realpath)
+        if os.path.isdir(common_ancestor_path) and file_realpath.startswith(
+             os.path.abspath(common_ancestor_path) + os.path.sep
+         ):
+            rel_path = os.path.relpath(file_realpath, common_ancestor_path)
+        else:
+             rel_path = os.path.relpath(file_realpath, common_ancestor_path)
+
+        if rel_path == ".":
+            return os.path.basename(file_realpath)
+    except ValueError:
+        rel_path = os.path.basename(file_realpath)
+
+    return rel_path.replace(os.path.sep, "/")
+
+
+def find_common_ancestor(paths: List[str]) -> str:
+    if not paths: return os.getcwd()
+    real_paths = []
+    for p in paths:
+        try:
+            abs_p = os.path.abspath(p)
+            if os.path.exists(abs_p) or os.path.islink(abs_p):
+                 real_paths.append(os.path.realpath(abs_p))
+        except OSError: continue
+    if not real_paths: return os.getcwd()
+
+    if len(real_paths) == 1:
+        return (
+            os.path.dirname(real_paths[0])
+            if os.path.isfile(real_paths[0])
+            else real_paths[0]
+        )
+
+    paths_for_commonpath = []
+    for p_rp in real_paths:
+         try:
+             if os.path.isdir(p_rp): paths_for_commonpath.append(p_rp)
+             elif os.path.isfile(p_rp): paths_for_commonpath.append(os.path.dirname(p_rp))
+         except OSError: continue
+    if not paths_for_commonpath: return os.getcwd()
+
+    try:
+         common = os.path.commonpath(paths_for_commonpath)
+         if len(set(paths_for_commonpath)) > 1 and (not os.path.isdir(common)):
+             common = os.path.dirname(common)
+         return common if common else os.getcwd()
+    except ValueError: return os.getcwd()
+
+
+def prepare_file_object(file_abs_path: str, common_ancestor_for_relpath: str) -> Optional[FileObject]:
+    try:
+        with open(file_abs_path, "rb") as f:
+            content_bytes = f.read()
+
+        detected_encoding = detect_text_encoding(content_bytes)
+        relative_path = generate_bundle_relative_path(
+            file_abs_path, common_ancestor_for_relpath
+        )
+
+        return {
+            "path": file_abs_path,
+            "relative_path": relative_path,
+            "content_bytes": content_bytes,
+            "encoding": detected_encoding, # 'utf-8', 'utf-16le', or None for binary
+            "is_utf8": detected_encoding == 'utf-8' # Keep for potential legacy checks, though 'encoding' is better
+        }
+    except Exception as e:
+        print(
+            f"  Warning: Error reading file '{file_abs_path}': {e}. Skipping.",
+            file=sys.stderr,
+        )
+        return None
+
+
+def prepare_file_objects_from_paths(
+    abs_file_paths: List[str], common_ancestor_for_relpath: str
+) -> List[FileObject]:
+    file_objects: List[FileObject] = []
+    for file_abs_path in abs_file_paths:
+        file_obj = prepare_file_object(file_abs_path, common_ancestor_for_relpath)
+        if file_obj:
+            file_objects.append(file_obj)
+    return file_objects
+
+
+def create_bundle_string_from_objects(
+    file_objects: List[FileObject],
+    encoding_mode: str, # 'auto', 'utf8', 'utf16le', 'b64'
+) -> Tuple[str, str]:
+    bundle_parts = []
+    final_bundle_format = 'Raw UTF-8' # Default start
+    final_encoding_for_write = 'utf-8' # Default start
+
+    if encoding_mode == 'b64':
+        final_bundle_format = 'Base64'
+        final_encoding_for_write = 'base64'
+    elif encoding_mode == 'utf16le':
+        final_bundle_format = 'Raw UTF-16LE'
+        final_encoding_for_write = 'utf-16le'
+    elif encoding_mode == 'utf8':
+        final_bundle_format = 'Raw UTF-8'
+        final_encoding_for_write = 'utf-8'
+    elif encoding_mode == 'auto':
+        # Auto logic: Check files. Binary -> B64. Any UTF16 -> UTF16LE. Else -> UTF8.
+        has_binary = any(f["encoding"] is None for f in file_objects)
+        has_utf16 = any(f["encoding"] == 'utf-16le' for f in file_objects)
+
+        if has_binary:
+            final_bundle_format = 'Base64'
+            final_encoding_for_write = 'base64'
+        elif has_utf16:
+            final_bundle_format = 'Raw UTF-16LE'
+            final_encoding_for_write = 'utf-16le'
+        else: # All seem UTF-8 compatible or are empty
+            final_bundle_format = 'Raw UTF-8'
+            final_encoding_for_write = 'utf-8'
+    else: # Should not happen with arg choices, but default
+        final_bundle_format = 'Raw UTF-8'
+        final_encoding_for_write = 'utf-8'
+
+    format_description = final_bundle_format
+    if encoding_mode != 'auto':
+         format_description += f" (Forced by user: {encoding_mode})"
+    elif final_bundle_format == 'Base64':
+         format_description += " (Auto-Detected binary content)"
+    elif final_bundle_format == 'Raw UTF-16LE':
+         format_description += " (Auto-Detected UTF-16LE content)"
+    else:
+         format_description += " (All files appear UTF-8 compatible)"
+
+    bundle_parts.append(BUNDLE_HEADER_PREFIX)
+    bundle_parts.append(f"{BUNDLE_FORMAT_PREFIX}{format_description}")
+
+    output_encoding_error_handler = 'replace' # Be lenient when writing final bundle
+
+    for file_obj in file_objects:
+        bundle_parts.append("")
+        bundle_parts.append(
+            FILE_START_MARKER_TEMPLATE.format(str(file_obj["relative_path"]))
+        )
+        content_bytes = file_obj["content_bytes"]
+        assert isinstance(content_bytes, bytes), "File content must be bytes"
+
+        content_to_write = ""
+        try:
+            if final_encoding_for_write == 'base64':
+                content_to_write = base64.b64encode(content_bytes).decode('ascii')
+            elif final_encoding_for_write == 'utf-16le':
+                content_to_write = content_bytes.decode('utf-16le', errors=output_encoding_error_handler)
+            else: # utf-8
+                content_to_write = content_bytes.decode('utf-8', errors=output_encoding_error_handler)
+        except Exception as e:
+             # Fallback: If decode fails even with handler, try Base64 for this block
+             print(f"  Warning: Unexpected error encoding file '{file_obj['relative_path']}' for bundle format '{final_bundle_format}'. Falling back to Base64 for this file. Error: {e}", file=sys.stderr)
+             content_to_write = base64.b64encode(content_bytes).decode('ascii')
+
+        bundle_parts.append(content_to_write)
+        bundle_parts.append(FILE_END_MARKER)
+
+    # Use UTF-8 for the overall bundle file itself, content within uses specified format
+    return "\n".join(bundle_parts) + "\n", format_description
+
+
+def create_bundle_from_paths(
+    include_paths_raw: List[str],
+    exclude_paths_raw: List[str],
+    encoding_mode: str = 'auto', # 'auto', 'utf8', 'utf16le', 'b64'
+    use_default_excludes: bool = True,
+    output_file_abs_path: Optional[str] = None,
+    sys_human_abs_realpath_to_include: Optional[str] = None,
+    original_user_paths: Optional[List[str]] = None,
+) -> Tuple[str, str, int]:
+
+    sys_human_object: Optional[FileObject] = None
+    if sys_human_abs_realpath_to_include:
+        sys_human_ancestor = os.getcwd()
+        sys_human_object = prepare_file_object(sys_human_abs_realpath_to_include, sys_human_ancestor)
+
+    other_abs_file_paths_to_bundle = get_final_paths_to_process(
+        include_paths_raw,
+        exclude_paths_raw,
+        use_default_excludes,
+        output_file_abs_path,
+        sys_human_abs_realpath_to_ignore=sys_human_abs_realpath_to_include,
+        original_user_paths=original_user_paths
+    )
+
+    paths_for_ancestor_calc = other_abs_file_paths_to_bundle
+    if not paths_for_ancestor_calc and sys_human_object:
+         common_ancestor = os.getcwd()
+    elif not paths_for_ancestor_calc:
+         common_ancestor = os.getcwd()
+    else:
+         common_ancestor = find_common_ancestor(paths_for_ancestor_calc)
+
+    other_file_objects = prepare_file_objects_from_paths(
+        other_abs_file_paths_to_bundle, common_ancestor
+    )
+
+    final_file_objects: List[FileObject] = []
+    if sys_human_object:
+        sys_human_object['relative_path'] = generate_bundle_relative_path(sys_human_object['path'], os.getcwd())
+        final_file_objects.append(sys_human_object)
+    final_file_objects.extend(other_file_objects)
+
+    if not final_file_objects:
+        return "", "No files selected", 0
+
+    bundle_content, format_desc = create_bundle_string_from_objects(
+        final_file_objects, encoding_mode
+    )
+    return bundle_content, format_desc, len(final_file_objects)
+
+
+def confirm_action_prompt(prompt_message: str) -> bool:
+    if not sys.stdin.isatty():
+        print("  Non-interactive mode detected. Proceeding automatically.")
+        return True
+    while True:
+        try:
+            choice = input(f"{prompt_message} [Y/n]: ").strip().lower()
+            if choice == "y" or choice == "": return True
+            if choice == "n": return False
+            print("Invalid input. Please enter 'y' or 'n'.")
+        except KeyboardInterrupt:
+            print("\nOperation cancelled by user.")
+            return False
+        except EOFError:
+            print("\nOperation cancelled (EOF detected). Defaulting to No.")
+            return False
+
+
+def main_cli():
+    parser = argparse.ArgumentParser(
+        description="cats.py : Bundles project files into a single text artifact for LLMs.",
+        epilog="Example: python cats.py ./src -x ./tests -N -E utf8 -o my_project.bundle",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    parser.add_argument("paths", nargs="+", metavar="PATH", help="Files/directories to include.")
+    parser.add_argument("-o", "--output", default=DEFAULT_OUTPUT_FILENAME, metavar="BUNDLE_FILE", help=f"Output bundle file (default: {DEFAULT_OUTPUT_FILENAME}).")
+    parser.add_argument("-x", "--exclude", action="append", default=[], metavar="EXCLUDE_PATH", help="Path to exclude (file or directory). Use multiple times. Added to defaults.")
+    parser.add_argument("-N", "--no-default-excludes", action="store_false", dest="use_default_excludes", help=f"Disable default excludes: {', '.join(DEFAULT_EXCLUDES)}.")
+    parser.add_argument("-E", "--force-encoding", choices=['auto', 'utf8', 'utf16le', 'b64'], default='auto', metavar="MODE", help="Force bundle encoding: auto (default), utf8, utf16le, b64.")
+    parser.add_argument("-y", "--yes", action="store_true", help="Automatically confirm and proceed without prompting.")
+    parser.set_defaults(use_default_excludes=True)
+
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
+    args = parser.parse_args()
+
+    abs_output_file_realpath = os.path.realpath(os.path.abspath(args.output))
+
+    sys_human_realpath_to_include: Optional[str] = None
+    sys_human_path = "sys_human.txt"
+    sys_human_abs_path = os.path.abspath(sys_human_path)
+
+    # Check if sys_human exists and should be included (not manually excluded)
+    if os.path.isfile(sys_human_abs_path):
+        sys_human_realpath_to_include = os.path.realpath(sys_human_abs_path)
+        is_excluded = False
+        # Check against manual excludes first
+        for excl_raw in args.exclude:
+             try:
+                 excl_abs = os.path.abspath(excl_raw)
+                 excl_real = os.path.realpath(excl_abs)
+                 if sys_human_realpath_to_include == excl_real: is_excluded = True; break
+                 if os.path.isdir(excl_real) and sys_human_realpath_to_include.startswith(excl_real + os.path.sep): is_excluded = True; break
+             except OSError: pass
+        # Check against default excludes only if they are active
+        if not is_excluded and args.use_default_excludes:
+             for default_excl in DEFAULT_EXCLUDES:
+                  try:
+                      potential_path = os.path.join(os.getcwd(), default_excl)
+                      if os.path.exists(potential_path):
+                           excl_real = os.path.realpath(potential_path)
+                           if sys_human_realpath_to_include == excl_real: is_excluded = True; break
+                           if os.path.isdir(excl_real) and sys_human_realpath_to_include.startswith(excl_real + os.path.sep): is_excluded = True; break
+                  except OSError: pass
+
+        if is_excluded:
+             print(f"  Info: '{sys_human_path}' found but is excluded by rule. Not adding.")
+             sys_human_realpath_to_include = None
+        else:
+             print(f"  Convention: Found '{sys_human_path}'. Will include it at the start of the bundle.")
+
+    print("Phase 1: Collecting and filtering files...")
+    bundle_content, format_description, files_added_count = create_bundle_from_paths(
+        include_paths_raw=args.paths,
+        exclude_paths_raw=args.exclude,
+        encoding_mode=args.force_encoding,
+        use_default_excludes=args.use_default_excludes,
+        output_file_abs_path=abs_output_file_realpath,
+        sys_human_abs_realpath_to_include=sys_human_realpath_to_include,
+        original_user_paths=args.paths
+    )
+
+    if files_added_count == 0:
+        print(f"No files selected for bundling. {format_description}. Exiting.")
+        return
+
+    print(f"  Files to be bundled: {files_added_count}")
+    print(f"  Bundle format determined: {format_description.split('(')[0].strip()}")
+    if args.force_encoding != 'auto':
+        print(f"  (Encoding forced by user: {args.force_encoding})")
+
+    proceed = args.yes
+    if not proceed:
+        print(f"\n  Output will be written to: {abs_output_file_realpath}")
+        proceed = confirm_action_prompt("Proceed with bundling?")
+
+    if not proceed:
+        print("Bundling cancelled.")
+        return
+
+    print(f"\nPhase 2: Writing bundle to '{abs_output_file_realpath}'...")
+    print(f"  Final Bundle Format: {format_description}")
+
+    try:
+        output_parent_dir = os.path.dirname(abs_output_file_realpath)
+        if output_parent_dir and not os.path.exists(output_parent_dir):
+            os.makedirs(output_parent_dir, exist_ok=True)
+        # Write the bundle file itself always as UTF-8
+        with open(abs_output_file_realpath, "w", encoding=DEFAULT_ENCODING, errors="replace") as f_bundle:
+            f_bundle.write(bundle_content)
+        print(f"\nBundle created successfully: '{args.output}'")
+        print(f"  Files added: {files_added_count}")
+    except Exception as e:
+        print(f"\nFatal error writing bundle: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main_cli()
+🐈 --- CATS_END_FILE ---
+
+🐈 --- CATS_START_FILE: dogs.js ---
+#!/usr/bin/env node
+// dogs.js - Extracts files from a cats.js or LLM-generated (DOGS_) bundle.
+const fs = require("fs");
+const path = require("path");
+const { Buffer } = require("buffer");
+const readline = require("readline");
+
+const DEFAULT_ENCODING = "utf-8";
+const DEFAULT_INPUT_BUNDLE_FILENAME = "dogs_in.bundle"; // Changed default
+
+const CATS_BUNDLE_HEADER_PREFIX = "# Cats Bundle";
+const DOGS_BUNDLE_HEADER_PREFIX = "# Dogs Bundle";
+const BUNDLE_FORMAT_PREFIX = "# Format: ";
+
+// Regex with Emoji
+const CATS_FILE_START_MARKER_REGEX = /^\s*🐈\s*-{3,}\s*CATS_START_FILE\s*:\s*(.+?)\s*-{3,}$/i;
+const CATS_FILE_END_MARKER_REGEX = /^\s*🐈\s*-{3,}\s*CATS_END_FILE\s*-{3,}$/i;
+const DOGS_FILE_START_MARKER_REGEX = /^\s*🐕\s*-{3,}\s*DOGS_START_FILE\s*:\s*(.+?)\s*-{3,}$/i;
+const DOGS_FILE_END_MARKER_REGEX = /^\s*🐕\s*-{3,}\s*DOGS_END_FILE\s*-{3,}$/i;
+
+// Delta Command Regex (simpler parsing in JS)
+const PAWS_CMD_REGEX = /^\s*@@\s*PAWS_CMD\s*(.+?)\s*@@\s*$/;
+const REPLACE_LINES_REGEX = /REPLACE_LINES\(\s*(\d+)\s*,\s*(\d+)\s*\)/i;
+const INSERT_AFTER_LINE_REGEX = /INSERT_AFTER_LINE\(\s*(\d+)\s*\)/i;
+const DELETE_LINES_REGEX = /DELETE_LINES\(\s*(\d+)\s*,\s*(\d+)\s*\)/i;
+
+
+/**
+ * Basic sanitization for a single filename or directory name component.
+ */
+function sanitizePathComponent(comp) {
+  if (!comp || comp === "." || comp === "..") return "_sanitized_dots_";
+  let sanitized = comp.replace(/[^\w.\-_~ ]/g, "_");
+  sanitized = sanitized.replace(/\s+/g, "_");
+  sanitized = sanitized.replace(/_+/g, "_");
+  sanitized = sanitized.replace(/^[._]+|[._]+$/g, "");
+  return sanitized || "sanitized_empty_comp";
+}
+
+/**
+ * Sanitizes a relative path from the bundle, ensuring components are safe.
+ */
+function sanitizeRelativePath(relPathFromBundle) {
+  const normalizedPath = relPathFromBundle.replace(/\\/g, "/");
+  const parts = normalizedPath.split("/");
+  const sanitizedParts = parts.map(p => sanitizePathComponent(p)).filter(p => p && p !== "." && p !== "..");
+  if (sanitizedParts.length === 0) {
+    return sanitizePathComponent(path.basename(relPathFromBundle)) || "unnamed_file_from_bundle";
+  }
+  return path.join(...sanitizedParts);
+}
+
+/**
+ * @typedef {Object} ParsedFileFromBundle
+ * @property {string} path_in_bundle - Relative path from bundle marker.
+ * @property {Buffer|null} contentBytes - Decoded file content as Buffer (null if delta).
+ * @property {Array<Object>|null} deltaCommands - Parsed delta commands (null if full content).
+ * @property {string} formatUsedForDecode - 'b64', 'utf8', 'utf16le', or 'delta'.
+ * @property {boolean} hasDeltaCommands - True if delta commands were found.
+ */
+/**
+ * @typedef {Object} DeltaCommand
+ * @property {string} type - 'replace', 'insert', 'delete'.
+ * @property {number} [start] - 1-based start line (for replace/delete).
+ * @property {number} [end] - 1-based end line (for replace/delete).
+ * @property {number} [lineNum] - 1-based line number (for insert).
+ * @property {string[]} [contentLines] - Lines for replace/insert.
+ */
+
+
+/**
+ * Parses the bundle string into file objects or delta commands.
+ * Prioritizes DOGS_ markers, then CATS_. Does not do heuristic LLM parsing.
+ * @param {string} bundleContent - The entire bundle string.
+ * @param {string|null} forcedFormatOverride - 'b64', 'utf8', 'utf16le', or null for auto.
+ * @param {boolean} applyDelta - Whether to parse for delta commands.
+ * @param {boolean} [verbose=false] - Enable verbose logging.
+ * @returns {{parsedFiles: ParsedFileFromBundle[], formatDescription: string, effectiveEncoding: string}}
+ */
+function parseBundleContent(
+  bundleContent,
+  forcedFormatOverride = null,
+  applyDelta = false,
+  verbose = false
+) {
+  const lines = bundleContent.split(/\r?\n/);
+  const parsedFiles = [];
+  let bundleFormatIsB64 = null;
+  let bundleFormatEncoding = 'utf8'; // Default node encoding name
+  let formatDescription = "Unknown (Header not found or not recognized)";
+  let headerLinesConsumed = 0;
+  const possibleHeaders = [
+    { prefix: DOGS_BUNDLE_HEADER_PREFIX, desc: "Dogs Bundle (LLM Output)" },
+    { prefix: CATS_BUNDLE_HEADER_PREFIX, desc: "Cats Bundle (Original Source)" },
+  ];
+  let headerTypeFound = null;
+
+  for (let i = 0; i < Math.min(lines.length, 10); i++) {
+    const lineTextTrimmed = lines[i].trim();
+    if (!headerTypeFound) {
+      for (const headerInfo of possibleHeaders) {
+        if (lineTextTrimmed.startsWith(headerInfo.prefix)) {
+          headerTypeFound = headerInfo.desc;
+          headerLinesConsumed = Math.max(headerLinesConsumed, i + 1);
+          break;
+        }
+      }
+      if (headerTypeFound) continue;
+    }
+    if (headerTypeFound && lineTextTrimmed.startsWith(BUNDLE_FORMAT_PREFIX)) {
+      headerLinesConsumed = Math.max(headerLinesConsumed, i + 1);
+      const tempFormatDesc = lineTextTrimmed.substring(BUNDLE_FORMAT_PREFIX.length).trim();
+      formatDescription = `${headerTypeFound} - Format: ${tempFormatDesc}`;
+      const fmtLower = tempFormatDesc.toLowerCase();
+      if (fmtLower.includes("base64")) {
+        bundleFormatIsB64 = true; bundleFormatEncoding = 'base64'; // Node uses 'base64'
+      } else if (fmtLower.includes("utf-16le") || fmtLower.includes("utf-16 le")) {
+        bundleFormatIsB64 = false; bundleFormatEncoding = 'utf16le';
+      } else if (fmtLower.includes("utf-8")) {
+        bundleFormatIsB64 = false; bundleFormatEncoding = 'utf8';
+      } else {
+        bundleFormatIsB64 = false; bundleFormatEncoding = 'utf8';
+        formatDescription += ` (Unrecognized format details, defaulting to Raw UTF-8)`;
+        if (verbose) console.warn(`  Warning: Unrecognized format details: '${tempFormatDesc}'. Defaulting to UTF-8.`);
+      }
+      break;
+    }
+  }
+
+  if (forcedFormatOverride) {
+      const overrideLower = forcedFormatOverride.toLowerCase();
+      if (overrideLower === 'b64') { bundleFormatIsB64 = true; bundleFormatEncoding = 'base64'; formatDescription = `${headerTypeFound || 'Bundle'} - Format: Base64 (Overridden)`; }
+      else if (overrideLower === 'utf16le') { bundleFormatIsB64 = false; bundleFormatEncoding = 'utf16le'; formatDescription = `${headerTypeFound || 'Bundle'} - Format: Raw UTF-16LE (Overridden)`; }
+      else if (overrideLower === 'utf8') { bundleFormatIsB64 = false; bundleFormatEncoding = 'utf8'; formatDescription = `${headerTypeFound || 'Bundle'} - Format: Raw UTF-8 (Overridden)`; }
+  }
+
+  if (bundleFormatIsB64 === null) {
+    bundleFormatIsB64 = false; bundleFormatEncoding = 'utf8';
+    formatDescription = `Raw UTF-8 (Assumed, no valid header found)`;
+    if (verbose) console.warn(`  Warning: ${formatDescription}`);
+  }
+  const effectiveEncoding = bundleFormatIsB64 ? 'base64' : bundleFormatEncoding;
+
+  let currentFileRelativePathFromMarker = null;
+  let contentBufferLines = [];
+  let currentDeltaCommands = [];
+  let hasDeltaCommandsInBlock = false;
+
+  for (let lineNum = headerLinesConsumed; lineNum < lines.length; lineNum++) {
+    const lineText = lines[lineNum];
+    const strippedLine = lineText.trim();
+    let startMatch = DOGS_FILE_START_MARKER_REGEX.exec(strippedLine) || CATS_FILE_START_MARKER_REGEX.exec(strippedLine);
+    let endMatch = DOGS_FILE_END_MARKER_REGEX.test(strippedLine) || CATS_FILE_END_MARKER_REGEX.test(strippedLine);
+
+    if (startMatch) {
+      if (currentFileRelativePathFromMarker && verbose) {
+        console.warn(`  Warning (L${lineNum + 1}): New file started before '${currentFileRelativePathFromMarker}' ended. Previous block discarded.`);
+      }
+      currentFileRelativePathFromMarker = startMatch[1].trim();
+      contentBufferLines = [];
+      currentDeltaCommands = [];
+      hasDeltaCommandsInBlock = false;
+      if (verbose) console.log(`  Debug (L${lineNum + 1}): Matched START marker for '${currentFileRelativePathFromMarker}'`);
+      continue;
+    }
+
+    if (endMatch && currentFileRelativePathFromMarker) {
+       let fileContentBytes = null;
+       let deltaCmds = null;
+       let finalFormat = effectiveEncoding;
+
+       if (applyDelta && hasDeltaCommandsInBlock) {
+           if (currentDeltaCommands.length > 0 && currentDeltaCommands[currentDeltaCommands.length - 1].type !== 'delete') {
+                currentDeltaCommands[currentDeltaCommands.length - 1].contentLines = [...contentBufferLines];
+           }
+           deltaCmds = currentDeltaCommands;
+           finalFormat = 'delta';
+       } else {
+           const rawContentStr = contentBufferLines.join("\n");
+           try {
+               fileContentBytes = Buffer.from(rawContentStr, effectiveEncoding === 'base64' ? 'base64' : (effectiveEncoding === 'utf16le' ? 'utf16le' : 'utf8'));
+           } catch (e) {
+               console.warn(`  Error (L${lineNum + 1}): Failed to decode content for '${currentFileRelativePathFromMarker}' (format: ${effectiveEncoding}). Skipping. Error: ${e.message}`);
+               currentFileRelativePathFromMarker = null; contentBufferLines = []; currentDeltaCommands = []; hasDeltaCommandsInBlock = false;
+               continue; // Skip this file
+           }
+       }
+
+        parsedFiles.push({
+          path_in_bundle: currentFileRelativePathFromMarker,
+          contentBytes: fileContentBytes,
+          deltaCommands: deltaCmds,
+          formatUsedForDecode: finalFormat,
+          hasDeltaCommands: hasDeltaCommandsInBlock,
+        });
+
+      if (verbose) console.log(`  Debug (L${lineNum + 1}): Matched END marker for '${currentFileRelativePathFromMarker}', decoded as ${finalFormat}.`);
+      currentFileRelativePathFromMarker = null; contentBufferLines = []; currentDeltaCommands = []; hasDeltaCommandsInBlock = false;
+      continue;
+    }
+
+    // Delta Command Parsing (only if in a block and delta mode is on)
+    if (currentFileRelativePathFromMarker && applyDelta) {
+         const pawsCmdMatch = lineText.match(PAWS_CMD_REGEX);
+         if (pawsCmdMatch) {
+              const commandStr = pawsCmdMatch[1].trim();
+              let deltaCmd = null;
+              let replaceMatch = commandStr.match(REPLACE_LINES_REGEX);
+              let insertMatch = commandStr.match(INSERT_AFTER_LINE_REGEX);
+              let deleteMatch = commandStr.match(DELETE_LINES_REGEX);
+
+              // Finalize previous command content
+              if (currentDeltaCommands.length > 0 && currentDeltaCommands[currentDeltaCommands.length - 1].type !== 'delete') {
+                  currentDeltaCommands[currentDeltaCommands.length - 1].contentLines = [...contentBufferLines];
+              }
+              contentBufferLines = []; // Reset for next command
+
+              if (replaceMatch) deltaCmd = { type: 'replace', start: parseInt(replaceMatch[1], 10), end: parseInt(replaceMatch[2], 10) };
+              else if (insertMatch) deltaCmd = { type: 'insert', lineNum: parseInt(insertMatch[1], 10) };
+              else if (deleteMatch) deltaCmd = { type: 'delete', start: parseInt(deleteMatch[1], 10), end: parseInt(deleteMatch[2], 10) };
+
+              if (deltaCmd) {
+                   if (verbose) console.log(`  Debug (L${lineNum + 1}): Parsed PAWS_CMD: ${deltaCmd.type}`);
+                   currentDeltaCommands.push(deltaCmd);
+                   hasDeltaCommandsInBlock = true;
+              } else {
+                   if (verbose) console.warn(`  Warning (L${lineNum + 1}): Unrecognized PAWS_CMD format: '${commandStr}'. Treating line as content.`);
+                   contentBufferLines.push(lineText); // Treat as content if unrecognized
+              }
+              continue; // Skip command line itself
+         }
+    }
+
+    // If not a start/end/command line, and inside a block, add to buffer
+    if (currentFileRelativePathFromMarker !== null) {
+      contentBufferLines.push(lineText);
+    }
+  } // End line loop
+
+  if (currentFileRelativePathFromMarker) {
+    console.warn(`  Warning: Bundle ended before file '${currentFileRelativePathFromMarker}' was closed by an END marker. Block discarded.`);
+  }
+  return { parsedFiles, formatDescription, effectiveEncoding };
+}
+
+/**
+ * Parses the original bundle into memory { path: lines[] }
+ * @param {string} originalBundlePath
+ * @param {boolean} verbose
+ * @returns {Promise<Object<string, string[]>>}
+ */
+async function parseOriginalBundleForDeltaNode(originalBundlePath, verbose = false) {
+    const originalFiles = {};
+    let originalContent = "";
+    try {
+        originalContent = await fs.promises.readFile(originalBundlePath, DEFAULT_ENCODING);
+    } catch (e) {
+        console.error(`  Error: Could not read original bundle '${originalBundlePath}' for delta: ${e.message}`);
+        return {};
+    }
+
+    const lines = originalContent.split(/\r?\n/);
+    let currentFile = null;
+    let currentLines = [];
+    for (const line of lines) {
+        const startMatch = line.trim().match(CATS_FILE_START_MARKER_REGEX); // Only CATS
+        const endMatch = line.trim().match(CATS_FILE_END_MARKER_REGEX);
+        if (startMatch) {
+            if (currentFile) originalFiles[currentFile] = currentLines; // Store previous
+            currentFile = startMatch[1].trim();
+            currentLines = [];
+        } else if (endMatch && currentFile) {
+            originalFiles[currentFile] = currentLines;
+            if (verbose) console.log(`  Debug (Original Parse): Loaded ${currentLines.length} lines for '${currentFile}'`);
+            currentFile = null;
+            currentLines = [];
+        } else if (currentFile !== null) {
+            currentLines.push(line);
+        }
+    }
+    if (currentFile) originalFiles[currentFile] = currentLines; // EOF case
+    return originalFiles;
+}
+
+/**
+ * Applies delta commands to original lines.
+ * @param {string[]} originalLines
+ * @param {DeltaCommand[]} deltaCommands
+ * @param {string} filePathForLog
+ * @returns {string[]} New lines array.
+ */
+function applyDeltaCommandsNode(originalLines, deltaCommands, filePathForLog) {
+    let newLines = [...originalLines];
+    let offset = 0;
+
+    for (const cmd of deltaCommands) {
+        try {
+             const type = cmd.type;
+             if (type === 'replace') {
+                 const start = cmd.start; const end = cmd.end;
+                 if (start <= 0 || end < start) throw new Error("Invalid line numbers");
+                 const start0 = start - 1; const end0 = end - 1;
+                 const adjStart = start0 + offset; const adjEnd = end0 + offset;
+                 if (adjStart < 0 || adjEnd >= newLines.length) throw new Error("Line numbers out of bounds");
+                 const deleteCount = adjEnd - adjStart + 1;
+                 const insertContent = cmd.contentLines || [];
+                 newLines.splice(adjStart, deleteCount, ...insertContent);
+                 offset += insertContent.length - deleteCount;
+             } else if (type === 'insert') {
+                  const lineNum = cmd.lineNum;
+                  if (lineNum < 0) throw new Error("Invalid line number");
+                  const insertIdx0 = (lineNum === 0) ? 0 : lineNum; // Insert at 0 for lineNum=0, else after lineNum (at index lineNum)
+                  const adjInsertIdx = insertIdx0 + offset;
+                   if (adjInsertIdx < 0 || adjInsertIdx > newLines.length) throw new Error("Line number out of bounds");
+                  const insertContent = cmd.contentLines || [];
+                  newLines.splice(adjInsertIdx, 0, ...insertContent);
+                  offset += insertContent.length;
+             } else if (type === 'delete') {
+                  const start = cmd.start; const end = cmd.end;
+                  if (start <= 0 || end < start) throw new Error("Invalid line numbers");
+                  const start0 = start - 1; const end0 = end - 1;
+                  const adjStart = start0 + offset; const adjEnd = end0 + offset;
+                  if (adjStart < 0 || adjEnd >= newLines.length) throw new Error("Line numbers out of bounds");
+                  const deleteCount = adjEnd - adjStart + 1;
+                  newLines.splice(adjStart, deleteCount);
+                  offset -= deleteCount;
+             }
+        } catch (e) {
+             console.warn(`  Error applying delta command ${JSON.stringify(cmd)} to '${filePathForLog}': ${e.message}. Skipping command.`);
+        }
+    }
+    return newLines;
+}
+
+
+/**
+ * Extracts bundle content to memory. Does not apply deltas.
+ * @param {Object} options
+ * @param {string} [options.bundleFilePath]
+ * @param {string} [options.bundleFileContent]
+ * @param {string} [options.inputFormat='auto'] - 'auto', 'b64', 'utf8', 'utf16le'.
+ * @param {boolean} [options.verbose=false]
+ * @returns {Promise<ParsedFileFromBundle[]>} - Array includes full content bytes.
+ */
+async function extractToMemory({
+    bundleFilePath,
+    bundleFileContent,
+    inputFormat = 'auto',
+    verbose = false,
+}) {
+    let contentStr = bundleFileContent;
+    if (!contentStr && bundleFilePath) {
+        try { contentStr = await fs.promises.readFile(path.resolve(bundleFilePath), DEFAULT_ENCODING); }
+        catch (e) { console.error(`Error reading bundle file '${bundleFilePath}': ${e.message}`); return []; }
+    }
+    if (!contentStr && contentStr !== "") { console.error("No bundle content provided."); return []; }
+
+    const formatOverride = inputFormat === "auto" ? null : inputFormat;
+    const { parsedFiles } = parseBundleContent(contentStr, formatOverride, false, verbose); // Force applyDelta=false
+    // Filter out delta-only results if any snuck through (shouldn't with applyDelta=false)
+    return parsed_files.filter(f => f.contentBytes !== null);
+}
+
+
+/**
+ * Extracts bundle to disk, handles deltas.
+ * @param {Object} options
+ * @param {string} [options.bundleFilePath]
+ * @param {string} [options.bundleFileContent]
+ * @param {string} options.outputDir
+ * @param {string} [options.overwritePolicy='prompt'] - 'yes', 'no', 'prompt'.
+ * @param {string|null} [options.applyDeltaFromOriginalBundlePath=null] - Path to original bundle.
+ * @param {string} [options.inputFormat='auto'] - 'auto', 'b64', 'utf8', 'utf16le'.
+ * @param {boolean} [options.verbose=false]
+ * @returns {Promise<Array<{path: string, status: string, message: string}>>}
+ */
+async function extractToDiskNode({
+  bundleFilePath,
+  bundleFileContent,
+  outputDir,
+  overwritePolicy = "prompt",
+  applyDeltaFromOriginalBundlePath = null,
+  inputFormat = "auto",
+  verbose = false,
+}) {
+  const results = [];
+  const absOutputDirBase = path.resolve(outputDir);
+  let originalBundleFiles = null;
+
+  if (applyDeltaFromOriginalBundlePath) {
+      originalBundleFiles = await parseOriginalBundleForDeltaNode(applyDeltaFromOriginalBundlePath, verbose);
+      if (Object.keys(originalBundleFiles).length === 0) {
+          console.warn(`  Warning: Delta application requested, but failed to load/parse original bundle '${applyDeltaFromOriginalBundlePath}'. Delta commands cannot be applied.`);
+          applyDeltaFromOriginalBundlePath = null; // Disable delta if original failed
+      }
+  }
+
+  if (!fs.existsSync(absOutputDirBase)) {
+    try { await fs.promises.mkdir(absOutputDirBase, { recursive: true }); if (verbose) console.log(`  Info: Created output directory '${absOutputDirBase}'.`); }
+    catch (e) { const msg = `Error creating output directory '${absOutputDirBase}': ${e.message}`; console.error(msg); return [{ path: outputDir, status: "error", message: msg }]; }
+  } else if (!(await fs.promises.stat(absOutputDirBase)).isDirectory()) {
+    const msg = `Error: Output path '${absOutputDirBase}' exists but is not a directory.`; console.error(msg); return [{ path: outputDir, status: "error", message: msg }];
+  }
+  const realAbsOutputDirBase = fs.realpathSync(absOutputDirBase);
+
+  let contentStr = bundleFileContent;
+  if (!contentStr && bundleFilePath) {
+    try { contentStr = await fs.promises.readFile(path.resolve(bundleFilePath), DEFAULT_ENCODING); }
+    catch (e) { const msg = `Error reading bundle file '${bundleFilePath}': ${e.message}`; console.error(msg); return [{ path: bundleFilePath, status: "error", message: msg }]; }
+  }
+  if (!contentStr && contentStr !== "") { return [{ path: "bundle", status: "error", message: "No bundle content provided." }]; }
+
+  const formatOverride = inputFormat === "auto" ? null : inputFormat;
+  const { parsedFiles, formatDescription, effectiveEncoding } = parseBundleContent(
+    contentStr, formatOverride, !!applyDeltaFromOriginalBundlePath, verbose
+  );
+  if (verbose) console.log(`  Info: Bundle parsed. Format: ${formatDescription}. Files: ${parsedFiles.length}.`);
+  if (parsedFiles.length === 0) return results;
+
+  let alwaysYes = overwritePolicy === "yes";
+  let alwaysNo = overwritePolicy === "no";
+  let userQuitExtraction = false;
+  const rl = (overwritePolicy === "prompt" && process.stdin.isTTY) ? readline.createInterface({ input: process.stdin, output: process.stdout }) : null;
+  const promptUser = rl ? (query) => new Promise(resolve => rl.question(query, resolve)) : null;
+  if (overwritePolicy === "prompt" && !process.stdin.isTTY) { if (verbose) console.log("Info: Non-interactive, 'prompt' defaults to 'no'."); alwaysNo = true; }
+
+
+  for (const fileToExtract of parsedFiles) {
+    if (userQuitExtraction) { results.push({ path: fileToExtract.path_in_bundle, status: "skipped", message: "User quit extraction." }); continue; }
+
+    const originalPathFromMarker = fileToExtract.path_in_bundle;
+    const sanitizedFinalRelPath = sanitizeRelativePath(originalPathFromMarker);
+    const prospectiveAbsOutputPath = path.normalize(path.join(realAbsOutputDirBase, sanitizedFinalRelPath));
+
+    // Security check
+    try {
+        const prospectiveDir = path.dirname(prospectiveAbsOutputPath);
+        if (!fs.existsSync(prospectiveDir)) {
+             // Check parent chain if intermediate dirs needed
+             let checkDir = prospectiveDir;
+             while (!fs.existsSync(checkDir) && checkDir !== path.dirname(checkDir)) {
+                  checkDir = path.dirname(checkDir);
+             }
+             if (!fs.realpathSync(checkDir).startsWith(realAbsOutputDirBase)) throw new Error("Path traversal attempt");
+        } else {
+             if (!fs.realpathSync(prospectiveDir).startsWith(realAbsOutputDirBase)) throw new Error("Path traversal attempt");
+        }
+     } catch (e) {
+         const msg = `Security Alert: Path '${sanitizedFinalRelPath}' (from '${originalPathFromMarker}') resolved outside base '${realAbsOutputDirBase}'. Skipping.`;
+         console.error(`  Error: ${msg}`); results.push({ path: originalPathFromMarker, status: "error", message: msg }); continue;
+     }
+
+
+    let performActualWrite = true;
+    let fileContentToWrite = null;
+
+    // Determine content: apply delta or use full bytes
+     if (applyDeltaFromOriginalBundlePath && fileToExtract.hasDeltaCommands && originalBundleFiles) {
+          const originalFileLines = originalBundleFiles[originalPathFromMarker];
+          if (originalFileLines) {
+               if (verbose) console.log(`  Info: Applying delta for ${originalPathFromMarker}`);
+               const newLines = applyDeltaCommandsNode(originalFileLines, fileToExtract.deltaCommands || [], originalPathFromMarker);
+               // Encode using bundle's text format (assume text for delta files)
+               const encoding = (effectiveEncoding === 'b64' || effectiveEncoding === 'delta') ? 'utf8' : effectiveEncoding; // Default to utf8 if delta format
+                try {
+                    fileContentToWrite = Buffer.from(newLines.join('\n'), encoding);
+                } catch (encErr) {
+                     const msg = `Failed to encode delta result for '${originalPathFromMarker}' using ${encoding}: ${encErr.message}`;
+                     console.error(`  Error: ${msg}`); results.push({ path: originalPathFromMarker, status: "error", message: msg }); performActualWrite = false;
+                }
+          } else {
+               const msg = `Delta commands for '${originalPathFromMarker}' but file not in original bundle. Cannot apply.`;
+               console.error(`  Error: ${msg}`); results.push({ path: originalPathFromMarker, status: "error", message: msg }); performActualWrite = false;
+          }
+     } else {
+          fileContentToWrite = fileToExtract.contentBytes; // Use full content
+           if (fileContentToWrite === null) { // If delta was expected but couldn't be applied, this might be null
+                if (!results.some(r => r.path === originalPathFromMarker && r.status === 'error')) { // Check if error already logged
+                     const msg = `No content available for '${originalPathFromMarker}' (possibly failed delta operation). Write skipped.`;
+                     console.warn(`  Warning: ${msg}`); results.push({ path: originalPathFromMarker, status: "skipped", message: msg });
+                }
+                performActualWrite = false;
+           }
+     }
+
+
+    // Overwrite check
+    if (performActualWrite && fileContentToWrite !== null) {
+        if (fs.existsSync(prospectiveAbsOutputPath)) {
+            const stat = await fs.promises.lstat(prospectiveAbsOutputPath);
+            if (stat.isDirectory() && !stat.isSymbolicLink()) {
+                const msg = `Path '${sanitizedFinalRelPath}' exists as directory. Cannot overwrite. Skipping.`;
+                if (verbose) console.warn(`  Warning: ${msg}`); results.push({ path: originalPathFromMarker, status: "error", message: msg }); performActualWrite = false;
+            } else if (alwaysYes) { if (verbose) console.log(`  Info: Overwriting '${sanitizedFinalRelPath}' (forced yes).`); }
+            else if (alwaysNo) { if (verbose) console.log(`  Info: Skipping existing file '${sanitizedFinalRelPath}' (forced no).`); results.push({ path: originalPathFromMarker, status: "skipped", message: "Overwrite (policy: no)." }); performActualWrite = false; }
+            else if (promptUser) {
+                while (true) {
+                    const choice = (await promptUser(`File '${sanitizedFinalRelPath}' exists. Overwrite? [(y)es/(N)o/(a)ll yes/(s)kip all/(q)uit]: `)).trim().toLowerCase();
+                    if (choice === 'y') break;
+                    if (choice === 'n' || choice === '') { performActualWrite = false; results.push({ path: originalPathFromMarker, status: "skipped", message: "Overwrite (user: no)." }); break; }
+                    if (choice === 'a') { alwaysYes = true; break; }
+                    if (choice === 's') { alwaysNo = true; performActualWrite = false; results.push({ path: originalPathFromMarker, status: "skipped", message: "Overwrite (user: skip all)." }); break; }
+                    if (choice === 'q') { userQuitExtraction = true; performActualWrite = false; break; }
+                    console.log("Invalid choice.");
+                }
+            } else { /* Should be covered by alwaysNo in non-interactive */ performActualWrite = false; results.push({ path: originalPathFromMarker, status: "skipped", message: "Overwrite (prompt default no)." }); }
+        }
+    }
+
+    if (userQuitExtraction && !performActualWrite) { if (!results.find(r => r.path === originalPathFromMarker && r.status === "skipped")) results.push({ path: originalPathFromMarker, status: "skipped", message: "User quit extraction." }); continue; }
+
+    // Write file
+    if (performActualWrite && fileContentToWrite !== null) {
+      try {
+        const outputFileDir = path.dirname(prospectiveAbsOutputPath);
+        if (!fs.existsSync(outputFileDir)) await fs.promises.mkdir(outputFileDir, { recursive: true });
+        if (fs.existsSync(prospectiveAbsOutputPath) && (await fs.promises.lstat(prospectiveAbsOutputPath)).isSymbolicLink()) {
+             await fs.promises.unlink(prospectiveAbsOutputPath);
+        }
+        await fs.promises.writeFile(prospectiveAbsOutputPath, fileContentToWrite);
+        results.push({ path: originalPathFromMarker, status: "extracted", message: `Extracted to ${sanitizedFinalRelPath}` });
+        if (verbose) console.log(`  Extracted: ${sanitizedFinalRelPath}`);
+      } catch (e) {
+        const msg = `Error writing file '${sanitizedFinalRelPath}': ${e.message}`; console.error(`  Error: ${msg}`); results.push({ path: originalPathFromMarker, status: "error", message: msg });
+      }
+    } else if (performActualWrite && fileContentToWrite === null) {
+         // Write skipped because content was null (e.g., delta failed)
+          if (!results.some(r => r.path === originalPathFromMarker && r.status === 'error')) { // Avoid duplicate error
+                results.push({"path": originalPathFromMarker, "status": "error", "message": "Content generation failed (e.g., delta error), write skipped."});
+           }
+    }
+  } // End file loop
+
+  if (rl) rl.close();
+  return results;
+}
+
+
+// Browser functions omitted for brevity as they weren't part of the update focus
+
+function parseCliArgsDogs(argv) {
+  const args = {
+    bundleFile: null,
+    outputDir: ".",
+    applyDelta: null, // Path to original bundle
+    inputFormat: "auto",
+    overwrite: "prompt",
+    verbose: false,
+    help: false,
+  };
+  const cliArgs = argv.slice(2);
+  let i = 0;
+  let positionalCount = 0;
+  while (i < cliArgs.length) {
+    const arg = cliArgs[i];
+    if (arg === "-h" || arg === "--help") { args.help = true; break; }
+    else if (arg === "-d" || arg === "--apply-delta") {
+      if (i + 1 < cliArgs.length && !cliArgs[i + 1].startsWith("-")) args.applyDelta = cliArgs[++i];
+      else throw new Error(`Argument ${arg} requires the path to the original bundle.`);
+    }
+    else if (arg === "-i" || arg === "--input-format") {
+      if (i + 1 < cliArgs.length && !cliArgs[i + 1].startsWith("-") && ["auto", "b64", "utf8", "utf16le"].includes(cliArgs[i + 1].toLowerCase())) args.inputFormat = cliArgs[++i].toLowerCase();
+      else throw new Error(`Argument ${arg} requires a valid value (auto, b64, utf8, utf16le).`);
+    }
+    else if (arg === "-y" || arg === "--yes") args.overwrite = "yes";
+    else if (arg === "-n" || arg === "--no") args.overwrite = "no";
+    else if (arg === "-v" || arg === "--verbose") args.verbose = true;
+    else if (!arg.startsWith("-")) {
+      if (positionalCount === 0) args.bundleFile = arg;
+      else if (positionalCount === 1) args.outputDir = arg;
+      else throw new Error(`Too many positional arguments: ${arg}`);
+      positionalCount++;
+    } else throw new Error(`Unknown option: ${arg}`);
+    i++;
+  }
+  return args;
+}
+
+function printCliHelpDogs() {
+  console.log(`dogs.js : Extracts files from bundle, optionally applying deltas.
+
+Syntax: node dogs.js [BUNDLE_FILE] [OUTPUT_DIR] [options]
+
+Arguments:
+  BUNDLE_FILE             Bundle to extract (default: '${DEFAULT_INPUT_BUNDLE_FILENAME}' if exists).
+  OUTPUT_DIR              Where to extract files (default: './').
+
+Options:
+  -d, --apply-delta ORIGINAL_BUNDLE Path to original bundle (e.g., cats_out.bundle) to apply delta commands against.
+  -i {auto|b64|utf8|utf16le}, --input-format MODE
+                          Override bundle format detection (default: auto).
+  -y, --yes               Overwrite existing files without asking.
+  -n, --no                Skip overwriting existing files (default: prompt).
+  -v, --verbose           Enable verbose logging.
+  -h, --help              Show this help message and exit.
+
+Example (Delta): node dogs.js llm_deltas.bundle ./out -y -d project_orig.bundle
+Example (Full): node dogs.js llm_full.bundle ./out -y`);
+}
+
+async function mainCliDogs() {
+  try {
+    const args = parseCliArgsDogs(process.argv);
+    if (args.help) { printCliHelpDogs(); process.exit(0); }
+
+    if (args.bundleFile === null) {
+      if (fs.existsSync(DEFAULT_INPUT_BUNDLE_FILENAME)) {
+        args.bundleFile = DEFAULT_INPUT_BUNDLE_FILENAME;
+        if (args.verbose) console.log(`Info: Defaulting to bundle file '${DEFAULT_INPUT_BUNDLE_FILENAME}'.`);
+      } else { console.error(`Error: No bundle file specified and default '${DEFAULT_INPUT_BUNDLE_FILENAME}' not found.`); printCliHelpDogs(); process.exit(1); }
+    }
+    const absBundlePath = path.resolve(args.bundleFile);
+    if (!fs.existsSync(absBundlePath) || !(await fs.promises.stat(absBundlePath)).isFile()) { console.error(`Error: Bundle file not found: '${absBundlePath}'`); process.exit(1); }
+
+    let absOriginalBundlePath = null;
+    if (args.applyDelta) {
+         absOriginalBundlePath = path.resolve(args.applyDelta);
+          if (!fs.existsSync(absOriginalBundlePath) || !(await fs.promises.stat(absOriginalBundlePath)).isFile()) { console.error(`Error: Original bundle file for delta not found: '${absOriginalBundlePath}'`); process.exit(1); }
+    }
+
+    let effectiveOverwritePolicy = args.overwrite;
+    if (args.overwrite === "prompt" && !process.stdin.isTTY) {
+      if (args.verbose) console.log("Info: Non-interactive, 'prompt' defaults to 'no'.");
+      effectiveOverwritePolicy = "no";
+    }
+
+    // Preliminary parse for confirmation prompt
+     let numFilesPrelim = 0; let numDeltaFilesPrelim = 0; let prelimFormatDesc = "Parsing...";
+     try {
+         const tempContent = await fs.promises.readFile(absBundlePath, DEFAULT_ENCODING);
+         const { parsedFiles: pf, formatDescription: pd } = parseBundleContent(tempContent, args.inputFormat === "auto" ? null : args.inputFormat, !!absOriginalBundlePath, false);
+         numFilesPrelim = pf.length;
+         numDeltaFilesPrelim = pf.filter(f => f.hasDeltaCommands).length;
+         prelimFormatDesc = pd;
+     } catch (e) { /* Ignore read error here, main extract call will handle */ }
+
+
+    if (args.overwrite === "prompt" && process.stdin.isTTY) {
+       console.log("\n--- Bundle Extraction Plan ---");
+       console.log(`  Source Bundle:    ${absBundlePath}`);
+       if(absOriginalBundlePath) console.log(`  Original Bundle:  ${absOriginalBundlePath} (for Delta)`);
+       console.log(`  Detected Format:  ${prelimFormatDesc}`);
+       if (args.inputFormat !== 'auto') console.log(`  Format Override:  Will interpret as ${args.inputFormat}`);
+       console.log(`  Output Directory: ${path.resolve(args.outputDir)}`);
+       console.log(`  Overwrite Policy: ${args.overwrite.replace(/^\w/, c => c.toUpperCase())}`);
+       console.log(`  Files to process: ${numFilesPrelim}` + (numDeltaFilesPrelim > 0 ? ` (${numDeltaFilesPrelim} with delta commands)` : ""));
+
+      const rlConfirm = readline.createInterface({ input: process.stdin, output: process.stdout });
+      const proceed = await new Promise(resolve => rlConfirm.question("\nProceed with extraction? [Y/n]: ", answer => { rlConfirm.close(); resolve(answer.trim().toLowerCase()); }));
+      if (proceed !== 'y' && proceed !== '') { console.log("Extraction cancelled."); process.exit(0); }
+    } else if (args.verbose) {
+         console.log("\n--- Extraction Details ---");
+         console.log(`  Source: ${absBundlePath}`+ (absOriginalBundlePath ? `, Original: ${absOriginalBundlePath}` : ""));
+         console.log(`  Format: ${prelimFormatDesc}` + (args.inputFormat !== 'auto' ? `, Override: ${args.inputFormat}` : ""));
+         console.log(`  Output: ${path.resolve(args.outputDir)}, Overwrite: ${effectiveOverwritePolicy}`);
+         console.log(`  Files to process: ${numFilesPrelim}`+ (numDeltaFilesPrelim > 0 ? ` (${numDeltaFilesPrelim} delta)` : ""));
+    }
+
+
+    console.log("\nStarting extraction process...");
+    const extractionResults = await extractToDiskNode({
+      bundleFilePath: absBundlePath,
+      outputDir: args.outputDir,
+      overwritePolicy: effectiveOverwritePolicy,
+      applyDeltaFromOriginalBundlePath: absOriginalBundlePath,
+      inputFormat: args.inputFormat,
+      verbose: args.verbose,
+    });
+
+    const extractedCount = extractionResults.filter(r => r.status === "extracted").length;
+    const skippedCount = extractionResults.filter(r => r.status === "skipped").length;
+    const errorCount = extractionResults.filter(r => r.status === "error").length;
+    console.log(`\n--- Extraction Summary ---`);
+    console.log(`  Files Extracted: ${extractedCount}`);
+    if (skippedCount > 0) console.log(`  Files Skipped:   ${skippedCount}`);
+    if (errorCount > 0) console.log(`  Errors:          ${errorCount}`);
+    if (numFilesPrelim === 0) console.log("  No file content was found or parsed in the bundle.");
+
+  } catch (error) {
+    console.error(`\nError: ${error.message}`);
+    if (error.message.includes("Unknown option") || error.message.includes("requires a value") || error.message.includes("Too many positional")) printCliHelpDogs();
+    process.exit(1);
+  }
+}
+
+module.exports = { extractToMemory, extractToDiskNode }; // Browser func removed
+if (require.main === module) {
+  mainCliDogs();
+}
+🐈 --- CATS_END_FILE ---
+
+🐈 --- CATS_START_FILE: dogs.py ---
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+import sys
+import os
+import argparse
+import base64
+import re
+from typing import List, Tuple, Dict, Optional, Union, Any
+
+# --- Constants ---
+DEFAULT_ENCODING = "utf-8"
+DEFAULT_INPUT_BUNDLE_FILENAME = "dogs_in.bundle"  # Changed default
+DEFAULT_OUTPUT_DIR = "."
+
+CATS_BUNDLE_HEADER_PREFIX = "# Cats Bundle"
+DOGS_BUNDLE_HEADER_PREFIX = "# Dogs Bundle"
+BUNDLE_FORMAT_PREFIX = "# Format: "
+
+# Regex for explicit markers with emoji
+CATS_FILE_START_MARKER_REGEX = re.compile(
+    r"^\s*🐈\s*-{3,}\s*CATS_START_FILE\s*:\s*(.+?)\s*-{3,}$", re.IGNORECASE
+)
+CATS_FILE_END_MARKER_REGEX = re.compile(
+    r"^\s*🐈\s*-{3,}\s*CATS_END_FILE\s*-{3,}$", re.IGNORECASE
+)
+DOGS_FILE_START_MARKER_REGEX = re.compile(
+    r"^\s*🐕\s*-{3,}\s*DOGS_START_FILE\s*:\s*(.+?)\s*-{3,}$", re.IGNORECASE
+)
+DOGS_FILE_END_MARKER_REGEX = re.compile(
+    r"^\s*🐕\s*-{3,}\s*DOGS_END_FILE\s*-{3,}$", re.IGNORECASE
+)
+
+# Delta Command Regex
+PAWS_CMD_REGEX = re.compile(r"^\s*@@\s*PAWS_CMD\s*(.+?)\s*@@\s*$")
+REPLACE_LINES_REGEX = re.compile(
+    r"REPLACE_LINES\(\s*(\d+)\s*,\s*(\d+)\s*\)", re.IGNORECASE
+)
+INSERT_AFTER_LINE_REGEX = re.compile(r"INSERT_AFTER_LINE\(\s*(\d+)\s*\)", re.IGNORECASE)
+DELETE_LINES_REGEX = re.compile(
+    r"DELETE_LINES\(\s*(\d+)\s*,\s*(\d+)\s*\)", re.IGNORECASE
+)
+
+# Regex for heuristic parsing (unchanged)
+LLM_EDITING_FILE_REGEX = re.compile(
+    r"^\s*(?:\*\*|__)?(?:editing|generating|file|now generating file|processing|current file)\s*(?::)?\s*[`\"]?(?P<filepath>[\w./\\~-]+)[`\"]?(?:\s*\(.*\)|\s*\b(?:and|also|with|which)\b.*|\s+`?#.*|\s*(?:\*\*|__).*)?$",
+    re.IGNORECASE,
+)
+MARKDOWN_CODE_FENCE_REGEX = re.compile(r"^\s*```(?:[\w+\-.]+)?\s*$")
+HUMAN_CONTINUATION_PROMPT_REGEX = re.compile(
+    r"^\s*(continue|proceed|c|next|go on|resume|okay[,]? continue|cont\.?)\s*[:.!]?\s*$",
+    re.IGNORECASE,
+)
+
+# --- Type Aliases ---
+# Represents a parsed file block from the bundle.
+# If 'delta_commands' is present, 'content_bytes' should be None (and vice-versa).
+ParsedFile = Dict[str, Any]
+# Expected keys:
+#   path_in_bundle: str
+#   content_bytes: Optional[bytes]
+#   delta_commands: Optional[List[DeltaCommand]]
+#   format_used_for_decode: str  # 'utf8', 'utf16le', 'b64', or 'delta'
+#   has_delta_commands: bool
+
+# Represents a single delta command parsed from a file block.
+DeltaCommand = Dict[str, Any]
+# Expected keys:
+#   type: str  # 'replace', 'insert', 'delete'
+#   start: Optional[int]  # 1-based start line (for replace/delete)
+#   end: Optional[int]  # 1-based end line (for replace/delete)
+#   line_num: Optional[int]  # 1-based line num insert is *after* (for insert)
+#   content_lines: Optional[List[str]]  # Lines for replace/insert
+
+# Represents the outcome of trying to extract one file.
+ExtractionResult = Dict[str, str]
+# Expected keys:
+#   path: str  # Original path from bundle marker
+#   status: str  # e.g., 'extracted', 'skipped', 'error'
+#   message: str # Description of outcome or error
+
+# Represents the overall result of parsing a bundle.
+ParseResult = Tuple[List[ParsedFile], str, Optional[str]]
+# Structure: (list_of_parsed_files, format_description_string, effective_encoding_string_or_None)
+
+
+# --- Path Sanitization ---
+def sanitize_path_component(comp: str) -> str:
+    if not comp or comp == "." or comp == "..":
+        return "_sanitized_dots_"
+    sanitized = re.sub(r"[^\w.\-_]", "_", comp)
+    sanitized = re.sub(r"_+", "_", sanitized)
+    sanitized = re.sub(r"^[._]+|[._]+$", "", sanitized)
+    return sanitized if sanitized else "sanitized_empty_comp"
+
+
+def sanitize_relative_path(rel_path_from_bundle: str) -> str:
+    normalized_path = rel_path_from_bundle.replace("\\", "/")
+    parts = normalized_path.split("/")
+    sanitized_parts = [
+        sanitize_path_component(part)
+        for part in parts
+        if part and part != "." and part != ".."
+    ]
+    if not sanitized_parts:
+        return (
+            sanitize_path_component(os.path.basename(rel_path_from_bundle))
+            or "unnamed_file_from_bundle"
+        )
+    return os.path.join(*sanitized_parts)
+
+
+# --- Core Parsing Logic ---
+
+
+def parse_original_bundle_for_delta(
+    original_bundle_path: str, verbose_logging: bool = False
+) -> Dict[str, List[str]]:
+    """Parses the original cats bundle into a dict mapping relative paths to lines."""
+    original_files: Dict[str, List[str]] = {}
+    try:
+        with open(
+            original_bundle_path, "r", encoding=DEFAULT_ENCODING, errors="replace"
+        ) as f:
+            original_content = f.read()
+    except Exception as e:
+        print(
+            f"  Error: Could not read original bundle '{original_bundle_path}' for delta: {e}",
+            file=sys.stderr,
+        )
+        return {}  # Return empty if original cannot be read
+
+    # Use the main parser to get files, but ignore format/heuristics, just get CATS blocks
+    # Need a simpler parser here just for original content lines
+    lines = original_content.splitlines()
+    current_file_path: Optional[str] = None
+    current_content_lines: List[str] = []
+    in_block = False
+
+    for line_text in lines:
+        stripped_line = line_text.strip()
+        start_match = CATS_FILE_START_MARKER_REGEX.match(
+            stripped_line
+        )  # Only look for CATS in original
+        end_match = CATS_FILE_END_MARKER_REGEX.match(stripped_line)
+
+        if start_match:
+            if in_block and current_file_path:
+                if verbose_logging:
+                    print(
+                        f"  Warning (Original Parse): New file '{start_match.group(1).strip()}' started before '{current_file_path}' ended.",
+                        file=sys.stderr,
+                    )
+                original_files[current_file_path] = (
+                    current_content_lines  # Store potentially incomplete block
+                )
+
+            current_file_path = start_match.group(1).strip()
+            current_content_lines = []
+            in_block = True
+            continue
+
+        if end_match and in_block:
+            if current_file_path:
+                original_files[current_file_path] = current_content_lines
+                if verbose_logging:
+                    print(
+                        f"  Debug (Original Parse): Loaded {len(current_content_lines)} lines for '{current_file_path}'"
+                    )
+            current_file_path = None
+            current_content_lines = []
+            in_block = False
+            continue
+
+        if in_block:
+            current_content_lines.append(
+                line_text
+            )  # Keep original line endings implicitly via splitlines
+
+    if in_block and current_file_path:  # Handle unclosed block at EOF
+        if verbose_logging:
+            print(
+                f"  Warning (Original Parse): Bundle ended mid-file for '{current_file_path}'. Using content found.",
+                file=sys.stderr,
+            )
+        original_files[current_file_path] = current_content_lines
+
+    return original_files
+
+
+def parse_bundle_content(
+    bundle_content: str,
+    forced_format_override: Optional[str] = None,  # 'b64', 'utf8', 'utf16le'
+    apply_delta: bool = False,  # Flag indicating if delta commands should be parsed
+    verbose_logging: bool = False,
+) -> ParseResult:
+    lines = bundle_content.splitlines()
+    parsed_files: List[ParsedFile] = []
+
+    bundle_format_is_b64: Optional[bool] = None
+    bundle_format_encoding: str = DEFAULT_ENCODING  # 'utf-8' or 'utf-16le'
+    format_description = "Unknown (Header not found or not recognized)"
+    header_lines_consumed = 0
+
+    possible_headers = [
+        (DOGS_BUNDLE_HEADER_PREFIX, "Dogs Bundle (LLM Output)"),
+        (CATS_BUNDLE_HEADER_PREFIX, "Cats Bundle (Original Source)"),
+    ]
+    header_type_found = None
+
+    for i, line_text in enumerate(lines[:10]):
+        stripped = line_text.strip()
+        if not header_type_found:
+            for prefix_str, desc_str_part in possible_headers:
+                if stripped.startswith(prefix_str):
+                    header_type_found = desc_str_part
+                    header_lines_consumed = max(header_lines_consumed, i + 1)
+                    break
+            if header_type_found:
+                continue
+
+        if header_type_found and stripped.startswith(BUNDLE_FORMAT_PREFIX):
+            header_lines_consumed = max(header_lines_consumed, i + 1)
+            temp_format_description = stripped[len(BUNDLE_FORMAT_PREFIX) :].strip()
+            format_description = (
+                f"{header_type_found} - Format: {temp_format_description}"
+            )
+
+            fmt_lower = temp_format_description.lower()
+            if "base64" in fmt_lower:
+                bundle_format_is_b64 = True
+                bundle_format_encoding = "ascii"  # Base64 uses ascii representation
+            elif "utf-16le" in fmt_lower or "utf-16 le" in fmt_lower:
+                bundle_format_is_b64 = False
+                bundle_format_encoding = "utf-16le"
+            elif "utf-8" in fmt_lower:
+                bundle_format_is_b64 = False
+                bundle_format_encoding = "utf-8"
+            else:
+                bundle_format_is_b64 = False
+                bundle_format_encoding = "utf-8"  # Default
+                format_description += (
+                    f" (Unrecognized format details, defaulting to Raw UTF-8)"
+                )
+                if verbose_logging:
+                    print(
+                        f"  Warning: Unrecognized format details: '{temp_format_description}'. Defaulting to UTF-8.",
+                        file=sys.stderr,
+                    )
+            break
+
+    # Override with user's choice
+    if forced_format_override:
+        override_lower = forced_format_override.lower()
+        if override_lower == "b64":
+            bundle_format_is_b64 = True
+            bundle_format_encoding = "ascii"
+            format_description = (
+                f"{header_type_found or 'Bundle'} - Format: Base64 (Overridden by user)"
+            )
+        elif override_lower == "utf16le":
+            bundle_format_is_b64 = False
+            bundle_format_encoding = "utf-16le"
+            format_description = f"{header_type_found or 'Bundle'} - Format: Raw UTF-16LE (Overridden by user)"
+        elif override_lower == "utf8":
+            bundle_format_is_b64 = False
+            bundle_format_encoding = "utf-8"
+            format_description = f"{header_type_found or 'Bundle'} - Format: Raw UTF-8 (Overridden by user)"
+
+    if bundle_format_is_b64 is None:  # Still not determined
+        bundle_format_is_b64 = False
+        bundle_format_encoding = "utf-8"
+        format_description = f"Raw UTF-8 (Assumed, no valid header found)"
+        if verbose_logging:
+            print(f"  Info: {format_description}", file=sys.stderr)
+
+    effective_encoding = "base64" if bundle_format_is_b64 else bundle_format_encoding
+
+    current_state = "LOOKING_FOR_ANY_START"
+    current_file_path: Optional[str] = None
+    current_content_lines: List[str] = []
+    current_delta_commands: List[DeltaCommand] = []
+    has_delta_commands_in_block = False
+    in_markdown_code_block = False
+    line_iter_obj = iter(enumerate(lines[header_lines_consumed:]))
+
+    for line_idx_rel, line_text in line_iter_obj:
+        actual_line_num = line_idx_rel + header_lines_consumed + 1
+        stripped_line = line_text.strip()
+
+        is_dogs_end = DOGS_FILE_END_MARKER_REGEX.match(stripped_line)
+        is_cats_end = CATS_FILE_END_MARKER_REGEX.match(stripped_line)
+
+        if (
+            (is_dogs_end or is_cats_end)
+            and current_file_path
+            and current_state == "IN_EXPLICIT_BLOCK"
+        ):
+            if verbose_logging:
+                print(
+                    f"  Debug (L{actual_line_num}): Matched explicit END marker for '{current_file_path}'"
+                )
+
+            file_content_or_deltas: Union[bytes, List[DeltaCommand]]
+            final_format = effective_encoding
+
+            if apply_delta and has_delta_commands_in_block:
+                # Finalize last delta command's content
+                if (
+                    current_delta_commands
+                    and current_delta_commands[-1]["type"] != "delete"
+                ):
+                    current_delta_commands[-1]["content_lines"] = current_content_lines
+                file_content_or_deltas = current_delta_commands
+                final_format = "delta"  # Indicate special handling needed
+            else:
+                # Treat as full content
+                raw_content = "\n".join(current_content_lines)
+                try:
+                    if effective_encoding == "base64":
+                        file_content_or_deltas = base64.b64decode(
+                            "".join(raw_content.split())
+                        )
+                    elif effective_encoding == "utf-16le":
+                        file_content_or_deltas = raw_content.encode("utf-16le")
+                    else:  # utf-8
+                        file_content_or_deltas = raw_content.encode("utf-8")
+                except Exception as e:
+                    print(
+                        f"  Error (L{actual_line_num}): Failed to decode content for '{current_file_path}' on explicit END. Skipped. Error: {e}",
+                        file=sys.stderr,
+                    )
+                    current_state = "LOOKING_FOR_ANY_START"
+                    current_file_path = None
+                    current_content_lines = []
+                    current_delta_commands = []
+                    has_delta_commands_in_block = False
+                    in_markdown_code_block = False
+                    continue  # Skip this file
+
+            parsed_files.append(
+                {
+                    "path_in_bundle": current_file_path,
+                    "content_bytes": (
+                        file_content_or_deltas
+                        if not (apply_delta and has_delta_commands_in_block)
+                        else None
+                    ),
+                    "delta_commands": (
+                        file_content_or_deltas
+                        if (apply_delta and has_delta_commands_in_block)
+                        else None
+                    ),
+                    "format_used_for_decode": final_format,  # 'utf8', 'utf16le', 'b64', or 'delta'
+                    "has_delta_commands": has_delta_commands_in_block,
+                }
+            )
+            current_state = "LOOKING_FOR_ANY_START"
+            current_file_path = None
+            current_content_lines = []
+            current_delta_commands = []
+            has_delta_commands_in_block = False
+            in_markdown_code_block = False
+            continue
+
+        # Check for Delta Command if in explicit block and delta mode is active
+        if apply_delta and current_state == "IN_EXPLICIT_BLOCK":
+            paws_cmd_match = PAWS_CMD_REGEX.match(
+                line_text
+            )  # Match on full line for structure
+            if paws_cmd_match:
+                command_str = paws_cmd_match.group(1).strip()
+                delta_cmd: Optional[DeltaCommand] = None
+
+                replace_match = REPLACE_LINES_REGEX.match(command_str)
+                insert_match = INSERT_AFTER_LINE_REGEX.match(command_str)
+                delete_match = DELETE_LINES_REGEX.match(command_str)
+
+                # Finalize previous command's content lines before starting new command
+                if (
+                    current_delta_commands
+                    and current_delta_commands[-1]["type"] != "delete"
+                ):
+                    current_delta_commands[-1]["content_lines"] = current_content_lines
+                current_content_lines = []  # Reset for next command's content
+
+                if replace_match:
+                    delta_cmd = {
+                        "type": "replace",
+                        "start": int(replace_match.group(1)),
+                        "end": int(replace_match.group(2)),
+                    }
+                elif insert_match:
+                    delta_cmd = {
+                        "type": "insert",
+                        "line_num": int(insert_match.group(1)),
+                    }
+                elif delete_match:
+                    delta_cmd = {
+                        "type": "delete",
+                        "start": int(delete_match.group(1)),
+                        "end": int(delete_match.group(2)),
+                    }
+
+                if delta_cmd:
+                    if verbose_logging:
+                        print(
+                            f"  Debug (L{actual_line_num}): Parsed PAWS_CMD: {delta_cmd['type']}"
+                        )
+                    current_delta_commands.append(delta_cmd)
+                    has_delta_commands_in_block = True
+                else:
+                    if verbose_logging:
+                        print(
+                            f"  Warning (L{actual_line_num}): Unrecognized PAWS_CMD format: '{command_str}'"
+                        )
+                    current_content_lines.append(
+                        line_text
+                    )  # Treat unrecognized command line as content? Risky. Skip? Log and skip.
+                continue  # Skip the command line itself from content
+
+        if current_state == "LOOKING_FOR_ANY_START":
+            dogs_start_match = DOGS_FILE_START_MARKER_REGEX.match(stripped_line)
+            cats_start_match = CATS_FILE_START_MARKER_REGEX.match(stripped_line)
+            llm_editing_match = LLM_EDITING_FILE_REGEX.match(line_text)
+
+            if dogs_start_match:
+                current_file_path = dogs_start_match.group(1).strip()
+                current_state = "IN_EXPLICIT_BLOCK"
+                current_content_lines = []
+                current_delta_commands = []
+                has_delta_commands_in_block = False
+                in_markdown_code_block = False
+                if verbose_logging:
+                    print(
+                        f"  Debug (L{actual_line_num}): Matched DOGS_START for '{current_file_path}'"
+                    )
+            elif cats_start_match:
+                current_file_path = cats_start_match.group(1).strip()
+                current_state = "IN_EXPLICIT_BLOCK"
+                current_content_lines = []
+                current_delta_commands = []
+                has_delta_commands_in_block = False
+                in_markdown_code_block = False
+                if verbose_logging:
+                    print(
+                        f"  Debug (L{actual_line_num}): Matched CATS_START for '{current_file_path}'"
+                    )
+            elif (
+                llm_editing_match
+            ):  # Heuristic only works for full file content, not delta
+                if apply_delta:
+                    if verbose_logging:
+                        print(
+                            f"  Info (L{actual_line_num}): Ignoring heuristic LLM marker in delta mode: '{line_text[:100]}...'"
+                        )
+                    continue
+                current_file_path = llm_editing_match.group("filepath").strip()
+                current_state = "IN_HEURISTIC_BLOCK"
+                current_content_lines = []
+                current_delta_commands = []
+                has_delta_commands_in_block = False
+                in_markdown_code_block = False
+                if verbose_logging:
+                    print(
+                        f"  Debug (L{actual_line_num}): Matched LLM_EDITING heuristic for '{current_file_path}'"
+                    )
+                try:
+                    next_line_idx_rel, next_line_text = next(line_iter_obj)
+                    actual_next_line_num = next_line_idx_rel + header_lines_consumed + 1
+                    if MARKDOWN_CODE_FENCE_REGEX.match(next_line_text.strip()):
+                        in_markdown_code_block = True
+                        if verbose_logging:
+                            print(
+                                f"  Debug (L{actual_next_line_num}): Entered markdown block."
+                            )
+                    else:
+                        current_content_lines.append(next_line_text)
+                except StopIteration:
+                    pass
+            elif stripped_line and not HUMAN_CONTINUATION_PROMPT_REGEX.match(
+                stripped_line
+            ):
+                if verbose_logging:
+                    print(
+                        f"  Info (L{actual_line_num}): Ignoring line while LOOKING_FOR_ANY_START: '{stripped_line[:100]}...'"
+                    )
+
+        elif current_state == "IN_EXPLICIT_BLOCK":
+            current_content_lines.append(line_text)
+
+        elif current_state == "IN_HEURISTIC_BLOCK":
+            next_dogs_start = DOGS_FILE_START_MARKER_REGEX.match(stripped_line)
+            next_cats_start = CATS_FILE_START_MARKER_REGEX.match(stripped_line)
+            next_llm_editing = LLM_EDITING_FILE_REGEX.match(line_text)
+
+            if next_dogs_start or next_cats_start or next_llm_editing:
+                if verbose_logging:
+                    print(
+                        f"  Debug (L{actual_line_num}): New file start detected, ending heuristic block for '{current_file_path}'"
+                    )
+                raw_content_heuristic = "\n".join(current_content_lines)
+                try:
+                    if current_file_path:
+                        if effective_encoding == "base64":
+                            file_bytes_h = base64.b64decode(
+                                "".join(raw_content_heuristic.split())
+                            )
+                        elif effective_encoding == "utf-16le":
+                            file_bytes_h = raw_content_heuristic.encode("utf-16le")
+                        else:
+                            file_bytes_h = raw_content_heuristic.encode("utf-8")
+
+                        parsed_files.append(
+                            {
+                                "path_in_bundle": current_file_path,
+                                "content_bytes": file_bytes_h,
+                                "delta_commands": None,
+                                "format_used_for_decode": effective_encoding,
+                                "has_delta_commands": False,
+                            }
+                        )
+                except Exception as e:
+                    print(
+                        f"  Error (L{actual_line_num}): Failed to decode heuristic block '{current_file_path}'. Skipped. Error: {e}",
+                        file=sys.stderr,
+                    )
+
+                current_content_lines = []
+                current_delta_commands = []
+                has_delta_commands_in_block = False
+                in_markdown_code_block = False
+                current_state = "LOOKING_FOR_ANY_START"
+                # Reprocess this line in next loop iteration
+                line_iter_obj = iter(
+                    [(line_idx_rel, line_text)] + list(line_iter_obj)
+                )  # Push back line
+                continue
+
+            if MARKDOWN_CODE_FENCE_REGEX.match(stripped_line):
+                if in_markdown_code_block:
+                    in_markdown_code_block = False
+                    if verbose_logging:
+                        print(f"  Debug (L{actual_line_num}): Exited markdown block.")
+                else:
+                    in_markdown_code_block = True
+                    if verbose_logging:
+                        print(f"  Debug (L{actual_line_num}): Entered markdown block.")
+                continue
+
+            current_content_lines.append(line_text)
+
+    # After loop, finalize any open block
+    if current_file_path and (current_content_lines or current_delta_commands):
+        if verbose_logging:
+            print(
+                f"  Info: Bundle ended, finalizing last active block for '{current_file_path}' (State: {current_state})"
+            )
+
+        file_content_or_deltas_final: Union[bytes, List[DeltaCommand]]
+        final_format_eof = effective_encoding
+
+        if (
+            apply_delta
+            and has_delta_commands_in_block
+            and current_state == "IN_EXPLICIT_BLOCK"
+        ):
+            if (
+                current_delta_commands
+                and current_delta_commands[-1]["type"] != "delete"
+            ):
+                current_delta_commands[-1]["content_lines"] = current_content_lines
+            file_content_or_deltas_final = current_delta_commands
+            final_format_eof = "delta"
+        elif current_state in [
+            "IN_EXPLICIT_BLOCK",
+            "IN_HEURISTIC_BLOCK",
+        ]:  # Handle full content EOF
+            raw_content_final = "\n".join(current_content_lines)
+            try:
+                if effective_encoding == "base64":
+                    file_content_or_deltas_final = base64.b64decode(
+                        "".join(raw_content_final.split())
+                    )
+                elif effective_encoding == "utf-16le":
+                    file_content_or_deltas_final = raw_content_final.encode("utf-16le")
+                else:
+                    file_content_or_deltas_final = raw_content_final.encode("utf-8")
+            except Exception as e:
+                print(
+                    f"  Error: Failed to decode final EOF block '{current_file_path}'. Discarded. Error: {e}",
+                    file=sys.stderr,
+                )
+                file_content_or_deltas_final = None  # Mark as failed
+        else:  # Should not happen
+            file_content_or_deltas_final = None
+
+        if file_content_or_deltas_final is not None:
+            parsed_files.append(
+                {
+                    "path_in_bundle": current_file_path,
+                    "content_bytes": (
+                        file_content_or_deltas_final
+                        if final_format_eof != "delta"
+                        else None
+                    ),
+                    "delta_commands": (
+                        file_content_or_deltas_final
+                        if final_format_eof == "delta"
+                        else None
+                    ),
+                    "format_used_for_decode": final_format_eof,
+                    "has_delta_commands": has_delta_commands_in_block
+                    and final_format_eof == "delta",
+                }
+            )
+
+    return parsed_files, format_description, effective_encoding
+
+
+def apply_delta_commands(
+    original_lines: List[str],
+    delta_commands: List[DeltaCommand],
+    file_path_for_log: str,
+) -> List[str]:
+    """Applies delta commands to original lines. Returns new lines."""
+    new_lines = list(original_lines)  # Work on a copy
+    offset = 0  # Tracks line number shift due to inserts/deletes
+
+    for cmd in delta_commands:
+        cmd_type = cmd["type"]
+        try:
+            if cmd_type == "replace":
+                start_1based = cmd["start"]
+                end_1based = cmd["end"]
+                if start_1based <= 0 or end_1based < start_1based:
+                    raise ValueError("Invalid line numbers")
+                start_0based = start_1based - 1
+                end_0based = end_1based - 1
+
+                # Adjust indices based on previous operations
+                adj_start = start_0based + offset
+                adj_end = end_0based + offset
+                if adj_start < 0 or adj_end >= len(new_lines):
+                    raise ValueError("Line numbers out of bounds after offset")
+
+                num_to_delete = (adj_end - adj_start) + 1
+                num_to_insert = len(cmd.get("content_lines", []))
+
+                del new_lines[adj_start : adj_end + 1]
+                for i, line in enumerate(cmd.get("content_lines", [])):
+                    new_lines.insert(adj_start + i, line)
+
+                offset += num_to_insert - num_to_delete
+
+            elif cmd_type == "insert":
+                line_num_1based = cmd["line_num"]
+                if line_num_1based < 0:
+                    raise ValueError("Invalid line number")
+                # 0 means insert at beginning, otherwise insert *after* the line
+                insert_idx_0based = 0 if line_num_1based == 0 else line_num_1based
+
+                # Adjust index based on previous operations
+                adj_insert_idx = insert_idx_0based + offset
+                if adj_insert_idx < 0 or adj_insert_idx > len(new_lines):
+                    raise ValueError("Line number out of bounds after offset")
+
+                num_to_insert = len(cmd.get("content_lines", []))
+                for i, line in enumerate(cmd.get("content_lines", [])):
+                    # If line_num=0, inserts at index 0. If line_num=N, inserts at index N (after original line N).
+                    new_lines.insert(adj_insert_idx + i, line)
+                offset += num_to_insert
+
+            elif cmd_type == "delete":
+                start_1based = cmd["start"]
+                end_1based = cmd["end"]
+                if start_1based <= 0 or end_1based < start_1based:
+                    raise ValueError("Invalid line numbers")
+                start_0based = start_1based - 1
+                end_0based = end_1based - 1
+
+                adj_start = start_0based + offset
+                adj_end = end_0based + offset
+                if adj_start < 0 or adj_end >= len(new_lines):
+                    raise ValueError("Line numbers out of bounds after offset")
+
+                num_to_delete = (adj_end - adj_start) + 1
+                del new_lines[adj_start : adj_end + 1]
+                offset -= num_to_delete
+
+        except Exception as e:
+            print(
+                f"  Error applying delta command {cmd} to '{file_path_for_log}': {e}. Skipping command.",
+                file=sys.stderr,
+            )
+            # Potentially stop processing deltas for this file? Or continue? Continue for now.
+
+    return new_lines
+
+
+# --- Extraction to Disk & CLI ---
+def extract_bundle_to_disk(
+    parsed_files: List[ParsedFile],
+    output_dir_base_abs: str,
+    overwrite_policy: str,
+    apply_delta_from_original_bundle: Optional[str] = None,  # Path to original bundle
+    verbose_logging: bool = False,
+) -> List[ExtractionResult]:
+    results: List[ExtractionResult] = []
+    always_yes = overwrite_policy == "yes"
+    always_no = overwrite_policy == "no"
+    user_quit_extraction = False
+
+    original_bundle_files: Dict[str, List[str]] = {}
+    if apply_delta_from_original_bundle:
+        original_bundle_files = parse_original_bundle_for_delta(
+            apply_delta_from_original_bundle, verbose_logging
+        )
+        if not original_bundle_files and any(
+            f.get("has_delta_commands") for f in parsed_files
+        ):
+            print(
+                f"  Warning: Delta application requested, but failed to load original bundle '{apply_delta_from_original_bundle}'. Delta commands cannot be applied.",
+                file=sys.stderr,
+            )
+            apply_delta_from_original_bundle = None  # Disable delta if original failed
+
+    for file_info in parsed_files:
+        if user_quit_extraction:
+            results.append(
+                {
+                    "path": file_info["path_in_bundle"],
+                    "status": "skipped",
+                    "message": "User quit extraction process.",
+                }
+            )
+            continue
+
+        original_path_from_marker = file_info["path_in_bundle"]
+        sanitized_output_rel_path = sanitize_relative_path(original_path_from_marker)
+        prospective_abs_output_path = os.path.normpath(
+            os.path.join(output_dir_base_abs, sanitized_output_rel_path)
+        )
+
+        # Path Traversal Check
+        try:
+            # Check if the realpath of the prospective output starts with the realpath of the base output dir
+            # Need to handle dir creation carefully before realpath
+            prospective_dir = os.path.dirname(prospective_abs_output_path)
+            # Create intermediate dirs first IF we decide to write later
+            # For check, use commonpath or string startswith on abspaths
+            if not os.path.abspath(prospective_abs_output_path).startswith(
+                os.path.abspath(output_dir_base_abs)
+            ):
+                raise IsADirectoryError(
+                    "Path traversal attempt detected"
+                )  # Use an error type
+        except Exception as path_e:
+            msg = f"Security Alert: Path '{sanitized_output_rel_path}' (from '{original_path_from_marker}') resolved to '{prospective_abs_output_path}', which seems outside base output directory '{output_dir_base_abs}'. Skipping. Error: {path_e}"
+            print(f"  Error: {msg}", file=sys.stderr)
+            results.append(
+                {"path": original_path_from_marker, "status": "error", "message": msg}
+            )
+            continue
+
+        perform_actual_write = True
+        file_content_to_write: Optional[bytes] = None
+
+        # Decide whether to apply delta or use full content
+        if apply_delta_from_original_bundle and file_info.get("has_delta_commands"):
+            if verbose_logging:
+                print(
+                    f"  Info: Applying delta commands for '{original_path_from_marker}'"
+                )
+            original_lines = original_bundle_files.get(original_path_from_marker)
+            delta_commands = file_info.get("delta_commands")
+
+            if original_lines is None:
+                msg = f"Delta commands present for '{original_path_from_marker}', but file not found in original bundle '{apply_delta_from_original_bundle}'. Cannot apply deltas."
+                print(f"  Error: {msg}", file=sys.stderr)
+                results.append(
+                    {
+                        "path": original_path_from_marker,
+                        "status": "error",
+                        "message": msg,
+                    }
+                )
+                perform_actual_write = False
+            elif (
+                not delta_commands
+            ):  # Should have delta_commands if has_delta_commands is true
+                msg = f"Internal inconsistency: Delta flagged but no commands for '{original_path_from_marker}'."
+                print(f"  Error: {msg}", file=sys.stderr)
+                results.append(
+                    {
+                        "path": original_path_from_marker,
+                        "status": "error",
+                        "message": msg,
+                    }
+                )
+                perform_actual_write = False
+            else:
+                new_content_lines = apply_delta_commands(
+                    original_lines, delta_commands, original_path_from_marker
+                )
+                # Re-encode using the bundle's original effective text encoding
+                output_encoding = file_info.get(
+                    "format_used_for_decode", "utf-8"
+                )  # Default to utf8 if format missing? Should use bundle's
+                # Get bundle format again - needs bundle effective format passed down
+                # Let's assume UTF-8 for now if delta applied, needs refinement
+                try:
+                    # Join lines with '\n' - assumes original bundle used that. Could be fragile.
+                    file_content_to_write = "\n".join(new_content_lines).encode(
+                        "utf-8"
+                    )  # TODO: Detect original encoding?
+                except Exception as enc_e:
+                    msg = f"Failed to encode delta result for '{original_path_from_marker}': {enc_e}"
+                    print(f"  Error: {msg}", file=sys.stderr)
+                    results.append(
+                        {
+                            "path": original_path_from_marker,
+                            "status": "error",
+                            "message": msg,
+                        }
+                    )
+                    perform_actual_write = False
+        else:
+            # Use full content
+            if file_info.get("content_bytes") is None and not file_info.get(
+                "has_delta_commands"
+            ):
+                msg = f"No content bytes found for '{original_path_from_marker}' and not a delta operation."
+                print(
+                    f"  Warning: {msg}", file=sys.stderr
+                )  # Allow empty file write? Yes.
+                file_content_to_write = b""
+            else:
+                file_content_to_write = file_info.get(
+                    "content_bytes", b""
+                )  # Default to empty if missing
+
+        # Overwrite check only if we plan to write
+        if perform_actual_write and file_content_to_write is not None:
+            if os.path.lexists(prospective_abs_output_path):
+                if os.path.isdir(prospective_abs_output_path) and not os.path.islink(
+                    prospective_abs_output_path
+                ):
+                    msg = f"Path '{sanitized_output_rel_path}' exists as a directory. Cannot overwrite. Skipping."
+                    if verbose_logging:
+                        print(f"  Warning: {msg}", file=sys.stderr)
+                    results.append(
+                        {
+                            "path": original_path_from_marker,
+                            "status": "error",
+                            "message": msg,
+                        }
+                    )
+                    perform_actual_write = False
+                elif always_yes:
+                    if verbose_logging:
+                        print(
+                            f"  Info: Overwriting '{sanitized_output_rel_path}' (forced yes)."
+                        )
+                elif always_no:
+                    if verbose_logging:
+                        print(
+                            f"  Info: Skipping existing file '{sanitized_output_rel_path}' (forced no)."
+                        )
+                    results.append(
+                        {
+                            "path": original_path_from_marker,
+                            "status": "skipped",
+                            "message": "File exists (overwrite policy: no).",
+                        }
+                    )
+                    perform_actual_write = False
+                else:  # Prompt
+                    if not sys.stdin.isatty():
+                        perform_actual_write = False
+                        results.append(
+                            {
+                                "path": original_path_from_marker,
+                                "status": "skipped",
+                                "message": "File exists (non-interactive, default no).",
+                            }
+                        )
+                        if verbose_logging:
+                            print(
+                                f"  Info: Skipping existing file '{sanitized_output_rel_path}' (non-interactive prompt)."
+                            )
+                    else:
+                        while True:
+                            try:
+                                choice = (
+                                    input(
+                                        f"File '{sanitized_output_rel_path}' exists. Overwrite? [(y)es/(N)o/(a)ll yes/(s)kip all/(q)uit]: "
+                                    )
+                                    .strip()
+                                    .lower()
+                                )
+                                if choice == "y":
+                                    break
+                                if choice == "n" or choice == "":
+                                    perform_actual_write = False
+                                    results.append(
+                                        {
+                                            "path": original_path_from_marker,
+                                            "status": "skipped",
+                                            "message": "File exists (user chose no).",
+                                        }
+                                    )
+                                    break
+                                if choice == "a":
+                                    always_yes = True
+                                    break
+                                if choice == "s":
+                                    always_no = True
+                                    perform_actual_write = False
+                                    results.append(
+                                        {
+                                            "path": original_path_from_marker,
+                                            "status": "skipped",
+                                            "message": "File exists (user chose skip all).",
+                                        }
+                                    )
+                                    break
+                                if choice == "q":
+                                    user_quit_extraction = True
+                                    perform_actual_write = False
+                                    break
+                                print("Invalid choice.")
+                            except (KeyboardInterrupt, EOFError):
+                                user_quit_extraction = True
+                                perform_actual_write = False
+                                print("\nExtraction cancelled.")
+                                break
+
+        if user_quit_extraction and not perform_actual_write:
+            if not any(
+                r["path"] == original_path_from_marker and r["status"] == "skipped"
+                for r in results
+            ):
+                results.append(
+                    {
+                        "path": original_path_from_marker,
+                        "status": "skipped",
+                        "message": "User quit extraction process.",
+                    }
+                )
+            continue
+
+        # Perform the actual write if decided
+        if perform_actual_write and file_content_to_write is not None:
+            try:
+                output_file_dir = os.path.dirname(prospective_abs_output_path)
+                if not os.path.exists(output_file_dir):
+                    os.makedirs(output_file_dir, exist_ok=True)
+                if os.path.islink(prospective_abs_output_path):
+                    os.unlink(prospective_abs_output_path)
+
+                with open(prospective_abs_output_path, "wb") as f_out:
+                    f_out.write(file_content_to_write)
+                results.append(
+                    {
+                        "path": original_path_from_marker,
+                        "status": "extracted",
+                        "message": f"Extracted to {sanitized_output_rel_path}",
+                    }
+                )
+                if verbose_logging:
+                    print(f"  Extracted: {sanitized_output_rel_path}")
+            except Exception as e_write:
+                msg = f"Error writing file '{sanitized_output_rel_path}': {e_write}"
+                print(f"  Error: {msg}", file=sys.stderr)
+                results.append(
+                    {
+                        "path": original_path_from_marker,
+                        "status": "error",
+                        "message": msg,
+                    }
+                )
+        elif perform_actual_write and file_content_to_write is None:
+            # This case happens if delta failed but overwrite checks passed
+            # Result should already contain the error message from delta stage
+            if not any(
+                r["path"] == original_path_from_marker and r["status"] == "error"
+                for r in results
+            ):  # Avoid duplicate error
+                results.append(
+                    {
+                        "path": original_path_from_marker,
+                        "status": "error",
+                        "message": "Delta application failed, write skipped.",
+                    }
+                )
+
+    return results
+
+
+def extract_bundle_to_memory(
+    bundle_content: Optional[str] = None,
+    bundle_path: Optional[str] = None,
+    input_format_override: Optional[str] = None,
+    verbose_logging: bool = False,
+) -> List[ParsedFile]:
+    """Parses bundle to memory. Does not apply deltas."""
+    if bundle_path and not bundle_content:
+        try:
+            # Determine read encoding - assume UTF-8 for reading the bundle file itself
+            with open(
+                bundle_path, "r", encoding=DEFAULT_ENCODING, errors="replace"
+            ) as f:
+                bundle_content = f.read()
+        except Exception as e:
+            print(f"Error reading bundle file '{bundle_path}': {e}", file=sys.stderr)
+            return []
+    elif not bundle_content:
+        print("Error: No bundle content or path provided.", file=sys.stderr)
+        return []
+
+    # Parse, but disable delta command processing for memory extraction
+    parsed_files, _, _ = parse_bundle_content(
+        bundle_content,
+        input_format_override,
+        apply_delta=False,
+        verbose_logging=verbose_logging,
+    )
+    return parsed_files
+
+
+def extract_bundle_from_string(
+    bundle_content: Optional[str] = None,
+    bundle_path: Optional[str] = None,
+    output_dir_base: str = ".",
+    overwrite_policy: str = "prompt",
+    apply_delta_from_original_bundle: Optional[str] = None,  # Path to original bundle
+    input_format_override: Optional[str] = None,
+    verbose_logging: bool = False,
+) -> List[ExtractionResult]:
+    """High-level function to parse and extract to disk, handling deltas."""
+    if bundle_path and not bundle_content:
+        try:
+            # Read bundle file itself as UTF-8 initially
+            with open(
+                bundle_path, "r", encoding=DEFAULT_ENCODING, errors="replace"
+            ) as f:
+                bundle_content = f.read()
+        except Exception as e:
+            return [
+                {
+                    "path": bundle_path,
+                    "status": "error",
+                    "message": f"Failed to read bundle file: {e}",
+                }
+            ]
+    elif not bundle_content and bundle_content != "":  # Allow empty string content
+        return [
+            {
+                "path": "bundle",
+                "status": "error",
+                "message": "No bundle content or path provided.",
+            }
+        ]
+    elif bundle_content is None:  # Handle None case explicitly if path wasn't provided
+        return [
+            {
+                "path": "bundle",
+                "status": "error",
+                "message": "No bundle content provided.",
+            }
+        ]
+
+    abs_output_dir = os.path.realpath(os.path.abspath(output_dir_base))
+    if not os.path.exists(abs_output_dir):
+        try:
+            os.makedirs(abs_output_dir, exist_ok=True)
+            if verbose_logging:
+                print(f"  Info: Created output directory '{abs_output_dir}'.")
+        except Exception as e:
+            return [
+                {
+                    "path": output_dir_base,
+                    "status": "error",
+                    "message": f"Failed to create output directory '{abs_output_dir}': {e}",
+                }
+            ]
+    elif not os.path.isdir(abs_output_dir):
+        return [
+            {
+                "path": output_dir_base,
+                "status": "error",
+                "message": f"Output path '{abs_output_dir}' exists but is not a directory.",
+            }
+        ]
+
+    parsed_files, format_desc, effective_encoding = parse_bundle_content(
+        bundle_content,
+        input_format_override,
+        apply_delta=bool(
+            apply_delta_from_original_bundle
+        ),  # Enable delta parsing if flag is set
+        verbose_logging=verbose_logging,
+    )
+
+    if verbose_logging:
+        print(
+            f"  Info: Bundle parsing complete. Format: {format_desc}. Files parsed: {len(parsed_files)}."
+        )
+        if apply_delta_from_original_bundle:
+            print(
+                f"  Info: Delta application mode active, using original: {apply_delta_from_original_bundle}"
+            )
+
+    if not parsed_files:
+        return [
+            {
+                "path": "bundle",
+                "status": "skipped",
+                "message": "No files found or parsed from the bundle content.",
+            }
+        ]
+
+    # Pass the original bundle path to the extraction function
+    return extract_bundle_to_disk(
+        parsed_files,
+        abs_output_dir,
+        overwrite_policy,
+        apply_delta_from_original_bundle,  # Pass the path here
+        verbose_logging,
+    )
+
+
+def confirm_action_cli_prompt(prompt_message: str) -> bool:
+    if not sys.stdin.isatty():
+        print(
+            "  Info: Non-interactive mode detected, proceeding automatically based on -y/-n flags (defaulting to no if neither)."
+        )
+        return True  # Let overwrite logic handle -y/-n
+    while True:
+        try:
+            choice = input(f"{prompt_message} [Y/n]: ").strip().lower()
+            if choice == "y" or choice == "":
+                return True
+            if choice == "n":
+                return False
+            print("Invalid input.")
+        except (KeyboardInterrupt, EOFError):
+            print("\nOperation cancelled.")
+            return False
+
+
+def main_cli_dogs():
+    parser = argparse.ArgumentParser(
+        description="dogs.py : Extracts files from a 'cats' or LLM-generated bundle, optionally applying deltas.",
+        epilog="Example: python dogs.py results.bundle ./code -y -d project_orig.bundle",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    parser.add_argument(
+        "bundle_file",
+        nargs="?",
+        default=None,
+        metavar="BUNDLE_FILE",
+        help=f"Bundle file to extract (default: {DEFAULT_INPUT_BUNDLE_FILENAME} if exists).",
+    )
+    parser.add_argument(
+        "output_directory",
+        nargs="?",
+        default=DEFAULT_OUTPUT_DIR,
+        metavar="OUTPUT_DIR",
+        help=f"Directory to extract files into (default: {DEFAULT_OUTPUT_DIR}).",
+    )
+    parser.add_argument(
+        "-d",
+        "--apply-delta",
+        metavar="ORIGINAL_BUNDLE",
+        help="Apply delta commands using ORIGINAL_BUNDLE as base.",
+    )
+    parser.add_argument(
+        "-i",
+        "--input-format",
+        choices=["auto", "b64", "utf8", "utf16le"],
+        default="auto",
+        help="Override bundle format detection (default: auto).",
+    )
+    overwrite_group = parser.add_mutually_exclusive_group()
+    overwrite_group.add_argument(
+        "-y",
+        "--yes",
+        dest="overwrite_policy",
+        action="store_const",
+        const="yes",
+        help="Automatically overwrite existing files.",
+    )
+    overwrite_group.add_argument(
+        "-n",
+        "--no",
+        dest="overwrite_policy",
+        action="store_const",
+        const="no",
+        help="Automatically skip existing files.",
+    )
+    parser.set_defaults(overwrite_policy="prompt")
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Enable verbose logging."
+    )
+
+    args = parser.parse_args()
+
+    if args.bundle_file is None:
+        if os.path.exists(DEFAULT_INPUT_BUNDLE_FILENAME):
+            args.bundle_file = DEFAULT_INPUT_BUNDLE_FILENAME
+            if args.verbose:
+                print(
+                    f"Info: No bundle file specified, defaulting to '{DEFAULT_INPUT_BUNDLE_FILENAME}'."
+                )
+        else:
+            parser.error(
+                f"No bundle file specified and default '{DEFAULT_INPUT_BUNDLE_FILENAME}' not found."
+            )
+
+    abs_bundle_file_path = os.path.realpath(os.path.abspath(args.bundle_file))
+    if not os.path.isfile(abs_bundle_file_path):
+        print(
+            f"Error: Bundle file not found or is not a file: '{abs_bundle_file_path}'",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    abs_original_bundle_path = None
+    if args.apply_delta:
+        abs_original_bundle_path = os.path.realpath(os.path.abspath(args.apply_delta))
+        if not os.path.isfile(abs_original_bundle_path):
+            print(
+                f"Error: Original bundle file for delta not found: '{abs_original_bundle_path}'",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+    # Read content once for preliminary check if prompting
+    bundle_content_str = ""
+    try:
+        with open(
+            abs_bundle_file_path, "r", encoding=DEFAULT_ENCODING, errors="replace"
+        ) as f:
+            bundle_content_str = f.read()
+    except Exception as e:
+        print(
+            f"Error reading bundle file '{abs_bundle_file_path}': {e}", file=sys.stderr
+        )
+        sys.exit(1)
+
+    # Determine effective overwrite policy if non-interactive prompt
+    effective_overwrite_policy = args.overwrite_policy
+    if not sys.stdin.isatty() and args.overwrite_policy == "prompt":
+        effective_overwrite_policy = "no"  # Default to non-destructive in non-TTY
+        if args.verbose:
+            print(
+                "Info: Non-interactive mode, 'prompt' overwrite policy defaults to 'no'."
+            )
+
+    # Preliminary parse for confirmation info
+    parsed_for_confirmation, prelim_format_desc, _ = parse_bundle_content(
+        bundle_content_str,
+        forced_format_override=(
+            args.input_format if args.input_format != "auto" else None
+        ),
+        apply_delta=bool(abs_original_bundle_path),
+        verbose_logging=False,  # Keep confirmation brief unless verbose main flag
+    )
+    num_files_prelim = len(parsed_for_confirmation)
+    num_delta_files_prelim = sum(
+        1 for pf in parsed_for_confirmation if pf.get("has_delta_commands")
+    )
+
+    if args.overwrite_policy == "prompt" and sys.stdin.isatty():
+        print("\n--- Bundle Extraction Plan ---")
+        print(f"  Source Bundle:    {abs_bundle_file_path}")
+        if abs_original_bundle_path:
+            print(f"  Original Bundle:  {abs_original_bundle_path} (for Delta)")
+        print(f"  Detected Format:  {prelim_format_desc}")
+        if args.input_format != "auto":
+            print(
+                f"  Format Override:  Will interpret as {'Base64' if args.input_format == 'b64' else ('UTF-16LE' if args.input_format=='utf16le' else 'UTF-8')}"
+            )
+        print(
+            f"  Output Directory: {os.path.realpath(os.path.abspath(args.output_directory))}"
+        )
+        print(f"  Overwrite Policy: {args.overwrite_policy.capitalize()}")
+        print(
+            f"  Files to process: {num_files_prelim}"
+            + (
+                f" ({num_delta_files_prelim} with delta commands)"
+                if num_delta_files_prelim > 0
+                else ""
+            )
+        )
+
+        if not confirm_action_cli_prompt("\nProceed with extraction?"):
+            print("Extraction cancelled.")
+            return
+    elif args.verbose:  # Not prompting, but verbose
+        print("\n--- Extraction Details ---")
+        print(
+            f"  Source: {abs_bundle_file_path}"
+            + (
+                f", Original: {abs_original_bundle_path}"
+                if abs_original_bundle_path
+                else ""
+            )
+        )
+        print(
+            f"  Format: {prelim_format_desc}"
+            + (
+                f", Override: {args.input_format}"
+                if args.input_format != "auto"
+                else ""
+            )
+        )
+        print(
+            f"  Output: {os.path.realpath(os.path.abspath(args.output_directory))}, Overwrite: {effective_overwrite_policy}"
+        )
+        print(
+            f"  Files to process: {num_files_prelim}"
+            + (
+                f" ({num_delta_files_prelim} delta)"
+                if num_delta_files_prelim > 0
+                else ""
+            )
+        )
+
+    print("\nStarting extraction process...")
+    extraction_results = extract_bundle_from_string(
+        bundle_content=bundle_content_str,  # Pass content directly
+        output_dir_base=args.output_directory,
+        overwrite_policy=effective_overwrite_policy,  # Use determined policy
+        apply_delta_from_original_bundle=abs_original_bundle_path,  # Pass original path if provided
+        input_format_override=(
+            args.input_format if args.input_format != "auto" else None
+        ),
+        verbose_logging=args.verbose,
+    )
+
+    ext = sum(1 for r in extraction_results if r["status"] == "extracted")
+    skip = sum(1 for r in extraction_results if r["status"] == "skipped")
+    err = sum(1 for r in extraction_results if r["status"] == "error")
+    print("\n--- Extraction Summary ---")
+    print(f"  Files Extracted: {ext}")
+    if skip:
+        print(f"  Files Skipped:   {skip}")
+    if err:
+        print(f"  Errors:          {err}")
+    if num_files_prelim == 0:
+        print("  No file content was found or parsed in the bundle.")
+
+
+if __name__ == "__main__":
+    main_cli_dogs()
+
+🐈 --- CATS_END_FILE ---
