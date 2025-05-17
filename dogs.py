@@ -168,7 +168,8 @@ def parse_bundle_content(
     ]
     header_type_found = None
 
-    for i, line_text in enumerate(lines[:10]): # Check up to 10 lines for header
+    # Check up to 10 lines for header
+    for i, line_text in enumerate(lines[:10]):
         stripped = line_text.strip()
         if not header_type_found:
             for prefix_str, desc_str_part in possible_headers:
