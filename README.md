@@ -31,7 +31,7 @@ The primary goal is to enable a seamless workflow for project-wide analysis, ref
 
     _(For Node.js `cats.js` usage, see `js/README.md`)_
 
-2.  **Interact with LLM**:
+2.  **Interact with an LLM**:
     Provide this bundle (`cats_out.bundle`) to an LLM. Give clear instructions:
 
     - **Understand Input**: "The very first part of this input, before any `--- CATS_START_FILE ---` or `--- DOGS_START_FILE ---` markers, is a system prompt/guide that you MUST adhere to. Following that, there is a bundle of files. Each file in the bundle starts with `🐈 --- CATS_START_FILE: path/to/file.ext ---` (or `🐕 --- DOGS_START_FILE: ... ---` if processed) and ends with the corresponding `END_FILE` marker. The first file _within_ the bundle may be `sys_human.txt` providing project-specific context, distinct from the initial system prompt."
