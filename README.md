@@ -6,8 +6,27 @@
 - **`cats.py`**: Bundles specified project files/directories into a single text artifact.
   - **System Prompt Prepending**: By default, `cats.py` searches for a `sys_human.txt` file (named `SYS_PROMPT_FILENAME` in the script) alongside itself or one directory level up. If found, its content is **prepended** to the output, _before_ the actual Cats Bundle structure. This can be disabled with `--no-sys-prompt`.
   - **CWD `sys_human.txt` Bundling**: By convention, `cats.py` also checks for a file named `sys_human.txt` in the current working directory. If found (and not excluded), it is included as the **first file _within_** the Cats Bundle.
+  - **Mixed Content Handling**: `cats.py` intelligently handles mixed content. Text files (e.g., source code) are bundled as raw text (typically UTF-8). Binary files (e.g., images) are Base64 encoded within their respective file blocks, and their start markers will include a `(Content:Base64)` hint (e.g., `🐈 --- CATS_START_FILE: assets/logo.png (Content:Base64) ---`). This allows for efficient bundling of diverse project assets.
   - It applies default excludes (`.git`, `node_modules/`, `gem/`, `__pycache__`) which can be disabled.
-- **`dogs.py`**: Extracts files from such a bundle back into a directory structure. It can apply delta changes specified in the bundle if invoked with the `--apply-delta` flag. The default input bundle name is `dogs_in.bundle`. When applying deltas, the resulting text is encoded according to the text format (`Raw UTF-8` or `Raw UTF-16LE`) specified in the input `dogs` bundle's header.
+- **`dogs.py`**: Extracts files from such a bundle back into a directory structure. It correctly decodes text and Base64-encoded binary files based on bundle headers and per-file markers. It can apply delta changes specified in the bundle if invoked with the `--apply-delta` flag (deltas apply to text-based files). The default input bundle name is `dogs_in.bundle`. When applying deltas, the resulting text is encoded according to the text format (`Raw UTF-8` or `Raw UTF-16LE`) specified in the input `dogs` bundle's header.
+
+## Why UTF-8 is the Standard
+
+UTF-8 has become the de facto standard encoding for text on the internet, in software development, and across most operating systems. Here's a brief overview:
+
+- **Unicode Foundation:** UTF-8 is an encoding for Unicode, a universal character set standard that aims to represent every character from every writing system in the world, plus a vast array of symbols and emoji. Each character is assigned a unique "code point."
+- **Variable-Width Encoding:** UTF-8 uses a variable number of bytes (1 to 4) to represent each Unicode code point.
+  - **ASCII Compatibility:** The first 128 Unicode code points are identical to ASCII. UTF-8 encodes these using a single byte, making it backward compatible with ASCII. This means plain English text files are the same in ASCII and UTF-8.
+  - **Efficiency:** For languages using Latin scripts, it remains very storage-efficient.
+  - **Comprehensive:** It can represent millions of characters, covering almost all known languages, scripts, and symbols, including emoji like "😂" (which is a single Unicode character `U+1F602` typically encoded in 4 bytes in UTF-8).
+- **Self-Synchronizing:** The way multi-byte sequences are structured in UTF-8 makes it easy for software to find the start of a character, even if it starts reading from the middle of a sequence, which aids in error recovery.
+- **No Byte Order Mark (BOM) Issues (Generally):** Unlike UTF-16 or UTF-32, UTF-8 does not have byte order (endianness) issues. While a UTF-8 BOM exists, it's generally not recommended or needed, and its primary use is to signal that a file is UTF-8, not to indicate byte order.
+- **Widespread Adoption:**
+  - **Web:** The W3C and WHATWG strongly recommend UTF-8 for all web content (HTML, CSS, JavaScript, JSON, XML). Most web servers and browsers use it by default.
+  - **Operating Systems:** Modern versions of Linux, macOS, and Windows use UTF-8 extensively as their default or preferred system encoding.
+  - **Programming Languages & Tools:** Most modern programming languages (Python, Java, JavaScript, Go, Rust, C#, etc.) have excellent UTF-8 support, often using it as their default for source files and string handling. Version control systems (like Git) and many developer tools also work best with UTF-8.
+
+This widespread support and technical advantages make UTF-8 the most robust, compatible, and versatile choice for text data exchange in today's interconnected world.
 
 ## Workflow
 
@@ -35,23 +54,23 @@ The primary goal is to enable a seamless workflow for project-wide analysis, ref
     Provide this bundle (`cats_out.bundle`) to an LLM. Give clear instructions:
 
     - **Understand Input**: "The very first part of this input, before any `--- CATS_START_FILE ---` or `--- DOGS_START_FILE ---` markers, is a system prompt/guide that you MUST adhere to. Following that, there is a bundle of files. Each file in the bundle starts with `🐈 --- CATS_START_FILE: path/to/file.ext ---` (or `🐕 --- DOGS_START_FILE: ... ---` if processed) and ends with the corresponding `END_FILE` marker. The first file _within_ the bundle may be `sys_human.txt` providing project-specific context, distinct from the initial system prompt."
-    - **Note Encoding**: "The bundle (after the initial system prompt, if any) will have a header like `# Cats Bundle` or `# Dogs Bundle`. Its first lines might include a `# Format: ...` (e.g., `Raw UTF-8`, `Raw UTF-16LE`, `Base64`). Respect this encoding for modifications. UTF-8 is the default for text."
+    - **Note Encoding**: "The bundle (after the initial system prompt, if any) will have a header like `# Cats Bundle` or `# Dogs Bundle`. Its first lines might include a `# Format: ...` (e.g., `Raw UTF-8`, `Raw UTF-16LE`, `Base64`). Respect this encoding for modifications. UTF-8 is the default for text. Individual files might be Base64 encoded if they are binary, indicated by `(Content:Base64)` in their start marker; if so, your output for that file must also be Base64."
     - **Preserve/Use Markers**:
       - "**VERY IMPORTANT: Only modify content _between_ the start and end file markers.**"
-      - "**Use `🐕 --- DOGS_START_FILE: path/to/your/file.ext ---` and `🐕 --- DOGS_END_FILE ---` for each file you output.** This helps the `dogs` utility parse your output most reliably."
+      - "**Use `🐕 --- DOGS_START_FILE: path/to/your/file.ext ---` and `🐕 --- DOGS_END_FILE ---` for each file you output.** If outputting binary data (like an image) within a text-primary bundle, use `🐕 --- DOGS_START_FILE: path/to/your/file.bin (Content:Base64) ---`. This helps the `dogs` utility parse your output most reliably."
       - "Do NOT alter the original `🐈 CATS_START_FILE` / `🐈 CATS_END_FILE` markers or any `# Format:` headers if you are only making minor changes _within_ existing file blocks of an input bundle."
-    - **Maintain Encoding**: "If the bundle format is Base64, your output must be valid Base64. If Raw UTF-8 or Raw UTF-16LE, ensure valid text in that encoding for all content between your `🐕 DOGS_` markers."
-    - **New Files**: "For new files, use `🐕 DOGS_START_FILE: path/to/new_file.ext ---`, its full content, then `🐕 DOGS_END_FILE ---`. Use relative paths with forward slashes `/`."
-    - **Delta Changes (Optional, for `dogs.py --apply-delta`):** "If modifying large existing files, you can specify changes using delta commands within the `🐕 DOGS_` block. Use `@@ PAWS_CMD REPLACE_LINES(start, end) @@`, `@@ PAWS_CMD INSERT_AFTER_LINE(line_num) @@`, or `@@ PAWS_CMD DELETE_LINES(start, end) @@`. These refer to 1-based line numbers in the _original_ file (from `cats_out.bundle`). Ensure the user intends to run `dogs.py` with the `-d` flag."
+    - **Maintain Encoding**: "If a file block is marked `(Content:Base64)`, your output for that file must be valid Base64. For other files, ensure valid text in the bundle's primary text encoding (e.g., UTF-8 or UTF-16LE) for all content between your `🐕 DOGS_` markers."
+    - **New Files**: "For new text files, use `🐕 DOGS_START_FILE: path/to/new_file.ext ---`, its full content, then `🐕 DOGS_END_FILE ---`. For new binary files, use `🐕 DOGS_START_FILE: path/to/new_file.bin (Content:Base64) ---`, its full Base64 content, then `🐕 DOGS_END_FILE ---`. Use relative paths with forward slashes `/`."
+    - **Delta Changes (Optional, for `dogs.py --apply-delta` on text files):** "If modifying large existing _text_ files, you can specify changes using delta commands within the `🐕 DOGS_` block. Use `@@ PAWS_CMD REPLACE_LINES(start, end) @@`, `@@ PAWS_CMD INSERT_AFTER_LINE(line_num) @@`, or `@@ PAWS_CMD DELETE_LINES(start, end) @@`. These refer to 1-based line numbers in the _original_ file (from `cats_out.bundle`). Ensure the user intends to run `dogs.py` with the `-d` flag. Deltas are not applicable to files marked `(Content:Base64)`."
 
     **Example LLM Task (Full File Output):**
-    "Refactor all Python functions named `old_func` to `new_func` in the `cats_out.bundle`. Output the complete modified files in a `dogs_in.bundle` using `🐕 DOGS_` markers, assuming `Raw UTF-8`."
+    "Refactor all Python functions named `old_func` to `new_func` in the `cats_out.bundle`. If the bundle contains an image `assets/logo.png` that was marked `(Content:Base64)`, preserve it as Base64 in your output. Output the complete modified files in a `dogs_in.bundle` using `🐕 DOGS_` markers, assuming `Raw UTF-8` as the primary text format."
 
-    **Example LLM Task (Delta Output):**
-    "In `large_file.py` from `cats_out.bundle`, replace lines 500-510 with the provided code snippet and insert another snippet after line 600. Output a `dogs_in.bundle` using `🐕 DOGS_` markers and `PAWS_CMD` delta instructions for `large_file.py`."
+    **Example LLM Task (Delta Output for a text file):**
+    "In `large_text_file.py` from `cats_out.bundle`, replace lines 500-510 with the provided code snippet and insert another snippet after line 600. Output a `dogs_in.bundle` using `🐕 DOGS_` markers and `PAWS_CMD` delta instructions for `large_text_file.py`."
 
 3.  **🥏🐕 Extract with `dogs.py`**:
-    Use `dogs.py` to extract the LLM's output bundle (`dogs_in.bundle`) back into a functional project. Use `-d <original_bundle>` if the LLM used delta commands.
+    Use `dogs.py` to extract the LLM's output bundle (`dogs_in.bundle`) back into a functional project. Use `-d <original_bundle>` if the LLM used delta commands for text files.
 
     ```bash
     # Extract full file contents from dogs_in.bundle (Python)
@@ -71,10 +90,13 @@ The primary goal is to enable a seamless workflow for project-wide analysis, ref
   - Automatically **bundles** a `sys_human.txt` from CWD as the first file if present and not excluded.
 - **Default Excludes (`cats.py`):** Automatically excludes `.git`, `node_modules/`, `gem/`, `__pycache__`. Disable with `-N`.
 - **Robust Exclusion (`cats.py`):** Precisely exclude additional files/directories.
-- **Encoding Options (`cats.py`):** Handles UTF-8 (default), UTF-16LE. Auto-switches to Base64 for binary content unless text encoding is forced (`-E`).
-- **Clear Bundle Structure:** Includes format headers and `🐈`/`🐕` file markers.
-- **Safe Extraction (`dogs.py`):** Sanitizes paths, prevents traversal.
-- **Delta Application (`dogs.py`):** Applies line-based changes using `--apply-delta (-d)` flag and `@@ PAWS_CMD [...] @@` syntax. Output from deltas respects the `dogs` bundle's declared text encoding.
+- **Flexible Encoding (`cats.py`):**
+  - **`auto` mode (default):** Bundles text files as UTF-8 (or UTF-16LE if all text files are consistently that). Binary files (e.g., images) are automatically Base64 encoded and marked with `(Content:Base64)` in their start file marker. The bundle header reflects the primary text encoding (e.g., `# Format: Raw UTF-8 (with potential Base64 blocks)`).
+  - **`--force-encoding {utf8|utf16le}`:** Forces all _textual_ content to the specified encoding. Binary files are still Base64 encoded and marked.
+  - **`--force-encoding b64`:** Forces _all_ content (text and binary) to be Base64 encoded.
+- **Clear Bundle Structure:** Includes format headers and `🐈`/`🐕` file markers, with optional per-file Base64 indicators.
+- **Safe Extraction (`dogs.py`):** Sanitizes paths, prevents traversal. Correctly decodes mixed text/Base64 content.
+- **Delta Application (`dogs.py`):** Applies line-based changes to _text files_ using `--apply-delta (-d)` flag and `@@ PAWS_CMD [...] @@` syntax. Output from deltas respects the `dogs` bundle's declared text encoding.
 - **Overwrite Control (`dogs.py`):** User control over overwriting existing files (`-y`, `-n`, prompt).
 
 ## `cats.py` - Bundling your source code 🧶🐈
@@ -91,7 +113,10 @@ python cats.py [PATH...] [options]
 - `-o BUNDLE_FILE`, `--output BUNDLE_FILE`: Output bundle name (default: `cats_out.bundle`). Use `-` for stdout.
 - `-x EXCLUDE_PATH`, `--exclude EXCLUDE_PATH`: Path to exclude (multiple allowed). Applied _in addition_ to default excludes.
 - `-N`, `--no-default-excludes`: Disable default excludes.
-- `-E {auto,utf8,utf16le,b64}`, `--force-encoding {auto,utf8,utf16le,b64}`: Force bundle encoding (default: `auto`).
+- `-E {auto,utf8,utf16le,b64}`, `--force-encoding {auto,utf8,utf16le,b64}`: Set bundle encoding strategy (default: `auto`).
+  - `auto`: Detects text encoding (UTF-8/UTF-16LE). Binary files become Base64 marked blocks.
+  - `utf8`/`utf16le`: Text files conform to this; binary files become Base64 marked blocks.
+  - `b64`: All files are Base64 encoded.
 - `--no-sys-prompt`: Do not prepend the `sys_human.txt` found near the script.
 - `--require-sys-prompt`: Exit with error if system prompt prepending is attempted but `sys_human.txt` is not found/readable.
 - `-y`, `--yes`: Auto-confirm bundling process.
@@ -99,13 +124,14 @@ python cats.py [PATH...] [options]
 
 **`cats.py` Examples:**
 
-1.  **Bundle current directory, using default excludes, output to default `cats_out.bundle`:**
+1.  **Bundle current directory (mixed text/binary), using default excludes, output to default `cats_out.bundle`:**
     ```bash
     python cats.py .
     ```
-2.  **Bundle src, exclude tests, disable default excludes, force UTF-16LE:**
+    _(Text files likely UTF-8, images/binaries Base64 encoded within the UTF-8 bundle)_
+2.  **Bundle src, exclude tests, disable default excludes, force all text to UTF-16LE (binaries still Base64):**
     ```bash
-    python cats.py ./src -x ./src/tests -N -E utf16le -o app_utf16.bundle
+    python cats.py ./src -x ./src/tests -N -E utf16le -o app_mixed.bundle
     ```
 
 _(For `node cats.js` CLI options and examples, see `js/README.md`)_
@@ -122,8 +148,8 @@ python dogs.py [BUNDLE_FILE] [OUTPUT_DIR] [options]
 
 - `bundle_file` (optional): Bundle to extract (default: `dogs_in.bundle` if exists, else error).
 - `output_directory` (optional): Where to extract (default: current directory `./`).
-- `-d ORIGINAL_BUNDLE`, `--apply-delta ORIGINAL_BUNDLE`: Apply delta commands found in `bundle_file`, using `ORIGINAL_BUNDLE` as the reference.
-- `-i {auto,b64,utf8,utf16le}`, `--input-format {auto,b64,utf8,utf16le}`: Override bundle format detection.
+- `-d ORIGINAL_BUNDLE`, `--apply-delta ORIGINAL_BUNDLE`: Apply delta commands (for text files) found in `bundle_file`, using `ORIGINAL_BUNDLE` as the reference.
+- `-i {auto,b64,utf8,utf16le}`, `--input-format {auto,b64,utf8,utf16le}`: Override bundle format detection for the primary text encoding. `dogs.py` will still handle per-file `(Content:Base64)` markers.
 - `-y`, `--yes`: Overwrite existing files without asking.
 - `-n`, `--no`: Skip overwriting existing files without asking.
 - `-v`, `--verbose`: Enable verbose logging.
@@ -131,7 +157,7 @@ python dogs.py [BUNDLE_FILE] [OUTPUT_DIR] [options]
 
 **`dogs.py` Examples:**
 
-1.  **Extract default `dogs_in.bundle` to `./output`, auto-overwrite:**
+1.  **Extract default `dogs_in.bundle` (may contain mixed text/Base64 files) to `./output`, auto-overwrite:**
     ```bash
     python dogs.py -y ./output  # Assuming dogs_in.bundle exists
     # OR python dogs.py dogs_in.bundle ./output -y
@@ -156,11 +182,11 @@ from cats import create_bundle_from_paths, find_sys_prompt_path_for_prepending, 
 #     with open(sys_prompt_path_to_prepend, "r", encoding="utf-8") as f_prompt:
 #         prepended_sys_prompt_content = f_prompt.read().rstrip('\\n') + '\\n' + SYS_PROMPT_POST_SEPARATOR
 
-# paths_to_bundle = ['./src', 'config.json']
+# paths_to_bundle = ['./src', 'config.json', 'assets/logo.png']
 # bundle_str, fmt_desc, files_count = create_bundle_from_paths(
 #     include_paths_raw=paths_to_bundle,
 #     exclude_paths_raw=['./src/temp'],
-#     encoding_mode='auto',
+#     encoding_mode='auto', # 'auto' will handle logo.png as Base64 within a primarily text bundle
 #     # sys_human_abs_realpath_to_include can be set to path of CWD sys_human.txt
 # )
 # full_output = prepended_sys_prompt_content + bundle_str # Combine if needed
@@ -172,24 +198,24 @@ from dogs import extract_bundle_from_string, extract_bundle_to_memory
 
 # # Option 1: Extract to disk (potentially applying deltas)
 # results_disk = extract_bundle_from_string(
-#     bundle_path="path/to/dogs_in.bundle",
+#     bundle_path="path/to/dogs_in.bundle", # This bundle might have mixed raw text and Base64 file blocks
 #     output_dir_base="./py_lib_extracted",
 #     overwrite_policy="yes",
-#     # apply_delta_from_original_bundle="path/to/cats_out.bundle",
+#     # apply_delta_from_original_bundle="path/to/cats_out.bundle", # Deltas for text files
 #     # verbose_logging=True
 # )
 # for res in results_disk:
 #     print(f"Disk Op: Path: {res.get('path', 'N/A')}, Status: {res['status']}, Msg: {res.get('message', '')}")
 
-# # Option 2: Extract/parse to memory (does not apply deltas)
+# # Option 2: Extract/parse to memory (does not apply deltas, decodes Base64 if marked)
 # parsed_files_mem = extract_bundle_to_memory(
 #     bundle_path="path/to/dogs_in.bundle",
 #     # verbose_logging=True
 # )
 # for pf in parsed_files_mem:
 #     if pf.get('content_bytes') is not None:
-#       print(f"Mem Op: Path: {pf['path_in_bundle']}, Size: {len(pf['content_bytes'])}")
-#     elif pf.get('delta_commands') is not None:
+#       print(f"Mem Op: Path: {pf['path_in_bundle']}, Format: {pf['format_used_for_decode']}, Size: {len(pf['content_bytes'])}")
+#     elif pf.get('delta_commands') is not None: # Deltas for text files
 #       print(f"Mem Op: Path: {pf['path_in_bundle']}, Deltas: {len(pf['delta_commands'])} commands")
 
 ```
@@ -198,4 +224,4 @@ _(For Node.js library usage, see `js/README.md`)_
 
 ---
 
-This utility aims for simplicity and robustness in bridging your codebase with LLMs, now with enhanced flexibility for encoding and targeted modifications.
+This utility aims for simplicity and robustness in bridging your codebase with LLMs, now with enhanced flexibility for encoding, mixed content handling, and targeted modifications.
