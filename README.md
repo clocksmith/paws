@@ -99,8 +99,6 @@ python cats.py . -x dist -N -o my_custom_bundle.bundle
 python cats.py project -t -o project_original_for_delta.bundle
 ```
 
-````
-
 _(For Node.js `cats.js` usage, see `js/README.md`)_
 
 ### 2. Interact with an LLM
@@ -307,8 +305,3 @@ my_flutter_project/
 ```
 
 _Note_: `lib/src/feature_b/` (and its contents) would remain in `my_flutter_project` as `dogs.py` does not delete files by omission. The user would need to manually remove it if desired.
-
----
-
-This example showcases the full power of the PAWS/SWAP system for complex project modifications involving a mix of new files, detailed line-level changes, full file rewrites, and file removals managed by the user.
-````
