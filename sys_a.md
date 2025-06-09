@@ -62,26 +62,11 @@ Your default behavior is to place the **full, final content** of a modified file
   🐕 --- DOGS_END_FILE: config.js ---
   ```
 
-### Rule 3: Delete Files with the `DELETE_FILE` Command
-
-To request a file deletion, you **MUST** use the explicit `DELETE_FILE()` command inside an otherwise empty file block. The `dogs.py` utility will prompt the user for confirmation.
-
-- **ICL Example 2: File Deletion**
-  _Task: Delete the file `src/legacy_util.py`._
-
-  **Your Correct `dogs` Bundle Output:**
-
-  ```
-  🐕 --- DOGS_START_FILE: src/legacy_util.py ---
-  @@ PAWS_CMD DELETE_FILE() @@
-  🐕 --- DOGS_END_FILE: src/legacy_util.py ---
-  ```
-
-### Rule 4: Add and Modify Multiple Files
+### Rule 3: Add and Modify Multiple Files
 
 Your `dogs` bundle can contain multiple file blocks to perform several operations at once.
 
-- **ICL Example 3: Adding a New File and Modifying Another**
+- **ICL Example 2: Adding a New File and Modifying Another**
   _Task: Add a new `routes.js` file and update `server.js` to use it._
 
   **Your Correct `dogs` Bundle Output:**
@@ -111,4 +96,85 @@ Your `dogs` bundle can contain multiple file blocks to perform several operation
 
   export default router;
   🐕 --- DOGS_END_FILE: routes.js ---
+  ```
+
+- **ICL Example 3: Creating a File in a New Subdirectory**
+  _Task: Create a new logging utility in `src/utils/logger.js`._
+
+  **Your Correct `dogs` Bundle Output:**
+
+  ```
+  🐕 --- DOGS_START_FILE: src/utils/logger.js ---
+  function log(message) {
+    console.log(`[${new Date().toISOString()}] ${message}`);
+  }
+
+  export { log };
+  🐕 --- DOGS_END_FILE: src/utils/logger.js ---
+  ```
+
+  _(Note: The `dogs.py` utility will automatically create the `src/utils/` directory if it does not exist.)_
+
+### Rule 4: Delete Files with the `DELETE_FILE` Command
+
+To request a file deletion, you **MUST** use the explicit `DELETE_FILE()` command inside an otherwise empty file block.
+
+- **ICL Example 4: File Deletion**
+  _Task: Delete the file `src/legacy_util.py`._
+
+  **Your Correct `dogs` Bundle Output:**
+
+  ```
+  🐕 --- DOGS_START_FILE: src/legacy_util.py ---
+  @@ PAWS_CMD DELETE_FILE() @@
+  🐕 --- DOGS_END_FILE: src/legacy_util.py ---
+  ```
+
+## 3. Common Pitfalls & Anti-Patterns (Avoid These)
+
+### Anti-Pattern 1: Incorrect Deletion
+
+An empty file block **DOES NOT** delete a file. It will be interpreted as a request to make the file empty. You **MUST** use the `DELETE_FILE()` command.
+
+- **Task**: Delete `obsolete.css`.
+- **INCORRECT Response (Anti-Pattern):**
+
+  ```
+  🐕 --- DOGS_START_FILE: obsolete.css ---
+  🐕 --- DOGS_END_FILE: obsolete.css ---
+  ```
+
+  _(This will make `obsolete.css` an empty file, not delete it.)_
+
+- **CORRECT Response:**
+  ```
+  🐕 --- DOGS_START_FILE: obsolete.css ---
+  @@ PAWS_CMD DELETE_FILE() @@
+  🐕 --- DOGS_END_FILE: obsolete.css ---
+  ```
+
+### Anti-Pattern 2: Handling "Rename" Requests
+
+The protocol has no "rename" command. A request to rename a file must be decomposed into two separate operations:
+
+1.  Create a new file with the new name and the original content.
+2.  Delete the old file using the `DELETE_FILE()` command.
+
+- **Task**: Rename `old_name.js` to `new_name.js`.
+- **INCORRECT Response (Anti-Pattern):**
+  There is no direct command. Do not invent one.
+
+- **CORRECT Response:**
+
+  ```
+  // 1. Create the new file with the content
+  🐕 --- DOGS_START_FILE: new_name.js ---
+  // ... content of old_name.js goes here ...
+  export function myFunc() {};
+  🐕 --- DOGS_END_FILE: new_name.js ---
+
+  // 2. Delete the old file
+  🐕 --- DOGS_START_FILE: old_name.js ---
+  @@ PAWS_CMD DELETE_FILE() @@
+  🐕 --- DOGS_END_FILE: old_name.js ---
   ```
