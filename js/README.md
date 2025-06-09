@@ -2,10 +2,12 @@
 
 This document describes the Node.js implementation of the **PAWS/SWAP** toolkit. It provides command-line utilities (`cats.js`, `dogs.js`) that are feature-complete counterparts to the Python versions, designed to bundle project files for Large Language Models (LLMs) and then safely reconstruct them.
 
+For a high-level overview of the PAWS philosophy and project structure, please see the [main project README](../../README.md).
+
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
-- [Why PAWS for Node.js?](#why-paws-for-nodejs)
+- [Testing](#testing)
 - [Overview](#overview)
   - [`cats.js`](#catsjs)
   - [`dogs.js`](#dogsjs)
@@ -18,19 +20,26 @@ This document describes the Node.js implementation of the **PAWS/SWAP** toolkit.
 ## Prerequisites
 
 - **Node.js**: v14 or higher.
-- **Dependencies**: The CLI tools rely on `yargs` for argument parsing and `glob` for file matching. Install them from your project root:
+- **Dependencies**: The CLI tools rely on `yargs` for argument parsing and `glob` for file matching. From your project root, run:
   ```bash
-  npm install yargs glob
+  npm install
   ```
 
-## Why PAWS for Node.js?
+## Testing
 
-State-of-the-art LLMs now have massive context windows, making it possible to feed an entire codebase into a single prompt for project-wide refactoring, feature implementation, or bug fixing. However, a large context window alone is not enough. **PAWS provides the essential scaffolding to make this workflow practical, safe, and efficient.**
+The JavaScript implementation includes a comprehensive test suite using Mocha and Chai to ensure reliability and correctness.
 
-1.  **Intelligent Bundling (`cats.js`)**: You can't just `cat *.*`. `cats.js` uses powerful globbing and default-deny patterns to create a clean, minimal, and contextually-rich bundle that respects your project's structure.
-2.  **Instruction & Persona Scaffolding**: Prepend system prompts and task-specific "personas" to ensure the AI has the guidance it needs to perform the task correctly.
-3.  **Robust, Fault-Tolerant Parsing (`dogs.js`)**: LLMs add conversational filler, forget to close markdown fences, and produce malformed output. `dogs.js` is hardened to handle this noise, surgically extracting valid code blocks while ignoring extraneous text.
-4.  **Human-in-the-Loop Safety (`dogs.js`)**: Letting an AI directly overwrite your project is reckless. `dogs.js` provides a critical safety layer with interactive, colorized diffs and explicit confirmations for all overwrites and deletions.
+1.  **Install Development Dependencies**: The main `npm install` command from the prerequisites section will install `mocha` and `chai` from the `package.json` file.
+
+2.  **Run the Test Suite**: You can run the tests using the `npm test` script defined in `package.json`:
+
+    ```bash
+    # Recommended: Use the npm script from the project root
+    npm test
+
+    # Alternative: Direct invocation from the project root
+    npx mocha js/test/test_paws.js
+    ```
 
 ## Overview
 
@@ -47,7 +56,7 @@ Extracts files from a PAWS bundle back into a directory structure. It correctly 
 1.  **🧶🐈 Bundle with `cats.js`**: Package your project into a `cats.md` file.
 
     ```bash
-    # Bundle an entire project, excluding build artifacts
+    # From the project root, bundle an entire project, excluding build artifacts
     node js/cats.js . -x "dist/**" -o my_project.md
     ```
 
@@ -55,7 +64,7 @@ Extracts files from a PAWS bundle back into a directory structure. It correctly 
 
 3.  **🥏🐕 Extract with `dogs.js`**: Interactively review and apply the AI's changes.
     ```bash
-    # dogs.js will show diffs and prompt before changing files.
+    # From the project root, apply changes from dogs.md
     node js/dogs.js dogs.md .
     ```
 
@@ -70,7 +79,7 @@ Extracts files from a PAWS bundle back into a directory structure. It correctly 
   - Strips markdown code fences (e.g., ` ```js `).
   - Recovers from missing `END` markers.
 - **Safe, Interactive Extraction (`dogs.js`)**:
-  - Shows colorized diffs on overwrite.
+  - Shows colorized diffs on overwrite (requires a compatible terminal).
   - Requires explicit confirmation for `DELETE_FILE` commands.
   - Prevents path traversal security vulnerabilities.
 - **Advanced Delta Support**: A precise mode for applying line-based changes (`-d, --apply-delta`).
@@ -78,7 +87,7 @@ Extracts files from a PAWS bundle back into a directory structure. It correctly 
 
 ## `cats.js` - Command-Line Reference
 
-**Syntax**: `node cats.js [PATH_PATTERN...] [options]`
+**Syntax**: `node js/cats.js [PATH_PATTERN...] [options]`
 
 - `PATH_PATTERN...`: One or more files, directories, or glob patterns to include.
 - **`-o, --output <file>`**: Output file (default: `cats.md`). Use `-` for stdout.
@@ -94,7 +103,7 @@ Extracts files from a PAWS bundle back into a directory structure. It correctly 
 
 ## `dogs.js` - Command-Line Reference
 
-**Syntax**: `node dogs.js [BUNDLE_FILE] [OUTPUT_DIR] [options]`
+**Syntax**: `node js/dogs.js [BUNDLE_FILE] [OUTPUT_DIR] [options]`
 
 - `BUNDLE_FILE` (optional): The bundle to extract (default: `dogs.md`).
 - `OUTPUT_DIR` (optional): Directory to extract files into (default: `./`).
@@ -118,7 +127,7 @@ When used as a library (especially in a browser), they operate on a "virtual fil
 
 ```javascript
 // In a Node.js project or bundled for the browser
-const { createBundle } = require("./cats.js");
+const { createBundle } = require("./js/cats.js");
 
 async function runCatBundle() {
   const files = [
@@ -141,7 +150,7 @@ runCatBundle();
 
 ```javascript
 // In a Node.js project or bundled for the browser
-const { extractBundle } = require("./dogs.js");
+const { extractBundle } = require("./js/dogs.js");
 
 async function runDogExtract() {
   const bundleContent = `

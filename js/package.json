@@ -1,0 +1,25 @@
+{
+  "name": "paws-js",
+  "version": "1.0.0",
+  "description": "Node.js implementation of the PAWS/SWAP toolkit for interacting with LLMs.",
+  "main": "cats.js",
+  "scripts": {
+    "test": "npx mocha js/test/test_paws.js"
+  },
+  "keywords": [
+    "llm",
+    "ai",
+    "dev-tools",
+    "cli"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "glob": "^10.4.1",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "chai": "^5.1.1",
+    "mocha": "^10.4.0"
+  }
+}
