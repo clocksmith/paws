@@ -1,72 +1,87 @@
+🐕 --- DOGS_START_FILE: README.md ---
+
 # 🐾 PAWS: Prepare Artifacts With SWAP (Streamlined Write After PAWS)
 
 **PAWS** provides transparent and powerful command-line utilities (`cats.py` and `dogs.py`) to bundle your project files for efficient interaction with Large Language Models (LLMs) and then to reconstruct them, enabling a swift code **💱 SWAP** (Streamlined Write After PAWS).
 
-This two-part toolkit is designed for professional development workflows. It is **verbose by default** for clarity, supports **glob patterns** for flexible file selection, and features a **safe, interactive process** for applying changes, including colorized diffs and explicit confirmations for destructive operations.
+This two-part toolkit is designed for professional development workflows. It is **verbose by default** for clarity, supports powerful **glob patterns** for flexible file selection, and features a **safe, interactive process** for applying changes, including colorized diffs and explicit confirmations for destructive operations.
 
 (Node.js versions, `cats.js` and `dogs.js`, offering similar core functionality are available in the `js/` subdirectory; see `js/README.md` for details.)
 
 ## Table of Contents
 
+- [Why PAWS? The Missing Link for Large Context LLMs](#why-paws-the-missing-link-for-large-context-llms)
 - [Overview](#overview)
   - [`cats.py` - The Bundler](#catspy---the-bundler)
   - [`dogs.py` - The Unpacker](#dogspy---the-unpacker)
 - [Core Workflow](#core-workflow)
 - [Key Features](#key-features)
 - [`cats.py` - Command-Line Reference](#catspy---command-line-reference)
-  - [Syntax](#syntax)
-  - [Key Options](#key-options)
-  - [Extensive `cats.py` Examples](#extensive-catspy-examples)
 - [`dogs.py` - Command-Line Reference](#dogspy---command-line-reference)
-  - [Syntax](#syntax-1)
-  - [Key Options](#key-options-1)
-  - [Interactive Prompts (Default Behavior)](#interactive-prompts-default-behavior)
-  - [Extensive `dogs.py` Examples](#extensive-dogspy-examples)
 - [Advanced Workflows](#advanced-workflows)
-  - [The Delta Workflow: A Step-by-Step Guide](#the-delta-workflow-a-step-by-step-guide)
-  - [Persona Injection for Custom Instructions](#persona-injection-for-custom-instructions)
-  - [Recursive Self-Modification (RSI)](#recursive-self-modification-rsi)
+
+## Why PAWS? The Missing Link for Large Context LLMs
+
+State-of-the-art LLMs now have massive context windows (100k to 1M+ tokens), making it possible to feed an entire codebase into a single prompt. This is a paradigm shift for AI-assisted development, enabling tasks like:
+
+- Project-wide refactoring.
+- Adding a new feature that touches multiple files.
+- Generating comprehensive documentation based on source code.
+- Identifying and fixing complex, cross-cutting bugs.
+
+However, a large context window alone is not enough. The raw "copy-paste" workflow is inefficient, error-prone, and lacks critical safety features. **PAWS provides the essential scaffolding to bridge this gap.**
+
+1.  **Intelligent Bundling (`cats.py`)**: You can't just `cat *.*`. A real project has build artifacts, local configurations, and test files you want to exclude. `cats.py` uses powerful globbing and default-deny patterns to create a clean, minimal, and contextually-rich bundle that respects your project's structure.
+2.  **Instruction & Persona Scaffolding**: An LLM needs precise instructions. PAWS allows you to programmatically prepend system prompts and task-specific "personas," ensuring the AI has the guidance it needs to perform the task correctly _before_ it sees the first line of code.
+3.  **Robust, Fault-Tolerant Parsing (`dogs.py`)**: LLMs are not perfect. They add conversational filler, forget to close markdown code fences, and sometimes produce malformed output. `dogs.py` is specifically hardened to handle this noise. It surgically extracts only the valid code blocks, ignoring extraneous text and recovering from common formatting errors, ensuring that what gets written to your disk is clean.
+4.  **Human-in-the-Loop Safety (`dogs.py`)**: Letting an AI directly overwrite your entire project is reckless. `dogs.py` provides a critical safety layer. Its interactive mode shows you a colorized `diff` of every proposed change and requires explicit confirmation for all overwrites and deletions. You always have the final say.
+
+PAWS turns the potential of large context windows into a practical, safe, and powerful development reality.
 
 ## Overview
 
 ### `cats.py` - The Bundler
 
-`cats.py` creates a single, LLM-readable text artifact (`cats.md`) from your source code. It is **verbose by default**, showing you exactly which files are being collected. It intelligently handles file inclusion/exclusion with **glob patterns**, manages different content types, and can prepend layered instructions for the AI.
+`cats.py` creates a single, LLM-readable text artifact (`cats.md`) from your source code. It is **verbose by default**, showing you exactly which files are being collected. It intelligently handles file inclusion/exclusion with **glob patterns**, manages binary files, and can prepend layered instructions for the AI.
 
 ### `dogs.py` - The Unpacker
 
-`dogs.py` is the counterpart that unpacks the AI's response bundle (`dogs.md`). It is also **verbose by default** and is built for safety. It provides a **colorized diff** of changes before overwriting files and requires explicit, interactive confirmation for destructive operations like file overwrites and deletions, ensuring a human-in-the-loop process.
+`dogs.py` is the counterpart that unpacks the AI's response bundle (`dogs.md`). It is also **verbose by default** and is built for safety and robustness. It provides a **colorized diff** of changes before overwriting files and requires explicit, interactive confirmation for destructive operations. Its parser is specifically designed to ignore LLM chatter and recover from common formatting mistakes.
 
 ## Core Workflow
 
-1.  **🧶🐈 Bundle with `cats.py`**: Package your project into a `cats.md` file. The tool will print its progress.
+1.  **🧶🐈 Bundle with `cats.py`**: Package your project into a `cats.md` file.
 
     ```bash
-    # Bundle all .py files in the src directory, excluding tests
-    python cats.py 'src/**/*.py' -x 'src/**/test_*.py' -o my_project.md
+    # Bundle an entire project directory, excluding build artifacts and .log files
+    python cats.py . -x 'build/' -x '*.log' -o my_project.md
     ```
 
 2.  **🤖 Interact with an LLM**: Provide the `cats.md` bundle to your AI, along with your request. The AI will generate a `dogs.md` file containing the modifications.
 
-3.  **🥏🐕 Extract with `dogs.py`**: Apply the AI's changes to your project. `dogs.py` will be verbose, show diffs, and prompt you before changing files.
+3.  **🥏🐕 Extract with `dogs.py`**: Interactively review and apply the AI's changes to your project.
     ```bash
-    # dogs.py will now interactively guide you through the changes.
-    python dogs.py dogs.md .
+    # dogs.py will now guide you through the changes from the dogs.md file.
+    python dogs.py
     ```
 
 ## Key Features
 
-- **Verbose by Default**: Both tools provide clear, real-time feedback on the files they are processing. Use the `--quiet` (`-q`) flag on either script for silent operation.
-- **Glob Pattern Support (`cats.py`)**: Use familiar glob patterns like `src/**/*.js` for including files and `-x 'test/**'` for excluding them.
+- **Verbose by Default**: Both tools provide clear, real-time feedback. Use `--quiet` (`-q`) for silent operation.
+- **Powerful File Selection**: Use familiar **glob patterns** (`src/**/*.js`), directory paths (`.`), and file paths to precisely control what gets bundled.
+- **Robust Path Handling**: Invoke `cats.py` from any directory; it correctly handles relative paths (e.g., `../other-project`) and determines the correct common ancestor for bundled files.
 - **Layered Prompting (`cats.py`)**:
-  1.  **Persona Injection (`-p`)**: Prepend a task-specific persona or instruction file for the AI.
-  2.  **System Prompt (`-s`)**: Automatically prepends a general guide (`sys_a.md`, `sys_d.md`, etc.).
-  3.  **CWD Context File**: Bundles a context file from the current directory as the first file _inside_ the bundle.
+  1.  **Persona Injection (`-p`)**: Prepend a task-specific persona file for the AI.
+  2.  **System Prompt (`-s`)**: Automatically prepend a general instruction file (`sys_a.md`, `sys_d.md`, etc.).
+- **Hardened, Fault-Tolerant Parsing (`dogs.py`)**:
+  - **Ignores LLM Chatter**: Safely ignores conversational text before, between, or after valid file blocks.
+  - **Strips Artifacts**: Automatically removes markdown code fences (e.g., ` ```python `) and extraneous whitespace from code blocks.
+  - **Recovers from Errors**: Correctly processes files even if the LLM forgets the `DOGS_END_FILE` marker.
 - **Safe, Interactive Extraction (`dogs.py`)**:
-  - **Diff on Overwrite**: Shows a colorized diff of changes before asking for confirmation to overwrite a file.
-  - **Explicit Deletion**: Requires confirmation for the `DELETE_FILE` command, preventing accidental data loss.
-- **Intelligent Delta Support**: An advanced mode for applying precise, line-based changes, ideal for large files and formal code reviews.
-- **Symmetrical Markers**: Uses robust, symmetrical start and end file markers for reliable parsing by both humans and machines.
+  - **Diff on Overwrite**: Shows a colorized `diff` of all changes and asks for confirmation.
+  - **Explicit Deletion**: Requires confirmation for the `DELETE_FILE` command.
+  - **No Silent Failures**: Provides clear warnings and errors for issues like path traversal attempts or decoding failures.
+- **Advanced Delta Support**: A precise mode for applying line-based changes, ideal for large files and formal code reviews.
 
 ---
 
@@ -78,53 +93,40 @@ This two-part toolkit is designed for professional development workflows. It is 
 
 ### Key Options
 
-- `PATH_PATTERN...`: One or more glob patterns or file paths to include (e.g., `'src/**/*.py'`, `README.md`).
-- `-o, --output <file>`: Output bundle file (default: `cats.md`).
+- `PATH_PATTERN...`: One or more files, directories, or glob patterns to include (e.g., `'src/**/*.py'`, `.` , `../project`).
+- `-o, --output <file>`: Output file (default: `cats.md`). Use `-` for stdout.
 - `-x, --exclude <pattern>`: A glob pattern to exclude files. Can be used multiple times.
-- `-p, --persona <file>`: Prepend a specific persona/instruction file to the entire output.
+- `-p, --persona <file>`: Prepend a specific persona/instruction file.
 - `-s, --sys-prompt-file <file>`: Specify the system prompt file to use (default: `sys_a.md`).
-- `-t, --prepare-for-delta`: Mark the bundle as a clean reference for future delta operations.
+- `-t, --prepare-for-delta`: Mark the bundle as a clean reference for delta operations.
 - `-q, --quiet`: Suppress informational messages.
-- `-y, --yes`: Auto-confirm writing the output file without a prompt.
+- `-y, --yes`: Auto-confirm writing the output file.
 - `-N, --no-default-excludes`: Disables default excludes (`.git`, `node_modules`, etc.).
+- `-E, --force-encoding <mode>`: Force encoding (`auto`, `b64`).
 
 ### Extensive `cats.py` Examples
 
-**Example 1: Basic Bundling of a Web Project**
-Bundle all JavaScript, CSS, and HTML files, while excluding the `node_modules` directory (handled by default) and any `.log` files.
+**Example 1: Bundle an Entire Project**
 
 ```bash
-python cats.py 'src/**/*.js' 'styles/**/*.css' 'public/**/*.html' -x '*.log' -o web_project.md
+python cats.py . -x 'dist/' -x '*.log' -o web_project.md
 ```
 
-````
-
-_`cats.py` will print a list of every file it finds and adds to `web_project.md`._
-
-**Example 2: Bundling with a Custom Persona for a Specific Task**
-Prepare a bundle for an AI task to add documentation, using a custom persona.
+**Example 2: Bundle with a Custom Persona**
 
 ```bash
-# Create a persona file named 'doc_writer.md' with content like:
-# "You are a technical writer. Your task is to add Python docstrings..."
-
+# Create doc_writer.md with instructions: "You are a technical writer..."
 python cats.py 'api/**/*.py' -p doc_writer.md -o for_doc_writing.md
 ```
 
-_The contents of `doc_writer.md` will be placed at the very top of the final bundle._
-
-**Example 3: Creating a Delta-Ready Reference Bundle**
-Create a clean, pristine snapshot of a project, marking it as the "v1" reference for a future delta-based update.
+**Example 3: Create a Delta-Ready Reference**
 
 ```bash
-# The -t flag is the key here.
-python cats.py . -x 'dist/' -x 'venv/' -t -o project_v1_reference.md
+python cats.py . -t -o project_v1_reference.md
 ```
 
-_This `project_v1_reference.md` is now the canonical "before" state for `dogs.py`._
-
-**Example 4: Quietly Piping to Clipboard**
-Quickly grab a few files and pipe them to your clipboard without creating a file and with no console output. (Requires a clipboard utility like `pbcopy` on macOS or `xclip` on Linux).
+**Example 4: Quietly Pipe to Clipboard**
+(Requires a clipboard utility like `pbcopy` on macOS or `xclip` on Linux).
 
 ```bash
 python cats.py 'src/main.py' 'src/utils.py' -q -o - | pbcopy
@@ -138,59 +140,49 @@ python cats.py 'src/main.py' 'src/utils.py' -q -o - | pbcopy
 
 `python dogs.py [BUNDLE_FILE] [OUTPUT_DIR] [options]`
 
-- `BUNDLE_FILE` (optional): The bundle to extract (default: `dogs.md`).
-- `OUTPUT_DIR` (optional): Directory to extract files into (default: `./`).
-
 ### Key Options
 
+- `BUNDLE_FILE` (optional): The bundle to extract (default: `dogs.md`). Use `-` for stdin.
+- `OUTPUT_DIR` (optional): Directory to extract files into (default: `./`).
 - `-d, --apply-delta <original_bundle>`: **Crucial for deltas.** Applies delta commands using the original bundle as a reference.
-- `-i, --input-format <mode>`: Override bundle's format detection (`auto`, `b64`, `utf8`).
-- `-q, --quiet`: Suppress informational messages, diffs, and all interactive prompts. Implies `-n`.
-- `-y, --yes`: **[Yes-All]** Automatically answer "yes" to all prompts (overwrite and delete).
-- `-n, --no`: **[No-All]** Automatically answer "no" to all prompts, skipping all conflicts.
+- `-q, --quiet`: Suppress all output and prompts. Implies `-n`.
+- `-y, --yes`: **[Yes-All]** Auto-confirm all prompts (overwrite/delete).
+- `-n, --no`: **[No-All]** Auto-skip all conflicting actions.
 
 ### Interactive Prompts (Default Behavior)
 
 `dogs.py` prioritizes safety. When run without `-y`, `-n`, or `-q`, it is fully interactive:
 
-- **On Overwrite**: It shows a colorized `diff` of the proposed changes and asks `Overwrite? [y/N/a(yes-all)/s(skip-all)/q(quit)]`.
-- **On Delete**: It shows a high-stakes warning: `Request to DELETE file: ...` and asks `Permanently delete this file? [y/N/q(quit)]`.
+- **On Overwrite**: Shows a colorized `diff` and asks `Overwrite? [y/N/a(yes-all)/s(skip-all)/q(quit)]`.
+- **On Delete**: Shows a high-stakes warning and asks `Permanently delete this file? [y/N/q(quit)]`.
 
 ### Extensive `dogs.py` Examples
 
 **Example 1: Default Interactive Extraction**
-The most common and safest use case. You have received `dogs.md` from an AI and want to review its changes before applying them.
 
 ```bash
+# Processes dogs.md in the current directory
 python dogs.py
 ```
 
-_`dogs.py` will process `dogs.md`, find `main.py` has changed, show you a `diff`, and ask if you want to overwrite it._
-
-**Example 2: Applying Deltas and Handling a Deletion Request**
-You used the delta workflow and the AI is requesting a refactor and a file deletion.
+**Example 2: Applying Deltas**
 
 ```bash
-# Use the -d flag with the reference bundle you created earlier.
 python dogs.py llm_output.md . -d project_v1_reference.md
 ```
 
-_`dogs.py` will apply the line changes to any files with deltas. If it encounters a `DELETE_FILE` command for `old_util.py`, it will stop and ask for explicit confirmation before deleting it._
-
-**Example 3: Automated Extraction in a CI/CD Pipeline**
-You trust the source of the bundle and want to apply all changes automatically without any interaction.
+**Example 3: Automated Extraction in CI/CD**
 
 ```bash
-# The -y flag auto-confirms all overwrites and deletions.
+# Apply all changes from a trusted bundle without interaction
 python dogs.py ci_bundle.md ./build -y
 ```
 
-**Example 4: Quietly Extracting Only New Files**
-You want to extract a bundle but are only interested in files that don't already exist in your project, skipping all conflicts silently.
+**Example 4: Extracting from a Pipe**
 
 ```bash
-# The -q flag implies "no" to all prompts and suppresses all output.
-python dogs.py feature_bundle.md . -q
+# Generate response and apply it in one command
+my-llm-tool "Refactor this code" project.md | python dogs.py -
 ```
 
 ---
@@ -201,31 +193,19 @@ python dogs.py feature_bundle.md . -q
 
 This is the most precise way to work with an LLM, ideal for refactoring large files.
 
-1.  **Create Reference (`-t`)**: First, create the "before" snapshot. The system prompt is not important for this step.
-
+1.  **Create Reference (`-t`)**: First, create the "before" snapshot.
     ```bash
     python cats.py . -t -o original_code.md
     ```
-
-2.  **Instruct LLM (`-s sys_d.md`)**: Next, create the bundle to send to the LLM, instructing it to generate deltas.
-
+2.  **Instruct LLM (`-s sys_d.md`)**: Next, create the bundle for the LLM, instructing it to generate deltas.
     ```bash
     python cats.py . -s sys_d.md -o for_llm_delta_task.md
     ```
-
-    _You send `for_llm_delta_task.md` to the AI, which now knows to use `@@ PAWS_CMD ... @@` syntax._
-
-3.  **Apply Deltas (`-d`)**: Finally, use `dogs.py` to apply the LLM's patch (`llm_output.md`) using your original reference from Step 1.
+3.  **Apply Deltas (`-d`)**: Finally, use `dogs.py` to apply the LLM's patch using your original reference.
     ```bash
     python dogs.py llm_output.md . -d original_code.md
     ```
 
-### Persona Injection for Custom Instructions
-
-1.  Create `my_persona.md` with instructions like: _"You are a Go developer specializing in concurrency..."_
-2.  Bundle with the persona to guide the LLM's task: `python cats.py 'src/**/*.go' -p my_persona.md`
-
 ### Recursive Self-Modification (RSI)
 
 This is the process of using PAWS to modify its own source code. It requires maximum precision and uses the specialized `sys_r.md` prompt (`-s sys_r.md`), which mandates a cautious, delta-first approach.
-````
