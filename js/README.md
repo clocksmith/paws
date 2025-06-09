@@ -112,7 +112,9 @@ Extracts files from a PAWS bundle back into a directory structure. It correctly 
 - **`-y, --yes`**: Auto-confirm all overwrites and deletions.
 - **`-n, --no`**: Auto-skip all conflicting actions.
 - **`-h, --help`**: Show help message.
-- **Interactive Prompts**: If not `-y` or `-n`, prompts for overwrites (`[y/N/a/s/q]`) and deletions (`[y/N]`).
+- **Interactive Prompts**: If not using `-y` or `-n`, the tool is interactive.
+  - **Overwrite Prompt**: `[y/N/a(yes-all)/s(skip-all)/q(quit)]`
+  - **Deletion Prompt**: `[y/N/a(yes-all)/q(quit)]`
 
 ## Library Usage (Browser & Node.js)
 
