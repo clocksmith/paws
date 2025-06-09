@@ -127,7 +127,7 @@ class BundleParser {
     } else {
       const rawContentStr = finalContentLines.join("\n");
       const contentBytes = isBinary
-        ? Buffer.from(rawContentStr, "base64")
+        ? Buffer.from(rawContentStr.replace(/\s/g, ""), "base64")
         : Buffer.from(rawContentStr, DEFAULT_ENCODING);
       this.parsedFiles.push({
         path,
@@ -182,9 +182,12 @@ class BundleParser {
         }
       } else if (inBlock) {
         const cmdMatch = line.match(PAWS_CMD_REGEX);
-        if (this.applyDeltaMode && cmdMatch) {
+        if (cmdMatch) {
           const deltaCmd = this._parseDeltaCommand(cmdMatch[1].trim());
-          if (deltaCmd) {
+          if (
+            deltaCmd &&
+            (deltaCmd.type === "delete_file" || this.applyDeltaMode)
+          ) {
             const finalizedBlock = this._finalizeContentBlock(contentLines);
             if (
               finalizedBlock.length > 0 &&
@@ -376,7 +379,6 @@ async function mainCli() {
     const safePath = sanitizePath(file.path);
     const outputPath = path.join(outputDir, safePath);
 
-    // Security check
     if (!path.resolve(outputPath).startsWith(path.resolve(outputDir))) {
       log(
         `  Security Alert: Path '${file.path}' attempts to traverse outside of output directory. Skipping.`
@@ -392,11 +394,26 @@ async function mainCli() {
           .then(() => true)
           .catch(() => false)
       ) {
-        if (
-          overwritePolicy === "yes" ||
-          (overwritePolicy === "prompt" &&
-            (await confirmPrompt(`Permanently delete '${safePath}'? [y/N]: `)))
-        ) {
+        let shouldDelete = false;
+        if (overwritePolicy === "yes") {
+          shouldDelete = true;
+        } else if (overwritePolicy === "prompt") {
+          const answer = await confirmPrompt(
+            `Permanently delete '${safePath}'? [y/N/a(yes-all)/q(quit)]: `,
+            ["y", "n", "a", "q"]
+          );
+          if (answer === "y") shouldDelete = true;
+          if (answer === "a") {
+            shouldDelete = true;
+            overwritePolicy = "yes";
+          }
+          if (answer === "q") {
+            log("Operation cancelled by user.");
+            break;
+          }
+        }
+
+        if (shouldDelete) {
           await fs.unlink(outputPath);
           log(`  Deleted: ${safePath}`);
         } else {
@@ -404,6 +421,7 @@ async function mainCli() {
         }
       }
     } else if (file.contentBytes) {
+      let shouldWrite = true;
       if (
         await fs
           .access(outputPath)
@@ -411,37 +429,58 @@ async function mainCli() {
           .catch(() => false)
       ) {
         if (overwritePolicy === "no") {
-          log(`  Skipped existing: ${safePath}`);
-          continue;
-        }
-        if (overwritePolicy === "prompt") {
-          const answer = await confirmPrompt(
-            `File '${safePath}' exists. Overwrite? [y/N/a/s/q]: `,
-            ["y", "n", "a", "s", "q"]
-          );
-          if (answer === "n") {
-            log(`  Skipped: ${safePath}`);
-            continue;
-          }
-          if (answer === "a") overwritePolicy = "yes";
-          if (answer === "s") {
-            overwritePolicy = "no";
-            log(`  Skipped: ${safePath}`);
-            continue;
-          }
-          if (answer === "q") {
-            log("Operation cancelled by user.");
-            break;
+          shouldWrite = false;
+        } else if (overwritePolicy === "prompt") {
+          const existingContent = await fs.readFile(outputPath);
+          if (existingContent.equals(file.contentBytes)) {
+            const answer = await confirmPrompt(
+              `File content for '${safePath}' is identical. Overwrite anyway? [y/N/a/s/q]: `,
+              ["y", "n", "a", "s", "q"]
+            );
+            if (answer === "n") shouldWrite = false;
+            if (answer === "a") overwritePolicy = "yes";
+            if (answer === "s") {
+              shouldWrite = false;
+              overwritePolicy = "no";
+            }
+            if (answer === "q") {
+              log("Operation cancelled by user.");
+              break;
+            }
+          } else {
+            // In a real CLI, we would show a diff here.
+            const answer = await confirmPrompt(
+              `File '${safePath}' exists. Overwrite? [y/N/a/s/q]: `,
+              ["y", "n", "a", "s", "q"]
+            );
+            if (answer === "n") shouldWrite = false;
+            if (answer === "a") overwritePolicy = "yes";
+            if (answer === "s") {
+              shouldWrite = false;
+              overwritePolicy = "no";
+            }
+            if (answer === "q") {
+              log("Operation cancelled by user.");
+              break;
+            }
           }
         }
       }
-      await fs.writeFile(outputPath, file.contentBytes);
-      log(`  Wrote: ${safePath}`);
+
+      if (shouldWrite) {
+        await fs.writeFile(outputPath, file.contentBytes);
+        log(`  Wrote: ${safePath}`);
+      } else {
+        log(`  Skipped: ${safePath}`);
+      }
     }
   }
 }
 
 async function confirmPrompt(question, validChoices = ["y", "n"]) {
+  if (!process.stdin.isTTY) {
+    return "n"; // Default to 'no' in non-interactive environments
+  }
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -457,10 +496,8 @@ async function confirmPrompt(question, validChoices = ["y", "n"]) {
 
 // --- Exports and Execution ---
 
-// Export the main function for library use
 module.exports = { extractBundle };
 
-// If run directly from Node.js, execute the CLI
 if (IS_NODE && require.main === module) {
   mainCli().catch((err) => {
     console.error(`\nAn unexpected error occurred: ${err.message}`);
