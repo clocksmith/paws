@@ -1,4 +1,4 @@
-# 🐾 PAWS: Prepare Artifacts With SWAP (Streamlined Write After PAWS)
+# 🐾 PAWS: Prepare Artifacts With SWAP
 
 **PAWS** provides a set of transparent and powerful command-line utilities to bundle your project files for efficient interaction with Large Language Models (LLMs) and then to reconstruct them, enabling a swift code **💱 SWAP** (Streamlined Write After PAWS).
 
@@ -56,7 +56,8 @@ The project is organized into language-specific directories, with shared system 
 │   ├── dogs.py
 │   ├── README.md        <-- Python-specific documentation
 │   └── tests/
-│       └── ...
+│       └── test_paws.py
+├── README.md
 ├── sys_a.md             <-- Shared: Default system prompt
 ├── sys_d.md             <-- Shared: Delta mode system prompt
 └── sys_r.md             <-- Shared: RSI (self-modification) prompt
@@ -114,7 +115,7 @@ The Python tests use the built-in `unittest` module.
 1.  Navigate to the project root directory.
 2.  Run the test discovery command:
     ```bash
-    python -m unittest discover py/tests/python_tests
+    python -m unittest discover py/tests
     ```
 
 ### Running JavaScript Tests
@@ -138,4 +139,4 @@ Contributions are welcome! Please feel free to open an issue to report a bug or 
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the ISC License.

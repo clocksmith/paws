@@ -117,12 +117,12 @@ The most reliable way to run the entire test suite is to use `unittest`'s **disc
 
 ```bash
 # From the project root:
-python -m unittest discover py/tests/python_tests
+python -m unittest discover py/tests
 ```
 
 - `python -m unittest`: Invokes the `unittest` module as a script, correctly configuring the path.
 - `discover`: Tells `unittest` to search for tests.
-- `py/tests/python_tests`: Specifies the directory where the Python tests reside.
+- `py/tests`: Specifies the directory where the Python tests reside.
 
 #### Running Specific Tests
 
@@ -130,17 +130,17 @@ When developing or debugging, you can run a subset of tests by targeting specifi
 
 - **Run a single test file:**
   ```bash
-  python -m unittest py.tests.python_tests.test_paws
+  python -m unittest py.tests.test_paws
   ```
 - **Run a single test class:**
   ```bash
-  python -m unittest py.tests.python_tests.test_paws.TestDogsPy
+  python -m unittest py.tests.test_paws.TestDogsPy
   ```
 - **Run a single test method:**
   ```bash
-  python -m unittest py.tests.python_tests.test_paws.TestDogsPy.test_parser_handles_unterminated_blocks
+  python -m unittest py.tests.test_paws.TestDogsPy.test_parser_handles_unterminated_blocks
   ```
 
 ### Understanding the Test Structure
 
-The suite resides in `py/tests/python_tests/test_paws.py` and is broken down into `TestCatsPy`, `TestDogsPy`, and `TestFullWorkflow` classes to verify all features, edge cases, and safety mechanisms.
+The suite resides in `py/tests/test_paws.py` and is broken down into `TestCatsPy`, `TestDogsPy`, and `TestFullWorkflow` classes to verify all features, edge cases, and safety mechanisms.
