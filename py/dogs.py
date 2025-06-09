@@ -19,9 +19,9 @@ DEFAULT_OUTPUT_DIR = "."
 # --- Bundle Structure Constants ---
 BASE64_HINT_TEXT = "Content:Base64"
 START_END_MARKER_REGEX = re.compile(
-    r"^\s*🐕\s*-{3,}\s*DOGS_(START|END)_FILE\s*:\s*(.+?)(\s+\("  # FIX: Made group capturing
+    r"^\s*🐕\s*-{3,}\s*DOGS_(START|END)_FILE\s*:\s*(.+?)(\s+\("
     + re.escape(BASE64_HINT_TEXT)
-    + r"\))?\s*-{3,}\s*$",  # FIX: Group is optional
+    + r"\))?\s*-{3,}\s*$",
     re.IGNORECASE,
 )
 PAWS_CMD_REGEX = re.compile(r"^\s*@@\s*PAWS_CMD\s+(.+?)\s*@@\s*$")
@@ -84,6 +84,8 @@ class BundleParser:
 
     def _parse_delta_command(self, cmd_str: str) -> Optional[DeltaCommand]:
         """Parses a PAWS_CMD string into a DeltaCommand dictionary."""
+        if m := DELETE_FILE_REGEX.match(cmd_str):
+            return {"type": "delete_file"}
         if m := REPLACE_LINES_REGEX.match(cmd_str):
             return {"type": "replace", "start": int(m.group(1)), "end": int(m.group(2))}
         if m := INSERT_AFTER_LINE_REGEX.match(cmd_str):
@@ -94,8 +96,6 @@ class BundleParser:
                 "start": int(m.group(1)),
                 "end": int(m.group(2)),
             }
-        if m := DELETE_FILE_REGEX.match(cmd_str):
-            return {"type": "delete_file"}
         return None
 
     def _finalize_content_block(self, content_lines: List[str]) -> List[str]:
@@ -145,7 +145,7 @@ class BundleParser:
                     f"  Error: Failed to decode content for '{path}': {e}",
                     file=sys.stderr,
                 )
-                return  # Don't append a failed file
+                return
 
         self.parsed_files.append(file_action)
 
@@ -166,8 +166,7 @@ class BundleParser:
                     current_file_path = match.group(2).strip()
                     current_is_binary = bool(match.group(3))
                     content_lines, delta_commands = [], []
-                # else: Ignore any line outside a block
-            else:  # in_file_block is True
+            else:
                 if match:
                     marker_type, path_str = (
                         match.group(1).upper(),
@@ -193,20 +192,22 @@ class BundleParser:
                             content_lines,
                             delta_commands,
                         )
-                        # Reset for the new file
-                        current_file_path = path_str
-                        current_is_binary = bool(match.group(3))
+                        current_file_path, current_is_binary = path_str, bool(
+                            match.group(3)
+                        )
                         content_lines, delta_commands = [], []
                     else:
-                        content_lines.append(
-                            line
-                        )  # Mismatched END marker, treat as content
-                else:  # It's a content line
+                        content_lines.append(line)
+                else:
                     paws_cmd_match = PAWS_CMD_REGEX.match(line)
-                    if self.config.apply_delta_from and paws_cmd_match:
+                    if paws_cmd_match:
                         cmd_str = paws_cmd_match.group(1).strip()
                         delta_cmd = self._parse_delta_command(cmd_str)
-                        if delta_cmd:
+                        # Process DELETE_FILE unconditionally. Process other deltas only in delta mode.
+                        if delta_cmd and (
+                            delta_cmd["type"] == "delete_file"
+                            or self.config.apply_delta_from
+                        ):
                             finalized_block = self._finalize_content_block(
                                 content_lines
                             )
@@ -220,11 +221,12 @@ class BundleParser:
                             content_lines = []
                             delta_commands.append(delta_cmd)
                         else:
-                            content_lines.append(line)
+                            content_lines.append(
+                                line
+                            )  # Unrecognized/disallowed command, treat as content
                     else:
                         content_lines.append(line)
 
-        # After loop, handle unclosed block at the very end of the file
         if in_file_block:
             if not self.config.quiet:
                 print(
@@ -317,16 +319,16 @@ class ActionHandler:
 
         color = Ansi.RED if is_destructive else Ansi.YELLOW
         options = (
-            "[y/N/q(quit)]"
-            if is_destructive
-            else "[y/N/a(yes-all)/s(skip-all)/q(quit)]"
+            "[y/N/a(yes-all)/s(skip-all)/q(quit)]"
+            if not is_destructive
+            else "[y/N/a(yes-all)/q(quit)]"
         )
 
         while True:
             try:
-                choice_prompt = f"{color}{prompt}{Ansi.RESET} {options}: "
-                choice = input(choice_prompt).strip().lower()
-
+                choice = (
+                    input(f"{color}{prompt}{Ansi.RESET} {options}: ").strip().lower()
+                )
                 if choice == "y":
                     return True
                 if choice == "n" or choice == "":
@@ -334,13 +336,12 @@ class ActionHandler:
                 if choice == "q":
                     self.quit_extraction = True
                     return False
-                if not is_destructive:
-                    if choice == "a":
-                        self.always_yes = True
-                        return True
-                    if choice == "s":
-                        self.always_no = True
-                        return False
+                if choice == "a":
+                    self.always_yes = True
+                    return True
+                if not is_destructive and choice == "s":
+                    self.always_no = True
+                    return False
             except (KeyboardInterrupt, EOFError):
                 self.quit_extraction = True
                 print("\nQuit.", file=sys.stderr)
@@ -367,7 +368,6 @@ class ActionHandler:
         for pf in parsed_files:
             if self.quit_extraction:
                 break
-
             try:
                 abs_path = (self.config.output_dir / pf["path"]).resolve()
                 if not str(abs_path).startswith(str(self.config.output_dir.resolve())):
@@ -387,7 +387,6 @@ class ActionHandler:
                             print(f"  Skipped delete: {pf['path']}")
                     elif not self.config.quiet:
                         print(f"  Info: Cannot delete non-existent file: {pf['path']}")
-
                 elif action in ["write", "delta"]:
                     content_bytes = pf.get("content_bytes")
                     if action == "delta":
@@ -415,9 +414,7 @@ class ActionHandler:
                             prompt_text = "Overwrite?"
                             if diff_str is not None:
                                 if not diff_str.strip():
-                                    prompt_text = (
-                                        "File content is identical. Overwrite anyway?"
-                                    )
+                                    prompt_text = f"File content for '{pf['path']}' is identical. Overwrite anyway?"
                                 elif not self.config.quiet:
                                     print(
                                         f"\nChanges for {Ansi.YELLOW}{pf['path']}{Ansi.RESET}:"
@@ -434,7 +431,6 @@ class ActionHandler:
                             )
                     elif not self.config.quiet:
                         print(f"  Skipped: {pf['path']}")
-
             except Exception as e:
                 print(
                     f"{Ansi.RED}  Error processing '{pf.get('path', 'unknown')}': {e}{Ansi.RESET}",
@@ -489,7 +485,6 @@ def main_cli():
         help="Auto-skip all conflicting actions.",
     )
     parser.set_defaults(overwrite_policy="prompt")
-
     args = parser.parse_args()
 
     using_stdin = args.bundle_file == "-"
