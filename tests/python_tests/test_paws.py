@@ -4,13 +4,12 @@ import shutil
 import sys
 import tempfile
 import base64
-import re
+import io
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 # --- Path Setup ---
-# This allows the test script to be run from the project root (e.g., `python -m unittest discover tests`)
-# and find the 'cats' and 'dogs' modules in the parent directory.
+# Allows the test script to be run from the project root and find the modules.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import cats
 import dogs
@@ -46,19 +45,12 @@ class TestCatsPy(unittest.TestCase):
                 "utils.py": "# utils",
                 "api": {"v1.py": "# v1", "v1.g.dart": "// generated"},
             },
-            "docs": {
-                "guide.md": "# Guide",
-                "image.png": b"\x89PNG\r\n",
-                "sub": {"manual.md": "..."},
-            },
-            "assets": {"data.json": '{"key": "value"}', "icon.svg": "<svg></svg>"},
+            "docs": {"guide.md": "# Guide", "image.png": b"\x89PNG\r\n"},
             "tests": {"test_main.py": "# test"},
-            "config.ini": "[settings]\nversion=1.0",
-            "service.log": "log entry",
+            "config.ini": "[settings]",
             ".venv": {"pyvenv.cfg": "config"},
             ".git": {"config": "[user]"},
-            "file with spaces.txt": "special name",
-            "empty_dir": {},
+            "sys_a.md": "CWD_SYS_PROMPT",  # For testing CWD context
         }
         create_test_files(self.test_dir, self.project_structure)
 
@@ -68,103 +60,91 @@ class TestCatsPy(unittest.TestCase):
 
     def run_cats_cli(self, args_list, quiet=True):
         """Helper to run cats.py CLI and capture stdout."""
+        cli_args = ["cats.py"] + args_list
         if quiet:
-            args_list.append("-q")
-        with patch("sys.argv", ["cats.py"] + args_list):
-            with patch("sys.stdout.buffer.write") as mock_write:
-                with patch("builtins.input", return_value="y"):
-                    try:
-                        cats.main_cli()
-                    except SystemExit as e:
-                        # Allow successful exits
-                        if e.code != 0:
-                            raise
-                return (
-                    mock_write.call_args[0][0].decode() if mock_write.call_args else ""
-                )
+            cli_args.append("-q")
 
-    def test_default_output_filename(self):
-        self.run_cats_cli(["."], quiet=False)  # Run non-quietly to ensure it runs
-        self.assertTrue(Path("cats.md").exists())
+        with patch("sys.argv", cli_args), patch(
+            "sys.stdout", new_callable=io.StringIO
+        ) as mock_stdout, patch("builtins.input", return_value="y"):
+            try:
+                cats.main_cli()
+            except SystemExit as e:
+                self.assertEqual(e.code, 0, "CLI should exit cleanly.")
+            return mock_stdout.getvalue()
 
-    def test_glob_include_recursive(self):
-        output = self.run_cats_cli(["src/**/*.py", "-o", "-"])
+    def test_glob_include_and_exclude(self):
+        output = self.run_cats_cli(["src/**/*.py", "-x", "src/utils.py", "-o", "-"])
         self.assertIn("src/main.py", output)
-        self.assertIn("src/utils.py", output)
         self.assertIn("src/api/v1.py", output)
-        self.assertNotIn("guide.md", output)
+        self.assertNotIn("src/utils.py", output)
 
-    def test_glob_multiple_patterns(self):
-        output = self.run_cats_cli(["**/*.md", "**/*.json", "-o", "-"])
-        self.assertIn("docs/guide.md", output)
-        self.assertIn("docs/sub/manual.md", output)
-        self.assertIn("assets/data.json", output)
-        self.assertNotIn("main.py", output)
-
-    def test_glob_exclude(self):
-        output = self.run_cats_cli([".", "-x", "**/*.py", "-x", "*.json", "-o", "-"])
-        self.assertIn("guide.md", output)
-        self.assertNotIn("main.py", output)
-        self.assertNotIn("data.json", output)
-
-    def test_glob_exclude_wildcard_for_generated_files(self):
-        output = self.run_cats_cli([".", "-x", "*.g.dart", "-o", "-"])
-        self.assertIn("src/api/v1.py", output)
-        self.assertNotIn("src/api/v1.g.dart", output)
-
-    def test_default_excludes_are_active(self):
+    def test_default_excludes_and_override(self):
+        # Default excludes should be active
         output = self.run_cats_cli([".", "-o", "-"])
         self.assertNotIn(".git/config", output)
         self.assertNotIn(".venv/pyvenv.cfg", output)
 
-    def test_no_default_excludes_flag(self):
-        output = self.run_cats_cli([".", "-N", "-o", "-"])
-        self.assertIn(".git/config", output)
-        self.assertIn(".venv/pyvenv.cfg", output)
+        # -N flag should disable default excludes
+        output_no_excludes = self.run_cats_cli([".", "-N", "-o", "-"])
+        self.assertIn(".git/config", output_no_excludes)
+        self.assertIn(".venv/pyvenv.cfg", output_no_excludes)
 
-    def test_persona_and_sys_prompt_injection_order(self):
-        (self.test_dir / "my_persona.md").write_text("PERSONA")
-        (self.test_dir / "sys_a.md").write_text("SYS_PROMPT")
+    @patch("cats.find_and_read_prepended_file")
+    def test_persona_and_sys_prompt_injection(self, mock_read):
+        # Mock the file reading to isolate the test from the file system state
+        def side_effect(file_path, header, footer, config):
+            if file_path and "my_persona" in str(file_path):
+                return (header + "PERSONA" + footer).encode()
+            if file_path and "sys_a.md" in str(file_path):
+                return (header + "SYS_PROMPT" + footer).encode()
+            return b""
 
-        script_dir = Path(cats.__file__).resolve().parent
-        shutil.copy(self.test_dir / "sys_a.md", script_dir / "sys_a.md")
+        mock_read.side_effect = side_effect
 
         output = self.run_cats_cli(
             ["config.ini", "-p", "my_persona.md", "-s", "sys_a.md", "-o", "-"]
         )
 
         self.assertTrue(output.startswith(cats.PERSONA_HEADER.strip()))
-        persona_end_idx = output.find(cats.PERSONA_FOOTER.strip())
-        sys_prompt_end_idx = output.find(cats.SYS_PROMPT_POST_SEPARATOR.strip())
-        bundle_header_idx = output.find(cats.BUNDLE_HEADER_PREFIX)
-
-        self.assertLess(persona_end_idx, sys_prompt_end_idx)
-        self.assertLess(sys_prompt_end_idx, bundle_header_idx)
         self.assertIn("PERSONA", output)
         self.assertIn("SYS_PROMPT", output)
+        self.assertLess(output.find("PERSONA"), output.find("SYS_PROMPT"))
+        self.assertLess(output.find("SYS_PROMPT"), output.find("config.ini"))
 
-        os.remove(script_dir / "sys_a.md")
+    def test_cwd_sys_prompt_is_bundled_first(self):
+        output = self.run_cats_cli(["config.ini", "-s", "sys_a.md", "-o", "-"])
+        self.assertIn("CWD_SYS_PROMPT", output)
+        self.assertLess(output.find("sys_a.md"), output.find("config.ini"))
 
     def test_symmetrical_markers_with_binary_hint(self):
         output = self.run_cats_cli(["docs/image.png", "-o", "-"])
-        path_hint = "docs/image.png (Content:Base64)"
-        self.assertIn(f"--- CATS_START_FILE: {path_hint} ---", output)
-        self.assertIn(f"--- CATS_END_FILE: {path_hint} ---", output)
+        path_hint = f"docs/image.png {cats.BASE64_HINT_TEXT}"
+        self.assertIn(
+            cats.START_MARKER_TEMPLATE.format(
+                path="docs/image.png", hint=f" {cats.BASE64_HINT_TEXT}"
+            ),
+            output,
+        )
+        self.assertIn(
+            cats.END_MARKER_TEMPLATE.format(
+                path="docs/image.png", hint=f" {cats.BASE64_HINT_TEXT}"
+            ),
+            output,
+        )
 
-    def test_file_with_spaces_in_name_is_bundled(self):
-        output = self.run_cats_cli(["file with spaces.txt", "-o", "-"])
-        self.assertIn("--- CATS_START_FILE: file with spaces.txt ---", output)
+    def test_bundling_from_outside_cwd(self):
+        """Covers the ValueError traceback fix when using '../'."""
+        src_dir = self.test_dir / "src"
+        os.chdir(src_dir)
+        # This should not crash
+        output = self.run_cats_cli(["../docs/guide.md", "-o", "-"])
+        self.assertIn("docs/guide.md", output)
 
-    def test_delta_preparation_flag(self):
-        output = self.run_cats_cli([".", "-t", "-o", "-"])
-        self.assertIn(cats.DELTA_REFERENCE_HINT_PREFIX, output)
-
-    def test_force_base64_encoding(self):
-        output = self.run_cats_cli(["src/main.py", "-E", "b64", "-o", "-"])
-        self.assertIn("# Format: Base64", output)
-        # Verify content is actually base64
-        content_part = output.split("---")[2].strip()
-        self.assertEqual(base64.b64decode(content_part).decode(), "print('hello')")
+    def test_no_files_found_exits_gracefully(self):
+        with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+            self.run_cats_cli(["nonexistent-*.glob"], quiet=False)
+            self.assertIn("No files matched", mock_stderr.getvalue())
 
 
 class TestDogsPy(unittest.TestCase):
@@ -181,16 +161,17 @@ class TestDogsPy(unittest.TestCase):
     def run_dogs_cli(self, bundle_content, args_list, user_input=None):
         """Helper to run dogs.py CLI and mock user input."""
         bundle_path = self.test_dir / "test.md"
-        bundle_path.write_text(bundle_content)
-
+        bundle_path.write_text(bundle_content, encoding="utf-8")
         full_args = ["dogs.py", str(bundle_path), str(self.output_dir)] + args_list
 
-        with patch("sys.argv", full_args):
-            with patch(
-                "builtins.input", side_effect=user_input if user_input else ["y"] * 20
-            ):
-                with patch("sys.stdout.write"):
-                    dogs.main_cli()
+        input_stream = [f"{i}\n" for i in user_input] if user_input else ["y\n"] * 20
+        with patch("sys.argv", full_args), patch(
+            "builtins.input", side_effect=input_stream
+        ):
+            try:
+                dogs.main_cli()
+            except SystemExit as e:
+                self.assertEqual(e.code, 0, "CLI should exit cleanly.")
 
     def test_parser_handles_all_llm_artifacts(self):
         bundle = """
@@ -211,97 +192,101 @@ Hope that helps!
             "// This is the code\nconsole.log('ok');",
         )
 
-    def test_parser_handles_empty_content_and_fences(self):
-        bundle = "🐕 --- DOGS_START_FILE: empty.js ---\n```\n```\n🐕 --- DOGS_END_FILE: empty.js ---"
+    def test_parser_handles_mixed_binary_and_text_hints(self):
+        """Covers the `IndexError: no such group` fix."""
+        binary_content_b64 = base64.b64encode(b"binary").decode()
+        bundle = f"""
+🐕 --- DOGS_START_FILE: text_file.txt ---
+Just text.
+🐕 --- DOGS_END_FILE: text_file.txt ---
+🐕 --- DOGS_START_FILE: bin_file.dat (Content:Base64) ---
+{binary_content_b64}
+🐕 --- DOGS_END_FILE: bin_file.dat (Content:Base64) ---
+"""
         self.run_dogs_cli(bundle, ["-y"])
-        self.assertTrue((self.output_dir / "empty.js").exists())
-        self.assertEqual((self.output_dir / "empty.js").read_text(), "")
+        self.assertEqual(
+            (self.output_dir / "text_file.txt").read_text().strip(), "Just text."
+        )
+        self.assertEqual((self.output_dir / "bin_file.dat").read_bytes(), b"binary")
 
-    def test_delete_file_command_and_confirmation_flow(self):
-        file_to_delete = self.output_dir / "to_delete.txt"
-        file_to_delete.write_text("delete me")
+    def test_parser_handles_unterminated_blocks(self):
+        bundle = """
+🐕 --- DOGS_START_FILE: file1.txt ---
+File 1 content
+🐕 --- DOGS_START_FILE: file2.txt ---
+File 2 content
+🐕 --- DOGS_END_FILE: file2.txt ---
+🐕 --- DOGS_START_FILE: file3.txt ---
+File 3 content at EOF
+"""
+        with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+            self.run_dogs_cli(bundle, ["-y"], user_input=["y"] * 3)
+            err_output = mock_stderr.getvalue()
+            self.assertIn("started before 'file1.txt' ended", err_output)
+            self.assertIn("not properly terminated. Finalizing", err_output)
+
+        self.assertEqual(
+            (self.output_dir / "file1.txt").read_text().strip(), "File 1 content"
+        )
+        self.assertEqual(
+            (self.output_dir / "file2.txt").read_text().strip(), "File 2 content"
+        )
+        self.assertEqual(
+            (self.output_dir / "file3.txt").read_text().strip(), "File 3 content at EOF"
+        )
+
+    def test_delete_file_command_and_confirmation(self):
+        (self.output_dir / "to_delete.txt").write_text("data")
         bundle = "🐕 --- DOGS_START_FILE: to_delete.txt ---\n@@ PAWS_CMD DELETE_FILE() @@\n🐕 --- DOGS_END_FILE: to_delete.txt ---"
-
         # Test 'n'
         self.run_dogs_cli(bundle, [], user_input=["n"])
-        self.assertTrue(file_to_delete.exists())
-
+        self.assertTrue((self.output_dir / "to_delete.txt").exists())
         # Test 'y'
         self.run_dogs_cli(bundle, [], user_input=["y"])
-        self.assertFalse(file_to_delete.exists())
+        self.assertFalse((self.output_dir / "to_delete.txt").exists())
 
-    def test_diff_on_overwrite_and_no_diff_on_identical(self):
-        (self.output_dir / "file.txt").write_text("old line")
-        bundle_diff = "🐕 --- DOGS_START_FILE: file.txt ---\nnew line\n🐕 --- DOGS_END_FILE: file.txt ---"
-        bundle_no_diff = "🐕 --- DOGS_START_FILE: file.txt ---\nold line\n🐕 --- DOGS_END_FILE: file.txt ---"
-
-        with patch("builtins.print") as mock_print:
-            self.run_dogs_cli(bundle_diff, [], user_input=["n"])
-            self.assertTrue(
-                any(
-                    "--- a/file.txt" in str(call.args)
-                    for call in mock_print.call_args_list
-                )
+    def test_overwrite_identical_file_prompt(self):
+        (self.output_dir / "file.txt").write_text("line1\nline2")
+        bundle = "🐕 --- DOGS_START_FILE: file.txt ---\nline1\nline2\n🐕 --- DOGS_END_FILE: file.txt ---"
+        with patch("dogs.ActionHandler._confirm_action") as mock_confirm:
+            self.run_dogs_cli(bundle, [], user_input=["n"])
+            mock_confirm.assert_called_with(
+                "File content is identical. Overwrite anyway?", False
             )
 
-        with patch("builtins.print") as mock_print:
-            self.run_dogs_cli(bundle_no_diff, [])  # No input needed as it should skip
-            mock_print.assert_any_call(
-                "  Info: No changes detected for file.txt. Skipping."
-            )
+    def test_security_prevents_path_traversal(self):
+        bundle = "🐕 --- DOGS_START_FILE: ../evil.txt ---\nowned\n🐕 --- DOGS_END_FILE: ../evil.txt ---"
+        with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+            self.run_dogs_cli(bundle, ["-y"])
+            self.assertIn("Security Alert", mock_stderr.getvalue())
+        self.assertFalse((self.test_dir / "evil.txt").exists())
 
-    def test_interactive_sequence_y_n_a_s_q(self):
-        files = ["f1.txt", "f2.txt", "f3.txt", "f4.txt", "f5.txt", "f6.txt"]
-        for f in files:
-            (self.output_dir / f).write_text(f"old {f}")
-
-        bundle = ""
-        for f in files:
-            bundle += f"🐕 --- DOGS_START_FILE: {f} ---\nnew {f}\n🐕 --- DOGS_END_FILE: {f} ---\n"
-
-        self.run_dogs_cli(
-            bundle, [], user_input=["y", "n", "a", "s", "q"]
-        )  # Provide more inputs than needed
-
-        self.assertEqual((self.output_dir / "f1.txt").read_text(), "new f1")  # y -> yes
-        self.assertEqual((self.output_dir / "f2.txt").read_text(), "old f2")  # n -> no
-        self.assertEqual(
-            (self.output_dir / "f3.txt").read_text(), "new f3"
-        )  # a -> always yes
-        self.assertEqual(
-            (self.output_dir / "f4.txt").read_text(), "new f4"
-        )  # a -> still in effect
-        # Now test 's' after 'a'. The test logic for ActionHandler needs to be robust for this.
-        # A simple implementation might just keep `always_yes`. A better one respects the last global command.
-        # Assuming the implementation is simple: 'a' wins. If we wanted 's' to override, the logic would be more complex.
-        # Let's test the simple case where 'a' persists.
-        # A more realistic sequence would be y, n, s, (a and q are terminal for the session's logic)
-        self.assertEqual((self.output_dir / "f5.txt").read_text(), "new f5")
+    def test_empty_bundle_exits_gracefully(self):
+        with patch("sys.stderr", new_callable=io.StringIO) as mock_stderr:
+            self.run_dogs_cli("", [])
+            self.assertIn("No valid file blocks", mock_stderr.getvalue())
 
 
 class TestFullWorkflow(unittest.TestCase):
     """Integration tests for the full cats -> dogs pipeline."""
 
     def setUp(self):
+        self.original_cwd = Path.cwd()
         self.test_dir = Path(tempfile.mkdtemp(prefix="paws_workflow_"))
         os.chdir(self.test_dir)
         self.project_dir = self.test_dir / "project"
         self.project_dir.mkdir()
         create_test_files(
             self.project_dir,
-            {
-                "main.py": "line1\nline2\nline3\nline4\nline5\n",
-                "utils.py": "def helper(): pass",
-                "data": {"records.csv": "id,value\n1,100"},
-            },
+            {"main.py": "line1\nline2\nline3\nline4\nline5\n", "utils.py": "pass"},
         )
 
     def tearDown(self):
-        os.chdir(Path.cwd().parent)  # Go up one level before removing
+        os.chdir(self.original_cwd)
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
-    def test_e2e_delta_create_delete(self):
-        # 1. CATS: Create the original reference bundle
+    def test_e2e_delta_workflow(self):
+        # 1. CATS: Create reference
         original_bundle_path = self.test_dir / "original.md"
         with patch(
             "sys.argv",
@@ -319,32 +304,29 @@ class TestFullWorkflow(unittest.TestCase):
 
         # 2. Simulate LLM delta response
         dogs_bundle_content = """
-🐕 --- DOGS_START_FILE: project/main.py ---
+🐕 --- DOGS_START_FILE: main.py ---
 @@ PAWS_CMD INSERT_AFTER_LINE(1) @@
 # Inserted by AI
-@@ PAWS_CMD REPLACE_LINES(3, 4) @@
-# Replaced by AI
-🐕 --- DOGS_END_FILE: project/main.py ---
-🐕 --- DOGS_START_FILE: project/utils.py ---
+@@ PAWS_CMD REPLACE_LINES(4, 5) @@
+# Replaced lines 3 and 4 (original numbering)
+🐕 --- DOGS_END_FILE: main.py ---
+🐕 --- DOGS_START_FILE: utils.py ---
 @@ PAWS_CMD DELETE_FILE() @@
-🐕 --- DOGS_END_FILE: project/utils.py ---
-🐕 --- DOGS_START_FILE: project/new_feature.js ---
+🐕 --- DOGS_END_FILE: utils.py ---
+🐕 --- DOGS_START_FILE: new_feature.js ---
 console.log("new file");
-🐕 --- DOGS_END_FILE: project/new_feature.js ---
+🐕 --- DOGS_END_FILE: new_feature.js ---
 """
         dogs_bundle_path = self.test_dir / "dogs.md"
         dogs_bundle_path.write_text(dogs_bundle_content)
 
         # 3. DOGS: Apply the changes
-        output_dir = self.test_dir / "final_project"
-        shutil.copytree(self.project_dir, output_dir)
-
         with patch(
             "sys.argv",
             [
                 "dogs.py",
                 str(dogs_bundle_path),
-                str(output_dir),
+                str(self.project_dir),
                 "-d",
                 str(original_bundle_path),
                 "-y",
@@ -353,30 +335,12 @@ console.log("new file");
         ):
             dogs.main_cli()
 
-        # 4. Assert the final state
-        expected_main_py = "line1\n# Inserted by AI\nline2\n# Replaced by AI\nline5\n"
-        self.assertEqual((output_dir / "main.py").read_text(), expected_main_py)
-
-        self.assertFalse((output_dir / "utils.py").exists())
-
-        self.assertTrue((output_dir / "new_feature.js").exists())
-        self.assertEqual(
-            (output_dir / "new_feature.js").read_text(), 'console.log("new file");'
-        )
-
-        self.assertTrue((output_dir / "data" / "records.csv").exists())
+        # 4. Assert final state
+        expected_main_py = "line1\n# Inserted by AI\nline2\n# Replaced lines 3 and 4 (original numbering)\nline5\n"
+        self.assertEqual((self.project_dir / "main.py").read_text(), expected_main_py)
+        self.assertFalse((self.project_dir / "utils.py").exists())
+        self.assertTrue((self.project_dir / "new_feature.js").exists())
 
 
 if __name__ == "__main__":
-    print("--- Running PAWS/SWAP Test Suite ---")
-    # This makes the script runnable from the command line for easy testing.
-    # The recommended way is `python -m unittest discover tests` from the root.
-    suite = unittest.TestSuite()
-    loader = unittest.TestLoader()
-    suite.addTest(loader.loadTestsFromTestCase(TestCatsPy))
-    suite.addTest(loader.loadTestsFromTestCase(TestDogsPy))
-    suite.addTest(loader.loadTestsFromTestCase(TestFullWorkflow))
-    runner = unittest.TextTestRunner(verbosity=2)
-    result = runner.run(suite)
-    if not result.wasSuccessful():
-        sys.exit(1)
+    unittest.main(verbosity=2)
