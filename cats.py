@@ -90,13 +90,27 @@ def get_paths_to_process(
                 file=sys.stderr,
             )
 
-    # 3. Resolve all include patterns and filter them
-    candidate_files: Set[Path] = set()
-    include_paths = _resolve_glob_patterns(config.include_patterns, cwd)
-    for path in include_paths:
-        if not path.is_file():
-            continue
+    # 3. Resolve all include patterns and expand directories
+    initial_include_paths = _resolve_glob_patterns(config.include_patterns, cwd)
 
+    expanded_files: Set[Path] = set()
+    for path in initial_include_paths:
+        if path.is_dir():
+            if not config.quiet:
+                try:
+                    display_path = path.relative_to(cwd)
+                except ValueError:
+                    display_path = path
+                print(f"  Info: Expanding directory '{display_path}'", file=sys.stderr)
+            for child in path.rglob("*"):
+                if child.is_file():
+                    expanded_files.add(child)
+        elif path.is_file():
+            expanded_files.add(path)
+
+    # 4. Filter the final list of files against exclusions
+    candidate_files: Set[Path] = set()
+    for path in expanded_files:
         is_excluded = False
         for ex_path in exclude_paths:
             if path == ex_path or (ex_path.is_dir() and ex_path in path.parents):
@@ -113,8 +127,12 @@ def find_common_ancestor(paths: List[Path], cwd: Path) -> Path:
     if not paths:
         return cwd
     try:
-        return Path(os.path.commonpath([str(p) for p in paths]))
+        # os.path.commonpath handles cases with mixed absolute/relative paths more gracefully
+        # by working on string representations.
+        common_path_str = os.path.commonpath([str(p) for p in paths])
+        return Path(common_path_str)
     except (ValueError, TypeError):
+        # Fallback for edge cases like mixed drive letters on Windows
         return cwd
 
 
@@ -210,7 +228,7 @@ def main_cli():
         epilog="Examples:\n"
         "  python cats.py 'src/**/*.py' -o my_code.md\n"
         "  python cats.py . -x '*.g.dart' -x 'build/**' -o project.md\n"
-        "  python cats.py . -p personas/test_writer.md -o for_testing.md",
+        "  python cats.py ../other-project -p personas/test_writer.md -o for_testing.md",
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
@@ -218,7 +236,7 @@ def main_cli():
         "paths",
         nargs="+",
         metavar="PATH_PATTERN",
-        help="One or more files or glob patterns to include (e.g., 'src/**/*.py').",
+        help="One or more files or glob patterns to include (e.g., 'src/**/*.py', '.').",
     )
     parser.add_argument(
         "-o",
@@ -287,6 +305,7 @@ def main_cli():
     args = parser.parse_args()
 
     # --- Configuration Setup ---
+    cwd = Path.cwd()
     output_to_stdout = args.output == "-"
     output_filename = (
         args.output if args.output and not output_to_stdout else DEFAULT_OUTPUT_FILENAME
@@ -296,7 +315,7 @@ def main_cli():
         include_patterns=args.paths,
         exclude_patterns=args.exclude,
         output_file=(
-            None if output_to_stdout else Path.cwd().joinpath(output_filename).resolve()
+            None if output_to_stdout else cwd.joinpath(output_filename).resolve()
         ),
         encoding_mode=args.force_encoding,
         use_default_excludes=args.use_default_excludes,
@@ -325,7 +344,7 @@ def main_cli():
         try:
             script_dir = Path(__file__).resolve().parent
         except NameError:
-            script_dir = Path.cwd()
+            script_dir = cwd
         for loc in [script_dir, script_dir.parent]:
             if (loc / config.sys_prompt_file).is_file():
                 sys_prompt_path = (loc / config.sys_prompt_file).resolve()
@@ -345,7 +364,7 @@ def main_cli():
         sys.exit(1)
 
     # 2. Collect and process files
-    other_files, cwd_context_file = get_paths_to_process(config, Path.cwd())
+    other_files, cwd_context_file = get_paths_to_process(config, cwd)
     all_paths_to_process = (
         [cwd_context_file] if cwd_context_file else []
     ) + other_files
@@ -354,9 +373,7 @@ def main_cli():
         print("No files matched the given criteria. Exiting.", file=sys.stderr)
         sys.exit(0)
 
-    common_ancestor = find_common_ancestor(
-        [p.parent for p in all_paths_to_process], Path.cwd()
-    )
+    common_ancestor = find_common_ancestor(all_paths_to_process, cwd)
     file_objects = [
         obj
         for p in all_paths_to_process
@@ -368,8 +385,15 @@ def main_cli():
         sys.exit(1)
 
     if not config.quiet:
+        try:
+            # Try to display a user-friendly relative path for the common ancestor
+            ancestor_display = common_ancestor.relative_to(cwd)
+        except ValueError:
+            # Fallback to the absolute path if it's not a subpath of CWD
+            ancestor_display = common_ancestor
+
         print(
-            f"  Found {len(file_objects)} files to bundle. Common ancestor: {common_ancestor}",
+            f"  Found {len(file_objects)} files to bundle. Common ancestor: '{ancestor_display}'",
             file=sys.stderr,
         )
 

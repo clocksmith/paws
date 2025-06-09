@@ -19,9 +19,9 @@ DEFAULT_OUTPUT_DIR = "."
 # --- Bundle Structure Constants ---
 BASE64_HINT_TEXT = "Content:Base64"
 START_END_MARKER_REGEX = re.compile(
-    r"^\s*🐕\s*-{3,}\s*DOGS_(START|END)_FILE\s*:\s*(.+?)(?:\s+\({hint_text}\))?\s*-{{3,}}\s*$".format(
-        hint_text=re.escape(BASE64_HINT_TEXT)
-    ),
+    r"^\s*🐕\s*-{3,}\s*DOGS_(START|END)_FILE\s*:\s*(.+?)(\s+\("  # FIX: Made group capturing
+    + re.escape(BASE64_HINT_TEXT)
+    + r"\))?\s*-{3,}\s*$",  # FIX: Group is optional
     re.IGNORECASE,
 )
 PAWS_CMD_REGEX = re.compile(r"^\s*@@\s*PAWS_CMD\s+(.+?)\s*@@\s*$")
@@ -45,7 +45,7 @@ DeltaCommand = Dict[str, Any]
 # --- Dataclass for Configuration ---
 @dataclass
 class ExtractionConfig:
-    bundle_file: Path
+    bundle_file: Optional[Path]
     output_dir: Path
     apply_delta_from: Optional[Path]
     overwrite_policy: str
@@ -58,6 +58,8 @@ class Ansi:
 
     @staticmethod
     def colorize_diff(diff_lines: List[str]) -> str:
+        if not sys.stdout.isatty():
+            return "\n".join(diff_lines)
         output = []
         for line in diff_lines:
             if line.startswith("+"):
@@ -78,6 +80,7 @@ class BundleParser:
     def __init__(self, bundle_lines: List[str], config: ExtractionConfig):
         self.lines = bundle_lines
         self.config = config
+        self.parsed_files: List[ParsedFile] = []
 
     def _parse_delta_command(self, cmd_str: str) -> Optional[DeltaCommand]:
         """Parses a PAWS_CMD string into a DeltaCommand dictionary."""
@@ -106,7 +109,6 @@ class BundleParser:
         if end > start and MARKDOWN_FENCE_REGEX.match(content_lines[end - 1]):
             end -= 1
 
-        # Strip blank lines from start and end of the content block
         while start < end and not content_lines[start].strip():
             start += 1
         while end > start and not content_lines[end - 1].strip():
@@ -114,92 +116,126 @@ class BundleParser:
 
         return content_lines[start:end]
 
+    def _finalize_file(self, path, is_binary, content_lines, delta_commands):
+        """Finalizes a file block and adds it to the parsed_files list."""
+        final_content = self._finalize_content_block(content_lines)
+        file_action: ParsedFile = {"path": path, "is_binary": is_binary}
+
+        if any(cmd.get("type") == "delete_file" for cmd in delta_commands):
+            file_action["action"] = "delete"
+        elif delta_commands:
+            file_action["action"] = "delta"
+            if final_content and delta_commands[-1].get("type") not in [
+                "delete_lines",
+                "delete_file",
+            ]:
+                delta_commands[-1]["content_lines"] = final_content
+            file_action["delta_commands"] = delta_commands
+        else:
+            file_action["action"] = "write"
+            raw_content_str = "\n".join(final_content)
+            try:
+                file_action["content_bytes"] = (
+                    base64.b64decode(raw_content_str)
+                    if is_binary
+                    else raw_content_str.encode(DEFAULT_ENCODING)
+                )
+            except Exception as e:
+                print(
+                    f"  Error: Failed to decode content for '{path}': {e}",
+                    file=sys.stderr,
+                )
+                return  # Don't append a failed file
+
+        self.parsed_files.append(file_action)
+
     def parse(self) -> List[ParsedFile]:
-        """Main parsing method, hardened against LLM artifacts."""
-        parsed_files: List[ParsedFile] = []
+        """Main parsing method, hardened against LLM artifacts and unterminated blocks."""
         in_file_block = False
         current_file_path: Optional[str] = None
+        current_is_binary: bool = False
         content_lines: List[str] = []
         delta_commands: List[DeltaCommand] = []
 
-        for line in self.lines:
+        for line_num, line in enumerate(self.lines):
             match = START_END_MARKER_REGEX.match(line)
 
-            if match:
-                marker_type, path, hint = match.groups()
-                path = path.strip()
-                is_base64_by_hint = bool(hint and BASE64_HINT_TEXT in hint)
-
-                if marker_type.upper() == "START":
-                    if in_file_block and not self.config.quiet:
-                        print(
-                            f"  Warning: New file '{path}' started before '{current_file_path}' ended. Finalizing previous.",
-                            file=sys.stderr,
-                        )
+            if not in_file_block:
+                if match and (marker_type := match.group(1).upper()) == "START":
                     in_file_block = True
-                    current_file_path = path
+                    current_file_path = match.group(2).strip()
+                    current_is_binary = bool(match.group(3))
                     content_lines, delta_commands = [], []
-                elif marker_type.upper() == "END" and in_file_block:
-                    final_content = self._finalize_content_block(content_lines)
-
-                    file_action: ParsedFile = {
-                        "path": current_file_path,
-                        "is_binary": is_base64_by_hint,
-                    }
-
-                    if any(cmd.get("type") == "delete_file" for cmd in delta_commands):
-                        file_action["action"] = "delete"
-                    elif delta_commands:
-                        file_action["action"] = "delta"
-                        if final_content and delta_commands[-1].get("type") not in [
-                            "delete_lines",
-                            "delete_file",
-                        ]:
-                            delta_commands[-1]["content_lines"] = final_content
-                        file_action["delta_commands"] = delta_commands
-                    else:
-                        file_action["action"] = "write"
-                        raw_content_str = "\n".join(final_content)
-                        try:
-                            file_action["content_bytes"] = (
-                                base64.b64decode(raw_content_str)
-                                if is_base64_by_hint
-                                else raw_content_str.encode(DEFAULT_ENCODING)
-                            )
-                        except Exception as e:
+                # else: Ignore any line outside a block
+            else:  # in_file_block is True
+                if match:
+                    marker_type, path_str = (
+                        match.group(1).upper(),
+                        match.group(2).strip(),
+                    )
+                    if marker_type == "END" and path_str == current_file_path:
+                        self._finalize_file(
+                            current_file_path,
+                            current_is_binary,
+                            content_lines,
+                            delta_commands,
+                        )
+                        in_file_block = False
+                    elif marker_type == "START":
+                        if not self.config.quiet:
                             print(
-                                f"  Error: Failed to decode content for '{current_file_path}': {e}",
+                                f"  Warning: New file '{path_str}' started before '{current_file_path}' ended. Finalizing previous file.",
                                 file=sys.stderr,
                             )
-                            file_action = None
-
-                    if file_action:
-                        parsed_files.append(file_action)
-                    in_file_block = False
-                    current_file_path = None
-
-            elif in_file_block:
-                paws_cmd_match = PAWS_CMD_REGEX.match(line)
-                if self.config.apply_delta_from and paws_cmd_match:
-                    cmd_str = paws_cmd_match.group(1).strip()
-                    delta_cmd = self._parse_delta_command(cmd_str)
-                    if delta_cmd:
-                        finalized_block = self._finalize_content_block(content_lines)
-                        if (
-                            finalized_block
-                            and delta_commands
-                            and delta_commands[-1].get("type")
-                            not in ["delete_lines", "delete_file"]
-                        ):
-                            delta_commands[-1]["content_lines"] = finalized_block
-                        content_lines = []
-                        delta_commands.append(delta_cmd)
+                        self._finalize_file(
+                            current_file_path,
+                            current_is_binary,
+                            content_lines,
+                            delta_commands,
+                        )
+                        # Reset for the new file
+                        current_file_path = path_str
+                        current_is_binary = bool(match.group(3))
+                        content_lines, delta_commands = [], []
+                    else:
+                        content_lines.append(
+                            line
+                        )  # Mismatched END marker, treat as content
+                else:  # It's a content line
+                    paws_cmd_match = PAWS_CMD_REGEX.match(line)
+                    if self.config.apply_delta_from and paws_cmd_match:
+                        cmd_str = paws_cmd_match.group(1).strip()
+                        delta_cmd = self._parse_delta_command(cmd_str)
+                        if delta_cmd:
+                            finalized_block = self._finalize_content_block(
+                                content_lines
+                            )
+                            if (
+                                finalized_block
+                                and delta_commands
+                                and delta_commands[-1].get("type")
+                                not in ["delete_lines", "delete_file"]
+                            ):
+                                delta_commands[-1]["content_lines"] = finalized_block
+                            content_lines = []
+                            delta_commands.append(delta_cmd)
+                        else:
+                            content_lines.append(line)
                     else:
                         content_lines.append(line)
-                else:
-                    content_lines.append(line)
 
-        return parsed_files
+        # After loop, handle unclosed block at the very end of the file
+        if in_file_block:
+            if not self.config.quiet:
+                print(
+                    f"  Warning: File '{current_file_path}' was not properly terminated. Finalizing.",
+                    file=sys.stderr,
+                )
+            self._finalize_file(
+                current_file_path, current_is_binary, content_lines, delta_commands
+            )
+
+        return self.parsed_files
 
 
 class ActionHandler:
@@ -219,7 +255,14 @@ class ActionHandler:
             content = self.config.apply_delta_from.read_text(
                 encoding=DEFAULT_ENCODING, errors="replace"
             )
-            parser = BundleParser(content.splitlines(), self.config)
+            temp_config = ExtractionConfig(
+                bundle_file=self.config.apply_delta_from,
+                output_dir=Path("."),
+                apply_delta_from=None,
+                overwrite_policy="no",
+                quiet=True,
+            )
+            parser = BundleParser(content.splitlines(), temp_config)
             parsed_files = parser.parse()
             if not self.config.quiet:
                 print(
@@ -241,7 +284,6 @@ class ActionHandler:
     def _apply_deltas(
         self, original_lines: List[str], commands: List[DeltaCommand], path: str
     ) -> List[str]:
-        # Implementation is complex and omitted for brevity, but would function as described in the prompt
         new_lines = list(original_lines)
         offset = 0
         for cmd in commands:
@@ -271,7 +313,7 @@ class ActionHandler:
 
     def _confirm_action(self, prompt: str, is_destructive: bool) -> bool:
         if not sys.stdin.isatty():
-            return False  # Never auto-confirm destructive actions non-interactively
+            return self.always_yes
 
         color = Ansi.RED if is_destructive else Ansi.YELLOW
         options = (
@@ -282,9 +324,9 @@ class ActionHandler:
 
         while True:
             try:
-                choice = (
-                    input(f"{color}{prompt}{Ansi.RESET} {options}: ").strip().lower()
-                )
+                choice_prompt = f"{color}{prompt}{Ansi.RESET} {options}: "
+                choice = input(choice_prompt).strip().lower()
+
                 if choice == "y":
                     return True
                 if choice == "n" or choice == "":
@@ -301,7 +343,7 @@ class ActionHandler:
                         return False
             except (KeyboardInterrupt, EOFError):
                 self.quit_extraction = True
-                print("\nQuit.")
+                print("\nQuit.", file=sys.stderr)
                 return False
 
     def _get_diff(self, old_path: Path, new_bytes: bytes) -> Optional[str]:
@@ -316,8 +358,8 @@ class ActionHandler:
                     tofile=f"b/{old_path.name}",
                 )
             )
-        except:
-            return None  # Binary file or read error
+        except Exception:
+            return None
 
     def process_actions(self, parsed_files: List[ParsedFile]):
         if not self.config.quiet:
@@ -343,7 +385,7 @@ class ActionHandler:
                             print(f"  Deleted: {pf['path']}")
                         else:
                             print(f"  Skipped delete: {pf['path']}")
-                    else:
+                    elif not self.config.quiet:
                         print(f"  Info: Cannot delete non-existent file: {pf['path']}")
 
                 elif action in ["write", "delta"]:
@@ -357,10 +399,12 @@ class ActionHandler:
                         new_lines = self._apply_deltas(
                             original_lines, pf["delta_commands"], pf["path"]
                         )
-                        content_bytes = "\n".join(new_lines).encode(DEFAULT_ENCODING)
+                        content_bytes = ("\n".join(new_lines) + "\n").encode(
+                            DEFAULT_ENCODING
+                        )
 
                     if content_bytes is None:
-                        raise ValueError("No content to write.")
+                        continue
 
                     should_write = True
                     if abs_path.exists():
@@ -368,19 +412,25 @@ class ActionHandler:
                             should_write = False
                         elif not self.always_yes:
                             diff_str = self._get_diff(abs_path, content_bytes)
-                            if not self.config.quiet and diff_str:
-                                print(
-                                    f"\nChanges for {Ansi.YELLOW}{pf['path']}{Ansi.RESET}:"
-                                )
-                                print(Ansi.colorize_diff(diff_str.splitlines()))
-                            should_write = self._confirm_action("Overwrite?", False)
+                            prompt_text = "Overwrite?"
+                            if diff_str is not None:
+                                if not diff_str.strip():
+                                    prompt_text = (
+                                        "File content is identical. Overwrite anyway?"
+                                    )
+                                elif not self.config.quiet:
+                                    print(
+                                        f"\nChanges for {Ansi.YELLOW}{pf['path']}{Ansi.RESET}:"
+                                    )
+                                    print(Ansi.colorize_diff(diff_str.splitlines()))
+                            should_write = self._confirm_action(prompt_text, False)
 
                     if should_write:
                         abs_path.parent.mkdir(parents=True, exist_ok=True)
                         abs_path.write_bytes(content_bytes)
                         if not self.config.quiet:
                             print(
-                                f"  {'Wrote' if not abs_path.exists() else 'Overwrote'}: {pf['path']}"
+                                f"  {'Wrote new' if not abs_path.exists() else 'Overwrote'}: {pf['path']}"
                             )
                     elif not self.config.quiet:
                         print(f"  Skipped: {pf['path']}")
@@ -401,7 +451,7 @@ def main_cli():
         "bundle_file",
         nargs="?",
         default=None,
-        help=f"Input bundle (default: {DEFAULT_INPUT_BUNDLE_FILENAME}).",
+        help=f"Input bundle (default: {DEFAULT_INPUT_BUNDLE_FILENAME}). Use '-' for stdin.",
     )
     parser.add_argument(
         "output_dir",
@@ -419,7 +469,7 @@ def main_cli():
         "-q",
         "--quiet",
         action="store_true",
-        help="Suppress all informational output and prompts.",
+        help="Suppress all informational output and prompts. Implies -n.",
     )
     overwrite_group = parser.add_mutually_exclusive_group()
     overwrite_group.add_argument(
@@ -442,12 +492,15 @@ def main_cli():
 
     args = parser.parse_args()
 
-    bundle_path_str = args.bundle_file or DEFAULT_INPUT_BUNDLE_FILENAME
-    if not Path(bundle_path_str).is_file():
-        parser.error(f"Bundle file not found: '{Path(bundle_path_str).resolve()}'")
+    using_stdin = args.bundle_file == "-"
+    bundle_path_str = (
+        args.bundle_file
+        if args.bundle_file and not using_stdin
+        else DEFAULT_INPUT_BUNDLE_FILENAME
+    )
 
     config = ExtractionConfig(
-        bundle_file=Path(bundle_path_str).resolve(),
+        bundle_file=Path(bundle_path_str).resolve() if not using_stdin else None,
         output_dir=Path(args.output_dir).resolve(),
         apply_delta_from=Path(args.apply_delta).resolve() if args.apply_delta else None,
         overwrite_policy="no" if args.quiet else args.overwrite_policy,
@@ -455,11 +508,19 @@ def main_cli():
     )
 
     try:
-        content_lines = config.bundle_file.read_text(
-            encoding=DEFAULT_ENCODING, errors="replace"
-        ).splitlines()
-        parser = BundleParser(content_lines, config)
-        parsed_files = parser.parse()
+        if using_stdin:
+            if not config.quiet:
+                print("Reading from stdin...", file=sys.stderr)
+            content_lines = sys.stdin.read().splitlines()
+        else:
+            if not config.bundle_file.is_file():
+                parser.error(f"Bundle file not found: '{config.bundle_file}'")
+            content_lines = config.bundle_file.read_text(
+                encoding=DEFAULT_ENCODING, errors="replace"
+            ).splitlines()
+
+        parser_instance = BundleParser(content_lines, config)
+        parsed_files = parser_instance.parse()
 
         if not parsed_files:
             print(
