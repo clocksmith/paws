@@ -11,8 +11,8 @@ from unittest.mock import patch, MagicMock
 # --- Path Setup ---
 # Allows the test script to be run from the project root and find the modules.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-import cats
-import dogs
+import py.cats as cats
+import py.dogs as dogs
 
 
 # --- Helper Functions ---
