@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from typing import List, Tuple, Dict, Optional, Union, Set
 
 # --- Configuration Constants ---
-DEFAULT_SYS_PROMPT_FILENAME = "sys_a.md"
+DEFAULT_SYS_PROMPT_FILENAME = "sys/sys_a.md"
 DEFAULT_OUTPUT_FILENAME = "cats.md"
 DEFAULT_ENCODING = "utf-8"
 DEFAULT_EXCLUDES = [".git", "node_modules", "gem", "__pycache__", "*.pyc", ".DS_Store"]

@@ -58,9 +58,10 @@ The project is organized into language-specific directories, with shared system 
 │   └── tests/
 │       └── test_paws.py
 ├── README.md
-├── sys_a.md             <-- Shared: Default system prompt
-├── sys_d.md             <-- Shared: Delta mode system prompt
-└── sys_r.md             <-- Shared: RSI (self-modification) prompt
+├── sys/
+│   ├── sys_a.md         <-- Shared: Default system prompt
+│   ├── sys_d.md         <-- Shared: Delta mode system prompt
+│   ├── sys_r.md         <-- Shared: RSI (self-modification) prompt
 ```
 
 ## Getting Started

@@ -20,7 +20,7 @@ if (IS_NODE) {
 }
 
 // --- Configuration Constants ---
-const DEFAULT_SYS_PROMPT_FILENAME = "sys_a.md";
+const DEFAULT_SYS_PROMPT_FILENAME = "sys/sys_a.md";
 const DEFAULT_OUTPUT_FILENAME = "cats.md";
 const DEFAULT_ENCODING = "utf-8";
 const DEFAULT_EXCLUDES = [
