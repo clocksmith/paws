@@ -255,7 +255,7 @@ def main_cli():
     parser.add_argument(
         "-p",
         "--persona",
-        default="personas/sys_h3.md",
+        default="personas/sys_h5.md",
         help="Path to a persona file to prepend to the entire output.",
     )
     parser.add_argument(
