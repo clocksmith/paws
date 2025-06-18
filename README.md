@@ -150,11 +150,12 @@ You are an expert Test-Driven Development (TDD) engineer. Your process is strict
 ├── js/                  <-- Node.js implementation
 ├── py/                  <-- Python implementation
 ├── personas/
-│   ├── sys_h1.md - sys_h5.md
+│   ├── ...              <-- Predefined distinct purpose personas
 └── sys/
     ├── sys_a.md         <-- Shared: Default system prompt
     ├── sys_d.md         <-- Shared: Delta mode system prompt
     └── sys_r.md         <-- Shared: RSI (self-modification) prompt
+├── README.md            <-- You are here
 ```
 
 ## Testing
