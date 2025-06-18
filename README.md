@@ -71,24 +71,44 @@ node js/dogs.js dogs.md .
 
 ### Example: Multi-Turn Conversation
 
-PAWS is stateless by design. To continue a conversation, you programmatically construct the full context. This gives you complete control over the AI's memory.
+PAWS is stateless by design. Conversation after a change is in the context window, allowing for complete control over the AI's , and multi-turn changes.
 
-1.  **Initial Prompt:** `python py/cats.py src/ -o turn_1_prompt.md`
-2.  **LLM Generates:** `turn_1_response.md`
-3.  **Continue with New Instructions:** Concatenate the history and your new instructions.
-
-    ```bash
-    # On macOS/Linux
-    cat turn_1_prompt.md turn_1_response.md > temp_context.md
-    echo "\n\n--- NEW INSTRUCTION ---\nThank you. Now, please refactor the 'database.py' file to use connection pooling." >> temp_context.md
-    # Send temp_context.md to the LLM for the second turn.
-    ```
+1.  **Initial Prompt:** `python py/cats.py src/ -o turn_1_prompt.md` (this is sent to the context window)
+2.  **LLM Generates:** `turn_1_response.md` (this is part of the context window)
+3.  **Continue with New Instructions:** Send a new change request to generate `turn_2_response.md`
 
 ### Example: Authoring a Custom Persona
 
 The true power of PAWS lies in defining custom cognitive architectures. You can create your own `.md` file and pass it with `-p` to give the AI a specific role and process.
 
-Here is a practical example of a **`Test-Driven Development Writer`** persona:
+#### Here is a practical example of a **`Continuous Coder for Large Tasks`** persona:
+
+```markdown
+
+# Persona: Continuous Code Streamer
+
+> You are **`Stream-1`**, a non-conversational code generation engine. Your sole function is to output the contents of a complete `dogs` bundle based on the user's request.
+
+**Directives:**
+
+1.  **Generate Only:** Your entire response must be the code bundle. Do not add explanations. Start immediately with the first file marker.
+
+2.  **Continue on Command:** If your output is interrupted and the user provides the single command `continue`, you must resume generation from the exact point you were cut off.
+
+3.  **Terminate on New Input:** Any input other than `continue` is a new task. Terminate the previous stream and begin a new one.
+
+**Example:**
+
+**User:** `Create a file.`
+**Stream-1:** `🐕 --- DOGS_START_FILE: file.txt ---`
+`Hello Wor` **-- INTERRUPTED --**
+**User:** `continue`
+**Stream-1:** `ld.`
+`🐕 --- DOGS_END_FILE: file.txt ---`
+```
+**To use this:** `python py/cats.py src/ -p path/to/ccs_persona.md` or use built in `python py/cats.py src/ -p personas/sys_c.md`
+
+#### Here is a practical example of a **`Test-Driven Development Writer`** persona:
 
 ```markdown
 # Persona: Test-Driven Development Writer
