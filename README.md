@@ -67,6 +67,29 @@ node js/cats.js . -o my_project.md
 node js/dogs.js dogs.md .
 ```
 
+## The `sys_h{N}` Architectures: From Agent to Architect
+
+Building on this principle, PAWS includes a pre-built suite of advanced `sys_h{N}` `personas`. This hierarchy allows you to scale the AI's cognitive complexity to match your task, a key principle in designing effective Multi-Agent Systems (MAS) [3].
+
+- **`sys_h1` (The Line):** A single-purpose agent for flawless execution of a clear specification.
+
+  - **Use for:** Writing boilerplate code, translating a file.
+  - **Why it works:** Mirrors a specialized, single-function agent, ideal for deterministic tasks where creativity is not required.
+
+- **`sys_h2` (The Plane):** An adversarial debater for resolving binary trade-offs (e.g., speed vs. quality).
+
+  - **Use for:** Deciding between a quick fix and a robust solution.
+  - **Why it works:** Simulates a two-agent system designed to find a robust equilibrium between competing objectives.
+
+- **`sys_h3` (The Cube):** A deliberation engine for critical reviews and judgment.
+
+  - **Use for:** Performing a critical code review or analyzing a refactoring proposal.
+  - **Why it works:** Models a supervised workflow (Examine -> Arbitrate -> Articulate), similar to the Process Supervision patterns that improve agent reliability [4].
+
+- **`sys_h4` & `sys_h5` (The Tesseract & Penteract):** Hierarchical, multi-agent systems for the most ambiguous and strategic problems.
+  - **Use for:** Designing a new software framework or formulating a technology strategy.
+  - **Why it works:** These are composed systems of specialized agents, similar to the architecture of Microsoft's AutoGen, designed to tackle complex problems that require diverse, collaborative intelligence.
+ 
 ## Advanced Usage and Architectural Control
 
 ### Example: Multi-Turn Conversation
@@ -87,26 +110,24 @@ The true power of PAWS lies in defining custom cognitive architectures. You can 
 
 # Persona: Continuous Code Streamer
 
-> You are **`Stream-1`**, a non-conversational code generation engine. Your sole function is to output the contents of a complete `dogs` bundle based on the user's request.
+> You are **`CCS-1`**, a non-conversational code generation engine. Your sole function is to output the contents of a complete `dogs` bundle based on the user's request.
 
 **Directives:**
 
 1.  **Generate Only:** Your entire response must be the code bundle. Do not add explanations. Start immediately with the first file marker.
-
 2.  **Continue on Command:** If your output is interrupted and the user provides the single command `continue`, you must resume generation from the exact point you were cut off.
-
 3.  **Terminate on New Input:** Any input other than `continue` is a new task. Terminate the previous stream and begin a new one.
 
 **Example:**
 
 **User:** `Create a file.`
-**Stream-1:** `🐕 --- DOGS_START_FILE: file.txt ---`
+**CCS-1:** `🐕 --- DOGS_START_FILE: file.txt ---`
 `Hello Wor` **-- INTERRUPTED --**
 **User:** `continue`
-**Stream-1:** `ld.`
+**CCS-1:** `ld.`
 `🐕 --- DOGS_END_FILE: file.txt ---`
 ```
-**To use this:** `python py/cats.py src/ -p path/to/ccs_persona.md` or use built in `python py/cats.py src/ -p personas/sys_c.md`
+**To use this:** `python py/cats.py src/ -p path/to/ccs_persona.md` or use built in `python py/cats.py src/ -p personas/sys_c1.md`
 
 #### Here is a practical example of a **`Test-Driven Development Writer`** persona:
 
@@ -121,29 +142,6 @@ You are an expert Test-Driven Development (TDD) engineer. Your process is strict
 ```
 
 **To use this:** `python py/cats.py src/ -p path/to/tdd_persona.md`
-
-## The `sys_h{N}` Architectures: From Agent to Architect
-
-Building on this principle, PAWS includes a pre-built suite of advanced `sys_h{N}` personas. This hierarchy allows you to scale the AI's cognitive complexity to match your task, a key principle in designing effective Multi-Agent Systems (MAS) [3].
-
-- **`sys_h1` (The Line):** A single-purpose agent for flawless execution of a clear specification.
-
-  - **Use for:** Writing boilerplate code, translating a file.
-  - **Why it works:** Mirrors a specialized, single-function agent, ideal for deterministic tasks where creativity is not required.
-
-- **`sys_h2` (The Plane):** An adversarial debater for resolving binary trade-offs (e.g., speed vs. quality).
-
-  - **Use for:** Deciding between a quick fix and a robust solution.
-  - **Why it works:** Simulates a two-agent system designed to find a robust equilibrium between competing objectives.
-
-- **`sys_h3` (The Cube):** A deliberation engine for critical reviews and judgment.
-
-  - **Use for:** Performing a critical code review or analyzing a refactoring proposal.
-  - **Why it works:** Models a supervised workflow (Examine -> Arbitrate -> Articulate), similar to the Process Supervision patterns that improve agent reliability [4].
-
-- **`sys_h4` & `sys_h5` (The Tesseract & Penteract):** Hierarchical, multi-agent systems for the most ambiguous and strategic problems.
-  - **Use for:** Designing a new software framework or formulating a technology strategy.
-  - **Why it works:** These are composed systems of specialized agents, similar to the architecture of Microsoft's AutoGen, designed to tackle complex problems that require diverse, collaborative intelligence.
 
 ## Project Structure
 
