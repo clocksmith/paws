@@ -336,7 +336,7 @@ async function mainCli() {
       alias: "persona",
       describe: "Path to a persona file to prepend to the entire output.",
       type: "string",
-      default: "personas/sys_h3.md",
+      default: "personas/sys_h5.md",
     })
     .option("s", {
       alias: "sys-prompt-file",
