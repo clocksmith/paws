@@ -1,12 +1,12 @@
-# 🐾 PAWS: Prepare Artifacts With SWAP 🧶🐈⚽🐕
+# 🧶🐈 PAWS: Prepare Artifacts With ⚽🐕 SWAP: Streamlined Write After PAWS 🧶🐈⚽🐕
 
-**PAWS** provides a set of transparent and powerful command-line utilities to bundle your project files for efficient interaction with Large Language Models (LLMs) and then to reconstruct them, enabling a swift code **💱 SWAP** (Streamlined Write After PAWS).
+**🐾 PAWS 💱** provides a set of transparent and powerful command-line utilities to bundle your project files for efficient interaction with Large Language Models (LLMs), and then to reconstruct them, enabling a swift code **💱 SWAP 🐾** (Streamlined Write After PAWS).
 
 This repository contains parallel implementations in **Python** and **Node.js**, offering feature parity and a consistent workflow for developers in both ecosystems.
 
 ## The PAWS Philosophy: Programmatic AI Whole System
 
-The landscape of AI-assisted development is defined by two powerful paradigms. The first, the **AI-Integrated IDE** (e.g., GitHub Copilot, Cursor), positions the developer as an _Augmented User_, seamlessly accelerating their inner workflow. The second, the **Programmatic AI Toolkit (PAT)**, elevates the developer to the role of an _AI Systems Architect_.
+The landscape of AI-assisted development is defined by two powerful paradigms. The first, the **"AI-Integrated IDE"** (e.g., GitHub Copilot, Cursor), positions the developer as an _**Augmented User**_, seamlessly accelerating their inner workflow. The second, the **"Programmatic AI Toolkit"**, elevates the developer to the role of an _**AI Systems Architect**_.
 
 **PAWS/SWAP is a foundational toolkit for this second paradigm**. It is designed for developers who want to move beyond being users of a pre-built AI assistant and become architects of bespoke AI systems. It provides the essential components to compose, orchestrate, and direct an LLM's intelligence with precision, control, and reproducibility.
 
