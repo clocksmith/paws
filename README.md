@@ -89,7 +89,7 @@ Building on this principle, PAWS includes a pre-built suite of advanced `sys_h{N
 - **`sys_h4` & `sys_h5` (The Tesseract & Penteract):** Hierarchical, multi-agent systems for the most ambiguous and strategic problems.
   - **Use for:** Designing a new software framework or formulating a technology strategy.
   - **Why it works:** These are composed systems of specialized agents, similar to the architecture of Microsoft's AutoGen, designed to tackle complex problems that require diverse, collaborative intelligence.
- 
+
 ## Advanced Usage and Architectural Control
 
 ### Example: Multi-Turn Conversation
@@ -107,7 +107,6 @@ The true power of PAWS lies in defining custom cognitive architectures. You can 
 #### Here is a practical example of a **`Continuous Coder for Large Tasks`** persona:
 
 ```markdown
-
 # Persona: Continuous Code Streamer
 
 > You are **`CCS-1`**, a non-conversational code generation engine. Your sole function is to output the contents of a complete `dogs` bundle based on the user's request.
@@ -127,6 +126,7 @@ The true power of PAWS lies in defining custom cognitive architectures. You can 
 **CCS-1:** `ld.`
 `🐕 --- DOGS_END_FILE: file.txt ---`
 ```
+
 **To use this:** `python py/cats.py src/ -p path/to/ccs_persona.md` or use built in `python py/cats.py src/ -p personas/sys_c1.md`
 
 #### Here is a practical example of a **`Test-Driven Development Writer`** persona:
