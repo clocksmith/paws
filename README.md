@@ -19,7 +19,7 @@ The landscape of AI-assisted development is defined by two powerful paradigms. T
 
 ## The PAWS Advantage: Control and Robustness
 
-### `cats`: Explicit Context Bundling 🧶🐈
+### `cats`: Controlled Artifact Text Script 🧶🐈
 
 The power of an LLM is directly proportional to the quality of its context. While AI-IDEs automatically gather context, this process is often a "black box." `cats` gives you full control.
 
@@ -30,7 +30,7 @@ The power of an LLM is directly proportional to the quality of its context. Whil
   ```
 - **Combine Code with External Context:** You can easily concatenate the output of `cats` with other context sources, like library documentation or API specifications, before sending it to the LLM.
 
-### `dogs`: Robust Reconstruction ⚽🐕
+### `dogs`: Directed Output Grounding Script ⚽🐕
 
 LLMs are not perfect; their output can be surrounded by conversational text and formatting artifacts. `dogs` is engineered for this reality.
 
