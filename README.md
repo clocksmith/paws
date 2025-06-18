@@ -1,68 +1,42 @@
-# 🐾 PAWS: Prepare Artifacts With SWAP
+# 🐾 PAWS: Prepare Artifacts With SWAP 🧶🐈⚽🐕
 
 **PAWS** provides a set of transparent and powerful command-line utilities to bundle your project files for efficient interaction with Large Language Models (LLMs) and then to reconstruct them, enabling a swift code **💱 SWAP** (Streamlined Write After PAWS).
 
 This repository contains parallel implementations in **Python** and **Node.js**, offering feature parity and a consistent workflow for developers in both ecosystems.
 
-## Table of Contents
+## The PAWS Philosophy: Programmatic AI Whole System
 
-- [Why PAWS? The Missing Link for Large Context LLMs](#why-paws-the-missing-link-for-large-context-llms)
-- [Key Features](#key-features)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-  - [For Python Users](#for-python-users)
-  - [For JavaScript Users](#for-javascript-users)
-- [Testing](#testing)
-  - [Running Python Tests](#running-python-tests)
-  - [Running JavaScript Tests](#running-javascript-tests)
-- [Contributing](#contributing)
-- [License](#license)
+The landscape of AI-assisted development is defined by two powerful paradigms. The first, the **AI-Integrated IDE** (e.g., GitHub Copilot, Cursor), positions the developer as an _Augmented User_, seamlessly accelerating their inner workflow. The second, the **Programmatic AI Toolkit (PAT)**, elevates the developer to the role of an _AI Systems Architect_.
 
-## Why PAWS? The Missing Link for Large Context LLMs
+**PAWS/SWAP is a foundational toolkit for this second paradigm**. It is designed for developers who want to move beyond being users of a pre-built AI assistant and become architects of bespoke AI systems. It provides the essential components to compose, orchestrate, and direct an LLM's intelligence with precision, control, and reproducibility.
 
-State-of-the-art LLMs now have massive context windows, making it possible to feed an entire codebase into a single prompt for project-wide refactoring or feature implementation. However, a large context window alone is not enough. The raw "copy-paste" workflow is inefficient, error-prone, and lacks critical safety features. **PAWS provides the essential scaffolding to bridge this gap.**
+| Dimension            | AI-Integrated IDE (e.g., Cursor)                                                                                | PAWS (Programmatic AI Toolkit)                                                                                                                                                       |
+| :------------------- | :-------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Locus of Control** | **Developer-in-the-Loop:** The AI suggests, but the human is always the pilot, reviewing and approving changes. | **Developer-as-Orchestrator:** The developer designs the AI's cognitive process upfront, then directs its autonomous operation.                                                      |
+| **Context**          | **Implicit & Automatic:** Context is derived from open files and the IDE's index. Powerful but can be opaque.   | **Explicit & Controlled:** The developer constructs the _exact_ context bundle, ensuring focus and eliminating noise.                                                                |
+| **Extensibility**    | **Bound by Plugin Architecture:** Customization is limited to what the host IDE's extension API allows.         | **Natively Composable:** As a CLI tool, PAWS can be scripted and combined with code subsets, library context, custom personas, and system prompts for limitless workflow automation. |
+| **Reproducibility**  | **Low:** Conversational interactions in a UI are difficult to reproduce exactly.                                | **High:** A given bundle (`cats.md`) and persona file will produce a far more deterministic and repeatable result.                                                                   |
 
-1.  **Intelligent Bundling (`cats`)**: You can't just `cat *.*`. A real project has build artifacts, local configurations, and test files you want to exclude. The `cats` utilities use powerful globbing and default-deny patterns to create a clean, minimal, and contextually-rich bundle that respects your project's structure.
-2.  **Instruction & Persona Scaffolding**: An LLM needs precise instructions. PAWS allows you to programmatically prepend system prompts and task-specific "personas," ensuring the AI has the guidance it needs to perform the task correctly _before_ it sees the first line of code.
-3.  **Robust, Fault-Tolerant Parsing (`dogs`)**: LLMs are not perfect. They add conversational filler, forget to close markdown code fences, and sometimes produce malformed output. The `dogs` utilities are specifically hardened to handle this noise, surgically extracting valid code blocks while ignoring extraneous text.
-4.  **Human-in-the-Loop Safety (`dogs`)**: Letting an AI directly overwrite your entire project is reckless. `dogs` provides a critical safety layer with interactive modes, colorized diffs, and explicit confirmations for all overwrites and deletions. You always have the final say.
+## The PAWS Advantage: Control and Robustness
 
-PAWS turns the potential of large context windows into a practical, safe, and powerful development reality.
+### `cats`: Explicit Context Bundling 🧶🐈
 
-## Key Features
+The power of an LLM is directly proportional to the quality of its context. While AI-IDEs automatically gather context, this process is often a "black box." `cats` gives you full control.
 
-- **Full CLI Parity**: The Python and JavaScript versions support the same command-line flags and arguments for a consistent experience.
-- **Powerful File Selection**: Uses standard **glob patterns** (e.g., `src/**/*.js`), directory paths, and file paths to precisely control what gets bundled.
-- **Advanced Delta Support**: A precise mode for applying line-based changes, ideal for large files and formal code reviews.
-- **Hardened Parser**: Ignores LLM "chatter" and artifacts, and gracefully recovers from common formatting errors like missing file markers.
-- **Safe, Interactive Extraction**: Provides colorized diffs and confirmation prompts for all file modifications and deletions.
-- **Environment-Aware JS**: The JavaScript version works as both a CLI tool in Node.js and as a library in the browser.
+- **Surgical Selection with Globs:** You can create a "clean room" context containing only what is necessary. For example, to refactor a feature without confusing the LLM with test files or documentation, you can be precise:
+  ```bash
+  # Bundle all source files, but exclude tests and legacy code
+  python py/cats.py 'src/**/*.js' -x '**/__tests__/**' -x 'src/legacy/**'
+  ```
+- **Combine Code with External Context:** You can easily concatenate the output of `cats` with other context sources, like library documentation or API specifications, before sending it to the LLM.
 
-## Project Structure
+### `dogs`: Robust Reconstruction ⚽🐕
 
-The project is organized into language-specific directories, with shared system prompts at the root.
+LLMs are not perfect; their output can be surrounded by conversational text and formatting artifacts. `dogs` is engineered for this reality.
 
-```
-.
-├── js/                  <-- Node.js implementation
-│   ├── cats.js
-│   ├── dogs.js
-│   ├── package.json
-│   ├── README.md        <-- JS-specific documentation
-│   └── test/
-│       └── test_paws.js
-├── py/                  <-- Python implementation
-│   ├── cats.py
-│   ├── dogs.py
-│   ├── README.md        <-- Python-specific documentation
-│   └── tests/
-│       └── test_paws.py
-├── README.md
-├── sys/
-│   ├── sys_a.md         <-- Shared: Default system prompt
-│   ├── sys_d.md         <-- Shared: Delta mode system prompt
-│   ├── sys_r.md         <-- Shared: RSI (self-modification) prompt
-```
+- **Resilient Parsing:** The `dogs` parser is designed to ignore extraneous text and find the valid file blocks. Our parser happily jumps any "fences" (like ` ``` `) the LLM might forget to close, ensuring you get your code back.
+- **A Predictable Contract:** This robustness is possible because our system prompts (`sys/sys_a.md`, `sys_d.md`) establish a clear contract with the LLM on how to format its output. `dogs` is the other half of that contract.
+- **Precision with Deltas:** For large files, `dogs` supports a delta mode that can apply surgical `REPLACE_LINES`, `INSERT_AFTER_LINE`, and `DELETE_LINES` commands, ensuring minimal, reviewable changes.
 
 ## Getting Started
 
@@ -70,74 +44,119 @@ The project is organized into language-specific directories, with shared system 
 
 **Prerequisites**: Python 3.9+ (no external libraries required).
 
-**Usage**:
-
 ```bash
 # Bundle the current directory into my_project.md
 python py/cats.py . -o my_project.md
 
-# Extract changes from dogs.md into the current directory
+# Extract changes from an LLM's response bundle
 python py/dogs.py dogs.md .
 ```
-
-For more detailed examples, see the [Python README](./py/README.md).
 
 ### For JavaScript Users
 
 **Prerequisites**: Node.js v14+.
 
-**Installation**:
-
 ```bash
-# Install required dependencies
+# Install dependencies from project root
 npm install
-```
 
-**Usage**:
-
-```bash
 # Bundle the current directory into my_project.md
 node js/cats.js . -o my_project.md
 
-# Extract changes from dogs.md into the current directory
+# Extract changes from an LLM's response bundle
 node js/dogs.js dogs.md .
 ```
 
-For more detailed examples, see the [JavaScript README](./js/README.md).
+## Advanced Usage and Architectural Control
+
+### Example: Multi-Turn Conversation
+
+PAWS is stateless by design. To continue a conversation, you programmatically construct the full context. This gives you complete control over the AI's memory.
+
+1.  **Initial Prompt:** `python py/cats.py src/ -o turn_1_prompt.md`
+2.  **LLM Generates:** `turn_1_response.md`
+3.  **Continue with New Instructions:** Concatenate the history and your new instructions.
+
+    ```bash
+    # On macOS/Linux
+    cat turn_1_prompt.md turn_1_response.md > temp_context.md
+    echo "\n\n--- NEW INSTRUCTION ---\nThank you. Now, please refactor the 'database.py' file to use connection pooling." >> temp_context.md
+    # Send temp_context.md to the LLM for the second turn.
+    ```
+
+### Example: Authoring a Custom Persona
+
+The true power of PAWS lies in defining custom cognitive architectures. You can create your own `.md` file and pass it with `-p` to give the AI a specific role and process.
+
+Here is a practical example of a **`Test-Driven Development Writer`** persona:
+
+```markdown
+# Persona: Test-Driven Development Writer
+
+You are an expert Test-Driven Development (TDD) engineer. Your process is strict and non-negotiable. For any given feature request, you will follow this three-step protocol in your response:
+
+1.  **Write the Failing Test:** First, create a new test file or modify an existing one to include a concise, clear test case that captures the feature's requirements. This test MUST fail when run against the existing code.
+2.  **Write the Minimal Implementation:** Second, write the simplest, cleanest possible code in the application files required to make the failing test pass. Do not add any extra features or gold-plating.
+3.  **Refactor (If Necessary):** Third, if the minimal implementation introduced any code duplication or sloppiness, provide a `REPLACE_LINES` delta command to refactor the newly-added code for clarity and efficiency.
+```
+
+**To use this:** `python py/cats.py src/ -p path/to/tdd_persona.md`
+
+## The `sys_h{N}` Architectures: From Agent to Architect
+
+Building on this principle, PAWS includes a pre-built suite of advanced `sys_h{N}` personas. This hierarchy allows you to scale the AI's cognitive complexity to match your task, a key principle in designing effective Multi-Agent Systems (MAS) [3].
+
+- **`sys_h1` (The Line):** A single-purpose agent for flawless execution of a clear specification.
+
+  - **Use for:** Writing boilerplate code, translating a file.
+  - **Why it works:** Mirrors a specialized, single-function agent, ideal for deterministic tasks where creativity is not required.
+
+- **`sys_h2` (The Plane):** An adversarial debater for resolving binary trade-offs (e.g., speed vs. quality).
+
+  - **Use for:** Deciding between a quick fix and a robust solution.
+  - **Why it works:** Simulates a two-agent system designed to find a robust equilibrium between competing objectives.
+
+- **`sys_h3` (The Cube):** A deliberation engine for critical reviews and judgment.
+
+  - **Use for:** Performing a critical code review or analyzing a refactoring proposal.
+  - **Why it works:** Models a supervised workflow (Examine -> Arbitrate -> Articulate), similar to the Process Supervision patterns that improve agent reliability [4].
+
+- **`sys_h4` & `sys_h5` (The Tesseract & Penteract):** Hierarchical, multi-agent systems for the most ambiguous and strategic problems.
+  - **Use for:** Designing a new software framework or formulating a technology strategy.
+  - **Why it works:** These are composed systems of specialized agents, similar to the architecture of Microsoft's AutoGen, designed to tackle complex problems that require diverse, collaborative intelligence.
+
+## Project Structure
+
+```
+.
+├── js/                  <-- Node.js implementation
+├── py/                  <-- Python implementation
+├── personas/
+│   ├── sys_h1.md - sys_h5.md
+└── sys/
+    ├── sys_a.md         <-- Shared: Default system prompt
+    ├── sys_d.md         <-- Shared: Delta mode system prompt
+    └── sys_r.md         <-- Shared: RSI (self-modification) prompt
+```
 
 ## Testing
 
-Both implementations come with their own comprehensive test suites.
+From the project root:
 
-### Running Python Tests
-
-The Python tests use the built-in `unittest` module.
-
-1.  Navigate to the project root directory.
-2.  Run the test discovery command:
-    ```bash
-    python -m unittest discover py/tests
-    ```
-
-### Running JavaScript Tests
-
-The JavaScript tests use the Mocha and Chai testing frameworks.
-
-1.  Ensure you have installed the development dependencies:
-    ```bash
-    # This will install mocha and chai from package.json
-    npm install
-    ```
-2.  Run the `test` script defined in `package.json`:
-    ```bash
-    npm test
-    ```
-    _(This is a shortcut for `npx mocha js/test/test_paws.js`)_
+- **Python:** `python -m unittest discover py/tests`
+- **JavaScript:** `npm install && npm test`
 
 ## Contributing
 
-Contributions are welcome! Please feel free to open an issue to report a bug or suggest a feature, or submit a pull request with your improvements.
+Contributions are welcome! Please open an issue to report a bug or suggest a feature.
 
 ## License
 
 This project is licensed under the ISC License.
+
+## References
+
+[1] Vibe Coding: Copilot vs Cursor AI. (2025). Techpoint.africa.
+[2] GitHub Blog: Copilot ask, edit, and agent modes. (2025).
+[3] Prompting Guide: LLM Agents. (2025).
+[4] arXiv: CodeTool: Enhancing Programmatic Tool Invocation of LLMs via Process Supervision. (2025).
