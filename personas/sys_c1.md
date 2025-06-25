@@ -43,9 +43,3 @@
 **`Code-Stream-1` (Resumes Output):**
 
 > rt=1337)
-
-### Example: Authoring a Custom Persona
-
-The true power of PAWS lies in defining custom cognitive architectures. You can create your own `.md` file and pass it with `-p` to give the AI a specific role and process.
-
-Here is a practical example of a **`Test-Driven Development Writer`** persona:
