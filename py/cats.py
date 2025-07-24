@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+Bundles project files into a single text artifact for Language Models.
+
+This script is a core component of the Prompt-Assisted Workflow System (PAWS).
+It supports a rich command-line interface for specifying files to include and
+exclude, and features an advanced CATSCAN-aware bundling mode that prioritizes
+architectural documentation over raw source code when available.
+"""
 
 import sys
 import os
@@ -14,7 +22,13 @@ from typing import List, Tuple, Dict, Optional, Union, Set
 DEFAULT_SYS_PROMPT_FILENAME = "sys/sys_a.md"
 DEFAULT_OUTPUT_FILENAME = "cats.md"
 DEFAULT_ENCODING = "utf-8"
-DEFAULT_EXCLUDES = [".git", "node_modules", "gem", "__pycache__", "*.pyc", ".DS_Store"]
+DEFAULT_EXCLUDES = [
+    ".git",
+    "node_modules",
+    "**/__pycache__",
+    "**/*.pyc",
+    ".DS_Store",
+]
 
 # --- Bundle Structure Constants ---
 PERSONA_HEADER = "\n--- START PERSONA ---\n"
@@ -33,7 +47,6 @@ END_MARKER_TEMPLATE = "🐈 --- CATS_END_FILE: {path}{hint} ---"
 FileObject = Dict[str, Union[str, bytes, bool, Optional[str], Path]]
 
 
-# --- Dataclass for Configuration ---
 @dataclass
 class BundleConfig:
     """Encapsulates all configuration for a bundling operation."""
@@ -48,28 +61,106 @@ class BundleConfig:
     sys_prompt_file: str
     no_sys_prompt: bool
     require_sys_prompt: bool
+    strict_catscan: bool
     quiet: bool
     yes: bool
 
 
-# --- Core Logic Functions ---
-
-
 def _resolve_glob_patterns(patterns: List[str], cwd: Path) -> Set[Path]:
-    """Expands a list of glob patterns into a set of resolved, absolute paths."""
+    """
+    Expands a list of glob patterns into a set of resolved, absolute paths.
+
+    Args:
+        patterns: A list of glob pattern strings.
+        cwd: The current working directory to resolve patterns against.
+
+    Returns:
+        A set of unique, resolved Path objects.
+    """
     resolved_paths = set()
     for pattern in patterns:
-        # Use glob to expand patterns relative to the current working directory
         for p_str in glob.glob(str(cwd.joinpath(pattern)), recursive=True):
             resolved_paths.add(Path(p_str).resolve(strict=False))
     return resolved_paths
 
 
-def get_paths_to_process(
-    config: BundleConfig, cwd: Path
-) -> Tuple[List[Path], Optional[Path]]:
-    """Resolves and filters input glob patterns to a list of absolute file paths."""
-    # 1. Resolve all exclude patterns first
+def _verify_catscan_compliance(
+    all_files: Set[Path],
+) -> Tuple[List[Tuple[Path, Path]], List[Path]]:
+    """
+    Finds READMEs and strictly checks for corresponding CATSCAN.md files.
+
+    Args:
+        all_files: A set of all candidate file paths.
+
+    Returns:
+        A tuple containing a list of valid (README, CATSCAN) pairs and a list
+        of directories where a CATSCAN.md was missing.
+    """
+    readmes = {p for p in all_files if p.name.lower() == "readme.md"}
+    valid_pairs = []
+    missing_dirs = []
+    for readme in readmes:
+        catscan_path = readme.parent / "CATSCAN.md"
+        # Check if the potential CATSCAN file was actually found by the glob
+        if catscan_path in all_files:
+            valid_pairs.append((readme, catscan_path))
+        else:
+            missing_dirs.append(readme.parent)
+    return valid_pairs, missing_dirs
+
+
+def _verify_catscan_compliance_soft(
+    all_files: Set[Path],
+) -> Tuple[List[Tuple[Path, Path]], List[Path], List[Path]]:
+    """
+    Finds README/CATSCAN pairs and returns non-module files separately.
+
+    This function is for the default, non-strict mode. It identifies valid
+    documentation pairs and filters out any other files from those directories,
+    returning the remaining non-module files.
+
+    Args:
+        all_files: A set of all candidate file paths.
+
+    Returns:
+        A tuple containing:
+        - A list of valid (README, CATSCAN) pairs.
+        - A list of directories where a CATSCAN.md was missing.
+        - A list of other files not part of a CATSCAN'd module.
+    """
+    readmes = {p for p in all_files if p.name.lower() == "readme.md"}
+    other_files_set = all_files - readmes
+    valid_pairs = []
+    missing_dirs = []
+    catscan_dirs = set()
+
+    for readme in readmes:
+        catscan_path = readme.parent / "CATSCAN.md"
+        if catscan_path in other_files_set:
+            valid_pairs.append((readme, catscan_path))
+            catscan_dirs.add(readme.parent)
+            other_files_set.remove(catscan_path)
+        else:
+            missing_dirs.append(readme.parent)
+
+    # Filter out any other files that were in a directory with a valid CATSCAN pair
+    final_other_files = [f for f in other_files_set if f.parent not in catscan_dirs]
+    return valid_pairs, missing_dirs, final_other_files
+
+
+def get_paths_to_process(config: BundleConfig, cwd: Path) -> List[Path]:
+    """
+    Resolves and filters input glob patterns to a final list of files to bundle,
+    applying CATSCAN-aware logic.
+
+    Args:
+        config: The BundleConfig object.
+        cwd: The current working directory.
+
+    Returns:
+        A sorted list of absolute file paths to be included in the bundle.
+    """
     exclude_paths = _resolve_glob_patterns(config.exclude_patterns, cwd)
     if config.use_default_excludes:
         exclude_paths.update(_resolve_glob_patterns(DEFAULT_EXCLUDES, cwd))
@@ -78,77 +169,74 @@ def get_paths_to_process(
     if config.persona_file:
         exclude_paths.add(config.persona_file)
 
-    # 2. Identify and handle the CWD context file
-    cwd_context_file_path = (cwd / config.sys_prompt_file).resolve()
-    cwd_context_file_to_bundle: Optional[Path] = None
-    if cwd_context_file_path.is_file() and cwd_context_file_path not in exclude_paths:
-        cwd_context_file_to_bundle = cwd_context_file_path
-        exclude_paths.add(cwd_context_file_path)  # Exclude from main processing
-        if not config.quiet:
-            print(
-                f"  Info: Found '{config.sys_prompt_file}' in CWD to be bundled first.",
-                file=sys.stderr,
-            )
-
-    # 3. Resolve all include patterns and expand directories
     initial_include_paths = _resolve_glob_patterns(config.include_patterns, cwd)
-
     expanded_files: Set[Path] = set()
     for path in initial_include_paths:
         if path.is_dir():
-            if not config.quiet:
-                try:
-                    display_path = path.relative_to(cwd)
-                except ValueError:
-                    display_path = path
-                print(f"  Info: Expanding directory '{display_path}'", file=sys.stderr)
             for child in path.rglob("*"):
                 if child.is_file():
                     expanded_files.add(child)
         elif path.is_file():
             expanded_files.add(path)
 
-    # 4. Filter the final list of files against exclusions
-    candidate_files: Set[Path] = set()
-    for path in expanded_files:
-        is_excluded = False
-        for ex_path in exclude_paths:
-            if path == ex_path or (ex_path.is_dir() and ex_path in path.parents):
-                is_excluded = True
-                break
-        if not is_excluded:
-            candidate_files.add(path)
+    filtered_files = {p for p in expanded_files if p not in exclude_paths}
 
-    return sorted(list(candidate_files)), cwd_context_file_to_bundle
+    if config.strict_catscan:
+        valid_pairs, missing_dirs = _verify_catscan_compliance(filtered_files)
+        if missing_dirs:
+            missing_str = "\n - ".join(str(p.relative_to(cwd)) for p in missing_dirs)
+            raise ValueError(
+                f"Strict CATSCAN mode failed. Missing CATSCAN.md files in:\n - {missing_str}"
+            )
+        return sorted([pair[1] for pair in valid_pairs])
+    else:
+        valid_pairs, _, other_files = _verify_catscan_compliance_soft(filtered_files)
+        catscan_files = [pair[1] for pair in valid_pairs]
+        return sorted(catscan_files + other_files)
 
 
 def find_common_ancestor(paths: List[Path], cwd: Path) -> Path:
-    """Finds the common ancestor directory for a list of file paths."""
+    """
+    Finds the common ancestor directory for a list of file paths.
+
+    Args:
+        paths: A list of Path objects.
+        cwd: The current working directory as a fallback.
+
+    Returns:
+        The common ancestor directory as a Path object.
+    """
     if not paths:
         return cwd
-    try:
-        # os.path.commonpath handles cases with mixed absolute/relative paths more gracefully
-        # by working on string representations.
-        common_path_str = os.path.commonpath([str(p) for p in paths])
-        return Path(common_path_str)
-    except (ValueError, TypeError):
-        # Fallback for edge cases like mixed drive letters on Windows
-        return cwd
+    return Path(os.path.commonpath([str(p) for p in paths]))
 
 
 def detect_is_binary(content_bytes: bytes) -> bool:
-    """Detects if content is likely binary by trying to decode it."""
-    try:
-        content_bytes.decode(DEFAULT_ENCODING)
-        return False
-    except UnicodeDecodeError:
-        return True
+    """
+    Detects if content is likely binary by checking for null bytes.
+
+    Args:
+        content_bytes: The byte content of a file.
+
+    Returns:
+        True if the content is likely binary, False otherwise.
+    """
+    return b"\0" in content_bytes
 
 
 def prepare_file_object(
     file_abs_path: Path, common_ancestor: Path
 ) -> Optional[FileObject]:
-    """Reads a file and prepares a FileObject dictionary."""
+    """
+    Reads a file and prepares a FileObject dictionary for bundling.
+
+    Args:
+        file_abs_path: The absolute path to the file.
+        common_ancestor: The common ancestor directory for calculating relative paths.
+
+    Returns:
+        A FileObject dictionary or None if the file cannot be read.
+    """
     try:
         content_bytes = file_abs_path.read_bytes()
         relative_path = file_abs_path.relative_to(common_ancestor).as_posix()
@@ -168,14 +256,22 @@ def prepare_file_object(
 def create_bundle_string_from_objects(
     file_objects: List[FileObject], config: BundleConfig
 ) -> str:
-    """Constructs the final bundle string from a list of FileObject dictionaries."""
+    """
+    Constructs the final bundle string from a list of FileObject dictionaries.
+
+    Args:
+        file_objects: A list of prepared file objects.
+        config: The BundleConfig object.
+
+    Returns:
+        The formatted bundle string.
+    """
     has_binaries = any(f["is_binary"] for f in file_objects)
     format_desc = (
         "Base64"
         if config.encoding_mode == "b64"
         else f"Raw UTF-8{'; binaries as Base64' if has_binaries else ''}"
     )
-
     bundle_parts = [BUNDLE_HEADER_PREFIX, f"{BUNDLE_FORMAT_PREFIX}{format_desc}"]
     if config.prepare_for_delta:
         bundle_parts.append(f"{DELTA_REFERENCE_HINT_PREFIX}Yes")
@@ -203,11 +299,22 @@ def create_bundle_string_from_objects(
 
 
 def find_and_read_prepended_file(
-    file_path: Path, header: str, footer: str, config: BundleConfig
-) -> Optional[bytes]:
-    """Reads a file for prepending (persona or system prompt)."""
+    file_path: Optional[Path], header: str, footer: str, config: BundleConfig
+) -> bytes:
+    """
+    Reads a file for prepending (persona or system prompt).
+
+    Args:
+        file_path: The path to the file to read.
+        header: The header string to prepend to the content.
+        footer: The footer string to append to the content.
+        config: The BundleConfig object.
+
+    Returns:
+        The file content with header/footer as bytes, or empty bytes if not found.
+    """
     if not file_path or not file_path.is_file():
-        return None
+        return b""
     try:
         content = file_path.read_text(encoding=DEFAULT_ENCODING)
         if not config.quiet:
@@ -218,7 +325,7 @@ def find_and_read_prepended_file(
             f"  Warning: Could not read prepended file '{file_path}': {e}",
             file=sys.stderr,
         )
-        return None
+        return b""
 
 
 def main_cli():
@@ -227,8 +334,7 @@ def main_cli():
         description="cats.py: Bundles project files into a single text artifact for LLMs.",
         epilog="Examples:\n"
         "  python cats.py 'src/**/*.py' -o my_code.md\n"
-        "  python cats.py . -x '*.g.dart' -x 'build/**' -o project.md\n"
-        "  python cats.py ../other-project -p personas/test_writer.md -o for_testing.md",
+        "  python cats.py . -x '*.g.dart' -p personas/test_writer.md",
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
@@ -236,39 +342,39 @@ def main_cli():
         "paths",
         nargs="+",
         metavar="PATH_PATTERN",
-        help="One or more files or glob patterns to include (e.g., 'src/**/*.py', '.').",
+        help="One or more files or glob patterns to include.",
     )
     parser.add_argument(
         "-o",
         "--output",
         default=None,
-        help=f"Output bundle file (default: {DEFAULT_OUTPUT_FILENAME}). Use '-' for stdout.",
+        help=f"Output file (default: {DEFAULT_OUTPUT_FILENAME}). Use '-' for stdout.",
     )
     parser.add_argument(
         "-x",
         "--exclude",
         action="append",
         default=[],
-        metavar="EXCLUDE_PATTERN",
+        metavar="PATTERN",
         help="Glob pattern to exclude. Can be used multiple times.",
     )
     parser.add_argument(
         "-p",
         "--persona",
         default="personas/sys_h5.md",
-        help="Path to a persona file to prepend to the entire output.",
+        help="Path to a persona file to prepend.",
     )
     parser.add_argument(
         "-s",
         "--sys-prompt-file",
         default=DEFAULT_SYS_PROMPT_FILENAME,
-        help=f"System prompt filename for prepending (default: {DEFAULT_SYS_PROMPT_FILENAME}).",
+        help=f"System prompt filename (default: {DEFAULT_SYS_PROMPT_FILENAME}).",
     )
     parser.add_argument(
         "-t",
         "--prepare-for-delta",
         action="store_true",
-        help="Mark the bundle as a clean reference for delta operations.",
+        help="Mark bundle as a reference for delta operations.",
     )
     parser.add_argument(
         "-q", "--quiet", action="store_true", help="Suppress informational messages."
@@ -284,14 +390,14 @@ def main_cli():
         "--no-default-excludes",
         action="store_false",
         dest="use_default_excludes",
-        help=f"Disable default excludes: {', '.join(DEFAULT_EXCLUDES)}.",
+        help=f"Disable default excludes.",
     )
     parser.add_argument(
         "-E",
         "--force-encoding",
         choices=["auto", "b64"],
         default="auto",
-        help="Encoding: 'auto' (default) or 'b64' (force all as Base64).",
+        help="Force encoding: 'auto' or 'b64'.",
     )
     parser.add_argument(
         "--no-sys-prompt", action="store_true", help="Do not prepend any system prompt."
@@ -299,23 +405,21 @@ def main_cli():
     parser.add_argument(
         "--require-sys-prompt",
         action="store_true",
-        help="Exit if the system prompt for prepending is not found.",
+        help="Exit if the system prompt is not found.",
     )
-
+    parser.add_argument(
+        "--strict-catscan",
+        action="store_true",
+        help="Enforce CATSCAN.md compliance, aborting if not met.",
+    )
     args = parser.parse_args()
 
-    # --- Configuration Setup ---
     cwd = Path.cwd()
-    output_to_stdout = args.output == "-"
-    output_filename = (
-        args.output if args.output and not output_to_stdout else DEFAULT_OUTPUT_FILENAME
-    )
-
     config = BundleConfig(
         include_patterns=args.paths,
         exclude_patterns=args.exclude,
         output_file=(
-            None if output_to_stdout else cwd.joinpath(output_filename).resolve()
+            Path(args.output).resolve() if args.output and args.output != "-" else None
         ),
         encoding_mode=args.force_encoding,
         use_default_excludes=args.use_default_excludes,
@@ -324,50 +428,45 @@ def main_cli():
         sys_prompt_file=args.sys_prompt_file,
         no_sys_prompt=args.no_sys_prompt,
         require_sys_prompt=args.require_sys_prompt,
+        strict_catscan=args.strict_catscan,
         quiet=args.quiet,
         yes=args.yes,
     )
 
-    # --- Main Logic ---
     if not config.quiet:
         print("--- Starting PAWS Bundling ---", file=sys.stderr)
 
-    # 1. Prepare prepended content
-    persona_bytes = (
-        find_and_read_prepended_file(
-            config.persona_file, PERSONA_HEADER, PERSONA_FOOTER, config
-        )
-        or b""
-    )
+    try:
+        script_dir = Path(__file__).resolve().parent
+    except NameError:
+        script_dir = cwd
+
     sys_prompt_path = None
     if not config.no_sys_prompt:
-        try:
-            script_dir = Path(__file__).resolve().parent
-        except NameError:
-            script_dir = cwd
         for loc in [script_dir, script_dir.parent]:
             if (loc / config.sys_prompt_file).is_file():
                 sys_prompt_path = (loc / config.sys_prompt_file).resolve()
                 break
 
-    sys_prompt_bytes = (
-        find_and_read_prepended_file(
-            sys_prompt_path, "", SYS_PROMPT_POST_SEPARATOR, config
-        )
-        or b""
-    )
-    if config.require_sys_prompt and not sys_prompt_bytes:
+    if config.require_sys_prompt and not sys_prompt_path:
         print(
-            f"Error: System prompt '{config.sys_prompt_file}' not found and --require-sys-prompt was used.",
+            f"Error: System prompt '{config.sys_prompt_file}' not found.",
             file=sys.stderr,
         )
         sys.exit(1)
 
-    # 2. Collect and process files
-    other_files, cwd_context_file = get_paths_to_process(config, cwd)
-    all_paths_to_process = (
-        [cwd_context_file] if cwd_context_file else []
-    ) + other_files
+    persona_bytes = find_and_read_prepended_file(
+        config.persona_file, PERSONA_HEADER, PERSONA_FOOTER, config
+    )
+    sys_prompt_bytes = find_and_read_prepended_file(
+        sys_prompt_path, "", SYS_PROMPT_POST_SEPARATOR, config
+    )
+
+    try:
+        all_paths_to_process = get_paths_to_process(config, cwd)
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
 
     if not all_paths_to_process:
         print("No files matched the given criteria. Exiting.", file=sys.stderr)
@@ -385,19 +484,16 @@ def main_cli():
         sys.exit(1)
 
     if not config.quiet:
-        try:
-            # Try to display a user-friendly relative path for the common ancestor
-            ancestor_display = common_ancestor.relative_to(cwd)
-        except ValueError:
-            # Fallback to the absolute path if it's not a subpath of CWD
-            ancestor_display = common_ancestor
-
+        ancestor_display = (
+            common_ancestor.relative_to(cwd)
+            if common_ancestor.is_relative_to(cwd)
+            else common_ancestor
+        )
         print(
-            f"  Found {len(file_objects)} files to bundle. Common ancestor: '{ancestor_display}'",
+            f"  Found {len(file_objects)} files. Common ancestor: '{ancestor_display}'",
             file=sys.stderr,
         )
 
-    # 3. Create bundle and write output
     bundle_content_string = create_bundle_string_from_objects(file_objects, config)
     full_output_bytes = (
         persona_bytes
@@ -405,20 +501,24 @@ def main_cli():
         + bundle_content_string.encode(DEFAULT_ENCODING)
     )
 
+    output_to_stdout = config.output_file is None
     output_target_display = "stdout" if output_to_stdout else str(config.output_file)
 
     if not config.yes and not output_to_stdout and sys.stdin.isatty():
-        print(
-            f"\nAbout to write {len(file_objects)} files to '{output_target_display}'."
-        )
-        if input("Proceed? [Y/n]: ").strip().lower() == "n":
+        if (
+            input(
+                f"\nAbout to write bundle to '{output_target_display}'. Proceed? [Y/n]: "
+            )
+            .strip()
+            .lower()
+            == "n"
+        ):
             print("Operation cancelled.", file=sys.stderr)
             sys.exit(0)
 
     try:
         if output_to_stdout:
             sys.stdout.buffer.write(full_output_bytes)
-            sys.stdout.flush()
         else:
             config.output_file.parent.mkdir(parents=True, exist_ok=True)
             config.output_file.write_bytes(full_output_bytes)
@@ -438,8 +538,6 @@ def main_cli():
 if __name__ == "__main__":
     try:
         main_cli()
-    except SystemExit as e:
-        sys.exit(e.code)
     except KeyboardInterrupt:
         print("\nOperation cancelled by user.", file=sys.stderr)
         sys.exit(130)

@@ -1,23 +1,3 @@
-### Key `sys_r.md` Updates:
-
-1.  **More Detailed Examples**:
-
-    - The conceptual `cats.py` modification example has been made more realistic and detailed.
-    - A new example has been added showing a **bug fix in the `dogs.py` parser**, demonstrating how to correct a regular expression with surgical precision. This is a very common and high-stakes RSI task.
-
-2.  **New "High-Stakes Anti-Patterns" Section**: This section is crucial for preventing catastrophic errors during self-modification.
-
-    - **Asymmetrical Marker Modification**: Explicitly forbids changing the `CATS_` marker in `cats.py` without simultaneously changing the `DOGS_` marker in `dogs.py`, which would break the entire system.
-    - **Ignoring Documentation**: Reinforces the mandate that any change to a tool's behavior _must_ be reflected in its documentation (`README.md`, `sys_a.md`, etc.) in the same atomic operation.
-
-3.  **Strengthened Language**: The warnings and core principles have been rephrased with even stronger, more direct language to emphasize the "no room for error" nature of RSI tasks.
-
-This revised `sys_r.md` provides a much safer and clearer framework for performing high-stakes modifications to the PAWS toolchain.
-
----
-
-🐕 --- DOGS_START_FILE: sys_r.md ---
-
 # PAWS/SWAP Self-Modification Guide (RSI Mode - sys_r.md)
 
 ## 0. CRITICAL CONTEXT: Recursive System Invocation (RSI)

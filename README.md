@@ -4,39 +4,142 @@
 
 This repository contains parallel implementations in **Python** and **Node.js**, offering feature parity and a consistent workflow for developers in both ecosystems.
 
-## The PAWS Philosophy: Programmatic AI Whole System
+## The PAWS Philosophy: Programmatic AI Orchestration
 
-The landscape of AI-assisted development is defined by two powerful paradigms. The first, the **"AI-Integrated IDE"** (e.g., GitHub Copilot, Cursor), positions the developer as an _**Augmented User**_, seamlessly accelerating their inner workflow. The second, the **"Programmatic AI Toolkit"**, elevates the developer to the role of an _**AI Systems Architect**_.
+While AI-integrated IDEs and direct model CLIs offer remarkable capabilities, they often trade control for convenience. Context is frequently implicit, workflows are ephemeral, and the developer is relegated to reacting to the AI's output.
 
-**PAWS/SWAP is a foundational toolkit for this second paradigm**. It is designed for developers who want to move beyond being users of a pre-built AI assistant and become architects of bespoke AI systems. It provides the essential components to compose, orchestrate, and direct an LLM's intelligence with precision, control, and reproducibility.
+PAWS is engineered for a different paradigm: **the developer as the orchestrator.** It is a foundational toolkit for operators who build bespoke AI systems, providing the essential, unopinionated components to compose, direct, and reproduce an LLM's intelligence with surgical precision. The core principle is that **controlling the context is controlling the outcome.**
 
-| Dimension            | AI-Integrated IDE (e.g., Cursor)                                                                                | PAWS (Programmatic AI Toolkit)                                                                                                                                                       |
-| :------------------- | :-------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Locus of Control** | **Developer-in-the-Loop:** The AI suggests, but the human is always the pilot, reviewing and approving changes. | **Developer-as-Orchestrator:** The developer designs the AI's cognitive process upfront, then directs its autonomous operation.                                                      |
-| **Context**          | **Implicit & Automatic:** Context is derived from open files and the IDE's index. Powerful but can be opaque.   | **Explicit & Controlled:** The developer constructs the _exact_ context bundle, ensuring focus and eliminating noise.                                                                |
-| **Extensibility**    | **Bound by Plugin Architecture:** Customization is limited to what the host IDE's extension API allows.         | **Natively Composable:** As a CLI tool, PAWS can be scripted and combined with code subsets, library context, custom personas, and system prompts for limitless workflow automation. |
-| **Reproducibility**  | **Low:** Conversational interactions in a UI are difficult to reproduce exactly.                                | **High:** A given bundle (`cats.md`) and persona file will produce a far more deterministic and repeatable result.                                                                   |
+```mermaid
+graph TD
+    subgraph "Integrated IDEs (e.g., Cursor)"
+        A1["Seamless In-Editor UI"]
+        A2["Implicit Context (Magic)"]
+    end
+    subgraph "Direct CLIs (e.g., Gemini CLI)"
+        B1["Raw Model Access"]
+        B2["Simple File/Search Grounding"]
+    end
+    subgraph "PAWS Toolkit"
+        C1["<b>Explicit Context Curation (CATSCAN)</b>"]
+        C2["<b>Reproducible, Scriptable Workflows</b>"]
+        C3["<b>Deterministic Orchestration</b>"]
+    end
 
-## The PAWS Advantage: Control and Robustness
+    classDef paws fill:#C71585,stroke:#000,color:#fff;
+    classDef ide fill:#696969,stroke:#000,color:#fff;
+    classDef cli fill:#483D8B,stroke:#000,color:#fff;
+    class A1,A2 ide;
+    class B1,B2 cli;
+    class C1,C2,C3 paws;
+```
 
-### `cats`: Controlled Artifact Text Script 🧶🐈
+This focus on deliberate context curation solves three fundamental challenges in AI-assisted development:
 
-The power of an LLM is directly proportional to the quality of its context. While AI-IDEs automatically gather context, this process is often a "black box." `cats` gives you full control.
+1.  **Token Efficiency & Cost:** `CATSCAN.md` files replace thousands of implementation tokens with a few hundred tokens of a precise contract, enabling larger-scale reasoning at a fraction of the cost.
+2.  **Attention Focusing:** It compels the LLM to reason about a module's API surface and dependencies—the critical elements for robust changes—preventing it from getting lost in implementation details.
+3.  **Reproducibility & Auditing:** The `cats.md` bundle is a deterministic artifact. The entire AI interaction can be audited, version-controlled, and re-executed reliably.
 
-- **Surgical Selection with Globs:** You can create a "clean room" context containing only what is necessary. For example, to refactor a feature without confusing the LLM with test files or documentation, you can be precise:
-  ```bash
-  # Bundle all source files, but exclude tests and legacy code
-  python py/cats.py 'src/**/*.js' -x '**/__tests__/**' -x 'src/legacy/**'
-  ```
-- **Combine Code with External Context:** You can easily concatenate the output of `cats` with other context sources, like library documentation or API specifications, before sending it to the LLM.
+| Dimension           | AI-Integrated IDE (e.g., Cursor)                                                                              | Gemini CLI                                                                                                             | Windsurf (Agentic IDE Vision)                                                                              | PAWS (Programmatic AI Toolkit)                                                                                                                   |
+| :------------------ | :------------------------------------------------------------------------------------------------------------ | :--------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Primary Goal**    | Augment the developer's inner loop with seamless, in-editor assistance.                                       | Provide direct, conversational access to the Gemini model from the terminal.                                           | Create a true "coding partner" AI that understands high-level intent within the IDE.                       | Provide a **composable toolkit** for developers to orchestrate their own repeatable, multi-turn AI workflows.                                    |
+| **Context Control** | **Implicit & Automatic:** Context is derived from open files and the IDE's index. Powerful but can be opaque. | **File-Based & Search-Grounded:** Context is provided via file paths (`@file`) and web search (`@search`) in a prompt. | **Automatic & Holistic:** Aims to understand the entire codebase contextually to perform autonomous tasks. | **Explicit & Developer-Curated:** The developer deterministically builds the _exact_ context bundle (`cats.md`), ensuring focus.                 |
+| **Workflow**        | **Conversational & Manual:** The AI is a reactive chat partner within a graphical interface.                  | **Interactive Agent or Single-Shot:** Can be used as a chat agent or for single, non-interactive command execution.    | **Autonomous Agentic Tasks:** Designed for complex, multi-step operations with less human input.           | **Scriptable & Orchestrated:** As a CLI tool, PAWS is natively designed to be scripted and chained into larger, automated, multi-turn workflows. |
+| **Extensibility**   | Bound by the host IDE's plugin architecture.                                                                  | Open-source with support for custom extensions and tools via the Model Context Protocol (MCP).                         | Primarily a closed, integrated product vision (though parts may be open).                                  | **Natively Composable:** Can be combined with any script, persona, or context source, offering limitless workflow design.                        |
+| **Reproducibility** | Low: UI-based conversations are difficult to reproduce exactly.                                               | Moderate: Single-shot commands are reproducible, but interactive sessions are less so.                                 | Low: Complex agentic behaviors are inherently hard to reproduce perfectly.                                 | **High:** A given `cats.md` bundle, persona, and prompt will produce a highly deterministic and repeatable result.                               |
 
-### `dogs`: Directed Output Grounding Script ⚽🐕
+## Core Workflow Visualization
 
-LLMs are not perfect; their output can be surrounded by conversational text and formatting artifacts. `dogs` is engineered for this reality.
+### System Mechanics (The `cats` & `dogs` Flow)
 
-- **Resilient Parsing:** The `dogs` parser is designed to ignore extraneous text and find the valid file blocks. Our parser happily jumps any "fences" (like ` ``` `) the LLM might forget to close, ensuring you get your code back.
-- **A Predictable Contract:** This robustness is possible because our system prompts (`sys/sys_a.md`, `sys_d.md`) establish a clear contract with the LLM on how to format its output. `dogs` is the other half of that contract.
-- **Precision with Deltas:** For large files, `dogs` supports a delta mode that can apply surgical `REPLACE_LINES`, `INSERT_AFTER_LINE`, and `DELETE_LINES` commands, ensuring minimal, reviewable changes.
+This diagram shows the direct data flow, highlighting how `CATSCAN.md` files are central to both creating the context bundle and verifying changes.
+
+```mermaid
+graph TD
+    classDef cats fill:#C71585,stroke:#000,color:#fff;
+    classDef dogs fill:#228B22,stroke:#000,color:#fff;
+    classDef default fill:#4F4F4F,stroke:#000,color:#fff;
+    classDef llm fill:#483D8B,stroke:#000,color:#fff;
+    classDef artifact fill:#008B8B,stroke:#000,color:#fff;
+
+    subgraph "Developer's Local Machine"
+        A[Source Code Files]
+        I[CATSCAN.md Files]
+        B(cats.py / cats.js)
+        C[cats.md Bundle]
+        F[dogs.md Bundle]
+        G(dogs.py / dogs.js)
+        H["Updated Project Files <br>(Code + CATSCANs)"]
+    end
+
+    subgraph "LLM Environment"
+        D(LLM + Persona)
+    end
+
+    A -- "Feeds" --> B
+    I -- "Are Prioritized By" --> B
+    B -- "Produces" --> C
+    C -- "Is Input To" --> D
+    D -- "Produces" --> F
+    F -- "Is Input To" --> G
+    G -- "Applies & Verifies<br>Changes To" --> H
+
+    class B cats;
+    class G dogs;
+    class C,F artifact;
+    class D llm;
+    class A,I,H default;
+```
+
+### Human-in-the-Loop Workflow
+
+This diagram illustrates how a developer uses the PAWS/SWAP toolkit in a cyclical, multi-turn workflow to modify a complex codebase.
+
+```mermaid
+graph TD
+    classDef human fill:#00008B,stroke:#000,color:#fff;
+    classDef tool fill:#696969,stroke:#000,color:#fff;
+    classDef artifact fill:#008B8B,stroke:#000,color:#fff;
+    classDef llm fill:#483D8B,stroke:#000,color:#fff;
+    classDef repo fill:#DAA520,stroke:#000,color:#000;
+    classDef catsTool fill:#C71585,stroke:#000,color:#fff;
+    classDef dogsTool fill:#228B22,stroke:#000,color:#fff;
+
+    subgraph "Developer's Machine"
+        DEV(Human Developer)
+        REPO[Monolith Codebase <br/>- Source Files<br/>- CATSCAN.md]
+        CATS(cats Tool)
+        DOGS(dogs Tool)
+    end
+
+    subgraph "LLM Interaction"
+        LLM(LLM Engine)
+        PERSONA[Persona & System Prompt]
+    end
+
+    subgraph "Data Artifacts"
+        CATS_MD[cats.md <br/><i>Curated Context</i>]
+        DOGS_MD[dogs.md <br/><i>Proposed Changes</i>]
+    end
+
+    DEV -- "1. Selects Context" --> REPO
+    REPO -- "2. Feeds Files" --> CATS
+    CATS -- "3. Produces Bundle" --> CATS_MD
+    CATS_MD -- "4. Sends to" --> LLM
+    PERSONA -- "Guides" --> LLM
+    LLM -- "5. Generates Changes" --> DOGS_MD
+    DOGS_MD -- "6. Sends back to" --> DOGS
+    DOGS -- "7. Applies Changes" --> REPO
+    REPO -- "8. Developer Reviews" --> DEV
+    DEV -- "9. Initiates Next Turn" --> CATS
+
+    class DEV human;
+    class CATS catsTool;
+    class DOGS dogsTool;
+    class CATS_MD,DOGS_MD artifact;
+    class LLM,PERSONA llm;
+    class REPO repo;
+```
 
 ## Getting Started
 
@@ -45,11 +148,11 @@ LLMs are not perfect; their output can be surrounded by conversational text and 
 **Prerequisites**: Python 3.9+ (no external libraries required).
 
 ```bash
-# Bundle the current directory into my_project.md
+# Bundle the current directory into my_project.md (will prefer CATSCAN.md files)
 python py/cats.py . -o my_project.md
 
 # Extract changes from an LLM's response bundle
-python py/dogs.py dogs.md .
+python py/dogs.py dogs.md . --verify-docs
 ```
 
 ### For JavaScript Users
@@ -64,98 +167,57 @@ npm install
 node js/cats.js . -o my_project.md
 
 # Extract changes from an LLM's response bundle
-node js/dogs.js dogs.md .
+node js/dogs.js dogs.md . --verify-docs
 ```
 
-## The `sys_h{N}` Architectures: From Agent to Architect
+## Agentic Personas & System Protocols
 
-Building on this principle, PAWS includes a pre-built suite of advanced `sys_h{N}` `personas`. This hierarchy allows you to scale the AI's cognitive complexity to match your task, a key principle in designing effective Multi-Agent Systems (MAS) [3].
+PAWS includes a pre-built suite of advanced `sys_h{N}` personas and `sys_a/d/r` system protocols. This hierarchy allows you to scale the AI's cognitive complexity to match your task, a key principle in designing effective Multi-Agent Systems (MAS).
 
-- **`sys_h1` (The Line):** A single-purpose agent for flawless execution of a clear specification.
+- **Personas (`personas/sys_h*.md`):** These define the AI's role and cognitive process.
+  - **`sys_h1` (The Line):** A single-purpose agent for flawless execution.
+  - **`sys_h2` (The Plane):** An adversarial debater for resolving trade-offs.
+  - **`sys_h3` (The Cube):** A deliberation engine for critical reviews.
+  - **`sys_h4` & `sys_h5` (The Tesseract & Penteract):** Hierarchical, multi-agent systems for strategic problems.
+- **System Protocols (`sys/*.md`):** These define the technical interaction rules.
+  - **`sys_a`:** Default interaction protocol.
+  - **`sys_d`:** Delta-mode interaction protocol.
+  - **`sys_r`:** Self-improvement (RSI) protocol.
 
-  - **Use for:** Writing boilerplate code, translating a file.
-  - **Why it works:** Mirrors a specialized, single-function agent, ideal for deterministic tasks where creativity is not required.
+## Advanced Usage
 
-- **`sys_h2` (The Plane):** An adversarial debater for resolving binary trade-offs (e.g., speed vs. quality).
+### `CATSCAN.md` Enforcement
 
-  - **Use for:** Deciding between a quick fix and a robust solution.
-  - **Why it works:** Simulates a two-agent system designed to find a robust equilibrium between competing objectives.
-
-- **`sys_h3` (The Cube):** A deliberation engine for critical reviews and judgment.
-
-  - **Use for:** Performing a critical code review or analyzing a refactoring proposal.
-  - **Why it works:** Models a supervised workflow (Examine -> Arbitrate -> Articulate), similar to the Process Supervision patterns that improve agent reliability [4].
-
-- **`sys_h4` & `sys_h5` (The Tesseract & Penteract):** Hierarchical, multi-agent systems for the most ambiguous and strategic problems.
-  - **Use for:** Designing a new software framework or formulating a technology strategy.
-  - **Why it works:** These are composed systems of specialized agents, similar to the architecture of Microsoft's AutoGen, designed to tackle complex problems that require diverse, collaborative intelligence.
-
-## Advanced Usage and Architectural Control
-
-### Example: Multi-Turn Conversation
-
-PAWS is stateless by design. Conversation after a change is in the context window, allowing for complete control over the AI's , and multi-turn changes.
-
-1.  **Initial Prompt:** `python py/cats.py src/ -o turn_1_prompt.md` (this is sent to the context window)
-2.  **LLM Generates:** `turn_1_response.md` (this is part of the context window)
-3.  **Continue with New Instructions:** Send a new change request to generate `turn_2_response.md`
+- `cats.py --strict-catscan`: Aborts bundling if any `README.md` is found without a corresponding `CATSCAN.md`, enforcing documentation compliance.
+- `dogs.py --verify-docs`: After applying changes, warns the operator if a `README.md` was modified without a corresponding change to its `CATSCAN.md`, preventing documentation drift.
 
 ### Example: Authoring a Custom Persona
 
-The true power of PAWS lies in defining custom cognitive architectures. You can create your own `.md` file and pass it with `-p` to give the AI a specific role and process.
-
-#### Here is a practical example of a **`Continuous Coder for Large Tasks`** persona:
-
-```markdown
-# Persona: Continuous Code Streamer
-
-> You are **`CCS-1`**, a non-conversational code generation engine. Your sole function is to output the contents of a complete `dogs` bundle based on the user's request.
-
-**Directives:**
-
-1.  **Generate Only:** Your entire response must be the code bundle. Do not add explanations. Start immediately with the first file marker.
-2.  **Continue on Command:** If your output is interrupted and the user provides the single command `continue`, you must resume generation from the exact point you were cut off.
-3.  **Terminate on New Input:** Any input other than `continue` is a new task. Terminate the previous stream and begin a new one.
-
-**Example:**
-
-**User:** `Create a file.`
-**CCS-1:** `🐕 --- DOGS_START_FILE: file.txt ---`
-`Hello Wor` **-- INTERRUPTED --**
-**User:** `continue`
-**CCS-1:** `ld.`
-`🐕 --- DOGS_END_FILE: file.txt ---`
-```
-
-**To use this:** `python py/cats.py src/ -p path/to/ccs_persona.md` or use built in `python py/cats.py src/ -p personas/sys_c1.md`
-
-#### Here is a practical example of a **`Test-Driven Development Writer`** persona:
-
-```markdown
-# Persona: Test-Driven Development Writer
-
-You are an expert Test-Driven Development (TDD) engineer. Your process is strict and non-negotiable. For any given feature request, you will follow this three-step protocol in your response:
-
-1.  **Write the Failing Test:** First, create a new test file or modify an existing one to include a concise, clear test case that captures the feature's requirements. This test MUST fail when run against the existing code.
-2.  **Write the Minimal Implementation:** Second, write the simplest, cleanest possible code in the application files required to make the failing test pass. Do not add any extra features or gold-plating.
-3.  **Refactor (If Necessary):** Third, if the minimal implementation introduced any code duplication or sloppiness, provide a `REPLACE_LINES` delta command to refactor the newly-added code for clarity and efficiency.
-```
-
-**To use this:** `python py/cats.py src/ -p path/to/tdd_persona.md`
+The true power of PAWS lies in defining custom cognitive models. You can create your own `.md` file and pass it with `-p` to give the AI a specific role and process. See `personas/` for examples like a Continuous Coder or a Test-Driven Development writer.
 
 ## Project Structure
 
 ```
 .
-├── js/                  <-- Node.js implementation
-├── py/                  <-- Python implementation
+├── js/
+│   ├── cats.js
+│   ├── dogs.js
+│   ├── package.json
+│   └── test/
+├── py/
+│   ├── cats.py
+│   ├── dogs.py
+│   └── tests/
 ├── personas/
-│   ├── ...              <-- Predefined distinct purpose personas
-└── sys/
-    ├── sys_a.md         <-- Shared: Default system prompt
-    ├── sys_d.md         <-- Shared: Delta mode system prompt
-    └── sys_r.md         <-- Shared: RSI (self-modification) prompt
-├── README.md            <-- You are here
+│   ├── sys_h1.md
+│   └── ...
+├── sys/
+│   ├── sys_a.md
+│   ├── sys_d.md
+│   └── sys_r.md
+├── cats.md
+├── dogs.md
+└── README.md
 ```
 
 ## Testing
@@ -171,11 +233,4 @@ Contributions are welcome! Please open an issue to report a bug or suggest a fea
 
 ## License
 
-This project is licensed under the ISC License.
-
-## References
-
-[1] Vibe Coding: Copilot vs Cursor AI. (2025). Techpoint.africa.
-[2] GitHub Blog: Copilot ask, edit, and agent modes. (2025).
-[3] Prompting Guide: LLM Agents. (2025).
-[4] arXiv: CodeTool: Enhancing Programmatic Tool Invocation of LLMs via Process Supervision. (2025).
+This project is licensed under the MIT License.

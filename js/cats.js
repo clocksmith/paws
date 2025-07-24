@@ -1,6 +1,12 @@
 #!/usr/bin/env node
-// cats.js - Bundles project files into a single text artifact for LLMs.
-// Supports both Node.js CLI and browser/library usage.
+/**
+ * @file cats.js
+ * @description Bundles project files into a single text artifact for Language Models.
+ * This script is a core component of the Prompt-Assisted Workflow System (PAWS).
+ * It supports both Node.js for command-line operations and can be used as a
+ * library in browser environments with a virtual file system.
+ * @verson 2.0.0
+ */
 
 // --- Environment Detection ---
 const IS_NODE =
@@ -9,7 +15,6 @@ const IS_NODE =
   process.versions.node != null;
 
 // --- Node.js Specific Imports ---
-// These are conditionally required only in the Node.js environment.
 let fs, path, glob, yargs;
 if (IS_NODE) {
   fs = require("fs").promises;
@@ -57,7 +62,7 @@ const END_MARKER_TEMPLATE = "🐈 --- CATS_END_FILE: {path}{hint} ---";
  */
 
 /**
- * A simple TextEncoder/Decoder polyfill for browser environments.
+ * A simple TextEncoder polyfill for browser environments that may not have it.
  */
 const _TextEncoder =
   typeof TextEncoder !== "undefined"
@@ -93,9 +98,10 @@ const _TextEncoder =
       };
 
 /**
- * Normalizes content to a Buffer. Works in Node.js and browsers.
- * @param {string | Buffer | Uint8Array} content
- * @returns {Buffer}
+ * Normalizes file content to a Buffer, ensuring compatibility between
+ * Node.js (Buffer) and browser (string, Uint8Array) environments.
+ * @param {string | Buffer | Uint8Array} content The input content.
+ * @returns {Buffer} The content converted to a Buffer.
  */
 function toBuffer(content) {
   if (typeof content === "string") {
@@ -105,12 +111,12 @@ function toBuffer(content) {
 }
 
 /**
- * Detects if content is likely binary.
- * @param {Buffer} contentBytes
- * @returns {boolean}
+ * Detects if a Buffer's content is likely binary data.
+ * The heuristic checks for the presence of null bytes, which are rare in text files.
+ * @param {Buffer} contentBytes The file content as a Buffer.
+ * @returns {boolean} True if the content is likely binary, false otherwise.
  */
 function detectIsBinary(contentBytes) {
-  // A common heuristic: check for null bytes. Real text files rarely have them.
   for (let i = 0; i < Math.min(contentBytes.length, 512); i++) {
     if (contentBytes[i] === 0) {
       return true;
@@ -120,15 +126,15 @@ function detectIsBinary(contentBytes) {
 }
 
 /**
- * Prepares an array of FileObjects from virtual file representations.
- * @param {VirtualFile[]} files
- * @returns {FileObject[]}
+ * Prepares an array of standardized FileObjects from virtual file representations.
+ * @param {VirtualFile[]} files An array of virtual file objects.
+ * @returns {FileObject[]} An array of processed FileObjects.
  */
 function prepareFileObjectsFromVirtualFS(files) {
   return files.map((file) => {
     const contentBytes = toBuffer(file.content);
     return {
-      path: file.path.replace(/\\/g, "/"), // Normalize to forward slashes
+      path: file.path.replace(/\\/g, "/"),
       contentBytes,
       isBinary: detectIsBinary(contentBytes),
     };
@@ -137,9 +143,12 @@ function prepareFileObjectsFromVirtualFS(files) {
 
 /**
  * Creates the final bundle string from an array of FileObjects.
- * @param {FileObject[]} fileObjects
- * @param {Object} options
- * @returns {string}
+ * This function constructs the bundle body with headers and file markers.
+ * @param {FileObject[]} fileObjects The files to include in the bundle.
+ * @param {Object} options Configuration options.
+ * @param {boolean} [options.prepareForDelta=false] - Whether to add a delta hint.
+ * @param {string} [options.forceEncoding='auto'] - Encoding override ('b64' or 'auto').
+ * @returns {string} The formatted bundle body string.
  */
 function createBundleString(fileObjects, options) {
   const { prepareForDelta, forceEncoding } = options;
@@ -185,11 +194,13 @@ function createBundleString(fileObjects, options) {
 }
 
 /**
- * The core bundling logic, abstracted to work with a list of FileObjects.
- * This function is environment-agnostic.
- * @param {FileObject[]} allFileObjects - The complete list of files to bundle.
- * @param {Object} options - Bundling options.
- * @returns {string} The complete bundle string including prepended content.
+ * The core bundling logic, abstracted to be environment-agnostic.
+ * It prepends persona and system prompts to the main bundle string.
+ * @param {FileObject[]} allFileObjects The complete list of files to bundle.
+ * @param {Object} options Bundling options including content to prepend.
+ * @param {string} [options.personaContent] - Persona content string.
+ * @param {string} [options.sysPromptContent] - System prompt content string.
+ * @returns {string} The complete bundle string including all prepended content.
  */
 function buildFinalBundle(allFileObjects, options) {
   const { personaContent, sysPromptContent } = options;
@@ -208,24 +219,51 @@ function buildFinalBundle(allFileObjects, options) {
   return finalOutput;
 }
 
-// --- Main API Function ---
+/**
+ * Verifies CATSCAN.md compliance for a list of file paths.
+ * It finds all README.md files and checks for a corresponding CATSCAN.md.
+ * @param {string[]} allFiles - A flat list of file paths.
+ * @returns {Promise<{valid: {readme: string, catscan: string}[], missing: string[], others: string[]}>}
+ * An object detailing compliance status.
+ */
+async function verifyCatscanCompliance(allFiles) {
+  const readmes = allFiles.filter(
+    (f) => path.basename(f).toLowerCase() === "readme.md"
+  );
+  const others = allFiles.filter(
+    (f) => path.basename(f).toLowerCase() !== "readme.md"
+  );
+  const valid = [];
+  const missing = [];
+  for (const readme of readmes) {
+    const catscanPath = path.join(path.dirname(readme), "CATSCAN.md");
+    try {
+      await fs.access(catscanPath);
+      valid.push({ readme, catscan: catscanPath });
+    } catch {
+      missing.push(path.dirname(readme));
+    }
+  }
+  return { valid, missing, others };
+}
 
 /**
  * Creates a PAWS bundle from a set of files.
- * In Node.js, it reads from the file system based on glob patterns.
- * In the browser, it operates on a provided virtual file system.
+ * This is the main exported function, handling both Node.js (file system)
+ * and browser (virtual file system) execution paths.
  *
- * @param {Object} options
+ * @param {Object} options - The configuration for creating the bundle.
  * @param {string[]} [options.paths=[]] - (Node.js) Glob patterns or paths to include.
  * @param {string[]} [options.exclude=[]] - (Node.js) Glob patterns to exclude.
  * @param {string} [options.personaFile] - (Node.js) Path to a persona file to prepend.
  * @param {string} [options.sysPromptFile] - (Node.js) Path to a system prompt file.
- * @param {boolean} [options.useDefaultExcludes=true] - (Node.js) Whether to use default excludes.
+ * @param {boolean} [options.useDefaultExcludes=true] - (Node.js) Toggles default excludes.
+ * @param {boolean} [options.strictCatscan=false] - (Node.js) Enforces CATSCAN.md compliance.
  * @param {VirtualFile[]} [options.virtualFS=[]] - (Browser) An array of {path, content} objects.
  * @param {string} [options.personaContent] - (Browser) String content for the persona.
  * @param {string} [options.sysPromptContent] - (Browser) String content for the system prompt.
- * @param {boolean} [options.prepareForDelta=false] - Add delta reference hint.
- * @param {string} [options.forceEncoding='auto'] - Force encoding ('auto' or 'b64').
+ * @param {boolean} [options.prepareForDelta=false] - Adds a delta reference hint.
+ * @param {string} [options.forceEncoding='auto'] - Forces encoding ('auto' or 'b64').
  * @returns {Promise<string>} The generated bundle string.
  */
 async function createBundle(options = {}) {
@@ -237,6 +275,7 @@ async function createBundle(options = {}) {
       useDefaultExcludes = true,
       personaFile,
       sysPromptFile,
+      strictCatscan = false,
       prepareForDelta = false,
       forceEncoding = "auto",
     } = options;
@@ -246,7 +285,7 @@ async function createBundle(options = {}) {
       ignorePatterns.push(...DEFAULT_EXCLUDES);
     }
 
-    const files = (
+    let allFiles = (
       await Promise.all(
         paths.map((p) =>
           glob.glob(p, { nodir: true, dot: true, ignore: ignorePatterns })
@@ -254,14 +293,34 @@ async function createBundle(options = {}) {
       )
     ).flat();
 
+    if (strictCatscan) {
+      const { valid, missing } = await verifyCatscanCompliance(allFiles);
+      if (missing.length > 0) {
+        throw new Error(
+          `Strict CATSCAN mode failed. Missing CATSCAN.md files in:\n - ${missing.join(
+            "\n - "
+          )}`
+        );
+      }
+      allFiles = valid.map((pair) => pair.catscan);
+    } else {
+      const { valid, others } = await verifyCatscanCompliance(allFiles);
+      const catscanDirs = new Set(
+        valid.map((pair) => path.dirname(pair.readme))
+      );
+      const nonCatscanFiles = others.filter(
+        (file) => !catscanDirs.has(path.dirname(file))
+      );
+      allFiles = [...valid.map((pair) => pair.catscan), ...nonCatscanFiles];
+    }
+
     const fileObjects = await Promise.all(
-      files.map(async (file) => ({
+      allFiles.map(async (file) => ({
         path: file,
         content: await fs.readFile(file),
       }))
     );
 
-    // Read prepended files
     const finalOptions = { ...options };
     if (personaFile) {
       finalOptions.personaContent = await fs.readFile(
@@ -298,10 +357,9 @@ async function createBundle(options = {}) {
   }
 }
 
-// --- Node.js Command-Line Interface (CLI) Logic ---
-
 /**
- * Main function to run the CLI.
+ * Main function to run the Command-Line Interface.
+ * This function is executed only when the script is run directly in Node.js.
  */
 async function mainCli() {
   const argv = yargs(hideBin(process.argv))
@@ -375,6 +433,12 @@ async function mainCli() {
       choices: ["auto", "b64"],
       default: "auto",
     })
+    .option("strict-catscan", {
+      describe:
+        "Enforce CATSCAN.md compliance. Aborts if any README.md is missing a CATSCAN.md.",
+      type: "boolean",
+      default: false,
+    })
     .help("h")
     .alias("h", "help").argv;
 
@@ -384,63 +448,62 @@ async function mainCli() {
     process.exit(1);
   }
 
-  // In quiet mode, stdout is for the bundle only. Log to stderr.
   const log = argv.q ? () => {} : (...args) => console.error(...args);
 
   log("--- Starting PAWS Bundling ---");
 
-  const bundleString = await createBundle({
-    paths: argv.paths,
-    exclude: argv.x,
-    personaFile: argv.p,
-    sysPromptFile: argv.s,
-    useDefaultExcludes: !argv.N,
-    prepareForDelta: argv.t,
-    forceEncoding: argv.E,
-  });
+  try {
+    const bundleString = await createBundle({
+      paths: argv.paths,
+      exclude: argv.x,
+      personaFile: argv.p,
+      sysPromptFile: argv.s,
+      useDefaultExcludes: !argv.N,
+      prepareForDelta: argv.t,
+      forceEncoding: argv.E,
+      strictCatscan: argv.strictCatscan,
+    });
 
-  if (!bundleString.trim()) {
-    log("No files matched the given criteria. Exiting.");
-    process.exit(0);
-  }
-
-  if (argv.o === "-") {
-    process.stdout.write(bundleString);
-  } else {
-    const outputPath = path.resolve(process.cwd(), argv.o);
-    if (!argv.y && process.stdin.isTTY) {
-      const readline = require("readline").createInterface({
-        input: process.stdin,
-        output: process.stdout,
-      });
-      await new Promise((resolve, reject) => {
-        readline.question(
-          `About to write bundle to '${outputPath}'. Proceed? [Y/n]: `,
-          (answer) => {
-            readline.close();
-            if (answer.toLowerCase() === "n") {
-              log("Operation cancelled.");
-              process.exit(0);
-            }
-            resolve();
-          }
-        );
-      });
+    if (!bundleString.trim()) {
+      log("No files matched the given criteria. Exiting.");
+      process.exit(0);
     }
-    await fs.writeFile(outputPath, bundleString);
-    log(`\nOutput successfully written to: '${outputPath}'`);
+
+    if (argv.o === "-") {
+      process.stdout.write(bundleString);
+    } else {
+      const outputPath = path.resolve(process.cwd(), argv.o);
+      if (!argv.y && process.stdin.isTTY) {
+        const readline = require("readline").createInterface({
+          input: process.stdin,
+          output: process.stdout,
+        });
+        await new Promise((resolve, reject) => {
+          readline.question(
+            `About to write bundle to '${outputPath}'. Proceed? [Y/n]: `,
+            (answer) => {
+              readline.close();
+              if (answer.toLowerCase() === "n") {
+                log("Operation cancelled.");
+                process.exit(0);
+              }
+              resolve();
+            }
+          );
+        });
+      }
+      await fs.writeFile(outputPath, bundleString);
+      log(`\nOutput successfully written to: '${outputPath}'`);
+    }
+  } catch (error) {
+    console.error(`\nError: ${error.message}`);
+    process.exit(1);
   }
 }
 
 // --- Exports and Execution ---
-
-// Export the main function for library use
 module.exports = { createBundle };
 
-// If run directly from Node.js, execute the CLI
 if (IS_NODE && require.main === module) {
-  mainCli().catch((err) => {
-    console.error(`\nAn unexpected error occurred: ${err.message}`);
-    process.exit(1);
-  });
+  mainCli();
 }

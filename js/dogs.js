@@ -1,6 +1,12 @@
 #!/usr/bin/env node
-// dogs.js - Extracts files from a PAWS bundle, applying deltas if needed.
-// Supports both Node.js CLI and browser/library usage.
+/**
+ * @file dogs.js
+ * @description Extracts files from a PAWS bundle, applying deltas if needed.
+ * This script is a core component of the Prompt-Assisted Workflow System (PAWS).
+ * It supports both Node.js for command-line operations and can be used as a
+ * library in browser environments.
+ * @version 2.0.0
+ */
 
 // --- Environment Detection ---
 const IS_NODE =
@@ -25,15 +31,10 @@ const DEFAULT_ENCODING = "utf-8";
 
 // --- Bundle Structure Constants ---
 const MARKER_REGEX = new RegExp(
-  // Match start of line, optional whitespace, emoji, and dashes
   `^\\s*(?:🐈|🐕)\\s*-{3,}\\s*` +
-    // Capture START or END
     `(?:CATS|DOGS)_(START|END)_FILE\\s*:\\s*` +
-    // Capture file path (non-greedy)
     `(.+?)` +
-    // Optionally capture Base64 hint
     `(\\s+\\(Content:Base64\\))?` +
-    // Match trailing dashes and end of line
     `\\s*-{3,}\\s*$`,
   "i"
 );
@@ -46,8 +47,6 @@ const INSERT_AFTER_LINE_REGEX = /INSERT_AFTER_LINE\(\s*(\d+)\s*\)/i;
 const DELETE_LINES_REGEX = /DELETE_LINES\(\s*(\d+)\s*,\s*(\d+)\s*\)/i;
 const DELETE_FILE_REGEX = /DELETE_FILE\(\s*\)/i;
 
-// --- Core Logic (Environment-Agnostic) ---
-
 /**
  * @typedef {Object} ParsedFile
  * @property {string} path - The relative path of the file from the bundle.
@@ -56,7 +55,16 @@ const DELETE_FILE_REGEX = /DELETE_FILE\(\s*\)/i;
  * @property {boolean} isDelete - True if this is a DELETE_FILE operation.
  */
 
+/**
+ * Parses a PAWS bundle string into a structured representation of its files.
+ */
 class BundleParser {
+  /**
+   * @param {string[]} bundleLines - The bundle content split into an array of lines.
+   * @param {Object} [options={}] - Parser options.
+   * @param {boolean} [options.applyDeltaMode=false] - Whether to parse for delta commands.
+   * @param {boolean} [options.quiet=false] - Suppresses console warnings.
+   */
   constructor(bundleLines, options = {}) {
     this.lines = bundleLines;
     this.applyDeltaMode = options.applyDeltaMode || false;
@@ -65,27 +73,39 @@ class BundleParser {
     this.parsedFiles = [];
   }
 
+  /**
+   * Parses a PAWS command string into a structured delta command object.
+   * @param {string} cmdStr - The command string (e.g., "DELETE_FILE()").
+   * @returns {Object | null} A structured command object or null if invalid.
+   */
   _parseDeltaCommand(cmdStr) {
     if (DELETE_FILE_REGEX.test(cmdStr)) return { type: "delete_file" };
-    if (REPLACE_LINES_REGEX.test(cmdStr)) {
-      const m = cmdStr.match(REPLACE_LINES_REGEX);
-      return { type: "replace", start: parseInt(m[1]), end: parseInt(m[2]) };
+    let match;
+    if ((match = cmdStr.match(REPLACE_LINES_REGEX))) {
+      return {
+        type: "replace",
+        start: parseInt(match[1]),
+        end: parseInt(match[2]),
+      };
     }
-    if (INSERT_AFTER_LINE_REGEX.test(cmdStr)) {
-      const m = cmdStr.match(INSERT_AFTER_LINE_REGEX);
-      return { type: "insert", lineNum: parseInt(m[1]) };
+    if ((match = cmdStr.match(INSERT_AFTER_LINE_REGEX))) {
+      return { type: "insert", lineNum: parseInt(match[1]) };
     }
-    if (DELETE_LINES_REGEX.test(cmdStr)) {
-      const m = cmdStr.match(DELETE_LINES_REGEX);
+    if ((match = cmdStr.match(DELETE_LINES_REGEX))) {
       return {
         type: "delete_lines",
-        start: parseInt(m[1]),
-        end: parseInt(m[2]),
+        start: parseInt(match[1]),
+        end: parseInt(match[2]),
       };
     }
     return null;
   }
 
+  /**
+   * Cleans a block of content lines by removing markdown fences and blank lines.
+   * @param {string[]} lines - The raw lines of content from a file block.
+   * @returns {string[]} The cleaned content lines.
+   */
   _finalizeContentBlock(lines) {
     if (!lines.length) return [];
     let start = 0,
@@ -97,6 +117,13 @@ class BundleParser {
     return lines.slice(start, end);
   }
 
+  /**
+   * Finalizes the parsing of a file block and adds it to the list of parsed files.
+   * @param {string} path - The file path.
+   * @param {boolean} isBinary - Whether the content is Base64 encoded.
+   * @param {string[]} contentLines - The lines of content for the file.
+   * @param {Object[]} deltaCommands - Any parsed delta commands.
+   */
   _finalizeFile(path, isBinary, contentLines, deltaCommands) {
     const finalContentLines = this._finalizeContentBlock(contentLines);
 
@@ -113,6 +140,7 @@ class BundleParser {
     if (this.applyDeltaMode && deltaCommands.length > 0) {
       if (
         finalContentLines.length > 0 &&
+        deltaCommands.length > 0 &&
         deltaCommands[deltaCommands.length - 1].type !== "delete_lines"
       ) {
         deltaCommands[deltaCommands.length - 1].contentLines =
@@ -138,6 +166,10 @@ class BundleParser {
     }
   }
 
+  /**
+   * Executes the parsing of the entire bundle.
+   * @returns {ParsedFile[]} The array of parsed file objects.
+   */
   parse() {
     let inBlock = false;
     let currentPath = null;
@@ -178,7 +210,6 @@ class BundleParser {
             deltaCommands
           );
           inBlock = false;
-          currentPath = null;
         }
       } else if (inBlock) {
         const cmdMatch = line.match(PAWS_CMD_REGEX);
@@ -217,6 +248,12 @@ class BundleParser {
   }
 }
 
+/**
+ * Applies a series of delta commands to an array of original file lines.
+ * @param {string[]} originalLines - The original lines of the file.
+ * @param {Object[]} deltaCommands - The delta commands to apply.
+ * @returns {string[]} The new lines of the file after applying deltas.
+ */
 function applyDeltas(originalLines, deltaCommands) {
   let newLines = [...originalLines];
   let offset = 0;
@@ -224,8 +261,7 @@ function applyDeltas(originalLines, deltaCommands) {
     try {
       if (cmd.type === "replace") {
         const start = cmd.start - 1 + offset;
-        const end = cmd.end - 1 + offset;
-        const deleteCount = end - start + 1;
+        const deleteCount = cmd.end - start;
         newLines.splice(start, deleteCount, ...(cmd.contentLines || []));
         offset += (cmd.contentLines || []).length - deleteCount;
       } else if (cmd.type === "insert") {
@@ -234,8 +270,7 @@ function applyDeltas(originalLines, deltaCommands) {
         offset += (cmd.contentLines || []).length;
       } else if (cmd.type === "delete_lines") {
         const start = cmd.start - 1 + offset;
-        const end = cmd.end - 1 + offset;
-        const deleteCount = end - start + 1;
+        const deleteCount = cmd.end - start;
         newLines.splice(start, deleteCount);
         offset -= deleteCount;
       }
@@ -248,24 +283,25 @@ function applyDeltas(originalLines, deltaCommands) {
   return newLines;
 }
 
+/**
+ * Sanitizes a relative path to prevent directory traversal.
+ * @param {string} relPath - The relative path from the bundle.
+ * @returns {string} A safe, normalized path.
+ */
 function sanitizePath(relPath) {
-  // Prevent directory traversal and invalid characters
   const normalized = path.normalize(relPath).replace(/^(\.\.(\/|\\|$))+/, "");
   const resolved = path.resolve("/", normalized);
-  return resolved.substring(1); // Remove leading slash
+  return resolved.substring(1);
 }
 
-// --- Main API Function ---
-
 /**
- * Extracts a PAWS bundle.
+ * Extracts files from a PAWS bundle.
  * In Node.js, it can read from/write to the file system.
  * In the browser, it operates on strings and returns a virtual file system.
- *
- * @param {Object} options
+ * @param {Object} options - Configuration options for extraction.
  * @param {string} options.bundleContent - The bundle content as a string.
- * @param {string} [options.originalBundleContent] - (For Delta Mode) The original bundle content.
- * @returns {Promise<ParsedFile[]>} A promise that resolves to an array of ParsedFile objects.
+ * @param {string} [options.originalBundleContent] - The original bundle for delta mode.
+ * @returns {Promise<ParsedFile[]>} A promise resolving to an array of ParsedFile objects.
  */
 async function extractBundle(options = {}) {
   const { bundleContent, originalBundleContent, quiet = false } = options;
@@ -293,8 +329,10 @@ async function extractBundle(options = {}) {
 
     for (const file of parsedFiles) {
       if (file.deltaCommands && originalFilesMap.has(file.path)) {
-        const originalLines = originalFilesMap.get(file.path);
-        const newLines = applyDeltas(originalLines, file.deltaCommands);
+        const newLines = applyDeltas(
+          originalFilesMap.get(file.path),
+          file.deltaCommands
+        );
         file.contentBytes = Buffer.from(newLines.join("\n"), DEFAULT_ENCODING);
       }
     }
@@ -302,37 +340,61 @@ async function extractBundle(options = {}) {
   return parsedFiles;
 }
 
-// --- Node.js Command-Line Interface (CLI) Logic ---
+/**
+ * Prompts the user for confirmation in an interactive terminal.
+ * @param {string} question - The question to ask the user.
+ * @param {string[]} [validChoices=['y', 'n']] - The list of valid single-character responses.
+ * @returns {Promise<string>} The user's validated choice.
+ */
+async function confirmPrompt(question, validChoices = ["y", "n"]) {
+  if (!process.stdin.isTTY) {
+    return "n";
+  }
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      const choice = answer.trim().toLowerCase();
+      resolve(validChoices.includes(choice) ? choice : "n");
+    });
+  });
+}
 
+/**
+ * Main function to run the Command-Line Interface.
+ */
 async function mainCli() {
   const argv = yargs(hideBin(process.argv))
     .usage("Usage: node dogs.js [BUNDLE_FILE] [OUTPUT_DIR] [options]")
     .example(
       "node dogs.js dogs.md ./output -y",
-      "Extract dogs.md to ./output, auto-confirming overwrites"
+      "Extract dogs.md to ./output, auto-confirming"
     )
     .example(
       "node dogs.js changes.bundle . -d original.bundle",
-      "Apply delta changes to the current directory"
+      "Apply delta changes"
     )
     .positional("bundle_file", {
-      describe: `Input bundle to extract (default: ${DEFAULT_INPUT_BUNDLE_FILENAME})`,
+      describe: `Input bundle (default: ${DEFAULT_INPUT_BUNDLE_FILENAME})`,
       type: "string",
       default: DEFAULT_INPUT_BUNDLE_FILENAME,
     })
     .positional("output_dir", {
-      describe: `Directory to extract files into (default: ${DEFAULT_OUTPUT_DIR})`,
+      describe: `Output directory (default: ${DEFAULT_OUTPUT_DIR})`,
       type: "string",
       default: DEFAULT_OUTPUT_DIR,
     })
     .option("d", {
       alias: "apply-delta",
-      describe: "Path to the original bundle to apply delta commands against.",
+      describe: "Path to original bundle for delta application.",
       type: "string",
     })
     .option("q", {
       alias: "quiet",
-      describe: "Suppress all informational output and prompts. Implies -n.",
+      describe: "Suppress all informational output. Implies -n.",
       type: "boolean",
       default: false,
     })
@@ -345,6 +407,11 @@ async function mainCli() {
     .option("n", {
       alias: "no",
       describe: "Auto-skip all conflicting actions.",
+      type: "boolean",
+      default: false,
+    })
+    .option("verify-docs", {
+      describe: "Warn if a README.md is changed without its CATSCAN.md.",
       type: "boolean",
       default: false,
     })
@@ -381,25 +448,24 @@ async function mainCli() {
 
     if (!path.resolve(outputPath).startsWith(path.resolve(outputDir))) {
       log(
-        `  Security Alert: Path '${file.path}' attempts to traverse outside of output directory. Skipping.`
+        `  Security Alert: Path '${file.path}' attempts traversal. Skipping.`
       );
       continue;
     }
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
 
+    const fileExists = await fs
+      .access(outputPath)
+      .then(() => true)
+      .catch(() => false);
+
     if (file.isDelete) {
-      if (
-        await fs
-          .access(outputPath)
-          .then(() => true)
-          .catch(() => false)
-      ) {
+      if (fileExists) {
         let shouldDelete = false;
-        if (overwritePolicy === "yes") {
-          shouldDelete = true;
-        } else if (overwritePolicy === "prompt") {
+        if (overwritePolicy === "yes") shouldDelete = true;
+        else if (overwritePolicy === "prompt") {
           const answer = await confirmPrompt(
-            `Permanently delete '${safePath}'? [y/N/a(yes-all)/q(quit)]: `,
+            `Permanently delete '${safePath}'? [y/N/a(ll)/q(uit)]: `,
             ["y", "n", "a", "q"]
           );
           if (answer === "y") shouldDelete = true;
@@ -408,11 +474,10 @@ async function mainCli() {
             overwritePolicy = "yes";
           }
           if (answer === "q") {
-            log("Operation cancelled by user.");
+            log("Operation cancelled.");
             break;
           }
         }
-
         if (shouldDelete) {
           await fs.unlink(outputPath);
           log(`  Deleted: ${safePath}`);
@@ -422,51 +487,25 @@ async function mainCli() {
       }
     } else if (file.contentBytes) {
       let shouldWrite = true;
-      if (
-        await fs
-          .access(outputPath)
-          .then(() => true)
-          .catch(() => false)
-      ) {
-        if (overwritePolicy === "no") {
-          shouldWrite = false;
-        } else if (overwritePolicy === "prompt") {
-          const existingContent = await fs.readFile(outputPath);
-          if (existingContent.equals(file.contentBytes)) {
-            const answer = await confirmPrompt(
-              `File content for '${safePath}' is identical. Overwrite anyway? [y/N/a/s/q]: `,
-              ["y", "n", "a", "s", "q"]
-            );
-            if (answer === "n") shouldWrite = false;
-            if (answer === "a") overwritePolicy = "yes";
-            if (answer === "s") {
-              shouldWrite = false;
-              overwritePolicy = "no";
-            }
-            if (answer === "q") {
-              log("Operation cancelled by user.");
-              break;
-            }
-          } else {
-            // In a real CLI, we would show a diff here.
-            const answer = await confirmPrompt(
-              `File '${safePath}' exists. Overwrite? [y/N/a/s/q]: `,
-              ["y", "n", "a", "s", "q"]
-            );
-            if (answer === "n") shouldWrite = false;
-            if (answer === "a") overwritePolicy = "yes";
-            if (answer === "s") {
-              shouldWrite = false;
-              overwritePolicy = "no";
-            }
-            if (answer === "q") {
-              log("Operation cancelled by user.");
-              break;
-            }
+      if (fileExists) {
+        if (overwritePolicy === "no") shouldWrite = false;
+        else if (overwritePolicy === "prompt") {
+          const answer = await confirmPrompt(
+            `File '${safePath}' exists. Overwrite? [y/N/a(ll)/s(kip-all)/q(uit)]: `,
+            ["y", "n", "a", "s", "q"]
+          );
+          if (answer === "n") shouldWrite = false;
+          if (answer === "a") overwritePolicy = "yes";
+          if (answer === "s") {
+            shouldWrite = false;
+            overwritePolicy = "no";
+          }
+          if (answer === "q") {
+            log("Operation cancelled.");
+            break;
           }
         }
       }
-
       if (shouldWrite) {
         await fs.writeFile(outputPath, file.contentBytes);
         log(`  Wrote: ${safePath}`);
@@ -475,27 +514,37 @@ async function mainCli() {
       }
     }
   }
-}
 
-async function confirmPrompt(question, validChoices = ["y", "n"]) {
-  if (!process.stdin.isTTY) {
-    return "n"; // Default to 'no' in non-interactive environments
+  if (argv.verifyDocs) {
+    const modifiedFiles = new Set(filesToWrite.map((f) => f.path));
+    const readmeChanges = new Set(
+      Array.from(modifiedFiles).filter((f) =>
+        f.toLowerCase().endsWith("readme.md")
+      )
+    );
+
+    if (readmeChanges.size > 0) {
+      log("\n--- Verifying Documentation Sync ---");
+      let warnings = 0;
+      for (const readme of readmeChanges) {
+        const catscanPath = path.join(path.dirname(readme), "CATSCAN.md");
+        if (!modifiedFiles.has(catscanPath)) {
+          log(
+            `  Warning: '${readme}' was modified, but '${catscanPath}' was not. Docs may be out of sync.`
+          );
+          warnings++;
+        }
+      }
+      if (warnings === 0) {
+        log(
+          "  OK: All modified README.md files had corresponding CATSCAN.md changes."
+        );
+      }
+    }
   }
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      const choice = answer.trim().toLowerCase();
-      resolve(validChoices.includes(choice) ? choice : "n");
-    });
-  });
 }
 
 // --- Exports and Execution ---
-
 module.exports = { extractBundle };
 
 if (IS_NODE && require.main === module) {
