@@ -12,18 +12,20 @@ PAWS is engineered for a different paradigm: **the developer as the orchestrator
 
 ```mermaid
 graph LR
-    subgraph "Integrated IDEs (Cursor)"
-        A1["Seamless In-Editor UI"]
-        A2["Implicit Context (Magic)"]
+    subgraph "Integrated IDEs (Cursor, Replit, Windsurf)"
+        A1["Forced In-Editor UI"]
+        A2["Implicit Context (Dark Magic)"]
     end
-    subgraph "Direct CLIs (Gemini CLI)"
+    subgraph "Direct CLIs (Gemini CLI, Claude CLI)"
         B1["Raw Model Access"]
         B2["Simple File/Search Grounding"]
     end
     subgraph "PAWS Toolkit"
-        C1["<b>Explicit Context Curation (CATSCAN)</b>"]
+        C1["<b>Explicit Context Curation (CATS)</b>"]
         C2["<b>Reproducible, Scriptable Workflows</b>"]
-        C3["<b>Deterministic Orchestration</b>"]
+        C3["<b>Controllable Orchestration</b>"]
+        C4["<b>Choose Your Best Model</b>"]
+        C5["<b>BYO Comfortable Editor</b>"]
     end
 
     classDef paws fill:#16D416,stroke:#000,color:#fff;
@@ -31,7 +33,7 @@ graph LR
     classDef cli fill:#695669,stroke:#000,color:#fff;
     class A1,A2 ide;
     class B1,B2 cli;
-    class C1,C2,C3 paws;
+    class C1,C2,C3,C4,C5 paws;
 ```
 
 This focus on deliberate context curation solves three fundamental challenges in AI-assisted development:
