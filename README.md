@@ -12,11 +12,11 @@ PAWS is engineered for a different paradigm: **the developer as the orchestrator
 
 ```mermaid
 graph LR
-    subgraph "Integrated IDEs (e.g., Cursor)"
+    subgraph "Integrated IDEs (Cursor)"
         A1["Seamless In-Editor UI"]
         A2["Implicit Context (Magic)"]
     end
-    subgraph "Direct CLIs (e.g., Gemini CLI)"
+    subgraph "Direct CLIs (Gemini CLI)"
         B1["Raw Model Access"]
         B2["Simple File/Search Grounding"]
     end
@@ -26,9 +26,9 @@ graph LR
         C3["<b>Deterministic Orchestration</b>"]
     end
 
-    classDef paws fill:#C71585,stroke:#000,color:#fff;
+    classDef paws fill:#16D416,stroke:#000,color:#fff;
     classDef ide fill:#696969,stroke:#000,color:#fff;
-    classDef cli fill:#483D8B,stroke:#000,color:#fff;
+    classDef cli fill:#C71688,stroke:#000,color:#fff;
     class A1,A2 ide;
     class B1,B2 cli;
     class C1,C2,C3 paws;
