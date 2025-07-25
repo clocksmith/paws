@@ -11,7 +11,7 @@ While AI-integrated IDEs and direct model CLIs offer remarkable capabilities, th
 PAWS is engineered for a different paradigm: **the developer as the orchestrator.** It is a foundational toolkit for operators who build bespoke AI systems, providing the essential, unopinionated components to compose, direct, and reproduce an LLM's intelligence with surgical precision. The core principle is that **controlling the context is controlling the outcome.**
 
 ```mermaid
-graph TD
+graph LR
     subgraph "Integrated IDEs (e.g., Cursor)"
         A1["Seamless In-Editor UI"]
         A2["Implicit Context (Magic)"]
