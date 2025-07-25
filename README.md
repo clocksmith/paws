@@ -22,10 +22,9 @@ graph LR
     end
     subgraph "PAWS Toolkit"
         C1["<b>Explicit Context Curation (CATS)</b>"]
-        C2["<b>Reproducible, Scriptable Workflows</b>"]
-        C3["<b>Controllable Orchestration</b>"]
-        C4["<b>Choose Your Best Model</b>"]
-        C5["<b>BYO Comfortable Editor</b>"]
+        C2["<b>Controllable Orchestration</b>"]
+        C3["<b>Choose Your Best Model</b>"]
+        C4["<b>BYO Comfortable Editor</b>"]
     end
 
     classDef paws fill:#16D416,stroke:#000,color:#fff;
@@ -33,7 +32,7 @@ graph LR
     classDef cli fill:#695669,stroke:#000,color:#fff;
     class A1,A2 ide;
     class B1,B2 cli;
-    class C1,C2,C3,C4,C5 paws;
+    class C1,C2,C3,C4 paws;
 ```
 
 This focus on deliberate context curation solves three fundamental challenges in AI-assisted development:
