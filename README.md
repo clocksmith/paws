@@ -28,7 +28,7 @@ graph LR
 
     classDef paws fill:#16D416,stroke:#000,color:#fff;
     classDef ide fill:#696969,stroke:#000,color:#fff;
-    classDef cli fill:#565656,stroke:#000,color:#fff;
+    classDef cli fill:#695669,stroke:#000,color:#fff;
     class A1,A2 ide;
     class B1,B2 cli;
     class C1,C2,C3 paws;
