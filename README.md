@@ -21,7 +21,7 @@ graph LR
         B2["Simple File/Search Grounding"]
     end
     subgraph "PAWS Toolkit"
-        C1["<b>Explicit Context Curation (CATS)</b>"]
+        C1["<b>Explicit Context Curation</b>"]
         C2["<b>Controllable Orchestration</b>"]
         C3["<b>Choose Your Best Model</b>"]
         C4["<b>BYO Comfortable Editor</b>"]
