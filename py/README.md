@@ -1,146 +1,119 @@
-# 🐾 PAWS for Python: `cats.py` and `dogs.py`
+# 🧶🐈 PAWS: The Programmable AI Workflow System
 
-This document describes the Python implementation of the **PAWS/SWAP** toolkit. It provides command-line utilities (`cats.py`, `dogs.py`) to bundle your project files for efficient interaction with Large Language Models (LLMs) and then to safely reconstruct them from the model's output.
+**PAWS/SWAP** is not just another AI coding assistant. It is a professional-grade, command-line toolkit for developers who demand **absolute control, perfect reproducibility, and deep integration** into their own custom workflows. It is built on a simple, powerful philosophy: **the developer, not the AI, must be the orchestrator.**
 
-For a high-level overview of the PAWS philosophy and project structure, please see the [main project README](../../README.md).
+This repository contains parallel implementations in **Python** and **Node.js**, offering feature parity for developers in both ecosystems.
 
-## Table of Contents
+## The Problem: The Limits of "Magic" AI
 
-- [Prerequisites](#prerequisites)
-- [Overview](#overview)
-  - [`cats.py` - The Bundler](#catspy---the-bundler)
-  - [`dogs.py` - The Unpacker](#dogspy---the-unpacker)
-- [Core Workflow](#core-workflow)
-- [`cats.py` - Command-Line Reference](#catspy---command-line-reference)
-- [`dogs.py` - Command-Line Reference](#dogspy---command-line-reference)
-- [Advanced Workflows](#advanced-workflows)
-- [Testing the Python Scripts](#testing-the-python-scripts)
+Current AI tools like **Cursor, GitHub Copilot, and Windsurf** are powerful, but they operate as "magic boxes." They use opaque, automatic context-gathering that you cannot inspect or control. This leads to frustratingly common failure modes:
 
-## Prerequisites
+- The AI misses critical context from a file you don't have open.
+- The AI gets confused by irrelevant code in your active editor.
+- The workflow is ephemeral and cannot be reliably reproduced or audited.
+- You are forced into a "golden cage"—a specific IDE that dictates your entire workflow.
 
-- Python 3.9+
-- No external libraries are required.
+These tools trade control for convenience, but for serious engineering, that trade-off is unacceptable.
 
-## Overview
+## The PAWS Solution: You Are the Orchestrator
 
-### `cats.py` - The Bundler
+PAWS inverts this paradigm. It provides the unopinionated, composable components for you to design and execute AI-powered workflows with surgical precision. **Being disconnected from a specific editor is its greatest strength.**
 
-`cats.py` creates a single, LLM-readable text artifact (`cats.md`) from your source code. It is **verbose by default**, showing you exactly which files are being collected. It intelligently handles file inclusion/exclusion with **glob patterns**, manages binary files, and can prepend layered instructions for the AI.
+```mermaid
+graph TD
+    subgraph "The 'Magic Box' IDE (Cursor, etc.)"
+        direction LR
+        A1["Developer's Intent"] --> B(Proprietary Black Box<br/><i>Embeddings, File Chunking...</i>);
+        B --> C{LLM};
+        C --> D[Code Suggestion];
+        subgraph "Uncertainty & No Control"
+            B
+        end
+    end
 
-### `dogs.py` - The Unpacker
+    subgraph "The PAWS Programmable Workflow"
+        direction LR
+        A2["Developer's Intent"] --> E(<b>cats.py</b><br/><i>Human-Curated Context</i>);
+        E -- "<b>cats.md</b><br/>(Deterministic Artifact)" --> F{LLM};
+        F -- "<b>dogs.md</b><br/>(Reviewable Changes)" --> G(<b>dogs.py</b><br/><i>Human-Confirmed Application</i>);
+        subgraph "Certainty & Full Control"
+            E
+            G
+        end
+    end
 
-`dogs.py` is the counterpart that unpacks the AI's response bundle (`dogs.md`). It is also **verbose by default** and is built for safety and robustness. It provides a **colorized diff** of changes before overwriting files and requires explicit, interactive confirmation for destructive operations. Its parser is specifically designed to ignore LLM chatter and recover from common formatting mistakes.
-
-## Core Workflow
-
-1.  **🧶🐈 Bundle with `cats.py`**: From the project root, package your project into a `cats.md` file.
-
-    ```bash
-    # Bundle an entire project directory, excluding build artifacts
-    python py/cats.py . -x 'build/' -x '*.log' -o my_project.md
-    ```
-
-2.  **🤖 Interact with an LLM**: Provide the `cats.md` bundle to your AI, along with your request. The AI will generate a `dogs.md` file containing the modifications.
-
-3.  **🥏🐕 Extract with `dogs.py`**: Interactively review and apply the AI's changes to your project.
-    ```bash
-    # From the project root, apply changes from dogs.md
-    python py/dogs.py dogs.md .
-    ```
-
-## `cats.py` - Command-Line Reference
-
-**Syntax**: `python py/cats.py [PATH_PATTERN...] [options]`
-
-- `PATH_PATTERN...`: One or more files, directories, or glob patterns to include (e.g., `'src/**/*.py'`, `.` , `../project`).
-- `-o, --output <file>`: Output file (default: `cats.md`). Use `-` for stdout.
-- `-x, --exclude <pattern>`: A glob pattern to exclude files. Can be used multiple times.
-- `-p, --persona <file>`: Prepend a specific persona/instruction file.
-- `-s, --sys-prompt-file <file>`: Specify the system prompt file to use (default: `sys_a.md`).
-- `-t, --prepare-for-delta`: Mark the bundle as a clean reference for delta operations.
-- `-q, --quiet`: Suppress informational messages.
-- `-y, --yes`: Auto-confirm writing the output file.
-- `-N, --no-default-excludes`: Disables default excludes (`.git`, `node_modules`, etc.).
-- `-E, --force-encoding <mode>`: Force encoding (`auto`, `b64`).
-- `-h, --help`: Show the help message.
-
----
-
-## `dogs.py` - Command-Line Reference
-
-**Syntax**: `python py/dogs.py [BUNDLE_FILE] [OUTPUT_DIR] [options]`
-
-- `BUNDLE_FILE` (optional): The bundle to extract (default: `dogs.md`). Use `-` for stdin.
-- `OUTPUT_DIR` (optional): Directory to extract files into (default: `./`).
-- `-d, --apply-delta <original_bundle>`: **Crucial for deltas.** Applies delta commands using the original bundle as a reference.
-- `-q, --quiet`: Suppress all output and prompts. Implies `-n`.
-- `-y, --yes`: **[Yes-All]** Auto-confirm all prompts (overwrite/delete).
-- `-n, --no`: **[No-All]** Auto-skip all conflicting actions.
-- `-h, --help`: Show the help message.
-
----
-
-## Advanced Workflows
-
-### The Delta Workflow: A Step-by-Step Guide
-
-This is the most precise way to work with an LLM, ideal for refactoring large files.
-
-1.  **Create Reference (`-t`)**: First, create the "before" snapshot.
-    ```bash
-    python py/cats.py . -t -o original_code.md
-    ```
-2.  **Instruct LLM (`-s sys_d.md`)**: Next, create the bundle for the LLM, instructing it to generate deltas.
-    ```bash
-    python py/cats.py . -s ../sys_d.md -o for_llm_delta_task.md
-    ```
-3.  **Apply Deltas (`-d`)**: Finally, use `dogs.py` to apply the LLM's patch using your original reference.
-    ```bash
-    python py/dogs.py llm_output.md . -d original_code.md
-    ```
-
-### Recursive Self-Modification (RSI)
-
-This is the process of using PAWS to modify its own source code. It requires maximum precision and uses the specialized `sys_r.md` prompt (`-s ../sys_r.md`), which mandates a cautious, delta-first approach.
-
----
-
-## Testing the Python Scripts
-
-The test suite is the primary mechanism for ensuring the reliability and safety of the Python scripts.
-
-### How to Run Tests
-
-#### Running the Full Suite (Recommended)
-
-The most reliable way to run the entire test suite is to use `unittest`'s **discovery feature** from the **project's root directory**.
-
-```bash
-# From the project root:
-python -m unittest discover py/tests
+    classDef blackbox fill:#696969,stroke:#000,color:#fff;
+    classDef paws fill:#16D416,stroke:#000,color:#fff;
+    class B,C,D blackbox;
+    class E,F,G paws;
 ```
 
-- `python -m unittest`: Invokes the `unittest` module as a script, correctly configuring the path.
-- `discover`: Tells `unittest` to search for tests.
-- `py/tests`: Specifies the directory where the Python tests reside.
+With PAWS, you achieve what other tools cannot:
 
-#### Running Specific Tests
+1.  **Explicit Context Control:** You specify exactly what the AI sees using file paths, glob patterns, and powerful `CATSCAN.md` summaries. No more guessing.
+2.  **Perfect Reproducibility:** The `cats.md` and `dogs.md` bundles are deterministic text artifacts. You can commit them to Git, share them, and re-run them, ensuring every AI-driven change is auditable and repeatable.
+3.  **Total Workflow Composability:** As a CLI tool, PAWS integrates with anything. Use it in VS Code tasks, Neovim plugins, CI/CD pipelines, or simple shell scripts. You build the workflow; PAWS provides the power.
+4.  **Extreme Token Efficiency:** Why pay for an AI to read thousands of lines of a library's implementation when all you need is its API? With `CATSCAN.md` summaries, you can slash token usage and costs while increasing accuracy.
 
-When developing or debugging, you can run a subset of tests by targeting specific files, classes, or methods.
+## Core Features
 
-- **Run a single test file:**
+- **Granular Context Curation:** Use path prefixes like `summary:<pattern>` to send a module's high-level `CATSCAN.md` summary instead of its full source.
+- **`.pawsignore` Support:** Manage project-wide exclusions with a familiar `.gitignore`-style file.
+- **Composable Personas:** Layer multiple `-p <persona>.md` files to construct a bespoke AI mind for any task.
+- **CATSCAN Verification:** Use `cats.py --verify` to ensure your high-level summaries are not out-of-sync with your source code. Supports Python, JS, TS, and Dart.
+- **Agentic Feedback Loop:** The AI can use the `REQUEST_CONTEXT` command to ask for more information when its context is insufficient, turning failure into a productive dialogue.
+
+## Project Lifecycle Examples
+
+PAWS is not just for one-off changes. It's a partner for the entire lifecycle of your project.
+
+### 1. Project Scaffolding
+
+- **Task:** Create a new Python web server project using Flask, including a Dockerfile, tests, and basic structure.
+- **`cats.py` Command:**
   ```bash
-  python -m unittest py.tests.test_paws
+  # Use the Scaffolder persona and send it a requirements file.
+  python py/cats.py requirements.txt -p personas/scaffolder.md -o scaffold_task.md
   ```
-- **Run a single test class:**
+- **Result:** The AI generates a `dogs.md` bundle with multiple new files (`app.py`, `Dockerfile`, `tests/test_app.py`, etc.), creating a complete, ready-to-run project structure in a single, reviewable step.
+
+### 2. Mid-Project Refactoring
+
+- **Task:** Refactor a large data processing module to be more efficient.
+- **`cats.py` Command:**
   ```bash
-  python -m unittest py.tests.test_paws.TestDogsPy
+  # Send the full module source, but only summaries of its dependencies.
+  python py/cats.py src/data_processing/** 'summary:src/utils/**' 'summary:src/db/**' -p personas/refactor_guru.md -o refactor_task.md
   ```
-- **Run a single test method:**
+- **Result:** The AI gets a focused context. It uses delta commands in its `dogs.md` response to make precise changes to the data module, which you can review and apply with confidence. If it needs more info on a utility function, it can use `REQUEST_CONTEXT` to ask for it.
+
+### 3. Documentation & Maintenance
+
+- **Task:** A key module has undergone significant changes, and its `CATSCAN.md` is now out of date.
+- **`cats.py` Commands:**
+
   ```bash
-  python -m unittest py.tests.test_paws.TestDogsPy.test_parser_handles_unterminated_blocks
+  # First, verify the drift.
+  python py/cats.py --verify src/changed_module/**
+
+  # Next, ask the AI to update the CATSCAN.
+  python py/cats.py src/changed_module/** -p personas/docs_updater.md -o update_docs.md
   ```
 
-### Understanding the Test Structure
+- **Result:** `cats.py --verify` gives you a precise list of what's out of sync. You then pass the full module source to a specialized persona that reads the code and generates a new, accurate `CATSCAN.md` file, keeping your project's high-level documentation perfectly maintained.
 
-The suite resides in `py/tests/test_paws.py` and is broken down into `TestCatsPy`, `TestDogsPy`, and `TestFullWorkflow` classes to verify all features, edge cases, and safety mechanisms.
+## Getting Started
+
+_(Installation and basic usage instructions for Python and JS would follow here, similar to the original README but updated for new flags.)_
+
+## Advanced Usage: The Agentic Loop
+
+With the `--allow-reinvoke` flag, you can empower the AI to request and automatically receive more context.
+
+1.  The AI determines its context is incomplete.
+2.  It generates a `dogs.md` with an `EXECUTE_AND_REINVOKE` command, specifying what it needs.
+3.  You run `python py/dogs.py dogs.md --allow-reinvoke`.
+4.  After you confirm the command, `dogs.py` runs it, generating a new `cats.md` bundle.
+5.  A wrapper script can then automatically re-invoke the AI with the new context, creating a powerful, human-supervised agentic workflow.
+
+This is the future of AI-assisted development—a true partnership where the AI can ask for what it needs, and the developer always has the final say.
