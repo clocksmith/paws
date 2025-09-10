@@ -1,509 +1,734 @@
 #!/usr/bin/env node
 /**
- * @file cats.js
- * @description Bundles project files into a single text artifact for Language Models.
- * This script is a core component of the Prompt-Assisted Workflow System (PAWS).
- * It supports both Node.js for command-line operations and can be used as a
- * library in browser environments with a virtual file system.
- * @verson 2.0.0
+ * Enhanced CATS bundler with AI-curated context selection.
+ * Part of the PAWS CLI Evolution - Phase 2 Implementation.
  */
 
-// --- Environment Detection ---
-const IS_NODE =
-  typeof process !== "undefined" &&
-  process.versions != null &&
-  process.versions.node != null;
+const fs = require('fs').promises;
+const path = require('path');
+const { glob } = require('glob');
+const ignore = require('ignore');
+const chalk = require('chalk');
+const ora = require('ora');
+const { program } = require('commander');
 
-// --- Node.js Specific Imports ---
-let fs, path, glob, yargs;
-if (IS_NODE) {
-  fs = require("fs").promises;
-  path = require("path");
-  glob = require("glob");
-  yargs = require("yargs/yargs");
-  const { hideBin } = require("yargs/helpers");
+// AI Provider SDKs
+let GoogleGenerativeAI, Anthropic, OpenAI;
+
+try {
+  ({ GoogleGenerativeAI } = require('@google/generative-ai'));
+} catch {
+  console.warn('Google Generative AI not installed. Gemini support disabled.');
 }
 
-// --- Configuration Constants ---
-const DEFAULT_SYS_PROMPT_FILENAME = "sys/sys_a.md";
-const DEFAULT_OUTPUT_FILENAME = "cats.md";
-const DEFAULT_ENCODING = "utf-8";
-const DEFAULT_EXCLUDES = [
-  ".git",
-  "node_modules",
-  "**/__pycache__",
-  "**/*.pyc",
-  ".DS_Store",
-];
+try {
+  Anthropic = require('@anthropic-ai/sdk');
+} catch {
+  console.warn('Anthropic SDK not installed. Claude support disabled.');
+}
 
-// --- Bundle Structure Constants ---
-const PERSONA_HEADER = "\n--- START PERSONA ---\n";
-const PERSONA_FOOTER = "\n--- END PERSONA ---\n";
-const SYS_PROMPT_POST_SEPARATOR =
-  "\n--- END PREPENDED INSTRUCTIONS ---\nThe following content is the Cats Bundle.\n";
-const BUNDLE_HEADER_PREFIX = "# Cats Bundle";
-const BUNDLE_FORMAT_PREFIX = "# Format: ";
-const DELTA_REFERENCE_HINT_PREFIX = "# Delta Reference: ";
-const BASE64_HINT_TEXT = "(Content:Base64)";
-const START_MARKER_TEMPLATE = "🐈 --- CATS_START_FILE: {path}{hint} ---";
-const END_MARKER_TEMPLATE = "🐈 --- CATS_END_FILE: {path}{hint} ---";
+try {
+  OpenAI = require('openai');
+} catch {
+  console.warn('OpenAI SDK not installed. OpenAI support disabled.');
+}
+
+// For git operations
+let simpleGit;
+try {
+  simpleGit = require('simple-git');
+} catch {
+  console.warn('simple-git not installed. Git-based file discovery disabled.');
+}
 
 /**
- * @typedef {Object} VirtualFile
- * @property {string} path - The relative path of the file.
- * @property {string | Buffer | Uint8Array} content - The file content.
+ * Represents a file or directory in the project tree
  */
-
-/**
- * @typedef {Object} FileObject
- * @property {string} path - Relative path for the bundle marker.
- * @property {Buffer} contentBytes - File content as a Buffer.
- * @property {boolean} isBinary - True if content is detected as binary.
- */
-
-/**
- * A simple TextEncoder polyfill for browser environments that may not have it.
- */
-const _TextEncoder =
-  typeof TextEncoder !== "undefined"
-    ? TextEncoder
-    : class {
-        encode(str) {
-          const bytes = [];
-          for (let i = 0; i < str.length; i++) {
-            let code = str.charCodeAt(i);
-            if (code < 0x80) bytes.push(code);
-            else if (code < 0x800)
-              bytes.push(0xc0 | (code >> 6), 0x80 | (code & 0x3f));
-            else if (code < 0xd800 || code >= 0xe000)
-              bytes.push(
-                0xe0 | (code >> 12),
-                0x80 | ((code >> 6) & 0x3f),
-                0x80 | (code & 0x3f)
-              );
-            else {
-              code =
-                0x10000 +
-                (((code & 0x3ff) << 10) | (str.charCodeAt(++i) & 0x3ff));
-              bytes.push(
-                0xf0 | (code >> 18),
-                0x80 | ((code >> 12) & 0x3f),
-                0x80 | ((code >> 6) & 0x3f),
-                0x80 | (code & 0x3f)
-              );
-            }
-          }
-          return new Uint8Array(bytes);
-        }
-      };
-
-/**
- * Normalizes file content to a Buffer, ensuring compatibility between
- * Node.js (Buffer) and browser (string, Uint8Array) environments.
- * @param {string | Buffer | Uint8Array} content The input content.
- * @returns {Buffer} The content converted to a Buffer.
- */
-function toBuffer(content) {
-  if (typeof content === "string") {
-    return Buffer.from(new _TextEncoder().encode(content));
+class FileTreeNode {
+  constructor(filePath, isDir = false, size = 0) {
+    this.path = filePath;
+    this.isDir = isDir;
+    this.size = size;
+    this.children = [];
   }
-  return Buffer.from(content);
+
+  /**
+   * Add a child node
+   */
+  addChild(node) {
+    this.children.push(node);
+  }
+
+  /**
+   * Convert to string representation for LLM context
+   */
+  toString(indent = 0) {
+    const prefix = '  '.repeat(indent);
+    const name = path.basename(this.path);
+    
+    if (this.isDir) {
+      let result = `${prefix}${name}/\n`;
+      for (const child of this.children) {
+        result += child.toString(indent + 1);
+      }
+      return result;
+    } else {
+      const sizeStr = this.size > 0 ? ` (${this.size} bytes)` : '';
+      return `${prefix}${name}${sizeStr}\n`;
+    }
+  }
 }
 
 /**
- * Detects if a Buffer's content is likely binary data.
- * The heuristic checks for the presence of null bytes, which are rare in text files.
- * @param {Buffer} contentBytes The file content as a Buffer.
- * @returns {boolean} True if the content is likely binary, false otherwise.
+ * Analyzes project structure for AI curation
  */
-function detectIsBinary(contentBytes) {
-  for (let i = 0; i < Math.min(contentBytes.length, 512); i++) {
-    if (contentBytes[i] === 0) {
+class ProjectAnalyzer {
+  constructor(rootPath) {
+    this.rootPath = path.resolve(rootPath);
+    this.gitignorePatterns = null;
+    this.ig = ignore();
+  }
+
+  /**
+   * Load gitignore patterns
+   */
+  async loadGitignore() {
+    const patterns = [];
+    
+    try {
+      const gitignorePath = path.join(this.rootPath, '.gitignore');
+      const content = await fs.readFile(gitignorePath, 'utf-8');
+      const lines = content.split('\n');
+      
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed && !trimmed.startsWith('#')) {
+          patterns.push(trimmed);
+          this.ig.add(trimmed);
+        }
+      }
+    } catch {
+      // No .gitignore file
+    }
+
+    // Always ignore common patterns
+    const defaultPatterns = [
+      'node_modules',
+      '.git',
+      '.venv',
+      'venv',
+      'env',
+      '.env',
+      '*.log',
+      '.DS_Store',
+      'dist',
+      'build',
+      '*.pyc',
+      '__pycache__',
+      '.idea',
+      '.vscode'
+    ];
+
+    for (const pattern of defaultPatterns) {
+      this.ig.add(pattern);
+      patterns.push(pattern);
+    }
+
+    this.gitignorePatterns = patterns;
+    return patterns;
+  }
+
+  /**
+   * Check if path should be ignored
+   */
+  shouldIgnore(filePath) {
+    const relativePath = path.relative(this.rootPath, filePath);
+    return this.ig.ignores(relativePath);
+  }
+
+  /**
+   * Build a tree representation of the project
+   */
+  async buildFileTree() {
+    await this.loadGitignore();
+    
+    if (simpleGit) {
+      try {
+        return await this.buildTreeWithGit();
+      } catch {
+        // Fallback to filesystem walk
+      }
+    }
+    
+    return await this.buildTreeWithWalk();
+  }
+
+  /**
+   * Build tree using git ls-files
+   */
+  async buildTreeWithGit() {
+    const git = simpleGit(this.rootPath);
+    const files = await git.raw(['ls-files']);
+    const fileList = files.split('\n').filter(f => f);
+    
+    const root = new FileTreeNode(this.rootPath, true);
+    const nodes = new Map();
+    nodes.set(this.rootPath, root);
+
+    for (const filePath of fileList) {
+      const fullPath = path.join(this.rootPath, filePath);
+      await this.addFileToTree(fullPath, root, nodes);
+    }
+
+    return root;
+  }
+
+  /**
+   * Build tree by walking filesystem
+   */
+  async buildTreeWithWalk() {
+    const root = new FileTreeNode(this.rootPath, true);
+    const nodes = new Map();
+    nodes.set(this.rootPath, root);
+
+    const walkDir = async (dirPath, parentNode) => {
+      const entries = await fs.readdir(dirPath, { withFileTypes: true });
+      
+      for (const entry of entries) {
+        const fullPath = path.join(dirPath, entry.name);
+        
+        if (this.shouldIgnore(fullPath)) {
+          continue;
+        }
+
+        if (entry.isDirectory()) {
+          const dirNode = new FileTreeNode(fullPath, true);
+          parentNode.addChild(dirNode);
+          nodes.set(fullPath, dirNode);
+          await walkDir(fullPath, dirNode);
+        } else {
+          const stats = await fs.stat(fullPath);
+          const fileNode = new FileTreeNode(fullPath, false, stats.size);
+          parentNode.addChild(fileNode);
+        }
+      }
+    };
+
+    await walkDir(this.rootPath, root);
+    return root;
+  }
+
+  /**
+   * Add a file to the tree structure
+   */
+  async addFileToTree(filePath, root, nodes) {
+    const relativePath = path.relative(this.rootPath, filePath);
+    const parts = relativePath.split(path.sep);
+    let current = root;
+
+    for (let i = 0; i < parts.length - 1; i++) {
+      const dirPath = path.join(this.rootPath, ...parts.slice(0, i + 1));
+      
+      if (!nodes.has(dirPath)) {
+        const dirNode = new FileTreeNode(dirPath, true);
+        nodes.set(dirPath, dirNode);
+        current.addChild(dirNode);
+        current = dirNode;
+      } else {
+        current = nodes.get(dirPath);
+      }
+    }
+
+    // Add the file
+    try {
+      const stats = await fs.stat(filePath);
+      const fileNode = new FileTreeNode(filePath, false, stats.size);
+      current.addChild(fileNode);
+    } catch {
+      // File doesn't exist or can't be accessed
+    }
+  }
+}
+
+/**
+ * Handles AI-powered context curation
+ */
+class AICurator {
+  constructor(apiKey, provider = 'gemini') {
+    this.provider = provider;
+    this.apiKey = apiKey || process.env[`${provider.toUpperCase()}_API_KEY`];
+    this.client = null;
+
+    if (!this.apiKey) {
+      throw new Error(`No API key provided for ${provider}`);
+    }
+
+    this.initializeClient();
+  }
+
+  /**
+   * Initialize the AI client based on provider
+   */
+  initializeClient() {
+    switch (this.provider) {
+      case 'gemini':
+        if (!GoogleGenerativeAI) {
+          throw new Error('Google Generative AI SDK not installed');
+        }
+        const genAI = new GoogleGenerativeAI(this.apiKey);
+        this.client = genAI.getGenerativeModel({ model: 'gemini-pro' });
+        break;
+
+      case 'claude':
+        if (!Anthropic) {
+          throw new Error('Anthropic SDK not installed');
+        }
+        this.client = new Anthropic({ apiKey: this.apiKey });
+        break;
+
+      case 'openai':
+        if (!OpenAI) {
+          throw new Error('OpenAI SDK not installed');
+        }
+        this.client = new OpenAI({ apiKey: this.apiKey });
+        break;
+
+      default:
+        throw new Error(`Unknown provider: ${this.provider}`);
+    }
+  }
+
+  /**
+   * Use AI to select relevant files for the task
+   */
+  async curateFiles(taskDescription, fileTree, maxFiles = 20) {
+    const prompt = this.buildCurationPrompt(taskDescription, fileTree, maxFiles);
+    
+    switch (this.provider) {
+      case 'gemini':
+        return await this.curateWithGemini(prompt);
+      case 'claude':
+        return await this.curateWithClaude(prompt);
+      case 'openai':
+        return await this.curateWithOpenAI(prompt);
+      default:
+        throw new Error(`Unknown provider: ${this.provider}`);
+    }
+  }
+
+  /**
+   * Build the prompt for file curation
+   */
+  buildCurationPrompt(task, tree, maxFiles) {
+    return `You are an expert Staff Software Engineer specializing in codebase analysis.
+Your task is to identify the most relevant set of files for a developer to complete a task.
+
+**Task Description:**
+${task}
+
+**Project File Tree:**
+\`\`\`
+${tree}
+\`\`\`
+
+**Instructions:**
+1. Analyze the task and the file tree carefully
+2. Identify a concise set of files (maximum ${maxFiles}) that are absolutely essential
+3. Prioritize:
+   - Core implementation files directly related to the task
+   - Interface/API definitions that need modification
+   - Configuration files if relevant
+   - Data models or schemas that are affected
+4. AVOID including:
+   - Test files (unless the task is specifically about testing)
+   - Documentation files (unless the task is about documentation)
+   - Build artifacts or generated files
+   - Unrelated modules or components
+
+**Output Format:**
+Return ONLY a JSON object with a single key "files" containing an array of relative file paths.
+Do not include any explanation or other text.
+
+Example:
+{"files": ["src/auth/login.js", "src/models/user.js", "config/auth.yaml"]}`;
+  }
+
+  /**
+   * Use Gemini to curate files
+   */
+  async curateWithGemini(prompt) {
+    try {
+      const result = await this.client.generateContent(prompt);
+      const response = await result.response;
+      return this.parseAIResponse(response.text());
+    } catch (error) {
+      console.error(`Gemini curation failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Use Claude to curate files
+   */
+  async curateWithClaude(prompt) {
+    try {
+      const response = await this.client.messages.create({
+        model: 'claude-3-sonnet-20240229',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      });
+      return this.parseAIResponse(response.content[0].text);
+    } catch (error) {
+      console.error(`Claude curation failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Use OpenAI to curate files
+   */
+  async curateWithOpenAI(prompt) {
+    try {
+      const response = await this.client.chat.completions.create({
+        model: 'gpt-4',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3
+      });
+      return this.parseAIResponse(response.choices[0].message.content);
+    } catch (error) {
+      console.error(`OpenAI curation failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Parse the AI response to extract file paths
+   */
+  parseAIResponse(response) {
+    try {
+      // Try to extract JSON from response
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const data = JSON.parse(jsonMatch[0]);
+        return data.files || [];
+      }
+    } catch {
+      // JSON parsing failed
+    }
+
+    // Fallback: extract file paths directly
+    const paths = [];
+    const lines = response.split('\n');
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed && 
+          (trimmed.endsWith('.js') || trimmed.endsWith('.ts') || 
+           trimmed.endsWith('.jsx') || trimmed.endsWith('.tsx') ||
+           trimmed.endsWith('.json') || trimmed.endsWith('.yaml') ||
+           trimmed.endsWith('.yml') || trimmed.endsWith('.md'))) {
+        // Clean up the path
+        const cleaned = trimmed.replace(/["`',]/g, '');
+        if (cleaned && !cleaned.startsWith('#')) {
+          paths.push(cleaned);
+        }
+      }
+    }
+
+    return paths;
+  }
+}
+
+/**
+ * Enhanced CATS bundler with AI curation support
+ */
+class CatsBundler {
+  constructor(config) {
+    this.config = config;
+    this.rootPath = path.resolve(config.root || '.');
+  }
+
+  /**
+   * Check if file is binary
+   */
+  async isBinary(filePath) {
+    try {
+      const buffer = await fs.readFile(filePath);
+      const slice = buffer.slice(0, 1024);
+      
+      // Check for null bytes
+      for (let i = 0; i < slice.length; i++) {
+        if (slice[i] === 0) return true;
+      }
+      
+      // Try to decode as UTF-8
+      const decoder = new TextDecoder('utf-8', { fatal: true });
+      decoder.decode(slice);
+      return false;
+    } catch {
       return true;
     }
   }
-  return false;
-}
 
-/**
- * Prepares an array of standardized FileObjects from virtual file representations.
- * @param {VirtualFile[]} files An array of virtual file objects.
- * @returns {FileObject[]} An array of processed FileObjects.
- */
-function prepareFileObjectsFromVirtualFS(files) {
-  return files.map((file) => {
-    const contentBytes = toBuffer(file.content);
-    return {
-      path: file.path.replace(/\\/g, "/"),
-      contentBytes,
-      isBinary: detectIsBinary(contentBytes),
-    };
-  });
-}
-
-/**
- * Creates the final bundle string from an array of FileObjects.
- * This function constructs the bundle body with headers and file markers.
- * @param {FileObject[]} fileObjects The files to include in the bundle.
- * @param {Object} options Configuration options.
- * @param {boolean} [options.prepareForDelta=false] - Whether to add a delta hint.
- * @param {string} [options.forceEncoding='auto'] - Encoding override ('b64' or 'auto').
- * @returns {string} The formatted bundle body string.
- */
-function createBundleString(fileObjects, options) {
-  const { prepareForDelta, forceEncoding } = options;
-  const hasBinaries = fileObjects.some((f) => f.isBinary);
-  const formatDesc =
-    forceEncoding === "b64"
-      ? "Base64"
-      : `Raw UTF-8${hasBinaries ? "; binaries as Base64" : ""}`;
-
-  const bundleParts = [
-    BUNDLE_HEADER_PREFIX,
-    `${BUNDLE_FORMAT_PREFIX}${formatDesc}`,
-  ];
-  if (prepareForDelta) {
-    bundleParts.push(`${DELTA_REFERENCE_HINT_PREFIX}Yes`);
-  }
-
-  for (const fileObj of fileObjects) {
-    const isBase64 = forceEncoding === "b64" || fileObj.isBinary;
-    const contentStr = isBase64
-      ? fileObj.contentBytes.toString("base64")
-      : fileObj.contentBytes.toString(DEFAULT_ENCODING);
-    const hint =
-      isBase64 && forceEncoding !== "b64" ? ` ${BASE64_HINT_TEXT}` : "";
-
-    bundleParts.push(
-      "",
-      START_MARKER_TEMPLATE.replace("{path}", fileObj.path).replace(
-        "{hint}",
-        hint
-      )
-    );
-    bundleParts.push(contentStr);
-    bundleParts.push(
-      END_MARKER_TEMPLATE.replace("{path}", fileObj.path).replace(
-        "{hint}",
-        hint
-      )
-    );
-  }
-
-  return bundleParts.join("\n") + "\n";
-}
-
-/**
- * The core bundling logic, abstracted to be environment-agnostic.
- * It prepends persona and system prompts to the main bundle string.
- * @param {FileObject[]} allFileObjects The complete list of files to bundle.
- * @param {Object} options Bundling options including content to prepend.
- * @param {string} [options.personaContent] - Persona content string.
- * @param {string} [options.sysPromptContent] - System prompt content string.
- * @returns {string} The complete bundle string including all prepended content.
- */
-function buildFinalBundle(allFileObjects, options) {
-  const { personaContent, sysPromptContent } = options;
-
-  let bundleContentString = createBundleString(allFileObjects, options);
-  let finalOutput = "";
-
-  if (personaContent) {
-    finalOutput += PERSONA_HEADER + personaContent + PERSONA_FOOTER;
-  }
-  if (sysPromptContent) {
-    finalOutput += sysPromptContent + SYS_PROMPT_POST_SEPARATOR;
-  }
-  finalOutput += bundleContentString;
-
-  return finalOutput;
-}
-
-/**
- * Verifies CATSCAN.md compliance for a list of file paths.
- * It finds all README.md files and checks for a corresponding CATSCAN.md.
- * @param {string[]} allFiles - A flat list of file paths.
- * @returns {Promise<{valid: {readme: string, catscan: string}[], missing: string[], others: string[]}>}
- * An object detailing compliance status.
- */
-async function verifyCatscanCompliance(allFiles) {
-  const readmes = allFiles.filter(
-    (f) => path.basename(f).toLowerCase() === "readme.md"
-  );
-  const others = allFiles.filter(
-    (f) => path.basename(f).toLowerCase() !== "readme.md"
-  );
-  const valid = [];
-  const missing = [];
-  for (const readme of readmes) {
-    const catscanPath = path.join(path.dirname(readme), "CATSCAN.md");
-    try {
-      await fs.access(catscanPath);
-      valid.push({ readme, catscan: catscanPath });
-    } catch {
-      missing.push(path.dirname(readme));
-    }
-  }
-  return { valid, missing, others };
-}
-
-/**
- * Creates a PAWS bundle from a set of files.
- * This is the main exported function, handling both Node.js (file system)
- * and browser (virtual file system) execution paths.
- *
- * @param {Object} options - The configuration for creating the bundle.
- * @param {string[]} [options.paths=[]] - (Node.js) Glob patterns or paths to include.
- * @param {string[]} [options.exclude=[]] - (Node.js) Glob patterns to exclude.
- * @param {string} [options.personaFile] - (Node.js) Path to a persona file to prepend.
- * @param {string} [options.sysPromptFile] - (Node.js) Path to a system prompt file.
- * @param {boolean} [options.useDefaultExcludes=true] - (Node.js) Toggles default excludes.
- * @param {boolean} [options.strictCatscan=false] - (Node.js) Enforces CATSCAN.md compliance.
- * @param {VirtualFile[]} [options.virtualFS=[]] - (Browser) An array of {path, content} objects.
- * @param {string} [options.personaContent] - (Browser) String content for the persona.
- * @param {string} [options.sysPromptContent] - (Browser) String content for the system prompt.
- * @param {boolean} [options.prepareForDelta=false] - Adds a delta reference hint.
- * @param {string} [options.forceEncoding='auto'] - Forces encoding ('auto' or 'b64').
- * @returns {Promise<string>} The generated bundle string.
- */
-async function createBundle(options = {}) {
-  // --- Node.js File System Logic ---
-  if (IS_NODE) {
-    const {
-      paths = [],
-      exclude = [],
-      useDefaultExcludes = true,
-      personaFile,
-      sysPromptFile,
-      strictCatscan = false,
-      prepareForDelta = false,
-      forceEncoding = "auto",
-    } = options;
-
-    const ignorePatterns = exclude.slice();
-    if (useDefaultExcludes) {
-      ignorePatterns.push(...DEFAULT_EXCLUDES);
-    }
-
-    let allFiles = (
-      await Promise.all(
-        paths.map((p) =>
-          glob.glob(p, { nodir: true, dot: true, ignore: ignorePatterns })
-        )
-      )
-    ).flat();
-
-    if (strictCatscan) {
-      const { valid, missing } = await verifyCatscanCompliance(allFiles);
-      if (missing.length > 0) {
-        throw new Error(
-          `Strict CATSCAN mode failed. Missing CATSCAN.md files in:\n - ${missing.join(
-            "\n - "
-          )}`
-        );
+  /**
+   * Create a CATS bundle with optional AI curation
+   */
+  async createBundle(files, aiCurate, aiProvider = 'gemini', aiKey) {
+    // Get files to bundle
+    if (aiCurate) {
+      const spinner = ora('AI is analyzing your codebase...').start();
+      files = await this.getAICuratedFiles(aiCurate, aiProvider, aiKey);
+      spinner.stop();
+      
+      if (!files || files.length === 0) {
+        console.log(chalk.red('AI curation failed or returned no files.'));
+        return '';
       }
-      allFiles = valid.map((pair) => pair.catscan);
+    }
+
+    if (!files || files.length === 0) {
+      // Handle glob patterns and directories
+      if (this.config.root) {
+        files = ['**/*.js', '**/*.py', '**/*.ts', '**/*.jsx', '**/*.tsx', '**/*.md'];
+      } else {
+        if (!this.config.quiet) {
+          console.log(chalk.red('No files specified for bundling.'));
+        }
+        return '';
+      }
+    }
+
+    // Build the bundle
+    const bundleLines = [];
+    
+    // Add system prompt if configured
+    if (this.config.sysPromptFile) {
+      try {
+        const sysPromptPath = path.resolve(this.config.sysPromptFile);
+        const sysPromptContent = await fs.readFile(sysPromptPath, 'utf-8');
+        bundleLines.push(sysPromptContent);
+        bundleLines.push('\n--- END PREPENDED INSTRUCTIONS ---\n');
+        bundleLines.push('');
+      } catch (error) {
+        if (this.config.requireSysPrompt) {
+          throw new Error(`System prompt file not found: ${this.config.sysPromptFile}`);
+        }
+      }
+    }
+    
+    // Add persona files
+    if (this.config.persona && this.config.persona.length > 0) {
+      for (const personaFile of this.config.persona) {
+        try {
+          bundleLines.push('\n--- START PERSONA ---');
+          const personaPath = path.resolve(personaFile);
+          const personaContent = await fs.readFile(personaPath, 'utf-8');
+          bundleLines.push(personaContent);
+          bundleLines.push('--- END PERSONA ---\n');
+          bundleLines.push('');
+        } catch (error) {
+          if (!this.config.quiet) {
+            console.log(chalk.yellow(`Warning: Persona file not found: ${personaFile}`));
+          }
+        }
+      }
+    }
+    
+    bundleLines.push('# Cats Bundle');
+    if (this.config.prepareForDelta) {
+      bundleLines.push('# Format: DELTA');
+      bundleLines.push('# Delta Reference: Yes');
     } else {
-      const { valid, others } = await verifyCatscanCompliance(allFiles);
-      const catscanDirs = new Set(
-        valid.map((pair) => path.dirname(pair.readme))
-      );
-      const nonCatscanFiles = others.filter(
-        (file) => !catscanDirs.has(path.dirname(file))
-      );
-      allFiles = [...valid.map((pair) => pair.catscan), ...nonCatscanFiles];
+      bundleLines.push('# Format: FULL');
+    }
+    bundleLines.push('');
+
+    for (const filePath of files) {
+      const fullPath = path.isAbsolute(filePath) 
+        ? filePath 
+        : path.join(this.rootPath, filePath);
+      
+      try {
+        await fs.access(fullPath);
+      } catch {
+        if (!this.config.quiet) {
+          console.log(chalk.yellow(`Warning: File not found: ${filePath}`));
+        }
+        continue;
+      }
+
+      try {
+        // Check if binary
+        const isBinary = await this.isBinary(fullPath);
+        let content;
+
+        if (isBinary) {
+          const buffer = await fs.readFile(fullPath);
+          content = buffer.toString('base64');
+          bundleLines.push(`🐈 --- CATS_START_FILE: ${filePath} (Content:Base64) ---`);
+        } else {
+          content = await fs.readFile(fullPath, 'utf-8');
+          bundleLines.push(`🐈 --- CATS_START_FILE: ${filePath} ---`);
+          
+          // Add language hint
+          const ext = path.extname(fullPath).slice(1);
+          if (ext) {
+            bundleLines.push(`\`\`\`${ext}`);
+          }
+        }
+
+        bundleLines.push(content);
+
+        if (!isBinary) {
+          const ext = path.extname(fullPath).slice(1);
+          if (ext) {
+            bundleLines.push('```');
+          }
+        }
+
+        bundleLines.push(`🐈 --- CATS_END_FILE: ${filePath} ---`);
+        bundleLines.push('');
+
+        if (!this.config.quiet) {
+          console.log(chalk.green(`✓ Added: ${filePath}`));
+        }
+
+      } catch (error) {
+        if (!this.config.quiet) {
+          console.log(chalk.red(`✗ Failed to add ${filePath}: ${error.message}`));
+        }
+      }
     }
 
-    const fileObjects = await Promise.all(
-      allFiles.map(async (file) => ({
-        path: file,
-        content: await fs.readFile(file),
-      }))
-    );
-
-    const finalOptions = { ...options };
-    if (personaFile) {
-      finalOptions.personaContent = await fs.readFile(
-        personaFile,
-        DEFAULT_ENCODING
-      );
-    }
-    if (sysPromptFile) {
-      finalOptions.sysPromptContent = await fs.readFile(
-        sysPromptFile,
-        DEFAULT_ENCODING
-      );
-    }
-
-    const processedObjects = prepareFileObjectsFromVirtualFS(fileObjects);
-    return buildFinalBundle(processedObjects, finalOptions);
+    return bundleLines.join('\n');
   }
-  // --- Browser/Library Virtual File System Logic ---
-  else {
-    const {
-      virtualFS = [],
-      personaContent = "",
-      sysPromptContent = "",
-      prepareForDelta = false,
-      forceEncoding = "auto",
-    } = options;
-    const fileObjects = prepareFileObjectsFromVirtualFS(virtualFS);
-    return buildFinalBundle(fileObjects, {
-      personaContent,
-      sysPromptContent,
-      prepareForDelta,
-      forceEncoding,
-    });
+
+  /**
+   * Get AI-curated list of files for the task
+   */
+  async getAICuratedFiles(task, provider, apiKey) {
+    console.log(chalk.blue(`[AI] Analyzing codebase for task: ${task.slice(0, 50)}...`));
+
+    // Build file tree
+    const analyzer = new ProjectAnalyzer(this.rootPath);
+    const fileTree = await analyzer.buildFileTree();
+    const treeStr = fileTree.toString();
+
+    // Curate files with AI
+    try {
+      const curator = new AICurator(apiKey, provider);
+      const files = await curator.curateFiles(task, treeStr, this.config.maxFiles);
+
+      console.log(chalk.blue(`[AI] Selected ${files.length} files:`));
+      for (const file of files) {
+        console.log(chalk.gray(`  - ${file}`));
+      }
+
+      return files;
+    } catch (error) {
+      console.error(chalk.red(`[AI] Curation failed: ${error.message}`));
+      return [];
+    }
   }
 }
 
 /**
- * Main function to run the Command-Line Interface.
- * This function is executed only when the script is run directly in Node.js.
+ * Main CLI
  */
-async function mainCli() {
-  const argv = yargs(hideBin(process.argv))
-    .usage("Usage: node cats.js [PATH_PATTERN...] [options]")
-    .example(
-      'node cats.js "src/**/*.js" -o web_project.md',
-      "Bundle all JS files in src"
-    )
-    .example(
-      'node cats.js . -x "node_modules/**" -p persona.md',
-      "Bundle current directory with a persona"
-    )
-    .command("$0 [paths...]", "Default command to bundle files", (yargs) => {
-      yargs.positional("paths", {
-        describe: "One or more files, directories, or glob patterns to include",
-        type: "string",
-      });
-    })
-    .option("o", {
-      alias: "output",
-      describe: `Output bundle file (default: ${DEFAULT_OUTPUT_FILENAME}). Use '-' for stdout.`,
-      type: "string",
-      default: DEFAULT_OUTPUT_FILENAME,
-    })
-    .option("x", {
-      alias: "exclude",
-      describe: "A glob pattern to exclude files. Can be used multiple times.",
-      type: "array",
-      default: [],
-    })
-    .option("p", {
-      alias: "persona",
-      describe: "Path to a persona file to prepend to the entire output.",
-      type: "string",
-      default: "personas/sys_h5.md",
-    })
-    .option("s", {
-      alias: "sys-prompt-file",
-      describe: `System prompt filename for prepending (default: ${DEFAULT_SYS_PROMPT_FILENAME}).`,
-      type: "string",
-      default: DEFAULT_SYS_PROMPT_FILENAME,
-    })
-    .option("t", {
-      alias: "prepare-for-delta",
-      describe: "Mark the bundle as a clean reference for delta operations.",
-      type: "boolean",
-      default: false,
-    })
-    .option("q", {
-      alias: "quiet",
-      describe: "Suppress informational messages.",
-      type: "boolean",
-      default: false,
-    })
-    .option("y", {
-      alias: "yes",
-      describe: "Automatically confirm writing the output file.",
-      type: "boolean",
-      default: false,
-    })
-    .option("N", {
-      alias: "no-default-excludes",
-      describe: `Disable default excludes: ${DEFAULT_EXCLUDES.join(", ")}.`,
-      type: "boolean",
-      default: false,
-    })
-    .option("E", {
-      alias: "force-encoding",
-      describe:
-        "Force encoding: 'auto' (default) or 'b64' (force all as Base64).",
-      choices: ["auto", "b64"],
-      default: "auto",
-    })
-    .option("strict-catscan", {
-      describe:
-        "Enforce CATSCAN.md compliance. Aborts if any README.md is missing a CATSCAN.md.",
-      type: "boolean",
-      default: false,
-    })
-    .help("h")
-    .alias("h", "help").argv;
+async function main() {
+  program
+    .name('cats')
+    .description('CATS - Bundle project files for AI/LLM consumption with optional AI curation')
+    .argument('[files...]', 'Files to include in the bundle')
+    .option('--ai-curate <task>', 'Use AI to select files based on task description')
+    .option('--ai-provider <provider>', 'AI provider (gemini, claude, openai)', 'gemini')
+    .option('--ai-key <key>', 'API key for AI provider')
+    .option('-o, --output <file>', 'Output file for the bundle', 'cats.md')
+    .option('-x, --exclude <pattern>', 'Exclude pattern (can be used multiple times)', (value, previous) => {
+      return previous ? [...previous, value] : [value];
+    }, [])
+    .option('-p, --persona <file>', 'Persona file to prepend (can be used multiple times)', (value, previous) => {
+      return previous ? [...previous, value] : [value];
+    }, [])
+    .option('-s, --sys-prompt-file <file>', 'System prompt file to prepend', 'sys/sys_a.md')
+    .option('--no-sys-prompt', 'Disable system prompt prepending')
+    .option('--require-sys-prompt', 'Fail if system prompt file not found')
+    .option('-t, --prepare-for-delta', 'Prepare bundle for delta application')
+    .option('--strict-catscan', 'Replace README.md with CATSCAN.md when available')
+    .option('-N, --no-default-excludes', 'Disable default excludes')
+    .option('--verify <module>', 'Verify module and extract API')
+    .option('-q, --quiet', 'Suppress informational output')
+    .option('-y, --yes', 'Auto-confirm all prompts')
+    .option('--root <dir>', 'Root directory for relative paths', '.')
+    .option('--max-files <n>', 'Maximum files for AI curation', '20')
+    .option('--include-tests', 'Include test files in AI curation')
+    .parse();
 
-  if (argv.paths.length === 0) {
-    console.error("Error: You must specify at least one path to include.");
-    console.error("Use --help for more information.");
-    process.exit(1);
-  }
+  const options = program.opts();
+  const files = program.args;
 
-  const log = argv.q ? () => {} : (...args) => console.error(...args);
-
-  log("--- Starting PAWS Bundling ---");
+  // Build config
+  const config = {
+    root: options.root,
+    maxFiles: parseInt(options.maxFiles),
+    includeTests: options.includeTests,
+    exclude: options.exclude || [],
+    persona: options.persona || [],
+    sysPromptFile: options.sysPrompt === false ? null : options.sysPromptFile,
+    requireSysPrompt: options.requireSysPrompt,
+    prepareForDelta: options.prepareForDelta,
+    strictCatscan: options.strictCatscan,
+    noDefaultExcludes: options.noDefaultExcludes,
+    verify: options.verify,
+    quiet: options.quiet,
+    yes: options.yes
+  };
 
   try {
-    const bundleString = await createBundle({
-      paths: argv.paths,
-      exclude: argv.x,
-      personaFile: argv.p,
-      sysPromptFile: argv.s,
-      useDefaultExcludes: !argv.N,
-      prepareForDelta: argv.t,
-      forceEncoding: argv.E,
-      strictCatscan: argv.strictCatscan,
-    });
+    // Create bundler
+    const bundler = new CatsBundler(config);
 
-    if (!bundleString.trim()) {
-      log("No files matched the given criteria. Exiting.");
-      process.exit(0);
-    }
+    // Create bundle
+    const bundleContent = await bundler.createBundle(
+      files,
+      options.aiCurate,
+      options.aiProvider,
+      options.aiKey
+    );
 
-    if (argv.o === "-") {
-      process.stdout.write(bundleString);
-    } else {
-      const outputPath = path.resolve(process.cwd(), argv.o);
-      if (!argv.y && process.stdin.isTTY) {
-        const readline = require("readline").createInterface({
-          input: process.stdin,
-          output: process.stdout,
-        });
-        await new Promise((resolve, reject) => {
-          readline.question(
-            `About to write bundle to '${outputPath}'. Proceed? [Y/n]: `,
-            (answer) => {
-              readline.close();
-              if (answer.toLowerCase() === "n") {
-                log("Operation cancelled.");
-                process.exit(0);
-              }
-              resolve();
-            }
-          );
-        });
+    if (bundleContent) {
+      // Write to output file or stdout
+      if (options.output === '-') {
+        console.log(bundleContent);
+      } else {
+        await fs.writeFile(options.output, bundleContent, 'utf-8');
+        if (!options.quiet) {
+          console.log(chalk.green(`\n✓ Bundle written to: ${options.output}`));
+        }
       }
-      await fs.writeFile(outputPath, bundleString);
-      log(`\nOutput successfully written to: '${outputPath}'`);
+      return 0;
+    } else {
+      if (!options.quiet) {
+        console.log(chalk.red('✗ Failed to create bundle'));
+      }
+      return 1;
     }
+
   } catch (error) {
-    console.error(`\nError: ${error.message}`);
-    process.exit(1);
+    console.error(chalk.red(`Error: ${error.message}`));
+    return 1;
   }
 }
 
-// --- Exports and Execution ---
-module.exports = { createBundle };
-
-if (IS_NODE && require.main === module) {
-  mainCli();
+// Run if called directly
+if (require.main === module) {
+  main().then(code => process.exit(code));
 }
+
+// Export for use as module
+module.exports = {
+  FileTreeNode,
+  ProjectAnalyzer,
+  AICurator,
+  CatsBundler
+};

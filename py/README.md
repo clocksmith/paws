@@ -1,119 +1,342 @@
-# 🧶🐈 PAWS: The Programmable AI Workflow System
+# PAWS Python Implementation
 
-**PAWS/SWAP** is not just another AI coding assistant. It is a professional-grade, command-line toolkit for developers who demand **absolute control, perfect reproducibility, and deep integration** into their own custom workflows. It is built on a simple, powerful philosophy: **the developer, not the AI, must be the orchestrator.**
+## Installation
 
-This repository contains parallel implementations in **Python** and **Node.js**, offering feature parity for developers in both ecosystems.
+**Prerequisites**: Python 3.9+ (no external libraries required for core functionality).
 
-## The Problem: The Limits of "Magic" AI
+```bash
+# Optional: Install for interactive features
+pip install rich  # For interactive TUI
 
-Current AI tools like **Cursor, GitHub Copilot, and Windsurf** are powerful, but they operate as "magic boxes." They use opaque, automatic context-gathering that you cannot inspect or control. This leads to frustratingly common failure modes:
-
-- The AI misses critical context from a file you don't have open.
-- The AI gets confused by irrelevant code in your active editor.
-- The workflow is ephemeral and cannot be reliably reproduced or audited.
-- You are forced into a "golden cage"—a specific IDE that dictates your entire workflow.
-
-These tools trade control for convenience, but for serious engineering, that trade-off is unacceptable.
-
-## The PAWS Solution: You Are the Orchestrator
-
-PAWS inverts this paradigm. It provides the unopinionated, composable components for you to design and execute AI-powered workflows with surgical precision. **Being disconnected from a specific editor is its greatest strength.**
-
-```mermaid
-graph TD
-    subgraph "The 'Magic Box' IDE (Cursor, etc.)"
-        direction LR
-        A1["Developer's Intent"] --> B(Proprietary Black Box<br/><i>Embeddings, File Chunking...</i>);
-        B --> C{LLM};
-        C --> D[Code Suggestion];
-        subgraph "Uncertainty & No Control"
-            B
-        end
-    end
-
-    subgraph "The PAWS Programmable Workflow"
-        direction LR
-        A2["Developer's Intent"] --> E(<b>cats.py</b><br/><i>Human-Curated Context</i>);
-        E -- "<b>cats.md</b><br/>(Deterministic Artifact)" --> F{LLM};
-        F -- "<b>dogs.md</b><br/>(Reviewable Changes)" --> G(<b>dogs.py</b><br/><i>Human-Confirmed Application</i>);
-        subgraph "Certainty & Full Control"
-            E
-            G
-        end
-    end
-
-    classDef blackbox fill:#696969,stroke:#000,color:#fff;
-    classDef paws fill:#16D416,stroke:#000,color:#fff;
-    class B,C,D blackbox;
-    class E,F,G paws;
+# Optional: Install AI provider SDKs
+pip install google-generativeai  # For Gemini
+pip install anthropic            # For Claude
+pip install openai               # For OpenAI
 ```
 
-With PAWS, you achieve what other tools cannot:
+## Core Tools
 
-1.  **Explicit Context Control:** You specify exactly what the AI sees using file paths, glob patterns, and powerful `CATSCAN.md` summaries. No more guessing.
-2.  **Perfect Reproducibility:** The `cats.md` and `dogs.md` bundles are deterministic text artifacts. You can commit them to Git, share them, and re-run them, ensuring every AI-driven change is auditable and repeatable.
-3.  **Total Workflow Composability:** As a CLI tool, PAWS integrates with anything. Use it in VS Code tasks, Neovim plugins, CI/CD pipelines, or simple shell scripts. You build the workflow; PAWS provides the power.
-4.  **Extreme Token Efficiency:** Why pay for an AI to read thousands of lines of a library's implementation when all you need is its API? With `CATSCAN.md` summaries, you can slash token usage and costs while increasing accuracy.
+### cats.py - Context Aggregation Tool
 
-## Core Features
+Bundles project files into a single markdown file for LLM consumption.
 
-- **Granular Context Curation:** Use path prefixes like `summary:<pattern>` to send a module's high-level `CATSCAN.md` summary instead of its full source.
-- **`.pawsignore` Support:** Manage project-wide exclusions with a familiar `.gitignore`-style file.
-- **Composable Personas:** Layer multiple `-p <persona>.md` files to construct a bespoke AI mind for any task.
-- **CATSCAN Verification:** Use `cats.py --verify` to ensure your high-level summaries are not out-of-sync with your source code. Supports Python, JS, TS, and Dart.
-- **Agentic Feedback Loop:** The AI can use the `REQUEST_CONTEXT` command to ask for more information when its context is insufficient, turning failure into a productive dialogue.
+```bash
+# Basic usage - bundle current directory
+python py/cats.py . -o context.md
 
-## Project Lifecycle Examples
+# Bundle specific files or patterns
+python py/cats.py src/*.py tests/*.py -o bundle.md
 
-PAWS is not just for one-off changes. It's a partner for the entire lifecycle of your project.
+# With AI-powered file selection
+python py/cats.py --ai-curate "implement authentication" -o auth_context.md
 
-### 1. Project Scaffolding
+# With persona and system prompt
+python py/cats.py . -p personas/p_refactor.md -o refactor.md
 
-- **Task:** Create a new Python web server project using Flask, including a Dockerfile, tests, and basic structure.
-- **`cats.py` Command:**
-  ```bash
-  # Use the Scaffolder persona and send it a requirements file.
-  python py/cats.py requirements.txt -p personas/scaffolder.md -o scaffold_task.md
-  ```
-- **Result:** The AI generates a `dogs.md` bundle with multiple new files (`app.py`, `Dockerfile`, `tests/test_app.py`, etc.), creating a complete, ready-to-run project structure in a single, reviewable step.
+# Multiple persona files (applied in order)
+python py/cats.py . -p personas/base.md -p personas/expert.md -o output.md
 
-### 2. Mid-Project Refactoring
+# Disable system prompt
+python py/cats.py . --no-sys-prompt -o bundle.md
 
-- **Task:** Refactor a large data processing module to be more efficient.
-- **`cats.py` Command:**
-  ```bash
-  # Send the full module source, but only summaries of its dependencies.
-  python py/cats.py src/data_processing/** 'summary:src/utils/**' 'summary:src/db/**' -p personas/refactor_guru.md -o refactor_task.md
-  ```
-- **Result:** The AI gets a focused context. It uses delta commands in its `dogs.md` response to make precise changes to the data module, which you can review and apply with confidence. If it needs more info on a utility function, it can use `REQUEST_CONTEXT` to ask for it.
+# Strict CATSCAN mode (prefer CATSCAN.md over README.md)
+python py/cats.py . --strict-catscan -o bundle.md
 
-### 3. Documentation & Maintenance
+# Use summary: prefix for token efficiency
+python py/cats.py 'src/core/**' 'summary:src/utils/**' -o focused.md
 
-- **Task:** A key module has undergone significant changes, and its `CATSCAN.md` is now out of date.
-- **`cats.py` Commands:**
+# Output to stdout for piping
+python py/cats.py . -o - | head -100
+```
 
-  ```bash
-  # First, verify the drift.
-  python py/cats.py --verify src/changed_module/**
+#### Options
 
-  # Next, ask the AI to update the CATSCAN.
-  python py/cats.py src/changed_module/** -p personas/docs_updater.md -o update_docs.md
-  ```
+**Core Options:**
+- `-o, --output <file>` - Output file (default: cats.md, use '-' for stdout)
+- `-x, --exclude <pattern>` - Exclude pattern (can be used multiple times)
+- `-q, --quiet` - Suppress informational output
+- `-y, --yes` - Auto-confirm all prompts
 
-- **Result:** `cats.py --verify` gives you a precise list of what's out of sync. You then pass the full module source to a specialized persona that reads the code and generates a new, accurate `CATSCAN.md` file, keeping your project's high-level documentation perfectly maintained.
+**AI Curation:**
+- `--ai-curate <task>` - Use AI to select relevant files based on task
+- `--ai-provider <provider>` - AI provider: gemini, claude, openai (default: gemini)
+- `--ai-key <key>` - API key for AI provider
+- `--max-files <n>` - Maximum files for AI curation (default: 20)
+- `--include-tests` - Include test files in AI curation
 
-## Getting Started
+**Prompts & Personas:**
+- `-p, --persona <file>` - Persona file to prepend (can use multiple times)
+- `-s, --sys-prompt-file <file>` - System prompt file (default: sys/sys_a.md)
+- `--no-sys-prompt` - Disable system prompt prepending
+- `--require-sys-prompt` - Fail if system prompt file not found
 
-_(Installation and basic usage instructions for Python and JS would follow here, similar to the original README but updated for new flags.)_
+**Advanced Features:**
+- `-t, --prepare-for-delta` - Mark bundle as reference for delta operations
+- `--strict-catscan` - Replace README.md with CATSCAN.md when available
+- `-N, --no-default-excludes` - Disable default excludes (.git, node_modules, etc.)
+- `--verify <module>` - Verify module and extract API
 
-## Advanced Usage: The Agentic Loop
+### dogs.py - Differential Output Generator
 
-With the `--allow-reinvoke` flag, you can empower the AI to request and automatically receive more context.
+Extracts and applies code changes from LLM responses.
 
-1.  The AI determines its context is incomplete.
-2.  It generates a `dogs.md` with an `EXECUTE_AND_REINVOKE` command, specifying what it needs.
-3.  You run `python py/dogs.py dogs.md --allow-reinvoke`.
-4.  After you confirm the command, `dogs.py` runs it, generating a new `cats.md` bundle.
-5.  A wrapper script can then automatically re-invoke the AI with the new context, creating a powerful, human-supervised agentic workflow.
+```bash
+# Basic usage - extract and apply changes
+python py/dogs.py changes.md
 
-This is the future of AI-assisted development—a true partnership where the AI can ask for what it needs, and the developer always has the final say.
+# Interactive review with TUI (requires rich)
+python py/dogs.py changes.md -i
+
+# Auto-accept all changes
+python py/dogs.py changes.md -y
+
+# Review without applying
+python py/dogs.py changes.md -n
+
+# Verify with git and run tests
+python py/dogs.py changes.md --verify "pytest"
+
+# Run tests and revert on failure
+python py/dogs.py changes.md --verify "npm test" --revert-on-fail
+
+# With RSI-Link protocol for self-modification
+python py/dogs.py changes.md --rsi-link
+
+# Apply delta bundle with precise line changes
+python py/dogs.py changes.md -d reference.md
+
+# Allow agentic commands
+python py/dogs.py changes.md --allow-reinvoke
+
+# Verify documentation sync
+python py/dogs.py changes.md --verify-docs
+```
+
+#### Options
+
+**Core Options:**
+- `-i, --interactive` - Interactive review mode with rich TUI
+- `-y, --yes` - Auto-accept all changes
+- `-n, --no` - Auto-reject all changes (review only)
+- `-q, --quiet` - Suppress output
+
+**Verification:**
+- `--verify <command>` - Run verification command after applying changes
+- `--revert-on-fail` - Automatically revert changes if verification fails
+- `--test-cmd <command>` - Alias for --verify (test command to run)
+- `--verify-docs` - Warn if README.md changed without CATSCAN.md
+
+**Advanced Features:**
+- `-d, --apply-delta <ref_bundle>` - Apply deltas using reference bundle
+- `--rsi-link` - Use RSI-Link protocol for self-modification
+- `--allow-reinvoke` - Allow REQUEST_CONTEXT and EXECUTE_AND_REINVOKE commands
+
+### paws_session.py - Session Management
+
+Manages isolated work sessions using git worktrees.
+
+```bash
+# Start a new session
+python py/paws_session.py start "feature-name"
+
+# Create checkpoint
+python py/paws_session.py checkpoint "implemented auth"
+
+# Travel to previous checkpoint
+python py/paws_session.py travel 2
+
+# Merge back to main branch
+python py/paws_session.py merge
+
+# End session and cleanup
+python py/paws_session.py end
+```
+
+#### Commands
+- `start <name>` - Start new session with isolated worktree
+- `checkpoint [message]` - Create checkpoint commit
+- `travel <n>` - Travel to checkpoint n steps back
+- `merge` - Merge session changes to base branch
+- `end` - End session and remove worktree
+- `status` - Show current session status
+- `list` - List all active sessions
+
+## Interactive Features
+
+### Rich TUI (Terminal User Interface)
+When `rich` is installed and using `--interactive`:
+- Full-screen interface with syntax highlighting
+- Side-by-side diff view
+- Keyboard navigation (j/k or arrows)
+- Real-time status updates
+- Progress bars for multi-file operations
+
+### Fallback Mode
+Without `rich`, falls back to:
+- Basic colored diffs (if terminal supports color)
+- Simple y/n prompts
+- Clear file-by-file progression
+
+## Advanced Features
+
+### CATSCAN.md Support
+
+CATSCAN files are high-level API summaries that replace verbose implementations:
+
+```bash
+# Verify CATSCAN accuracy
+python py/cats.py --verify src/module/
+
+# Enforce CATSCAN usage
+python py/cats.py . --strict-catscan
+
+# After changes, verify docs are in sync
+python py/dogs.py changes.md --verify-docs
+```
+
+### Delta Commands
+
+For precise, line-based changes:
+
+```markdown
+PAWS_CMD: REPLACE_LINES(10, 15)
+def new_function():
+    return "updated"
+PAWS_CMD: END
+
+PAWS_CMD: INSERT_AFTER_LINE(25)
+    # New comment
+PAWS_CMD: END
+
+PAWS_CMD: DELETE_LINES(30, 35)
+```
+
+### Agentic Commands
+
+Enable two-way communication with AI:
+
+```markdown
+PAWS_CMD: REQUEST_CONTEXT(src/utils/helper.py)
+I need to see the helper module to complete this task.
+
+PAWS_CMD: EXECUTE_AND_REINVOKE(python py/cats.py src/utils/** -o context.md)
+Running this will give me the context I need.
+```
+
+### .pawsignore Support
+
+Create `.pawsignore` in your project root:
+```gitignore
+# Exclude test files
+**/*_test.py
+**/test_*.py
+
+# Exclude build artifacts
+build/
+dist/
+*.pyc
+__pycache__/
+
+# Exclude large data files
+data/*.csv
+*.db
+```
+
+## AI Provider Configuration
+
+Set API keys as environment variables:
+```bash
+export GEMINI_API_KEY=your_key_here
+export ANTHROPIC_API_KEY=your_key_here
+export OPENAI_API_KEY=your_key_here
+```
+
+Or pass via command line:
+```bash
+python py/cats.py --ai-curate "task" --api-key "your_key"
+```
+
+## Complete Workflow Example
+
+```bash
+# 1. Start an isolated session
+python py/paws_session.py start "refactor-auth"
+
+# 2. Create AI-curated context bundle
+python py/cats.py --ai-curate "refactor authentication to use JWT" \
+    --persona personas/p_refactor.md \
+    -o auth_refactor.md
+
+# 3. Send to LLM (via API, web UI, or CLI)
+# ... receive response as changes.md
+
+# 4. Review changes interactively
+python py/dogs.py changes.md --interactive --verify
+
+# 5. Run tests to ensure nothing broke
+python py/dogs.py changes.md --test-cmd "pytest tests/"
+
+# 6. Create checkpoint if satisfied
+python py/paws_session.py checkpoint "JWT auth implemented"
+
+# 7. Continue iterating or merge back
+python py/paws_session.py merge
+```
+
+## Git Integration
+
+The tools integrate deeply with git for safety:
+
+- **Automatic stashing** before applying changes
+- **Atomic rollback** on test failure
+- **Worktree isolation** for experimental changes
+- **Checkpoint system** for time-travel debugging
+- **Clean merge** back to main branch
+
+## Module Verification
+
+Verify that Python modules export what they claim:
+
+```bash
+# Check if module's CATSCAN matches reality
+python py/cats.py --verify src/auth/
+
+# Output shows:
+# ✓ Exported: login_user, logout_user, check_permission
+# ✗ Missing from CATSCAN: reset_password
+# ✗ In CATSCAN but not exported: delete_user
+```
+
+## Performance Tips
+
+1. **Use summary: prefix** for large dependencies to reduce tokens
+2. **Leverage .pawsignore** to exclude irrelevant files globally
+3. **Use --strict-catscan** to prefer concise API summaries
+4. **Apply --prepare-for-delta** for efficient incremental changes
+5. **Enable --ai-curate** to automatically select relevant files
+
+## Troubleshooting
+
+### Rich TUI Not Working
+- Install rich: `pip install rich`
+- Check terminal compatibility (needs 256 color support)
+- Use `--no-tui` flag to force basic mode
+
+### Git Verification Errors
+- Ensure you're in a git repository
+- Commit or stash current changes first
+- Use `--no-verify` to skip git checks
+
+### AI Provider Issues
+- Verify API keys are set correctly
+- Check rate limits and quotas
+- Use `--no-ai` to skip AI features
+
+### Module Verification Failed
+- Ensure `__init__.py` has proper `__all__` exports
+- Check for circular imports
+- Verify module is valid Python
+
+## For More Information
+
+See the [main project README](../README.md) for the PAWS philosophy and overall project structure.

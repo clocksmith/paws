@@ -144,32 +144,48 @@ graph TD
 
 ## Getting Started
 
-### For Python Users
+PAWS provides parallel implementations in Python and JavaScript with feature parity:
 
-**Prerequisites**: Python 3.9+ (no external libraries required).
+- **[Python Implementation](py/README.md)** - Python 3.9+ with no external dependencies for core functionality
+- **[JavaScript Implementation](js/README.md)** - Node.js v14+ with rich terminal UI support
 
-```bash
-# Bundle the current directory into my_project.md (will prefer CATSCAN.md files)
-python py/cats.py . -o my_project.md
+## 🤖 AI Agent Integration
 
-# Extract changes from an LLM's response bundle
-python py/dogs.py dogs.md . --verify-docs
-```
+PAWS is designed as a CLI toolkit that can be orchestrated by both human developers and AI agents. For autonomous agents that can execute shell commands (such as those running in Node.js environments), PAWS provides:
 
-### For JavaScript Users
+- Context bundling with `cats` for focused AI reasoning
+- Safe code modification with `dogs` for applying generated changes
+- Deterministic, reproducible workflows through explicit context control
 
-**Prerequisites**: Node.js v14+.
+Note: Browser-based agents like [REPLOID](../reploid/) operate in sandboxed environments and cannot directly execute PAWS commands. Such agents would need a server-side component or proxy to interact with PAWS.
 
-```bash
-# Install dependencies from project root
-npm install
+Both implementations offer identical functionality:
+- 🎨 Interactive review with visual diffs
+- ✅ Git-based verification and atomic rollback  
+- 🤖 AI-powered file curation (with provider API keys)
+- 📦 Session management with isolated workspaces
+- 🔄 Full backward compatibility with original PAWS tools
 
-# Bundle the current directory into my_project.md
-node js/cats.js . -o my_project.md
+### CLI Interface Consistency
 
-# Extract changes from an LLM's response bundle
-node js/dogs.js dogs.md . --verify-docs
-```
+Both implementations share the same command-line interface:
+
+| Feature | Python | JavaScript |
+|---------|--------|------------|
+| **CATS Options** | | |
+| Output control | `-o, --output` | `-o, --output` |
+| Exclude patterns | `-x, --exclude` | `-x, --exclude` |
+| Personas | `-p, --persona` | `-p, --persona` |
+| System prompt | `-s, --sys-prompt-file` | `-s, --sys-prompt-file` |
+| AI curation | `--ai-curate` | `--ai-curate` |
+| Quiet mode | `-q, --quiet` | `-q, --quiet` |
+| **DOGS Options** | | |
+| Interactive | `-i, --interactive` | `-i, --interactive` |
+| Auto-accept | `-y, --yes` | `-y, --yes` |
+| Auto-reject | `-n, --no` | `-n, --no` |
+| Verification | `--verify` | `--verify` |
+| Delta mode | `-d, --apply-delta` | `-d, --apply-delta` |
+| RSI protocol | `--rsi-link` | `--rsi-link` |
 
 ## Agentic Personas & System Protocols
 
@@ -200,33 +216,39 @@ The true power of PAWS lies in defining custom cognitive models. You can create 
 
 ```
 .
-├── js/
-│   ├── cats.js
-│   ├── dogs.js
-│   ├── package.json
-│   └── test/
-├── py/
-│   ├── cats.py
-│   ├── dogs.py
-│   └── tests/
-├── personas/
-│   ├── sys_h1.md
-│   └── ...
-├── sys/
-│   ├── sys_a.md
-│   ├── sys_d.md
-│   └── sys_r.md
-├── cats.md
-├── dogs.md
-└── README.md
+├── js/               # JavaScript/Node.js implementation
+│   ├── cats.js      # Context bundler with AI curation
+│   ├── dogs.js      # Bundle extractor with interactive review
+│   ├── paws-session.js  # Session management
+│   └── README.md    # JavaScript-specific documentation
+├── py/               # Python implementation
+│   ├── cats.py      # Context bundler with AI curation
+│   ├── dogs.py      # Bundle extractor with interactive review
+│   ├── paws_session.py  # Session management
+│   └── README.md    # Python-specific documentation
+├── personas/         # AI persona definitions
+│   ├── sys_h*.md    # Hierarchical cognitive models
+│   └── p_*.md       # Task-specific personas
+├── sys/              # System protocols
+│   ├── sys_a.md     # Default interaction
+│   ├── sys_d.md     # Delta-mode interaction
+│   └── sys_r.md     # Self-improvement (RSI)
+└── README.md         # This file
 ```
 
-## Testing
+## Quick Start
 
-From the project root:
+```bash
+# Python - Bundle current directory
+python py/cats.py . -o context.md
 
-- **Python:** `python -m unittest discover py/tests`
-- **JavaScript:** `npm install && npm test`
+# JavaScript - Extract and apply changes interactively
+node js/dogs.js changes.md --interactive
+```
+
+For detailed usage, see the language-specific READMEs:
+- [Python Documentation](py/README.md)
+- [JavaScript Documentation](js/README.md)
 
 ## Contributing
 

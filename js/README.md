@@ -1,134 +1,252 @@
-# PAWS for Node.js: `cats.js` and `dogs.js`
+# PAWS JavaScript/Node.js Implementation
 
-This document describes the Node.js implementation of the **PAWS/SWAP** toolkit. It provides command-line utilities (`cats.js`, `dogs.js`) that are feature-complete counterparts to the Python versions, designed to bundle project files for Large Language Models (LLMs) and then safely reconstruct them.
+## Installation
 
-For a high-level overview of the PAWS philosophy and project structure, please see the [main project README](../../README.md).
+```bash
+# From the paws root directory
+npm install
 
-## Table of Contents
+# Optional: Install AI provider SDKs for AI-powered features
+npm install @google/generative-ai   # For Gemini
+npm install @anthropic-ai/sdk        # For Claude  
+npm install openai                   # For OpenAI
+```
 
-- [Prerequisites](#prerequisites)
-- [Testing](#testing)
-- [Overview](#overview)
-  - [`cats.js`](#catsjs)
-  - [`dogs.js`](#dogsjs)
-- [Core Workflow](#core-workflow)
-- [Key Features](#key-features)
-- [`cats.js` - Command-Line Reference](#catsjs---command-line-reference)
-- [`dogs.js` - Command-Line Reference](#dogsjs---command-line-reference)
-- [Library Usage (Browser & Node.js)](#library-usage-browser--nodejs)
+## Core Tools
 
-## Prerequisites
+### cats.js - Context Aggregation Tool
 
-- **Node.js**: v14 or higher.
-- **Dependencies**: The CLI tools rely on `yargs` for argument parsing and `glob` for file matching. From your project root, run:
-  ```bash
-  npm install
-  ```
+Bundles project files into a single markdown file for LLM consumption.
+
+```bash
+# Basic usage - bundle current directory
+node js/cats.js . -o context.md
+
+# Bundle specific files or patterns
+node js/cats.js src/*.js tests/*.js -o bundle.md
+
+# With AI-powered file selection
+node js/cats.js --ai-curate "implement authentication" -o auth_context.md
+
+# With persona and system prompt
+node js/cats.js . -p personas/p_refactor.md -o refactor.md
+
+# Multiple persona files (applied in order)
+node js/cats.js . -p personas/base.md -p personas/expert.md -o output.md
+
+# Disable system prompt
+node js/cats.js . --no-sys-prompt -o bundle.md
+
+# Strict CATSCAN mode (prefer CATSCAN.md over README.md)
+node js/cats.js . --strict-catscan -o bundle.md
+
+# Output to stdout for piping
+node js/cats.js . -o - | head -100
+```
+
+#### Options
+
+**Core Options:**
+- `-o, --output <file>` - Output file (default: cats.md, use '-' for stdout)
+- `-x, --exclude <pattern>` - Exclude pattern (can be used multiple times)
+- `-q, --quiet` - Suppress informational output
+- `-y, --yes` - Auto-confirm all prompts
+
+**AI Curation:**
+- `--ai-curate <task>` - Use AI to select relevant files based on task
+- `--ai-provider <provider>` - AI provider: gemini, claude, openai (default: gemini)
+- `--ai-key <key>` - API key for AI provider
+- `--max-files <n>` - Maximum files for AI curation (default: 20)
+- `--include-tests` - Include test files in AI curation
+
+**Prompts & Personas:**
+- `-p, --persona <file>` - Persona file to prepend (can use multiple times)
+- `-s, --sys-prompt-file <file>` - System prompt file (default: sys/sys_a.md)
+- `--no-sys-prompt` - Disable system prompt prepending
+- `--require-sys-prompt` - Fail if system prompt file not found
+
+**Advanced Features:**
+- `-t, --prepare-for-delta` - Mark bundle as reference for delta operations
+- `--strict-catscan` - Replace README.md with CATSCAN.md when available
+- `-N, --no-default-excludes` - Disable default excludes (.git, node_modules, etc.)
+- `--verify <module>` - Verify module and extract API
+
+### dogs.js - Differential Output Generator
+
+Extracts and applies code changes from LLM responses.
+
+```bash
+# Basic usage - extract and apply changes
+node js/dogs.js changes.md
+
+# Interactive review with TUI (blessed)
+node js/dogs.js changes.md -i
+
+# Auto-accept all changes
+node js/dogs.js changes.md -y
+
+# Review without applying
+node js/dogs.js changes.md -n
+
+# Verify and run tests
+node js/dogs.js changes.md --verify "npm test"
+
+# Run tests and revert on failure
+node js/dogs.js changes.md --verify "npm test" --revert-on-fail
+
+# With RSI-Link protocol
+node js/dogs.js changes.md --rsi-link
+
+# Apply delta bundle
+node js/dogs.js changes.md -d reference.md
+
+# Allow agentic commands
+node js/dogs.js changes.md --allow-reinvoke
+
+# Verify documentation sync
+node js/dogs.js changes.md --verify-docs
+
+# Use simple prompts instead of TUI
+node js/dogs.js changes.md -i --no-blessed
+```
+
+#### Options
+
+**Core Options:**
+- `-i, --interactive` - Interactive review mode with blessed TUI
+- `-y, --yes` - Auto-accept all changes
+- `-n, --no` - Auto-reject all changes (review only)
+- `-q, --quiet` - Suppress output
+- `--no-blessed` - Use simple interface instead of TUI
+
+**Verification:**
+- `--verify <command>` - Run verification command after applying changes
+- `--revert-on-fail` - Automatically revert changes if verification fails
+- `--test-cmd <command>` - Alias for --verify (test command to run)
+- `--verify-docs` - Warn if README.md changed without CATSCAN.md
+
+**Advanced Features:**
+- `-d, --apply-delta <ref_bundle>` - Apply deltas using reference bundle
+- `--rsi-link` - Use RSI-Link protocol for self-modification
+- `--allow-reinvoke` - Allow REQUEST_CONTEXT and EXECUTE_AND_REINVOKE commands
+
+### paws-session.js - Session Management
+
+Manages isolated work sessions using git worktrees.
+
+```bash
+# Start a new session
+node js/paws-session.js start "feature-name"
+
+# Create checkpoint
+node js/paws-session.js checkpoint "implemented auth"
+
+# Travel to previous checkpoint
+node js/paws-session.js travel 2
+
+# Merge back to main branch
+node js/paws-session.js merge
+
+# End session
+node js/paws-session.js end
+```
+
+#### Commands
+- `start <name>` - Start new session
+- `checkpoint [message]` - Create checkpoint
+- `travel <n>` - Travel to checkpoint
+- `merge` - Merge to base branch
+- `end` - End current session
+- `status` - Show session status
+- `list` - List all sessions
+
+## Interactive Features
+
+### Visual Diffs
+When using `--interactive`, dogs.js provides:
+- Color-coded diffs (green for additions, red for deletions)
+- Side-by-side file navigation
+- Keyboard controls (a=accept, r=reject, s=skip, q=quit)
+
+### TUI Modes
+The tools automatically detect and use the best interface:
+1. **Blessed TUI** - Full-screen terminal interface (if terminal supports it)
+2. **Inquirer Prompts** - Interactive prompts (fallback)
+3. **CLI Flags** - Non-interactive mode
+
+## AI Provider Configuration
+
+Set API keys as environment variables:
+```bash
+export GEMINI_API_KEY=your_key_here
+export ANTHROPIC_API_KEY=your_key_here
+export OPENAI_API_KEY=your_key_here
+```
+
+Or pass via command line:
+```bash
+node js/cats.js --ai-curate "task" --api-key "your_key"
+```
 
 ## Testing
 
-The JavaScript implementation includes a comprehensive test suite using Mocha and Chai to ensure reliability and correctness.
+```bash
+# Run test suite
+npm test
 
-1.  **Install Development Dependencies**: The main `npm install` command from the prerequisites section will install `mocha` and `chai` from the `package.json` file.
+# Run specific test
+npm test -- --grep "cats"
+```
 
-2.  **Run the Test Suite**: You can run the tests using the `npm test` script defined in `package.json`:
+## Examples
 
-    ```bash
-    # Recommended: Use the npm script from the project root
-    npm test
+### Complete Workflow
 
-    # Alternative: Direct invocation from the project root
-    npx mocha js/test/test_paws.js
-    ```
+```bash
+# 1. Start a session for new feature
+node js/paws-session.js start "add-auth"
 
-## Overview
+# 2. Bundle relevant files with AI curation
+node js/cats.js --ai-curate "add JWT authentication" -o auth.md
 
-### `cats.js`
+# 3. Send auth.md to LLM, get changes.md response
 
-Bundles specified project files and/or directories into a single text artifact. It supports powerful glob patterns for flexible, inclusive, and exclusive filtering of files.
+# 4. Review and apply changes interactively
+node js/dogs.js changes.md --interactive --verify
 
-### `dogs.js`
+# 5. Create checkpoint
+node js/paws-session.js checkpoint "basic auth implemented"
 
-Extracts files from a PAWS bundle back into a directory structure. It correctly decodes text and Base64-encoded files, can apply precise delta changes, and sanitizes paths to prevent security issues.
+# 6. Iterate as needed...
 
-## Core Workflow
+# 7. Merge back to main
+node js/paws-session.js merge
+```
 
-1.  **🧶🐈 Bundle with `cats.js`**: Package your project into a `cats.md` file.
+### Backward Compatibility
 
-    ```bash
-    # From the project root, bundle an entire project, excluding build artifacts
-    node js/cats.js . -x "dist/**" -o my_project.md
-    ```
+All original PAWS features are supported:
 
-2.  **🤖 Interact with an LLM**: Provide the `cats.md` bundle to your AI with a clear request. The AI generates a `dogs.md` file with the changes.
+```bash
+# Original cats.js features
+node js/cats.js src/ --exclude "*.test.js" -o bundle.md
 
-3.  **🥏🐕 Extract with `dogs.js`**: Interactively review and apply the AI's changes.
-    ```bash
-    # From the project root, apply changes from dogs.md
-    node js/dogs.js dogs.md .
-    ```
+# Original dogs.js features  
+node js/dogs.js response.md --base-dir ./src
 
-## Key Features
+# Delta commands
+node js/dogs.js delta.md --apply-delta original.md
 
-- **Full CLI Parity**: `cats.js` and `dogs.js` support the same command-line flags and arguments as their Python counterparts for a consistent experience.
-- **Powerful File Selection**: Uses standard **glob patterns** (`src/**/*.js`), directory paths (`.`), and file paths to precisely control what gets bundled.
-- **Robust Path Handling**: Invoke `cats.js` from any directory; it correctly handles relative paths (e.g., `../other-project`).
-- **Layered Prompting (`cats.js`)**: Prepend persona (`-p`) and system (`-s`) prompts for AI guidance.
-- **Hardened Parser (`dogs.js`)**:
-  - Ignores LLM "chatter" and extraneous text.
-  - Strips markdown code fences (e.g., ` ```js `).
-  - Recovers from missing `END` markers.
-- **Safe, Interactive Extraction (`dogs.js`)**:
-  - Shows colorized diffs on overwrite (requires a compatible terminal).
-  - Requires explicit confirmation for `DELETE_FILE` commands.
-  - Prevents path traversal security vulnerabilities.
-- **Advanced Delta Support**: A precise mode for applying line-based changes (`-d, --apply-delta`).
-- **Environment-Aware**: Can be run as a CLI tool in Node.js or used as a library in both Node.js and browser environments.
+# PAWS_CMD protocol
+node js/dogs.js cmd.md --allow-reinvoke
+```
 
-## `cats.js` - Command-Line Reference
+## Library Usage
 
-**Syntax**: `node js/cats.js [PATH_PATTERN...] [options]`
-
-- `PATH_PATTERN...`: One or more files, directories, or glob patterns to include.
-- **`-o, --output <file>`**: Output file (default: `cats.md`). Use `-` for stdout.
-- **`-x, --exclude <pattern>`**: A glob pattern to exclude. Can be used multiple times.
-- **`-p, --persona <file>`**: Path to a persona file to prepend.
-- **`-s, --sys-prompt-file <file>`**: Path to a system prompt file to prepend.
-- **`-t, --prepare-for-delta`**: Mark the bundle as a reference for delta operations.
-- **`-q, --quiet`**: Suppress informational messages.
-- **`-y, --yes`**: Auto-confirm writing the output file.
-- **`-N, --no-default-excludes`**: Disable default excludes (`.git`, `node_modules`, etc.).
-- **`-E, --force-encoding <mode>`**: `auto` (default) or `b64` (force all as Base64).
-- **`-h, --help`**: Show help message.
-
-## `dogs.js` - Command-Line Reference
-
-**Syntax**: `node js/dogs.js [BUNDLE_FILE] [OUTPUT_DIR] [options]`
-
-- `BUNDLE_FILE` (optional): The bundle to extract (default: `dogs.md`).
-- `OUTPUT_DIR` (optional): Directory to extract files into (default: `./`).
-- **`-d, --apply-delta <ref_bundle>`**: Apply delta commands using a reference bundle.
-- **`-q, --quiet`**: Suppress all output and prompts. Implies `-n`.
-- **`-y, --yes`**: Auto-confirm all overwrites and deletions.
-- **`-n, --no`**: Auto-skip all conflicting actions.
-- **`-h, --help`**: Show help message.
-- **Interactive Prompts**: If not using `-y` or `-n`, the tool is interactive.
-  - **Overwrite Prompt**: `[y/N/a(yes-all)/s(skip-all)/q(quit)]`
-  - **Deletion Prompt**: `[y/N/a(yes-all)/q(quit)]`
-
-## Library Usage (Browser & Node.js)
-
-Both scripts are "environment-aware." They can be imported and used programmatically.
-
-- **`cats.js`**: Exports a `createBundle(options)` function.
-- **`dogs.js`**: Exports an `extractBundle(options)` function.
-
-When used as a library (especially in a browser), they operate on a "virtual file system" by accepting arrays of file objects instead of reading from disk.
-
-### `cats.js` Library Example
+Both scripts can be imported and used programmatically:
 
 ```javascript
-// In a Node.js project or bundled for the browser
+// cats.js library usage
 const { createBundle } = require("./js/cats.js");
 
 async function runCatBundle() {
@@ -145,13 +263,7 @@ async function runCatBundle() {
   console.log(bundleString);
 }
 
-runCatBundle();
-```
-
-### `dogs.js` Library Example
-
-```javascript
-// In a Node.js project or bundled for the browser
+// dogs.js library usage
 const { extractBundle } = require("./js/dogs.js");
 
 async function runDogExtract() {
@@ -169,6 +281,46 @@ console.log("hello world");
     console.log(`Content: ${file.contentBytes.toString("utf-8")}`);
   }
 }
-
-runDogExtract();
 ```
+
+## Dependencies
+
+Core dependencies:
+- `commander` - CLI framework
+- `glob` - File pattern matching
+- `ignore` - .gitignore parsing
+- `simple-git` - Git operations
+
+Optional UI dependencies:
+- `blessed` - Terminal UI
+- `inquirer` - Interactive prompts
+- `chalk` - Terminal colors
+- `diff` - Diff generation
+
+Optional AI dependencies:
+- `@google/generative-ai` - Gemini AI
+- `@anthropic-ai/sdk` - Claude AI
+- `openai` - OpenAI/GPT
+
+## Troubleshooting
+
+### Terminal UI Issues
+If the TUI doesn't display correctly:
+- Ensure terminal supports 256 colors
+- Try `--no-tui` flag to use basic prompts
+- Check terminal size (minimum 80x24)
+
+### Git Verification Failures
+If verification fails:
+- Ensure you're in a git repository
+- Check for uncommitted changes
+- Use `--no-verify` to skip verification
+
+### AI Provider Errors
+- Verify API keys are set correctly
+- Check network connectivity
+- Use `--no-ai` to skip AI features
+
+## For More Information
+
+See the [main project README](../README.md) for the PAWS philosophy and overall project structure.
