@@ -48,7 +48,7 @@ def run_cli(module, args_list, user_input=None, expect_exit_code=0, bundle_conte
 
     with argv_patch, stdout_patch as mock_stdout, stderr_patch as mock_stderr, input_patch, stdin_patch:
         try:
-            module.main_cli()
+            module.main()
         except SystemExit as e:
             if e.code != expect_exit_code:
                 raise AssertionError(
@@ -166,7 +166,9 @@ class TestCatsPyComprehensive(unittest.TestCase):
     def test_unreadable_file_is_skipped_with_warning(self): unreadable = Path("unreadable.txt"); unreadable.touch(); unreadable.chmod(0o000); _, stderr = run_cli(cats, ["."]); self.assertIn("Warning: Skipping unreadable file", stderr)
     def test_bundle_empty_dir(self): Path("empty").mkdir(); run_cli(cats, ["empty"])
     def test_bundle_dir_with_only_ignored_files(self): Path("ignored/file.log").mkdir(parents=True); run_cli(cats, ["ignored"], expect_exit_code=0)
-    def test_stdin_is_not_tty_no_prompt(self): with patch('sys.stdin.isatty', return_value=False): run_cli(cats, ["src", "-o", "bundle.md"], user_input=[]) # Should not hang
+    def test_stdin_is_not_tty_no_prompt(self):
+        with patch('sys.stdin.isatty', return_value=False):
+            run_cli(cats, ["src", "-o", "bundle.md"], user_input=[])  # Should not hang
     def test_user_cancel_stops_execution(self): run_cli(cats, ["src", "-o", "bundle.md"], user_input=['n'], expect_exit_code=0)
     def test_force_b64_encoding(self): stdout, _ = run_cli(cats, ["src/main.py", "--force-encoding", "b64", "-o", "-"]); self.assertIn(base64.b64encode(b'print(1)').decode(), stdout)
     def test_hidden_file_inclusion(self): Path(".hidden").write_text("h"); stdout, _ = run_cli(cats, [".hidden", "-o", "-"]); self.assertIn(".hidden", stdout)
@@ -217,8 +219,12 @@ class TestDogsPyDeltaLogic(unittest.TestCase):
         self.original = "L1\nL2\nL3\nL4\nL5\nL6\nL7\nL8\nL9\nL10".splitlines()
 
     def test_d01_validate_passes_correct_sequence(self): self.handler._validate_deltas(self.original, [{"type": "insert", "line_num": 1}, {"type": "replace", "start": 5, "end": 5}], "p")
-    def test_d02_validate_catches_out_of_order(self): with self.assertRaises(ValueError): self.handler._validate_deltas(self.original, [{"type": "replace", "start": 5, "end": 5}, {"type": "insert", "line_num": 1}], "p")
-    def test_d03_validate_catches_out_of_bounds(self): with self.assertRaises(ValueError): self.handler._validate_deltas(self.original, [{"type": "replace", "start": 10, "end": 11}], "p")
+    def test_d02_validate_catches_out_of_order(self):
+        with self.assertRaises(ValueError):
+            self.handler._validate_deltas(self.original, [{"type": "replace", "start": 5, "end": 5}, {"type": "insert", "line_num": 1}], "p")
+    def test_d03_validate_catches_out_of_bounds(self):
+        with self.assertRaises(ValueError):
+            self.handler._validate_deltas(self.original, [{"type": "replace", "start": 10, "end": 11}], "p")
     def test_d04_validate_allows_multiple_inserts_at_line_0(self): self.handler._validate_deltas(self.original, [{"type": "insert", "line_num": 0}, {"type": "insert", "line_num": 0}], "p")
     def test_d05_apply_single_replace(self): result = self.handler._apply_deltas(self.original, [{"type": "replace", "start": 5, "end": 5, "content_lines": ["NEW"]}]); self.assertEqual(result[4], "NEW")
     def test_d06_apply_single_insert(self): result = self.handler._apply_deltas(self.original, [{"type": "insert", "line_num": 5, "content_lines": ["NEW"]}]); self.assertEqual(result[5], "NEW")
@@ -231,14 +237,21 @@ class TestDogsPyDeltaLogic(unittest.TestCase):
     def test_d13_apply_delete_entire_file(self): result = self.handler._apply_deltas(self.original, [{"type": "delete_lines", "start": 1, "end": 10}]); self.assertEqual(result, [])
     def test_d14_apply_no_op_replace(self): result = self.handler._apply_deltas(self.original, [{"type": "replace", "start": 3, "end": 3, "content_lines": ["L3"]}]); self.assertEqual(result, self.original)
     def test_d15_apply_complex_sequence(self): cmds=[{"type":"insert","line_num":0,"content_lines":["S"]},{"type":"replace","start":2,"end":3,"content_lines":["X"]},{"type":"delete_lines","start":5,"end":5}]; res=self.handler._apply_deltas(self.original,cmds); self.assertEqual("\n".join(res), "S\nL1\nX\nL4")
-    def test_d16_delta_fails_if_reference_bundle_is_missing(self): with self.assertRaises(IOError): dogs.ActionHandler(dogs.ExtractionConfig(None, Path("."), Path("bad.md"), "y", 0,0,0,1))
-    def test_d17_delta_fails_if_file_not_in_reference(self): h = dogs.ActionHandler(dogs.ExtractionConfig(None, Path("."), None, "y", 0,0,0,1)); with self.assertRaises(FileNotFoundError): h.process_actions([{"action": "delta", "path": "p", "delta_commands": []}])
+    def test_d16_delta_fails_if_reference_bundle_is_missing(self):
+        with self.assertRaises(IOError):
+            dogs.ActionHandler(dogs.ExtractionConfig(None, Path("."), Path("bad.md"), "y", 0,0,0,1))
+    def test_d17_delta_fails_if_file_not_in_reference(self):
+        h = dogs.ActionHandler(dogs.ExtractionConfig(None, Path("."), None, "y", 0,0,0,1))
+        with self.assertRaises(FileNotFoundError):
+            h.process_actions([{"action": "delta", "path": "p", "delta_commands": []}])
     def test_d18_apply_insert_with_empty_content(self): result = self.handler._apply_deltas(self.original, [{"type": "insert", "line_num": 5, "content_lines": []}]); self.assertEqual(result, self.original)
     def test_d19_apply_replace_with_empty_content_is_delete(self): result = self.handler._apply_deltas(self.original, [{"type": "replace", "start": 5, "end": 5, "content_lines": []}]); self.assertEqual(len(result), 9)
     def test_d20_apply_replace_one_line_with_many(self): result = self.handler._apply_deltas(self.original, [{"type": "replace", "start": 5, "end": 5, "content_lines": ["A","B"]}]); self.assertEqual(len(result), 11)
     def test_d21_apply_replace_many_lines_with_one(self): result = self.handler._apply_deltas(self.original, [{"type": "replace", "start": 5, "end": 7, "content_lines": ["A"]}]); self.assertEqual(len(result), 8)
     def test_d22_validate_delete_range(self): self.handler._validate_deltas(self.original, [{"type": "delete_lines", "start": 1, "end": 10}], "p")
-    def test_d23_validate_fails_if_start_greater_than_end(self): with self.assertRaises(ValueError): self.handler._validate_deltas(self.original, [{"type": "replace", "start": 5, "end": 4}], "p")
+    def test_d23_validate_fails_if_start_greater_than_end(self):
+        with self.assertRaises(ValueError):
+            self.handler._validate_deltas(self.original, [{"type": "replace", "start": 5, "end": 4}], "p")
     def test_d24_apply_adjacent_inserts(self): cmds=[{"type":"insert","line_num":2,"content_lines":["A"]},{"type":"insert","line_num":2,"content_lines":["B"]}]; res=self.handler._apply_deltas(self.original,cmds); self.assertEqual(res[2],"A");self.assertEqual(res[3],"B")
     def test_d25_apply_replace_at_file_end(self): result = self.handler._apply_deltas(self.original, [{"type": "replace", "start": 10, "end": 10, "content_lines": ["END"]}]); self.assertEqual(result[-1], "END")
 

@@ -16,8 +16,8 @@ import os
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from dogs_enhanced import FileChange, ChangeSet, FileOperation, EnhancedBundleProcessor
-from cats_enhanced import ProjectAnalyzer, FileTreeNode
+from dogs import FileChange, ChangeSet, FileOperation, BundleProcessor, GIT_AVAILABLE
+from cats import ProjectAnalyzer, FileTreeNode
 from paws_session import Session, SessionStatus, SessionManager, SessionTurn
 
 
@@ -110,7 +110,7 @@ class TestChangeSet(unittest.TestCase):
         self.assertEqual(summary["pending"], 1)
 
 
-class TestEnhancedBundleProcessor(unittest.TestCase):
+class TestBundleProcessor(unittest.TestCase):
     """Test enhanced bundle processor"""
     
     def setUp(self):
@@ -136,7 +136,7 @@ print('hello world')
 ```
 🐕 --- DOGS_END_FILE: test.py ---
 """
-        processor = EnhancedBundleProcessor(self.config)
+        processor = BundleProcessor(self.config)
         changeset = processor.parse_bundle(bundle_content)
         
         self.assertEqual(len(changeset.changes), 1)
@@ -147,7 +147,7 @@ print('hello world')
     
     def test_apply_changes(self):
         """Test applying changes to filesystem"""
-        processor = EnhancedBundleProcessor(self.config)
+        processor = BundleProcessor(self.config)
         
         changeset = ChangeSet()
         change = FileChange(
@@ -360,7 +360,7 @@ def helper():
             "verify": None,
             "auto_accept": True
         }
-        processor = EnhancedBundleProcessor(config)
+        processor = BundleProcessor(config)
         changeset = processor.parse_bundle(bundle_content)
         
         # 3. Accept all changes
@@ -389,7 +389,7 @@ def run_tests():
     # Add all test classes
     suite.addTests(loader.loadTestsFromTestCase(TestFileChange))
     suite.addTests(loader.loadTestsFromTestCase(TestChangeSet))
-    suite.addTests(loader.loadTestsFromTestCase(TestEnhancedBundleProcessor))
+    suite.addTests(loader.loadTestsFromTestCase(TestBundleProcessor))
     suite.addTests(loader.loadTestsFromTestCase(TestProjectAnalyzer))
     suite.addTests(loader.loadTestsFromTestCase(TestSession))
     suite.addTests(loader.loadTestsFromTestCase(TestSessionManager))
