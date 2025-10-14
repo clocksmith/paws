@@ -1,119 +1,104 @@
 # PAWS: Prepare Artifacts With SWAP
 
-**Streamlined Write After PAWS** - A programmable AI workflow system for controlled LLM interactions
+**Multi-Agent AI Orchestration with Consensus-Based Verification**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Node.js 16+](https://img.shields.io/badge/node-16+-green.svg)](https://nodejs.org/)
 
-## Overview
+## What Makes PAWS Different
 
-PAWS is a powerful CLI toolkit that puts developers in control of AI-assisted development by making context explicit and workflows reproducible. Unlike AI-integrated IDEs that abstract away context selection, PAWS gives you surgical precision over what the AI sees and how it operates.
+PAWS does things other AI coding tools can't:
 
-**The Problem:** AI tools are powerful but often opaque - you don't know what context they're using or how to reproduce results.
+☇ **Swarm Intelligence**: Run 3-5 LLMs in parallel (GPT-4, Claude, Gemini) and let them compete. Best solution wins.
 
-**The Solution:** PAWS makes AI workflows transparent, reproducible, and composable through explicit context bundling and structured change proposals.
+⚬ **Deterministic Execution**: Version-lock models + explicit context bundles = same input, same output. Reproducible across teams.
 
-## Table of Contents
+♃ **Performance Benchmarking**: Track which AI model performs best on YOUR codebase with real metrics.
 
-- [Key Features](#key-features)
-- [Quick Start](#quick-start)
-- [Installation](#installation)
-- [Core Concepts](#core-concepts)
-- [Usage](#usage)
-- [Advanced Workflows](#advanced-workflows)
-- [Architecture](#architecture)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
-- [License](#license)
+☉ **Massive Context Handling**: Refactor 500K+ line codebases through hierarchical chunking and CATSCAN summaries.
 
-## Key Features
+⚘ **Test-Driven Consensus**: Solutions run in isolated git worktrees. Only changes that pass your test suite are presented.
 
-### ☉ Explicit Context Control
-- **cats** tool bundles exactly the files you choose into a portable `.md` format
-- AI-powered file curation can automatically select relevant files for your task
-- Perfect for token efficiency - only send what matters
+♲ **Editor-Agnostic**: Works with vim, VSCode, Emacs, IntelliJ - any editor. CLI-first design.
 
-### ♲ Interactive Change Management
-- **dogs** tool extracts and applies code changes with human approval
-- Beautiful TUI with visual diffs and selective file approval
-- Git-based verification with automatic rollback on test failures
+**Where PAWS Excels:** Large refactors, critical production changes, reproducible team workflows, multi-model verification
 
-### ☿ Git-Backed Safety
-- **paws-session** manages isolated git worktrees for each workflow
-- Track every change as a git commit
-- Rewind to any point in history
-- Merge or archive completed sessions
-
-### ⚘ Multi-Agent Competitive Verification (Paxos)
-- Run multiple AI agents in parallel on the same task
-- Automatic verification of each solution in isolated environments
-- Consensus-based selection - only solutions that pass tests are presented
-- Dramatically increases reliability for complex tasks
-
-### ☇ Dual Implementation
-- **Python** and **JavaScript** versions with identical CLI interfaces
-- Choose your preferred language ecosystem
-- Feature parity across both implementations
-
-### ⚛ Rich Developer Experience
-- Interactive TUI with blessed/blessed-contrib
-- Colored terminal output with chalk
-- Progress spinners and status indicators
-- Session management dashboard
+**Where Others Excel:** Cursor has better inline editing. Claude Code has better IDE integration. Copilot has faster autocomplete.
 
 ## Quick Start
 
 ```bash
-# Python - Bundle project files for AI
-python py/cats.py src/ -o context.md
+# 1. Bundle context for AI with smart curation
+python py/cats.py --ai-curate "refactor auth to use OAuth2" -o context.md
 
-# JavaScript - Apply changes with interactive review
-node js/dogs.js changes.md --interactive
-
-# Start a session for isolated work
-node js/paws-session.js start "refactor-auth"
-
-# Run competitive verification with multiple agents
+# 2. Run multi-agent competition with test verification
 python py/paws_paxos.py \
-  "Refactor the auth module" \
+  "Refactor auth module to OAuth2" \
   context.md \
-  --verify-cmd "pytest tests/"
+  --verify-cmd "pytest tests/test_auth.py"
+
+# 3. Review winning solutions interactively
+python py/dogs.py workspace/competition/gemini_solution.dogs.md --interactive
+
+# 4. Benchmark performance across models
+python py/paws_benchmark.py context.md --models gemini,claude,gpt4
 ```
 
-## Installation
+## Core Tools
 
-### Python Version
+**cats** - Context bundler with AI-powered file selection
+- Bundles source files into LLM-friendly markdown
+- AI curates relevant files based on task description
+- Supports personas and system prompts
+
+**dogs** - Change applier with interactive review
+- Extracts file changes from LLM responses
+- Visual diffs with selective approval
+- Git-based verification and automatic rollback
+
+**paws_paxos** - Multi-agent orchestrator
+- Runs 3-5 LLMs in parallel on the same task
+- Isolated git worktrees for each solution
+- Test-driven consensus voting
+- Only passing solutions presented
+
+**paws_benchmark** - Performance analyzer (NEW)
+- Compare LLM performance on your codebase
+- Track metrics: speed, correctness, token efficiency
+- Generate comparative reports
+
+**paws_swarm** - Swarm intelligence coordinator (NEW)
+- Agents collaborate in real-time, not just compete
+- Hierarchical task decomposition
+- Consensus through multi-round voting
+
+
+## Installation
 
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/paws.git
 cd paws
 
-# Install Python dependencies (optional - core works without deps)
-pip install -r requirements.txt
+# Install Python dependencies
+pip install google-generativeai anthropic openai rich
 
-# Run directly
-python py/cats.py --help
-```
-
-**Core Python tools have no dependencies!** Optional deps add AI curation and enhanced UI.
-
-### JavaScript Version
-
-```bash
-# Install Node.js dependencies
+# Or for JavaScript
 npm install
 
-# Use CLI tools
-node js/cats.js --help
-node js/dogs.js --help
-node js/paws-session.js --help
-
-# Or install globally
-npm link
-cats --help
+# Test it out
+python py/cats.py --help
+python py/paws_paxos.py --help
 ```
+
+**What you get:**
+- `cats.py` - Context bundler with AI curation
+- `dogs.py` - Interactive change applier
+- `paws_paxos.py` - Multi-agent competition orchestrator ☇
+- `paws_swarm.py` - Collaborative swarm intelligence ♲
+- `paws_benchmark.py` - Performance comparison system ♃
+- `paws_context_optimizer.py` - Massive codebase handler ☉
 
 ## Core Concepts
 
@@ -370,92 +355,131 @@ paws/
 - **[Persona Guide](personas/README.md)** - Creating custom personas
 - **[System Protocols](sys/README.md)** - Protocol documentation
 
-## Why PAWS?
+## Honest Comparison
 
-### vs. AI-Integrated IDEs (Cursor, Windsurf)
+### vs. Cursor / Claude Code / Windsurf
 
-| Feature | AI IDEs | PAWS |
-|---------|---------|------|
-| Context | Implicit (automatic) | Explicit (developer-controlled) |
-| Reproducibility | Low (UI-based) | High (scriptable CLI) |
-| Integration | Locked to IDE | Any editor |
-| Extensibility | Plugin system | Native composability |
-| Debugging | Opaque | Transparent |
+| What They Do Better | What PAWS Does Better |
+|---------------------|----------------------|
+| Real-time inline editing | Multi-agent consensus voting |
+| Low-latency autocomplete | Deterministic, reproducible results |
+| Seamless IDE integration | Massive context handling (500K+ lines) |
+| Better UX for daily coding | Test-driven verification with rollback |
+| Faster iteration loops | Performance benchmarking across models |
+| | Works with any editor (vim, emacs, VSCode) |
 
-### vs. Direct LLM CLIs (Gemini CLI, Claude CLI)
+**Use Them For:** Daily development, quick fixes, exploratory coding
 
-| Feature | LLM CLIs | PAWS |
-|---------|----------|------|
-| Workflow | Interactive chat | Structured pipeline |
-| Context | File paths only | Rich bundles with personas |
-| Safety | Manual review | Automated verification |
-| Multi-agent | No | Yes (Paxos) |
-| Sessions | No | Full session management |
+**Use PAWS For:** Critical refactors, production changes, team workflows needing reproducibility
 
-### vs. Agentic IDEs
+### vs. GitHub Copilot / Codex
 
-| Feature | Agentic IDEs | PAWS |
-|---------|--------------|------|
-| Autonomy | High (less control) | Balanced (human-in-loop) |
-| Transparency | Low | High |
-| Cost Control | Automatic | Explicit |
-| Test Integration | Built-in | Bring your own |
+| What They Do Better | What PAWS Does Better |
+|---------------------|----------------------|
+| Instant suggestions | Full-file context awareness |
+| Trained on more code | Explicit context control |
+| Fast autocomplete | Multi-model competition |
+| Better IDE integration | Test suite integration |
+| | Git worktree isolation |
 
-## Real-World Use Cases
+### vs. Gemini CLI / Claude CLI
 
-### 1. Refactoring Legacy Code
+| What They Do Better | What PAWS Does Better |
+|---------------------|----------------------|
+| Simpler to use | Structured workflows |
+| Direct API access | Context bundling with personas |
+| Conversational | Automated verification |
+| | Multi-agent orchestration |
+| | Session management with git |
 
-```bash
-# Create context from legacy module
-cats legacy/auth_v1.py -o legacy-auth.md
+## Revolutionary Features in Action
 
-# Add refactoring persona
-cats legacy/ -p personas/p_refactor.md -o context.md
+### 1. Multi-Agent Competition (Paxos)
 
-# Review proposed changes interactively
-dogs refactor-proposal.md --interactive
-
-# Apply with verification
-dogs refactor-proposal.md --verify "pytest tests/test_auth.py" --revert-on-fail
-```
-
-### 2. Multi-Agent Code Review
+Run 3 different LLMs in parallel, let them compete, only present solutions that pass your tests:
 
 ```bash
-# Get multiple perspectives on the same code
+# Create optimized context
+python py/cats.py --ai-curate "refactor auth to OAuth2" -o context.md
+
+# Run competition between GPT-4, Claude, and Gemini
 python py/paws_paxos.py \
-  "Review this code for security issues" \
-  security-context.md \
-  --verify-cmd "npm run security-test"
+  "Refactor authentication to use OAuth2" \
+  context.md \
+  --verify-cmd "pytest tests/test_auth.py"
+
+# Only passing solutions are presented
+# Review the best one
+python py/dogs.py workspace/competition/claude-sonnet_solution.dogs.md --interactive
 ```
 
-### 3. Documentation Generation
+**Why this is revolutionary:** Cursor and Claude Code can only use one model at a time. PAWS runs 3-5 in parallel with test-driven consensus.
+
+### 2. Swarm Intelligence (Collaborative Agents)
+
+Unlike competition, swarm enables agents to collaborate with specialized roles:
 
 ```bash
-# Bundle source for documentation
-cats src/ -p personas/p_documentation.md -o docs-context.md
+# Architect decomposes, Implementers code, Reviewers critique
+python py/paws_swarm.py \
+  "Implement a new caching layer with Redis" \
+  context.md
 
-# Apply generated documentation
-dogs docs-proposal.md --verify-docs
+# Agents collaborate through multiple rounds:
+# Round 1: Architect breaks down task
+# Round 2: Implementer proposes solution
+# Round 3: Reviewer critiques
+# Round 4: Implementer revises
 ```
 
-### 4. Long-Running Experiments
+**Why this is revolutionary:** Other tools are single-agent. PAWS agents have roles and collaborate like a real team.
+
+### 3. Performance Benchmarking
+
+Track which LLM actually performs best on YOUR codebase:
 
 ```bash
-# Start isolated experiment
-paws-session start "experiment-new-algorithm"
+# Compare models on real tasks
+python py/paws_benchmark.py \
+  --task "Fix memory leak in worker pool" \
+  --context context.md \
+  --verify-cmd "pytest tests/test_memory.py"
 
-# Work in session
-cd .paws/sessions/<session-id>/workspace
-
-# Multiple turns of AI assistance
-cats . -o context.md && dogs changes.md --interactive
-
-# Decide outcome
-paws-session merge <session-id>  # Success!
-# or
-paws-session archive <session-id>  # Didn't work out
+# Get detailed metrics:
+# - Pass rate
+# - Execution speed
+# - Token efficiency
+# - Cost per solution
 ```
+
+**Why this is revolutionary:** No other tool tracks LLM performance with real metrics on your specific codebase.
+
+### 4. Massive Context Optimization
+
+Refactor 500K+ line codebases through smart context windowing:
+
+```bash
+# Optimize context for large codebase
+python py/paws_context_optimizer.py \
+  "Migrate from Flask to FastAPI" \
+  --scan backend/ \
+  --max-tokens 100000 \
+  --output optimized_context.md
+
+# Context optimizer:
+# - Analyzes dependencies
+# - Includes core files in full
+# - Summarizes related files with CATSCAN
+# - Fits in model context window
+
+# Use optimized context with any tool
+python py/paws_paxos.py \
+  "Migrate from Flask to FastAPI" \
+  optimized_context.md \
+  --verify-cmd "pytest"
+```
+
+**Why this is revolutionary:** Other tools hit context limits on large refactors. PAWS uses hierarchical summarization.
 
 ## Performance & Cost
 

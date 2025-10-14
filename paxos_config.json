@@ -1,0 +1,28 @@
+{
+  "competitors": [
+    {
+      "name": "gemini-pro",
+      "model_id": "gemini-pro",
+      "provider": "gemini",
+      "persona": "personas/p_refactor.md",
+      "temperature": 0.7,
+      "max_tokens": 4000
+    },
+    {
+      "name": "claude-sonnet",
+      "model_id": "claude-3-sonnet-20240229",
+      "provider": "claude",
+      "persona": "personas/p_refactor.md",
+      "temperature": 0.7,
+      "max_tokens": 4000
+    },
+    {
+      "name": "gpt4-turbo",
+      "model_id": "gpt-4-turbo-preview",
+      "provider": "openai",
+      "persona": "personas/p_refactor.md",
+      "temperature": 0.7,
+      "max_tokens": 4000
+    }
+  ]
+}
