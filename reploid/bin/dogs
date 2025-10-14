@@ -1,0 +1,581 @@
+#!/usr/bin/env node
+
+/**
+ * PAWS dogs CLI - Apply Change Bundle
+ * Applies changes from a dogs.md bundle with verification and rollback
+ */
+
+const fs = require('fs').promises;
+const path = require('path');
+const { execSync } = require('child_process');
+
+// Load configuration
+let userConfig = {};
+try {
+  const { getConfig } = require('../utils/config-loader.js');
+  const configLoader = getConfig();
+  configLoader.load();
+  userConfig = configLoader.get('cli', {});
+} catch (err) {
+  // Config loader not available, use defaults
+}
+
+// Parse command line arguments
+const args = process.argv.slice(2);
+
+// Configuration
+const config = {
+  input: 'dogs.md',
+  verify: null,
+  dryRun: false,
+  force: false,
+  verbose: userConfig.verbose || false,
+  help: false,
+  validate: false,
+  diff: false
+};
+
+// Parse arguments
+for (let i = 0; i < args.length; i++) {
+  switch (args[i]) {
+    case 'validate':
+      config.validate = true;
+      if (args[i + 1] && !args[i + 1].startsWith('-')) {
+        config.input = args[++i];
+      }
+      break;
+    case 'diff':
+      config.diff = true;
+      if (args[i + 1] && !args[i + 1].startsWith('-')) {
+        config.input = args[++i];
+      }
+      break;
+    case '-i':
+    case '--input':
+      config.input = args[++i];
+      break;
+    case '-v':
+    case '--verify':
+      config.verify = args[++i];
+      break;
+    case '-d':
+    case '--dry-run':
+      config.dryRun = true;
+      break;
+    case '-f':
+    case '--force':
+      config.force = true;
+      break;
+    case '--verbose':
+      config.verbose = true;
+      break;
+    case '-h':
+    case '--help':
+      config.help = true;
+      break;
+    default:
+      if (!args[i].startsWith('-')) {
+        config.input = args[i];
+      }
+  }
+}
+
+// Show help
+if (config.help) {
+  console.log(`
+PAWS dogs CLI - Apply Change Bundle
+
+Usage: dogs [options] [bundle.md]
+       dogs validate <bundle>
+       dogs diff <bundle>
+
+Commands:
+  validate <bundle>      Validate dogs bundle format
+  diff <bundle>          Show detailed diff of proposed changes
+
+Options:
+  -i, --input <file>     Input bundle file (default: dogs.md)
+  -v, --verify <cmd>     Verification command to run after changes
+  -d, --dry-run         Preview changes without applying
+  -f, --force          Skip confirmation prompts
+  --verbose            Verbose output
+  -h, --help          Show help
+
+Examples:
+  dogs                          # Apply dogs.md
+  dogs changes.dogs.md         # Apply specific bundle
+  dogs validate dogs.md        # Validate bundle format
+  dogs diff changes.dogs.md    # Show detailed changes
+  dogs -v "npm test" -d        # Dry run with test verification
+  dogs --verify "npm run lint" # Apply with linting verification
+`);
+  process.exit(0);
+}
+
+// Logging helper
+const log = (msg) => {
+  if (config.verbose) {
+    console.error(`[dogs] ${msg}`);
+  }
+};
+
+// Parse dogs.md bundle
+const parseDogsBundle = async (content) => {
+  const changes = [];
+  const blocks = content.split('```paws-change');
+
+  for (let i = 1; i < blocks.length; i++) {
+    const block = blocks[i];
+    const metaEnd = block.indexOf('```');
+    if (metaEnd === -1) continue;
+
+    const meta = block.substring(0, metaEnd).trim();
+    const operationMatch = meta.match(/operation:\s*(\w+)/);
+    const filePathMatch = meta.match(/file_path:\s*(.+)/);
+
+    if (!operationMatch || !filePathMatch) {
+      log(`Skipping malformed change block at position ${i}. Expected format:\n` +
+          '```paws-change\noperation: CREATE|MODIFY|DELETE\nfile_path: /path/to/file\n```');
+      continue;
+    }
+
+    const operation = operationMatch[1];
+    const filePath = filePathMatch[1].trim();
+
+    let newContent = '';
+    if (operation !== 'DELETE') {
+      const contentStart = block.indexOf('```', metaEnd + 3);
+      if (contentStart !== -1) {
+        const actualStart = contentStart + 3;
+        const contentEnd = block.indexOf('```', actualStart);
+        if (contentEnd !== -1) {
+          let startIdx = actualStart;
+          if (block[startIdx] === '\n') startIdx++;
+          newContent = block.substring(startIdx, contentEnd);
+        }
+      }
+    }
+
+    changes.push({ operation, filePath, newContent });
+  }
+
+  return changes;
+};
+
+// Create backup
+const createBackup = async (filePath) => {
+  try {
+    const content = await fs.readFile(filePath, 'utf8');
+    const backupPath = `${filePath}.backup.${Date.now()}`;
+    await fs.writeFile(backupPath, content);
+    return backupPath;
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      throw err;
+    }
+    return null;
+  }
+};
+
+// Apply a single change
+const applyChange = async (change) => {
+  const { operation, filePath, newContent } = change;
+
+  switch (operation) {
+    case 'CREATE':
+      // Check if file exists
+      try {
+        await fs.access(filePath);
+        if (!config.force) {
+          throw new Error(
+            `File already exists: ${filePath}\n` +
+            `Cannot CREATE because file exists. Use --force to overwrite, or change operation to MODIFY.`
+          );
+        }
+      } catch (err) {
+        if (err.code !== 'ENOENT') throw err;
+      }
+
+      // Create directory if needed
+      const dir = path.dirname(filePath);
+      await fs.mkdir(dir, { recursive: true });
+
+      // Write new file
+      await fs.writeFile(filePath, newContent);
+      log(`Created ${filePath}`);
+      break;
+
+    case 'MODIFY':
+      // Backup existing file
+      const backup = await createBackup(filePath);
+      if (backup) {
+        log(`Backed up to ${backup}`);
+      }
+
+      // Write modified content
+      await fs.writeFile(filePath, newContent);
+      log(`Modified ${filePath}`);
+      break;
+
+    case 'DELETE':
+      // Backup before deletion
+      const deleteBackup = await createBackup(filePath);
+      if (deleteBackup) {
+        log(`Backed up to ${deleteBackup}`);
+      }
+
+      // Delete file
+      await fs.unlink(filePath);
+      log(`Deleted ${filePath}`);
+      break;
+
+    default:
+      throw new Error(
+        `Unknown operation: ${operation}\n` +
+        `Valid operations are: CREATE, MODIFY, DELETE\n` +
+        `Check the operation field in your dogs.md bundle for typos.`
+      );
+  }
+};
+
+// Run verification command
+const runVerification = async () => {
+  if (!config.verify) return true;
+
+  try {
+    console.log(`Running verification: ${config.verify}`);
+    execSync(config.verify, { stdio: 'inherit' });
+    console.log('✓ Verification passed');
+    return true;
+  } catch (err) {
+    console.error('✗ Verification failed');
+    return false;
+  }
+};
+
+// Display change summary
+const displaySummary = (changes) => {
+  const operations = {
+    CREATE: [],
+    MODIFY: [],
+    DELETE: []
+  };
+
+  for (const change of changes) {
+    operations[change.operation].push(change.filePath);
+  }
+
+  console.log('\nChange Summary:');
+  if (operations.CREATE.length > 0) {
+    console.log(`  Create: ${operations.CREATE.length} files`);
+    operations.CREATE.forEach(f => console.log(`    + ${f}`));
+  }
+  if (operations.MODIFY.length > 0) {
+    console.log(`  Modify: ${operations.MODIFY.length} files`);
+    operations.MODIFY.forEach(f => console.log(`    ~ ${f}`));
+  }
+  if (operations.DELETE.length > 0) {
+    console.log(`  Delete: ${operations.DELETE.length} files`);
+    operations.DELETE.forEach(f => console.log(`    - ${f}`));
+  }
+  console.log('');
+};
+
+// Prompt for confirmation
+const promptConfirmation = async () => {
+  if (config.force || config.dryRun) return true;
+
+  const readline = require('readline').createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  return new Promise((resolve) => {
+    readline.question('Apply these changes? (y/N) ', (answer) => {
+      readline.close();
+      resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes');
+    });
+  });
+};
+
+// Validate dogs bundle
+const validateDogsBundle = (content) => {
+  const errors = [];
+
+  // Check for Change Proposal header
+  if (!content.includes('# Change Proposal') && !content.includes('```paws-change')) {
+    errors.push('Missing "# Change Proposal" header or ```paws-change blocks');
+  }
+
+  // Parse changes
+  const changeRegex = /```paws-change\s+([\s\S]*?)```/g;
+  let changeCount = 0;
+  let match;
+
+  while ((match = changeRegex.exec(content)) !== null) {
+    changeCount++;
+    const meta = match[1];
+
+    const operationMatch = meta.match(/operation:\s*(\w+)/);
+    const filePathMatch = meta.match(/file_path:\s*(.+)/);
+
+    if (!operationMatch) {
+      errors.push(`Change ${changeCount}: Missing "operation:" field`);
+    } else {
+      const operation = operationMatch[1];
+      if (!['CREATE', 'MODIFY', 'DELETE'].includes(operation)) {
+        errors.push(`Change ${changeCount}: Invalid operation "${operation}" (must be CREATE, MODIFY, or DELETE)`);
+      }
+    }
+
+    if (!filePathMatch) {
+      errors.push(`Change ${changeCount}: Missing "file_path:" field`);
+    } else {
+      const filePath = filePathMatch[1].trim();
+      if (filePath.includes('..')) {
+        errors.push(`Change ${changeCount}: Path contains ".." (potential security issue): ${filePath}`);
+      }
+    }
+  }
+
+  if (changeCount === 0) {
+    errors.push('No change blocks found. Expected format: ```paws-change\\noperation: CREATE\\nfile_path: /path\\n```');
+  }
+
+  return { errors, changeCount };
+};
+
+// Show detailed diff
+const showDetailedDiff = async (changes) => {
+  console.log('\n📊 Detailed Diff:\n');
+
+  const stats = {
+    create: changes.filter(c => c.operation === 'CREATE').length,
+    modify: changes.filter(c => c.operation === 'MODIFY').length,
+    delete: changes.filter(c => c.operation === 'DELETE').length
+  };
+
+  console.log(`Summary: ${stats.create} CREATE, ${stats.modify} MODIFY, ${stats.delete} DELETE\n`);
+
+  for (const change of changes) {
+    console.log(`${'='.repeat(70)}`);
+    console.log(`${change.operation}: ${change.filePath}`);
+    console.log(`${'='.repeat(70)}`);
+
+    if (change.operation === 'CREATE') {
+      const lines = change.newContent.split('\n').length;
+      console.log(`\n  📝 New file with ${lines} lines\n`);
+      console.log('  Preview (first 10 lines):');
+      const preview = change.newContent.split('\n').slice(0, 10);
+      preview.forEach((line, i) => {
+        console.log(`    ${String(i + 1).padStart(3, ' ')} + ${line}`);
+      });
+      if (lines > 10) {
+        console.log(`    ... (${lines - 10} more lines)`);
+      }
+    } else if (change.operation === 'MODIFY') {
+      try {
+        const oldContent = await fs.readFile(change.filePath, 'utf8');
+        const oldLines = oldContent.split('\n');
+        const newLines = change.newContent.split('\n');
+
+        console.log(`\n  📝 Modified: ${oldLines.length} → ${newLines.length} lines\n`);
+
+        // Simple line-by-line diff (first 20 lines)
+        const maxLines = Math.min(20, Math.max(oldLines.length, newLines.length));
+        for (let i = 0; i < maxLines; i++) {
+          const oldLine = oldLines[i] || '';
+          const newLine = newLines[i] || '';
+
+          if (oldLine !== newLine) {
+            if (oldLine) {
+              console.log(`    ${String(i + 1).padStart(3, ' ')} - ${oldLine}`);
+            }
+            if (newLine) {
+              console.log(`    ${String(i + 1).padStart(3, ' ')} + ${newLine}`);
+            }
+          }
+        }
+        if (Math.max(oldLines.length, newLines.length) > 20) {
+          console.log(`    ... (more changes below)`);
+        }
+      } catch (err) {
+        if (err.code === 'ENOENT') {
+          console.log(`\n  ⚠️  File not found: ${change.filePath}`);
+          console.log(`  Tip: Change operation to CREATE instead of MODIFY`);
+        } else {
+          console.log(`\n  ⚠️  Cannot read file: ${err.message}`);
+        }
+      }
+    } else if (change.operation === 'DELETE') {
+      try {
+        const content = await fs.readFile(change.filePath, 'utf8');
+        const lines = content.split('\n').length;
+        console.log(`\n  🗑️  Deleting file (${lines} lines)\n`);
+      } catch (err) {
+        console.log(`\n  ⚠️  File not found: ${change.filePath}`);
+      }
+    }
+
+    console.log();
+  }
+};
+
+// Main execution
+const main = async () => {
+  try {
+    // Handle validate command
+    if (config.validate) {
+      log(`Validating bundle: ${config.input}`);
+
+      try {
+        const content = await fs.readFile(config.input, 'utf8');
+        const { errors, changeCount } = validateDogsBundle(content);
+
+        if (errors.length === 0) {
+          console.log('✓ Bundle is valid');
+
+          // Show summary
+          const changes = await parseDogsBundle(content);
+          console.log(`\n📝 Bundle contains ${changeCount} changes:`);
+          changes.forEach(c => console.log(`  ${c.operation}: ${c.filePath}`));
+
+          const stats = await fs.stat(config.input);
+          console.log(`\nSize: ${(stats.size / 1024).toFixed(1)}KB`);
+        } else {
+          console.log('✗ Bundle has errors:\n');
+          errors.forEach(err => console.log(`  ❌ ${err}`));
+          console.log('\nTip: Check the bundle format matches PAWS dogs.md specification');
+          process.exit(1);
+        }
+      } catch (err) {
+        if (err.code === 'ENOENT') {
+          console.error(`❌ Bundle file not found: ${config.input}`);
+          console.error('Tip: Check that the file path is correct');
+        } else {
+          console.error(`❌ Error reading bundle: ${err.message}`);
+        }
+        process.exit(1);
+      }
+      return;
+    }
+
+    // Handle diff command
+    if (config.diff) {
+      log(`Showing diff for bundle: ${config.input}`);
+
+      try {
+        const content = await fs.readFile(config.input, 'utf8');
+        const changes = await parseDogsBundle(content);
+
+        if (changes.length === 0) {
+          console.error('❌ No valid changes found in bundle');
+          process.exit(1);
+        }
+
+        await showDetailedDiff(changes);
+      } catch (err) {
+        if (err.code === 'ENOENT') {
+          console.error(`❌ Bundle file not found: ${config.input}`);
+        } else {
+          console.error(`❌ Error: ${err.message}`);
+        }
+        process.exit(1);
+      }
+      return;
+    }
+
+    // Normal apply mode
+    // Read bundle
+    log(`Reading bundle from ${config.input}...`);
+    const content = await fs.readFile(config.input, 'utf8');
+
+    // Parse changes
+    log('Parsing changes...');
+    const changes = await parseDogsBundle(content);
+
+    if (changes.length === 0) {
+      console.error('❌ No valid changes found in bundle: ' + config.input);
+      console.error('\nPossible issues:');
+      console.error('  • Bundle file may be empty or malformed');
+      console.error('  • Missing ```paws-change blocks with operation and file_path');
+      console.error('  • Check that the bundle follows PAWS dogs.md format\n');
+      console.error('Expected format example:');
+      console.error('  ```paws-change');
+      console.error('  operation: MODIFY');
+      console.error('  file_path: src/example.js');
+      console.error('  ```');
+      console.error('  ```');
+      console.error('  // file content here');
+      console.error('  ```\n');
+      process.exit(1);
+    }
+
+    // Display summary
+    displaySummary(changes);
+
+    if (config.dryRun) {
+      console.log('(Dry run - no changes applied)');
+      process.exit(0);
+    }
+
+    // Confirm changes
+    const confirmed = await promptConfirmation();
+    if (!confirmed) {
+      console.log('Aborted');
+      process.exit(0);
+    }
+
+    // Apply changes
+    const appliedChanges = [];
+    for (const change of changes) {
+      try {
+        await applyChange(change);
+        appliedChanges.push(change);
+      } catch (err) {
+        console.error(`\n❌ Failed to apply ${change.operation} to ${change.filePath}`);
+        console.error(`   Error: ${err.message}`);
+        if (err.code === 'ENOENT') {
+          console.error(`   Tip: File or directory doesn't exist. Check the path is correct.`);
+        } else if (err.code === 'EACCES') {
+          console.error(`   Tip: Permission denied. Check file permissions.`);
+        } else if (err.code === 'EISDIR') {
+          console.error(`   Tip: Path is a directory, not a file.`);
+        }
+        if (!config.force) {
+          console.error('\n⚠️  Stopping due to error. Use --force to continue despite errors.\n');
+          process.exit(1);
+        }
+      }
+    }
+
+    console.log(`\n✓ Applied ${appliedChanges.length} changes`);
+
+    // Run verification
+    if (config.verify) {
+      const passed = await runVerification();
+      if (!passed) {
+        console.error('\nVerification failed! Changes were applied but may need review.');
+        process.exit(1);
+      }
+    }
+
+  } catch (err) {
+    console.error(`\n❌ Error: ${err.message}`);
+    if (err.code === 'ENOENT' && err.path === config.input) {
+      console.error(`\nBundle file not found: ${config.input}`);
+      console.error('Tip: Check the file path is correct and the file exists.');
+      console.error('Example: dogs my-changes.dogs.md\n');
+    } else if (err.code === 'EACCES') {
+      console.error('\nPermission denied. Check you have read/write access to the files.\n');
+    }
+    process.exit(1);
+  }
+};
+
+// Run if executed directly
+if (require.main === module) {
+  main();
+}
+
+module.exports = { parseDogsBundle, applyChange };

@@ -1,0 +1,530 @@
+/* VFS Explorer Styles */
+
+.vfs-explorer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: rgba(0, 20, 40, 0.8);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.vfs-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(0, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+}
+
+.vfs-search {
+  flex: 1;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  border-radius: 4px;
+  color: #00ffff;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.vfs-search:focus {
+  outline: none;
+  border-color: #00ffff;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+}
+
+.vfs-search::placeholder {
+  color: rgba(0, 255, 255, 0.5);
+}
+
+.vfs-toolbar button {
+  padding: 6px 12px;
+  background: rgba(0, 255, 255, 0.1);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  border-radius: 4px;
+  color: #00ffff;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.vfs-toolbar button:hover {
+  background: rgba(0, 255, 255, 0.2);
+  border-color: #00ffff;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+}
+
+.vfs-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.vfs-tree::-webkit-scrollbar {
+  width: 8px;
+}
+
+.vfs-tree::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.vfs-tree::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.vfs-tree::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 255, 0.5);
+}
+
+.vfs-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.15s;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.vfs-item:hover {
+  background: rgba(0, 255, 255, 0.15);
+}
+
+.vfs-item.selected {
+  background: rgba(0, 255, 255, 0.25);
+  border-left: 2px solid #00ffff;
+}
+
+.vfs-item.highlight .vfs-name {
+  background: rgba(255, 255, 0, 0.3);
+  color: #ffff00;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+.vfs-folder-header {
+  font-weight: 600;
+  color: #00ffff;
+}
+
+.vfs-file {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.vfs-expand {
+  display: inline-block;
+  width: 16px;
+  text-align: center;
+  font-size: 10px;
+  color: rgba(0, 255, 255, 0.7);
+}
+
+.vfs-icon {
+  font-size: 14px;
+  min-width: 20px;
+}
+
+.vfs-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vfs-count {
+  font-size: 11px;
+  color: rgba(0, 255, 255, 0.6);
+  margin-left: 4px;
+}
+
+.vfs-size {
+  font-size: 11px;
+  color: rgba(0, 255, 255, 0.6);
+  margin-left: auto;
+}
+
+.vfs-children.collapsed {
+  display: none;
+}
+
+.vfs-children.expanded {
+  display: block;
+}
+
+.vfs-stats {
+  padding: 8px;
+  text-align: center;
+  font-size: 11px;
+  color: rgba(0, 255, 255, 0.6);
+  background: rgba(0, 255, 255, 0.05);
+  border-top: 1px solid rgba(0, 255, 255, 0.2);
+}
+
+/* File Viewer Modal */
+
+.vfs-file-viewer-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.vfs-file-viewer-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+}
+
+.vfs-file-viewer-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 90%;
+  max-width: 1200px;
+  height: 80vh;
+  background: rgba(0, 20, 40, 0.95);
+  border: 2px solid rgba(0, 255, 255, 0.5);
+  border-radius: 8px;
+  box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.vfs-file-viewer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(0, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+}
+
+.vfs-file-viewer-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #00ffff;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.vfs-file-viewer-close {
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid rgba(255, 0, 0, 0.5);
+  border-radius: 4px;
+  color: #ff6666;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.vfs-file-viewer-close:hover {
+  background: rgba(255, 0, 0, 0.2);
+  border-color: #ff0000;
+  box-shadow: 0 0 8px rgba(255, 0, 0, 0.3);
+}
+
+.vfs-file-viewer-meta {
+  padding: 8px 16px;
+  font-size: 12px;
+  color: rgba(0, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+}
+
+.vfs-file-viewer-body {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.vfs-file-viewer-body::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.vfs-file-viewer-body::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.vfs-file-viewer-body::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 255, 0.3);
+  border-radius: 6px;
+}
+
+.vfs-file-viewer-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 255, 0.5);
+}
+
+.vfs-file-viewer-body pre {
+  margin: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #ffffff;
+}
+
+.vfs-file-viewer-body code {
+  display: block;
+  white-space: pre;
+  color: #ffffff;
+}
+
+.vfs-file-viewer-footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(0, 255, 255, 0.1);
+  border-top: 1px solid rgba(0, 255, 255, 0.3);
+}
+
+.vfs-file-viewer-footer button {
+  padding: 8px 16px;
+  background: rgba(0, 255, 255, 0.1);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  border-radius: 4px;
+  color: #00ffff;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.vfs-file-viewer-footer button:hover {
+  background: rgba(0, 255, 255, 0.2);
+  border-color: #00ffff;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+}
+
+/* ========================================
+   MOBILE RESPONSIVE DESIGN
+   ======================================== */
+
+/* Tablet breakpoint */
+@media (max-width: 1024px) {
+  .vfs-toolbar {
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .vfs-item {
+    padding: 3px 6px;
+    font-size: 12px;
+  }
+
+  .vfs-file-viewer-content {
+    width: 92%;
+    height: 85vh;
+  }
+}
+
+/* Mobile breakpoint */
+@media (max-width: 768px) {
+  .vfs-explorer {
+    font-size: 12px;
+  }
+
+  .vfs-toolbar {
+    flex-wrap: wrap;
+    padding: 6px;
+  }
+
+  .vfs-search {
+    min-width: 100%;
+    flex-basis: 100%;
+    order: 1;
+    font-size: 12px;
+  }
+
+  .vfs-toolbar button {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+
+  .vfs-tree {
+    font-size: 11px;
+  }
+
+  .vfs-item {
+    padding: 4px 6px;
+    gap: 4px;
+  }
+
+  .vfs-icon {
+    font-size: 12px;
+    min-width: 18px;
+  }
+
+  .vfs-size,
+  .vfs-count {
+    font-size: 10px;
+  }
+
+  .vfs-stats {
+    padding: 6px;
+    font-size: 10px;
+  }
+
+  /* File viewer modal */
+  .vfs-file-viewer-content {
+    width: 95%;
+    height: 90vh;
+  }
+
+  .vfs-file-viewer-header {
+    padding: 10px 12px;
+  }
+
+  .vfs-file-viewer-title {
+    font-size: 12px;
+    gap: 6px;
+  }
+
+  .vfs-file-viewer-meta {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+
+  .vfs-file-viewer-body {
+    padding: 12px;
+  }
+
+  .vfs-file-viewer-body pre {
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  .vfs-file-viewer-footer {
+    padding: 10px 12px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .vfs-file-viewer-footer button {
+    padding: 6px 12px;
+    font-size: 12px;
+    flex: 1;
+    min-width: 80px;
+  }
+}
+
+/* Small mobile breakpoint */
+@media (max-width: 480px) {
+  .vfs-toolbar button {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+
+  .vfs-item {
+    padding: 3px 4px;
+    font-size: 10px;
+  }
+
+  .vfs-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+  }
+
+  .vfs-file-viewer-content {
+    width: 98%;
+    height: 95vh;
+    border-radius: 4px;
+  }
+
+  .vfs-file-viewer-title {
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .vfs-file-viewer-body {
+    padding: 8px;
+  }
+
+  .vfs-file-viewer-body pre {
+    font-size: 10px;
+    line-height: 1.4;
+  }
+
+  .vfs-file-viewer-footer button {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+}
+
+/* Touch optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .vfs-item {
+    min-height: 36px;
+    align-items: center;
+  }
+
+  .vfs-toolbar button {
+    min-height: 36px;
+    min-width: 36px;
+  }
+
+  .vfs-file-viewer-close {
+    min-height: 40px;
+    min-width: 40px;
+  }
+
+  .vfs-file-viewer-footer button {
+    min-height: 40px;
+  }
+
+  /* Better scroll */
+  .vfs-tree {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .vfs-file-viewer-body {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Landscape mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+  .vfs-file-viewer-content {
+    height: 95vh;
+  }
+
+  .vfs-file-viewer-body pre {
+    font-size: 10px;
+  }
+}

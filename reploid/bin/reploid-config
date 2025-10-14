@@ -1,0 +1,233 @@
+#!/usr/bin/env node
+
+/**
+ * REPLOID Configuration Manager
+ * Manage .reploidrc.json configuration files
+ */
+
+const { getConfig } = require('../utils/config-loader.js');
+const fs = require('fs');
+const path = require('path');
+
+const args = process.argv.slice(2);
+const command = args[0];
+
+const showHelp = () => {
+  console.log(`
+REPLOID Configuration Manager
+
+Usage: reploid-config <command> [options]
+
+Commands:
+  init                 Create a new .reploidrc.json in current directory
+  show [key]          Show configuration (optionally filter by key)
+  get <key>           Get a specific configuration value
+  set <key> <value>   Set a configuration value
+  path                Show path to loaded config file
+  validate            Validate configuration file
+  help                Show this help message
+
+Examples:
+  reploid-config init
+  reploid-config show
+  reploid-config show api
+  reploid-config get api.provider
+  reploid-config set api.timeout 60000
+  reploid-config path
+  reploid-config validate
+
+Environment Variables:
+  Configuration values can use ${VAR_NAME} syntax to reference environment variables.
+  Example: "geminiKey": "\${GEMINI_API_KEY}"
+`);
+};
+
+const init = async () => {
+  const targetPath = path.join(process.cwd(), '.reploidrc.json');
+
+  if (fs.existsSync(targetPath)) {
+    console.error(`Error: Configuration file already exists at ${targetPath}`);
+    console.error('Remove it first or edit it directly.');
+    process.exit(1);
+  }
+
+  try {
+    const config = getConfig();
+    await config.createDefault(targetPath);
+    console.log(`✅ Created configuration file: ${targetPath}`);
+    console.log('');
+    console.log('Next steps:');
+    console.log('  1. Edit .reploidrc.json to customize settings');
+    console.log('  2. Set environment variables (e.g., GEMINI_API_KEY)');
+    console.log('  3. Run `reploid-config validate` to check your config');
+  } catch (err) {
+    console.error(`Error creating config: ${err.message}`);
+    process.exit(1);
+  }
+};
+
+const show = async (filterKey) => {
+  try {
+    const config = getConfig();
+    await config.load();
+
+    let data = filterKey ? config.get(filterKey) : config.getAll();
+
+    if (data === undefined) {
+      console.error(`Key not found: ${filterKey}`);
+      process.exit(1);
+    }
+
+    console.log(JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.error(`Error: ${err.message}`);
+    process.exit(1);
+  }
+};
+
+const get = async (key) => {
+  if (!key) {
+    console.error('Error: Key is required');
+    console.error('Usage: reploid-config get <key>');
+    process.exit(1);
+  }
+
+  try {
+    const config = getConfig();
+    await config.load();
+
+    const value = config.get(key);
+
+    if (value === undefined) {
+      console.error(`Key not found: ${key}`);
+      process.exit(1);
+    }
+
+    console.log(value);
+  } catch (err) {
+    console.error(`Error: ${err.message}`);
+    process.exit(1);
+  }
+};
+
+const set = async (key, value) => {
+  if (!key || value === undefined) {
+    console.error('Error: Key and value are required');
+    console.error('Usage: reploid-config set <key> <value>');
+    process.exit(1);
+  }
+
+  try {
+    const config = getConfig();
+    await config.load();
+
+    // Try to parse value as JSON
+    let parsedValue = value;
+    try {
+      parsedValue = JSON.parse(value);
+    } catch {
+      // Not JSON, use as string
+    }
+
+    config.set(key, parsedValue);
+    await config.save();
+
+    console.log(`✅ Set ${key} = ${JSON.stringify(parsedValue)}`);
+  } catch (err) {
+    console.error(`Error: ${err.message}`);
+    process.exit(1);
+  }
+};
+
+const showPath = async () => {
+  try {
+    const config = getConfig();
+    await config.load();
+
+    const configPath = config.getConfigPath();
+
+    if (configPath) {
+      console.log(configPath);
+    } else {
+      console.log('Using default configuration (no file loaded)');
+    }
+  } catch (err) {
+    console.error(`Error: ${err.message}`);
+    process.exit(1);
+  }
+};
+
+const validate = async () => {
+  try {
+    const config = getConfig();
+    await config.load();
+
+    console.log('✅ Configuration is valid');
+
+    const configPath = config.getConfigPath();
+    if (configPath) {
+      console.log(`   File: ${configPath}`);
+    }
+
+    // Check for common issues
+    const geminiKey = config.get('api.geminiKey');
+    if (!geminiKey || geminiKey.includes('${')) {
+      console.warn('⚠️  Warning: Gemini API key not set or contains unexpanded variable');
+    }
+
+    const port = config.get('server.port');
+    if (port && (port < 1024 || port > 65535)) {
+      console.warn(`⚠️  Warning: Port ${port} may require elevated privileges or be invalid`);
+    }
+
+  } catch (err) {
+    console.error(`❌ Configuration is invalid: ${err.message}`);
+    process.exit(1);
+  }
+};
+
+// Main command router
+(async () => {
+  try {
+    switch (command) {
+      case 'init':
+        await init();
+        break;
+
+      case 'show':
+        await show(args[1]);
+        break;
+
+      case 'get':
+        await get(args[1]);
+        break;
+
+      case 'set':
+        await set(args[1], args[2]);
+        break;
+
+      case 'path':
+        await showPath();
+        break;
+
+      case 'validate':
+        await validate();
+        break;
+
+      case 'help':
+      case '--help':
+      case '-h':
+      case undefined:
+        showHelp();
+        break;
+
+      default:
+        console.error(`Unknown command: ${command}`);
+        console.error('Run `reploid-config help` for usage information');
+        process.exit(1);
+    }
+  } catch (err) {
+    console.error(`Fatal error: ${err.message}`);
+    process.exit(1);
+  }
+})();

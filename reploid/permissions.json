@@ -1,0 +1,20 @@
+
+{
+  "version": 1,
+  "policies": [
+    {
+      "tool": "read",
+      "rule": "allow"
+    },
+    {
+      "tool": "write",
+      "rule": "ask",
+      "description": "Allowing the agent to write or modify files can have unintended consequences. Please review the requested path and content carefully."
+    },
+    {
+        "tool": "bash",
+        "rule": "deny",
+        "description": "Executing shell commands is disabled by default for security reasons."
+    }
+  ]
+}

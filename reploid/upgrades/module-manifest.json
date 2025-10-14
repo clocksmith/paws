@@ -1,0 +1,152 @@
+{
+  "version": "1.0.0",
+  "description": "Module loading manifest for REPLOID agent",
+  "loadGroups": [
+    {
+      "level": 0,
+      "description": "Pure utilities (no dependencies)",
+      "modules": [
+        {
+          "id": "Utils",
+          "path": "/modules/utils.js",
+          "description": "Core utilities and error classes"
+        },
+        {
+          "id": "AgentLogicPureHelpers",
+          "path": "/modules/agent-logic-pure.js",
+          "description": "Pure functions for agent logic"
+        },
+        {
+          "id": "StateHelpersPure",
+          "path": "/modules/state-helpers-pure.js",
+          "description": "Pure functions for state management"
+        },
+        {
+          "id": "ToolRunnerPureHelpers",
+          "path": "/modules/tool-runner-pure-helpers.js",
+          "description": "Pure functions for tool execution"
+        }
+      ]
+    },
+    {
+      "level": 1,
+      "description": "Core storage and state services",
+      "modules": [
+        {
+          "id": "Storage",
+          "path": "/modules/storage-indexeddb.js",
+          "description": "IndexedDB storage backend"
+        },
+        {
+          "id": "StateManager",
+          "path": "/modules/state-manager.js",
+          "description": "Central state management"
+        }
+      ]
+    },
+    {
+      "level": 2,
+      "description": "Application services",
+      "modules": [
+        {
+          "id": "ApiClient",
+          "path": "/modules/api-client.js",
+          "description": "Gemini API client"
+        },
+        {
+          "id": "ToolRunner",
+          "path": "/modules/tool-runner.js",
+          "description": "Tool execution engine"
+        }
+      ]
+    },
+    {
+      "level": 3,
+      "description": "High-level components",
+      "modules": [
+        {
+          "id": "UI",
+          "path": "/modules/ui-manager.js",
+          "description": "User interface manager"
+        },
+        {
+          "id": "CycleLogic",
+          "path": "/modules/agent-cycle.js",
+          "description": "Agent cognitive cycle"
+        }
+      ]
+    }
+  ],
+  "optionalModules": [
+    {
+      "id": "ToolEvaluator",
+      "path": "/modules/tool-evaluator.js",
+      "description": "Self-evaluation tool package",
+      "requiredUpgrade": "EVAL"
+    },
+    {
+      "id": "MetaToolCreator",
+      "path": "/modules/meta-tool-creator.js",
+      "description": "Meta-tool creation patterns",
+      "requiredUpgrade": "MTCP"
+    },
+    {
+      "id": "GoalModifier",
+      "path": "/modules/goal-modifier.js",
+      "description": "Goal modification mechanisms",
+      "requiredUpgrade": "GMOD"
+    },
+    {
+      "id": "BlueprintCreator",
+      "path": "/modules/blueprint-creator.js",
+      "description": "Blueprint generation system",
+      "requiredUpgrade": "BLPR"
+    }
+  ],
+  "dataFiles": [
+    {
+      "id": "SystemPrompt",
+      "path": "/modules/prompt-system.md",
+      "type": "markdown",
+      "description": "Core system prompt template"
+    },
+    {
+      "id": "ToolsRead",
+      "path": "/modules/tools-read.json",
+      "type": "json",
+      "description": "Read-only tool definitions"
+    },
+    {
+      "id": "ToolsWrite",
+      "path": "/modules/tools-write.json",
+      "type": "json",
+      "description": "Write tool definitions (RSI)"
+    },
+    {
+      "id": "SystemConfig",
+      "path": "/system/config.json",
+      "type": "json",
+      "description": "System configuration"
+    },
+    {
+      "id": "DynamicTools",
+      "path": "/system/tools-dynamic.json",
+      "type": "json",
+      "description": "Agent-created dynamic tools"
+    }
+  ],
+  "templates": [
+    {
+      "id": "UIStyle",
+      "path": "/modules/ui-style.css",
+      "type": "css",
+      "description": "UI styling"
+    },
+    {
+      "id": "UIBody",
+      "path": "/modules/ui-body-template.html",
+      "type": "html",
+      "description": "UI HTML template"
+    }
+  ]
+}

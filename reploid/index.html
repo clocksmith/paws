@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' style='stop-color:%230ff;'/><stop offset='100%25' style='stop-color:%23ffd700;'/></linearGradient></defs><text fill='url(%23g)' y='.99em' font-size='90' font-weight='bold'>R</text></svg>" />
+    <title>REPLOID - AI Assistant</title>
+    <link rel="stylesheet" href="boot/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/acorn@8.12.1/dist/acorn.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-css.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-markup.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-markdown.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+    <script src="https://esm.run/@mlc-ai/web-llm"></script>
+
+    <!-- Firebase Analytics -->
+    <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+      import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js';
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBNjEuGLafsUde3ws_9_Zi-PUlKkWt-CWM",
+        authDomain: "reploid.firebaseapp.com",
+        projectId: "reploid",
+        storageBucket: "reploid.firebasestorage.app",
+        messagingSenderId: "506730551098",
+        appId: "1:506730551098:web:1b9639865cb8501b7c2203",
+        measurementId: "G-RL299QYBNB"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const analytics = getAnalytics(app);
+    </script>
+</head>
+<body>
+    <div id="boot-container">
+        <div class="boot-header">
+            <h1>REPLOID</h1>
+            <p class="subtitle">
+                <a href="about.html" target="_blank" class="subtitle-link">[Experimental] Recursive Self-Improvement Ecosystem</a>
+            </p>
+        </div>
+
+        <!-- Status and Config at Top -->
+        <div class="status-bar">
+            <div class="status-item">
+                <span class="status-label">Server Status:</span>
+                <span id="api-status" class="status-value">⚙ Checking...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">AI Provider:</span>
+                <span id="provider-status" class="status-value">-</span>
+            </div>
+            <button id="config-btn" class="btn-config" title="Configure API Keys">⛭</button>
+        </div>
+
+        <div id="api-error-message" class="error-message hidden">
+            <strong>☡ Server Offline</strong>
+            <p>The REPLOID server at <code>localhost:8000</code> is not responding.</p>
+            <p><strong>To fix this:</strong></p>
+            <ol>
+                <li>Make sure the server is running: <code>npm start</code></li>
+                <li>Check your API key is in <code>.env</code> file</li>
+                <li>Or click the ⛭ button above to paste your API key directly</li>
+            </ol>
+        </div>
+
+        <!-- API Key Configuration Modal -->
+        <div id="config-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>API Configuration</h3>
+                    <button id="close-modal" class="close-btn">×</button>
+                </div>
+                <div class="modal-body">
+                    <p>Configure your AI provider API keys. These will be stored locally in your browser.</p>
+
+                    <!-- Provider Selection -->
+                    <div class="api-key-input">
+                        <label for="provider-select">AI Provider</label>
+                        <select id="provider-select">
+                            <option value="gemini">Google Gemini (Cloud)</option>
+                            <option value="openai">OpenAI (Cloud)</option>
+                            <option value="anthropic">Anthropic (Cloud)</option>
+                            <option value="local">Local Ollama (No API Key)</option>
+                            <option value="custom">Custom Proxy URL</option>
+                        </select>
+                    </div>
+
+                    <!-- Gemini Key -->
+                    <div class="api-key-input provider-config" data-provider="gemini">
+                        <label for="gemini-key">Google Gemini API Key</label>
+                        <input type="password" id="gemini-key" placeholder="AIza..." />
+                        <small>Get your key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></small>
+                    </div>
+
+                    <!-- OpenAI Key -->
+                    <div class="api-key-input provider-config hidden" data-provider="openai">
+                        <label for="openai-key">OpenAI API Key</label>
+                        <input type="password" id="openai-key" placeholder="sk-..." />
+                        <small>Get your key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a></small>
+                    </div>
+
+                    <!-- Anthropic Key -->
+                    <div class="api-key-input provider-config hidden" data-provider="anthropic">
+                        <label for="anthropic-key">Anthropic API Key</label>
+                        <input type="password" id="anthropic-key" placeholder="sk-ant-..." />
+                        <small>Get your key from <a href="https://console.anthropic.com/" target="_blank">Anthropic Console</a></small>
+                    </div>
+
+                    <!-- Local Ollama -->
+                    <div class="api-key-input provider-config hidden" data-provider="local">
+                        <label for="local-endpoint">Local Ollama Endpoint</label>
+                        <input type="text" id="local-endpoint" placeholder="http://localhost:11434" />
+                        <small>Make sure Ollama is running: <code>ollama serve</code></small>
+
+                        <label for="local-model" style="margin-top: 10px;">Model Name</label>
+                        <input type="text" id="local-model" placeholder="llama2" />
+                        <small>Available models: llama2, mistral, codellama, etc.</small>
+                    </div>
+
+                    <!-- Custom Proxy -->
+                    <div class="api-key-input provider-config hidden" data-provider="custom">
+                        <label for="custom-proxy-url">Custom Proxy URL</label>
+                        <input type="text" id="custom-proxy-url" placeholder="http://localhost:8000/api" />
+                        <small>Enter the full URL to your custom proxy endpoint (e.g., Node.js server)</small>
+
+                        <label for="custom-api-key" style="margin-top: 10px;">API Key (if required)</label>
+                        <input type="password" id="custom-api-key" placeholder="Optional" />
+                    </div>
+
+                    <button id="save-keys-btn" class="btn primary">Save Configuration</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Goal Input at Top -->
+        <div class="goal-container-top">
+            <div class="goal-input-group">
+                <input type="text" id="goal-input" placeholder="What is your goal? (e.g., Create a landing page, Refactor my code, Write an RFC...)" maxlength="500" />
+                <button id="awaken-btn" class="btn primary">Launch Agent</button>
+            </div>
+        </div>
+
+        <!-- Configuration Tabs -->
+        <div class="config-section">
+            <div class="config-tabs">
+                <button class="config-tab active" data-tab="simple">
+                    <span class="tab-text">☇ Simple Mode</span>
+                </button>
+                <button class="config-tab" data-tab="templates">
+                    <span class="tab-text">☐ Templates</span>
+                </button>
+                <button class="config-tab" data-tab="hunter">
+                    <span class="tab-text">⚐ Hunter Protocol</span>
+                </button>
+            </div>
+
+            <div class="tab-description">
+                <p id="tab-description-text">Start with the minimal RSI core - fastest way to self-evolving agent</p>
+            </div>
+
+            <!-- Simple Mode Tab Content (NEW) -->
+            <div class="tab-content active" id="simple-tab">
+                <div class="simple-mode-container">
+                    <h3 class="simple-mode-title">Choose Your Starting Configuration</h3>
+                    <p class="simple-mode-subtitle">These options control which modules and blueprints load at startup</p>
+
+                    <div class="boot-mode-options">
+                        <button class="boot-mode-btn selected" data-mode="minimal" onclick="selectBootMode('minimal')">
+                            <div class="boot-mode-icon">☇</div>
+                            <div class="boot-mode-label">Minimal RSI Core</div>
+                            <div class="boot-mode-desc">8 essential modules only - fastest startup, agent can self-evolve</div>
+                            <div class="boot-mode-modules">APPL, UTIL, STMT, IDXB, APIC, CYCL, TLRD, TLWR</div>
+                        </button>
+
+                        <button class="boot-mode-btn" data-mode="all-blueprints" onclick="selectBootMode('all-blueprints')">
+                            <div class="boot-mode-icon">☐</div>
+                            <div class="boot-mode-label">Core + All Blueprints</div>
+                            <div class="boot-mode-desc">8 core modules + 26 blueprints for maximum knowledge</div>
+                            <div class="boot-mode-modules">Minimal + all .md knowledge documents</div>
+                        </button>
+
+                        <button class="boot-mode-btn" data-mode="all-upgrades" onclick="selectBootMode('all-upgrades')">
+                            <div class="boot-mode-icon">⛿</div>
+                            <div class="boot-mode-label">All Upgrades + Blueprints</div>
+                            <div class="boot-mode-desc">40 modules + 26 blueprints - full power from the start</div>
+                            <div class="boot-mode-modules">Every available capability enabled</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Templates Tab Content -->
+            <div class="tab-content" id="templates-tab">
+                <div id="persona-selection-container">
+                    <!-- Persona cards will be dynamically inserted here -->
+                </div>
+            </div>
+
+            <!-- Hunter Protocol Tab Content -->
+            <div class="tab-content" id="hunter-tab">
+                <div id="advanced-options">
+                    <!-- Advanced selection UI will be rendered here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="app-root" style="display: none;"></div>
+
+            <script src="https://unpkg.com/@isomorphic-git/lightning-fs"></script>
+    <script src="https://unpkg.com/isomorphic-git"></script>
+    <script src="https://unpkg.com/isomorphic-git/http/web/index.js"></script>
+    <script src="boot.js"></script>
+</body>
+</html>

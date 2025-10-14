@@ -1,0 +1,596 @@
+{
+"personas": [
+    {
+      "id": "rsi_lab_sandbox",
+      "name": "RSI Lab Sandbox",
+      "type": "lab",
+      "description": "A safe space to learn how the agent improves itself through guided lessons.",
+      "upgrades": ["APPL", "UTIL", "STMT", "IDXB", "APIC", "CYCL", "PRMT", "AGLP", "STHP", "TRUN", "TLRD", "TLWR", "TRHP", "UIMN", "STYL", "BODY", "GMOD", "BLPR", "MTCP", "PMON", "MDSH", "AVIS", "ASTV", "MGRV", "RATE", "MINT", "AUDT", "TUTR", "PYOD", "PYTH", "TSTN", "INTR", "REFL", "TEST", "BAPI"],
+      "blueprints": ["0x000016", "0x000017", "0x000018"],
+      "lessons": [
+        { "name": "Build a New Tool", "goal": "Study blueprint 0x000016 and create a new tool named 'greet_user' that returns a friendly message." },
+        { "name": "Modify a Goal", "goal": "Observe your own goal state and add a sub-goal to document your findings." },
+        { "name": "Create a Blueprint", "goal": "Use blueprint 0x000018 as guidance to create a new blueprint about tool composition patterns." }
+      ]
+    },
+    {
+      "id": "website_builder",
+      "name": "Website Builder",
+      "type": "factory",
+      "description": "Generate and preview a complete landing page with HTML, CSS, and JS.",
+      "upgrades": ["APPL", "UTIL", "STMT", "IDXB", "APIC", "CYCL", "PRMT", "AGLP", "STHP", "TRUN", "TLRD", "TLWR", "TRHP", "UIMN", "STYL", "BODY", "PMON"],
+      "blueprints": ["0x00000F", "0x00000E"],
+      "previewTarget": "/vfs/preview/index.html"
+    },
+    {
+      "id": "product_prototype_factory",
+      "name": "Product Prototype Factory",
+      "type": "factory",
+      "description": "Rapidly build interactive UI prototypes with live preview and export.",
+      "upgrades": ["APPL", "UTIL", "STMT", "IDXB", "APIC", "CYCL", "PRMT", "AGLP", "STHP", "TRUN", "TLRD", "TLWR", "TRHP", "UIMN", "STYL", "BODY", "PMON"],
+      "blueprints": ["0x00000F", "0x00000E", "0x00000D"],
+      "previewTarget": "/vfs/preview/prototype.html"
+    },
+    {
+      "id": "code_refactorer",
+      "name": "Code Refactorer",
+      "type": "lab",
+      "description": "Analyzes your code to find improvements, fix bugs, and enhance performance.",
+      "upgrades": ["APPL", "UTIL", "STMT", "IDXB", "APIC", "CYCL", "PRMT", "AGLP", "STHP", "TRUN", "TLRD", "TLWR", "TRHP", "UIMN", "STYL", "BODY", "EVAL", "PMON", "MDSH", "AVIS", "ASTV", "MGRV", "RATE", "MINT", "AUDT", "TUTR", "PYOD", "PYTH", "TSTN", "INTR", "REFL", "TEST", "BAPI"],
+      "blueprints": ["0x000009", "0x000003", "0x000012"],
+      "lessons": [
+        { "name": "Analyze Code Quality", "goal": "Use self-evaluation to assess the quality of state-manager.js and propose improvements." },
+        { "name": "Refactor for Performance", "goal": "Identify and optimize performance bottlenecks in agent-cycle.js." }
+      ]
+    },
+    {
+      "id": "rfc_author",
+      "name": "RFC Author",
+      "type": "lab",
+      "description": "Analyzes project changes and drafts formal Request for Change (RFC) documents.",
+      "upgrades": ["APPL", "UTIL", "STMT", "IDXB", "APIC", "CYCL", "PRMT", "AGLP", "STHP", "TRUN", "TLRD", "TLWR", "TRHP", "UIMN", "STYL", "BODY", "BLPR", "EVAL", "PMON", "MDSH", "AVIS", "INTR", "REFL", "TEST", "BAPI"],
+      "blueprints": ["0x000012", "0x00001A"],
+      "lessons": [
+        { "name": "Draft Feature RFC", "goal": "Create an RFC proposing a new feature for the REPLOID system." },
+        { "name": "Analyze Recent Changes", "goal": "Review recent VFS modifications and draft an RFC summarizing the changes." }
+      ]
+    },
+    {
+      "id": "creative_writer",
+      "name": "Creative Writer",
+      "type": "factory",
+      "description": "A creative partner to help you write, edit, and brainstorm new ideas for documents.",
+      "upgrades": ["APPL", "UTIL", "STMT", "IDXB", "APIC", "CYCL", "PRMT", "AGLP", "STHP", "TRUN", "TLRD", "TLWR", "TRHP", "UIMN", "STYL", "BODY"],
+      "blueprints": [],
+      "previewTarget": "/vfs/preview/document.html"
+    }
+  ],
+"minimalRSICore": ["APPL", "UTIL", "STMT", "IDXB", "APIC", "CYCL", "TLRD", "TLWR", "LLMR", "HYBR"],
+"curatorMode": {
+  "enabled": false,
+  "autoApproveContext": true,
+  "autoApproveProposal": false,
+  "maxProposalsPerGoal": 7,
+  "iterationDelay": 5000,
+  "defaultGoals": [
+    "Analyze all modules for performance optimization opportunities",
+    "Generate test cases for untested functions in core modules",
+    "Create RFC proposals for missing blueprint documentation"
+  ]
+},
+"defaultCore": ["APPL", "UTIL", "STMT", "IDXB", "APIC", "CYCL", "PRMT", "AGLP", "STHP", "TRUN", "TLRD", "TRHP", "UIMN", "STYL", "BODY", "PMON", "MDSH", "AVIS", "ASTV", "MGRV", "RATE", "MINT", "AUDT", "TUTR", "PYOD", "PYTH", "LLMR", "HYBR", "TSTN", "INTR", "REFL", "TEST", "BAPI"],
+"visualRSICore": ["APPL", "UTIL", "STMT", "IDXB", "APIC", "CYCL", "PRMT", "AGLP", "STHP", "TRUN", "TLRD", "TLWR", "TRHP", "UIMN", "CNVS", "VDAT", "MTCP", "GMOD", "BLPR", "PMON", "MDSH", "AVIS", "ASTV", "MGRV", "RATE", "MINT", "AUDT", "TUTR", "PYOD", "PYTH", "LLMR", "HYBR", "TSTN", "INTR", "REFL", "TEST", "BAPI"],
+"standardizedCore": ["MLDR", "MMNF", "APPL", "UTIL", "STMT", "IDXB", "APIC", "CYCL", "PRMT", "AGLP", "STHP", "TRUN", "TLRD", "TRHP", "UIMN", "PMON", "MDSH", "AVIS", "ASTV", "MGRV", "RATE", "MINT", "AUDT", "TUTR", "PYOD", "PYTH", "LLMR", "HYBR", "TSTN", "INTR", "REFL", "TEST", "BAPI"],
+"multiProviderCore": ["MLDR", "MMNF", "APPL", "UTIL", "STMT", "IDXB", "APMC", "CYCL", "PRMT", "AGLP", "STHP", "TRUN", "TLRD", "TRHP", "UIMN", "STYL", "BODY", "PMON", "MDSH", "AVIS", "ASTV", "MGRV", "RATE", "MINT", "AUDT", "TUTR", "PYOD", "PYTH", "LLMR", "HYBR", "TSTN", "INTR", "REFL", "TEST", "BAPI"],
+"providers": {
+  "default": "gemini",
+  "fallbackProviders": ["openai", "anthropic", "local"],
+  "localEndpoint": "http://localhost:11434",
+  "localModel": "llama2",
+  "geminiModel": "gemini-1.5-flash-latest",
+  "openaiModel": "gpt-4-turbo-preview",
+  "anthropicModel": "claude-3-opus-20240229"
+},
+"upgrades": [
+{
+"id": "MLDR",
+"path": "boot-module-loader.js",
+"description": "Standardized module loader system",
+"category": "core"
+},
+{
+"id": "MMNF",
+"path": "module-manifest.json",
+"description": "Module dependency manifest",
+"category": "core"
+},
+{
+"id": "PRMT",
+"path": "prompt-system.md",
+"description": "Core system prompt and identity",
+"category": "agent",
+"blueprint": "0x000001"
+},
+{
+"id": "APPL",
+"path": "app-logic.js",
+"description": "Main application orchestrator",
+"category": "core",
+"blueprint": "0x000002"
+},
+{
+"id": "UTIL",
+"path": "utils.js",
+"description": "Essential utilities and error classes",
+"category": "core",
+"blueprint": "0x000003"
+},
+{
+"id": "IDXB",
+"path": "storage-indexeddb.js",
+"description": "IndexedDB persistence layer",
+"category": "storage",
+"blueprint": "0x000011"
+},
+{
+"id": "STMT",
+"path": "state-manager.js",
+"description": "State management and VFS logic",
+"category": "core",
+"blueprint": "0x000005"
+},
+{
+"id": "STHP",
+"path": "state-helpers-pure.js",
+"description": "Pure functions for state logic",
+"category": "agent",
+"blueprint": "0x000006"
+},
+{
+"id": "APIC",
+"path": "api-client.js",
+"description": "Gemini API communication client",
+"category": "agent",
+"blueprint": "0x000007"
+},
+{
+"id": "APMC",
+"path": "api-client-multi.js",
+"description": "Multi-provider API client (Gemini, OpenAI, Anthropic, Local)",
+"category": "agent"
+},
+{
+"id": "CYCL",
+"path": "agent-cycle.js",
+"description": "The agent's main cognitive loop",
+"category": "agent",
+"blueprint": "0x000008"
+},
+{
+"id": "AGLP",
+"path": "agent-logic-pure.js",
+"description": "Pure functions for agent reasoning",
+"category": "agent",
+"blueprint": "0x000009"
+},
+{
+"id": "TRUN",
+"path": "tool-runner.js",
+"description": "Tool execution engine",
+"category": "tools",
+"blueprint": "0x00000A"
+},
+{
+"id": "TRHP",
+"path": "tool-runner-pure-helpers.js",
+"description": "Pure functions for tool logic",
+"category": "tools",
+"blueprint": "0x00000B"
+},
+{
+"id": "WRKR",
+"path": "tool-worker.js",
+"description": "Sandboxed Web Worker for tools",
+"category": "experimental",
+"blueprint": "0x00000C"
+},
+{
+"id": "UIMN",
+"path": "ui-manager.js",
+"description": "Developer console UI manager",
+"category": "ui",
+"blueprint": "0x00000D"
+},
+{
+"id": "STYL",
+"path": "ui-style.css",
+"description": "CSS for the dev console",
+"category": "ui",
+"blueprint": "0x00000E"
+},
+{
+"id": "BODY",
+"path": "ui-body-template.html",
+"description": "HTML structure for the dev console",
+"category": "ui",
+"blueprint": "0x00000F"
+},
+{
+"id": "CFMD",
+"path": "confirmation-modal.js",
+"description": "Confirmation dialog for destructive actions",
+"category": "ui"
+},
+{
+"id": "VFSX",
+"path": "vfs-explorer.js",
+"description": "Enhanced VFS file tree with search and viewer",
+"category": "ui"
+},
+{
+"id": "TLRD",
+"path": "tools-read.json",
+"description": "Read-only tools for safe introspection",
+"category": "tools",
+"blueprint": "0x000010"
+},
+{
+"id": "TLWR",
+"path": "tools-write.json",
+"description": "Write tools that enable RSI",
+"category": "tools",
+"blueprint": "0x000022"
+},
+{
+"id": "EVAL",
+"path": "tool-evaluator.js",
+"description": "Self-evaluation tool package",
+"category": "experimental",
+"blueprint": "0x000012"
+},
+{
+"id": "SCFG",
+"path": "system-config.json",
+"description": "Default agent configuration",
+"category": "storage",
+"blueprint": "0x000013"
+},
+{
+"id": "SCRT",
+"path": "system-scratchpad.md",
+"description": "Agent's working memory scratchpad",
+"category": "experimental",
+"blueprint": "0x000014"
+},
+{
+"id": "STLD",
+"path": "system-tools-dynamic.json",
+"description": "Manifest for agent-created dynamic tools",
+"category": "experimental",
+"blueprint": "0x000015"
+},
+{
+"id": "MTCP",
+"path": "meta-tool-creator.js",
+"description": "Meta-tool creation patterns and utilities",
+"category": "experimental",
+"blueprint": "0x000016"
+},
+{
+"id": "GMOD",
+"path": "goal-modifier.js",
+"description": "Safe goal modification and evolution mechanisms",
+"category": "experimental",
+"blueprint": "0x000017"
+},
+{
+"id": "BLPR",
+"path": "blueprint-creator.js",
+"description": "Blueprint generation and management system",
+"category": "experimental",
+"blueprint": "0x000018"
+},
+{
+"id": "CNVS",
+"path": "canvas-visualizer.js",
+"description": "2D canvas visualization for RSI insights",
+"category": "visualization"
+},
+{
+"id": "VDAT",
+"path": "viz-data-adapter.js",
+"description": "Transforms agent state into visual data",
+"category": "visualization"
+},
+{
+"id": "PMON",
+"path": "performance-monitor.js",
+"description": "Performance monitoring for RSI data-driven optimization",
+"category": "monitoring"
+},
+{
+"id": "MDSH",
+"path": "metrics-dashboard.js",
+"description": "Visual metrics dashboard with Chart.js for performance visualization",
+"category": "monitoring"
+},
+{
+"id": "AVIS",
+"path": "agent-visualizer.js",
+"description": "FSM state machine visualization with D3.js force-directed graph",
+"category": "visualization"
+},
+{
+"id": "ASTV",
+"path": "ast-visualizer.js",
+"description": "JavaScript AST tree visualization with D3.js and Acorn parser",
+"category": "visualization"
+},
+{
+"id": "MGRV",
+"path": "module-graph-visualizer.js",
+"description": "Interactive D3.js force-directed graph of module dependencies",
+"category": "visualization"
+},
+{
+"id": "TSTN",
+"path": "toast-notifications.js",
+"description": "Non-blocking toast notification system for user feedback",
+"category": "ui"
+},
+{
+"id": "RATE",
+"path": "rate-limiter.js",
+"description": "Token bucket and sliding window rate limiters for API calls",
+"category": "service"
+},
+{
+"id": "MINT",
+"path": "module-integrity.js",
+"description": "Module signing and integrity verification system",
+"category": "security"
+},
+{
+"id": "AUDT",
+"path": "audit-logger.js",
+"description": "Security audit logging for modules and VFS operations",
+"category": "security"
+},
+{
+"id": "TUTR",
+"path": "tutorial-system.js",
+"description": "Interactive tutorial system for onboarding new users",
+"category": "ui"
+},
+{
+"id": "PYOD",
+"path": "pyodide-runtime.js",
+"description": "WebAssembly Python runtime via Pyodide with VFS integration",
+"category": "runtime"
+},
+{
+"id": "PYTH",
+"path": "python-tool.js",
+"description": "Python code execution tool interface for agent",
+"category": "tools"
+},
+{
+"id": "LLMR",
+"path": "local-llm.js",
+"description": "Local LLM runtime with WebGPU acceleration via WebLLM",
+"category": "runtime"
+},
+{
+"id": "HYBR",
+"path": "hybrid-llm-provider.js",
+"description": "Hybrid LLM provider for seamless local/cloud inference switching",
+"category": "agent"
+},
+{
+"id": "SWRM",
+"path": "swarm-orchestrator.js",
+"description": "Multi-agent swarm intelligence orchestrator for distributed task execution",
+"category": "service"
+},
+{
+"id": "INTR",
+"path": "introspector.js",
+"description": "Code introspection and self-analysis for RSI",
+"category": "introspection",
+"blueprint": "0x00001B"
+},
+{
+"id": "REFL",
+"path": "reflection-store.js",
+"description": "Persistent reflection storage for learning over time",
+"category": "introspection"
+},
+{
+"id": "REAN",
+"path": "reflection-analyzer.js",
+"description": "Pattern recognition and learning from reflection history",
+"category": "learning"
+},
+{
+"id": "RESRCH",
+"path": "reflection-search.js",
+"description": "Semantic search over reflections using TF-IDF embeddings",
+"category": "intelligence"
+},
+{
+"id": "TOAN",
+"path": "tool-analytics.js",
+"description": "Tool usage analytics and performance tracking",
+"category": "analytics"
+},
+{
+"id": "COST",
+"path": "cost-tracker.js",
+"description": "API cost tracking and rate limiting for budget management",
+"category": "analytics"
+},
+{
+"id": "TABC",
+"path": "tab-coordinator.js",
+"description": "Inter-tab state synchronization via BroadcastChannel",
+"category": "coordination"
+},
+{
+"id": "TDOC",
+"path": "tool-doc-generator.js",
+"description": "Automatic markdown documentation generator for tool schemas",
+"category": "documentation"
+},
+{
+"id": "TEST",
+"path": "self-tester.js",
+"description": "Self-testing and validation framework for safe RSI",
+"category": "validation"
+},
+{
+"id": "BAPI",
+"path": "browser-apis.js",
+"description": "Browser-native Web API integration (File System, Notifications, Storage, etc.)",
+"category": "capability"
+},
+{
+"id": "AUOR",
+"path": "autonomous-orchestrator.js",
+"description": "Curator Mode - Autonomous overnight proposal generation with visual reports",
+"category": "service",
+"blueprint": "0x000023"
+}
+],
+"blueprints": [
+{
+"id": "0x000001",
+"path": "0x000001-system-prompt-architecture.md",
+"description": "Defines the architecture for the agent's dynamic identity prompt."
+},
+{
+"id": "0x000002",
+"path": "0x000002-application-orchestration.md",
+"description": "Details the app-logic.js module's role in loading other modules."
+},
+{
+"id": "0x000003",
+"path": "0x000003-core-utilities-and-error-handling.md",
+"description": "Explains the central utils.js module for shared functions and errors."
+},
+{
+"id": "0x000004",
+"path": "0x000004-default-storage-backend-localstorage.md",
+"description": "Describes the baseline localStorage wrapper for VFS persistence."
+},
+{
+"id": "0x000005",
+"path": "0x000005-state-management-architecture.md",
+"description": "Outlines the StateManager as the single source of truth for agent state."
+},
+{
+"id": "0x000006",
+"path": "0x000006-pure-state-helpers.md",
+"description": "Articulates separating deterministic state calculations into a pure helper."
+},
+{
+"id": "0x000007",
+"path": "0x000007-api-client-and-communication.md",
+"description": "Details a robust API client with retry logic and abort handling."
+},
+{
+"id": "0x000008",
+"path": "0x000008-agent-cognitive-cycle.md",
+"description": "Provides the model for the agent's primary 'think-act' loop."
+},
+{
+"id": "0x000009",
+"path": "0x000009-pure-agent-logic-helpers.md",
+"description": "Explains isolating prompt assembly into a testable, pure helper."
+},
+{
+"id": "0x00000A",
+"path": "0x00000A-tool-runner-engine.md",
+"description": "Describes the engine for executing the agent's static and dynamic tools."
+},
+{
+"id": "0x00000B",
+"path": "0x00000B-pure-tool-logic-helpers.md",
+"description": "Outlines converting internal tool definitions to external LLM API formats."
+},
+{
+"id": "0x00000C",
+"path": "0x00000C-sandboxed-tool-worker.md",
+"description": "Explains using a Web Worker for secure, sandboxed tool execution."
+},
+{
+"id": "0x00000D",
+"path": "0x00000D-ui-manager.md",
+"description": "Details the architecture for managing the agent's developer console UI."
+},
+{
+"id": "0x00000E",
+"path": "0x00000E-ui-styling-css.md",
+"description": "Covers the role of the ui-style.css artifact in defining UI appearance."
+},
+{
+"id": "0x00000F",
+"path": "0x00000F-ui-body-template-html.md",
+"description": "Describes the foundational HTML skeleton for the agent's UI."
+},
+{
+"id": "0x000010",
+"path": "0x000010-static-tool-manifest.md",
+"description": "Explains the JSON artifact that defines the agent's built-in static toolset."
+},
+{
+"id": "0x000011",
+"path": "0x000011-advanced-storage-backend-indexeddb.md",
+"description": "Outlines upgrading to an asynchronous, high-capacity IndexedDB layer."
+},
+{
+"id": "0x000012",
+"path": "0x000012-structured-self-evaluation.md",
+"description": "Proposes a framework for a structured, LLM-driven self-evaluation tool."
+},
+{
+"id": "0x000013",
+"path": "0x000013-system-configuration-structure.md",
+"description": "Blueprint for SCFG: System configuration for runtime behavior control."
+},
+{
+"id": "0x000014",
+"path": "0x000014-working-memory-scratchpad.md",
+"description": "Blueprint for SCRT: Agent's transient working memory system."
+},
+{
+"id": "0x000015",
+"path": "0x000015-dynamic-tool-creation.md",
+"description": "Blueprint for STLD: Creating and managing dynamic tools at runtime."
+},
+{
+"id": "0x000016",
+"path": "0x000016-meta-tool-creation-patterns.md",
+"description": "Meta-patterns and principles for designing new tools."
+},
+{
+"id": "0x000017",
+"path": "0x000017-goal-modification-safety.md",
+"description": "Safe patterns for agent goal evolution and modification."
+},
+{
+"id": "0x000018",
+"path": "0x000018-blueprint-creation-meta.md",
+"description": "Meta-blueprint: How to create new blueprints for knowledge transfer."
+},
+{
+"id": "0x000019",
+"path": "0x000019-visual-self-improvement.md",
+"description": "Visual RSI: Using 2D canvas visualization for pattern recognition and self-optimization."
+},
+{
+"id": "0x000023",
+"path": "0x000023-autonomous-orchestrator-curator-mode.md",
+"description": "Curator Mode: Autonomous overnight proposal generation with safety boundaries and visual reports."
+}
+]
+}
