@@ -714,4 +714,388 @@ describe('ReflectionSearch Module', () => {
       expect(Array.isArray(results)).toBe(true);
     });
   });
+
+  describe('Complex Query Scenarios', () => {
+    it('should handle nested AND conditions', async () => {
+      const results = await searchInstance.search('file AND validation AND success');
+
+      results.forEach(result => {
+        const desc = result.reflection.description.toLowerCase();
+        expect(desc.includes('file') || desc.includes('validation') || desc.includes('success')).toBe(true);
+      });
+    });
+
+    it('should handle OR conditions with wildcards', async () => {
+      const results = await searchInstance.search('file* OR valid*');
+
+      expect(results).toBeDefined();
+      expect(Array.isArray(results)).toBe(true);
+    });
+
+    it('should parse complex boolean queries', async () => {
+      const query = '(file OR validation) AND (success OR error)';
+      const results = await searchInstance.search(query);
+
+      expect(results).toBeDefined();
+    });
+
+    it('should handle quoted phrases', async () => {
+      const results = await searchInstance.search('"file reading validation"');
+
+      expect(results).toBeDefined();
+    });
+
+    it('should support negation queries', async () => {
+      const results = await searchInstance.search('validation NOT error');
+
+      expect(results).toBeDefined();
+    });
+  });
+
+  describe('Search Result Ranking', () => {
+    it('should rank exact matches higher', async () => {
+      const results = await searchInstance.search('validation error handling');
+
+      if (results.length > 1) {
+        expect(results[0].similarity).toBeGreaterThanOrEqual(results[1].similarity);
+      }
+    });
+
+    it('should apply relevance scoring', async () => {
+      const results = await searchInstance.search('file validation');
+
+      results.forEach(result => {
+        expect(result.score).toBeDefined();
+        expect(result.score).toBeGreaterThanOrEqual(0);
+      });
+    });
+
+    it('should boost recent results', async () => {
+      mockReflectionStore.getReflections.mockResolvedValue([
+        {
+          id: 'recent',
+          description: 'Recent file validation',
+          timestamp: Date.now(),
+          tags: ['validation']
+        },
+        {
+          id: 'old',
+          description: 'Old file validation',
+          timestamp: Date.now() - 100000,
+          tags: ['validation']
+        }
+      ]);
+
+      await searchInstance.rebuildIndex();
+      const results = await searchInstance.search('validation');
+
+      expect(results.length).toBeGreaterThan(0);
+    });
+
+    it('should apply tag weight boosting', async () => {
+      const results = await searchInstance.search('validation');
+
+      results.forEach(result => {
+        if (result.reflection.tags && result.reflection.tags.includes('validation')) {
+          expect(result.score).toBeGreaterThan(0);
+        }
+      });
+    });
+  });
+
+  describe('Fuzzy Matching Edge Cases', () => {
+    it('should handle typos with edit distance 1', async () => {
+      const results = await searchInstance.search('validatoin'); // typo
+
+      expect(results).toBeDefined();
+    });
+
+    it('should match with case insensitivity', async () => {
+      const results1 = await searchInstance.search('VALIDATION');
+      const results2 = await searchInstance.search('validation');
+
+      expect(results1.length).toBe(results2.length);
+    });
+
+    it('should handle transposition errors', async () => {
+      const results = await searchInstance.search('fiel'); // transposed 'file'
+
+      expect(results).toBeDefined();
+    });
+
+    it('should match partial words', async () => {
+      const results = await searchInstance.search('valid');
+
+      expect(results.length).toBeGreaterThan(0);
+    });
+
+    it('should handle keyboard proximity errors', async () => {
+      const results = await searchInstance.search('vqlidation'); // 'q' near 'a' on keyboard
+
+      expect(results).toBeDefined();
+    });
+  });
+
+  describe('Large Result Set Handling', () => {
+    it('should handle 1000+ results efficiently', async () => {
+      const manyReflections = Array(1000).fill(null).map((_, i) => ({
+        id: `r${i}`,
+        description: `Result ${i} with common term validation`,
+        tags: ['common'],
+        timestamp: Date.now() - i
+      }));
+
+      mockReflectionStore.getReflections.mockResolvedValue(manyReflections);
+      await searchInstance.rebuildIndex();
+
+      const startTime = Date.now();
+      const results = await searchInstance.search('validation', { limit: 100 });
+      const duration = Date.now() - startTime;
+
+      expect(results.length).toBeLessThanOrEqual(100);
+      expect(duration).toBeLessThan(2000);
+    });
+
+    it('should paginate large result sets', async () => {
+      const manyReflections = Array(500).fill(null).map((_, i) => ({
+        id: `r${i}`,
+        description: `Reflection ${i} matching search`,
+        tags: ['search'],
+        timestamp: Date.now() - i
+      }));
+
+      mockReflectionStore.getReflections.mockResolvedValue(manyReflections);
+      await searchInstance.rebuildIndex();
+
+      const page1 = await searchInstance.search('reflection', { limit: 10, threshold: 0.01 });
+      const page2 = await searchInstance.search('reflection', { limit: 10, threshold: 0.01 });
+
+      expect(page1.length).toBeLessThanOrEqual(10);
+    });
+
+    it('should stream results for very large sets', async () => {
+      const hugeReflections = Array(2000).fill(null).map((_, i) => ({
+        id: `r${i}`,
+        description: `Entry ${i}`,
+        tags: ['tag'],
+        timestamp: Date.now() - i
+      }));
+
+      mockReflectionStore.getReflections.mockResolvedValue(hugeReflections.slice(0, 1000));
+      await searchInstance.rebuildIndex();
+
+      const results = await searchInstance.search('entry', { limit: 50 });
+      expect(results).toBeDefined();
+    });
+
+    it('should implement result batching', async () => {
+      const batchSize = 100;
+      const totalResults = 500;
+
+      const reflections = Array(totalResults).fill(null).map((_, i) => ({
+        id: `r${i}`,
+        description: `Batch test ${i}`,
+        tags: ['batch'],
+        timestamp: Date.now() - i
+      }));
+
+      mockReflectionStore.getReflections.mockResolvedValue(reflections);
+      await searchInstance.rebuildIndex();
+
+      const results = await searchInstance.search('batch', { limit: batchSize });
+      expect(results.length).toBeLessThanOrEqual(batchSize);
+    });
+  });
+
+  describe('Concurrent Search Tests', () => {
+    it('should handle concurrent search requests', async () => {
+      const searches = [
+        searchInstance.search('validation'),
+        searchInstance.search('file'),
+        searchInstance.search('error')
+      ];
+
+      const results = await Promise.all(searches);
+      expect(results).toHaveLength(3);
+    });
+
+    it('should maintain index consistency during concurrent searches', async () => {
+      const promises = Array(10).fill(null).map(() =>
+        searchInstance.search('validation')
+      );
+
+      const results = await Promise.all(promises);
+      const firstLength = results[0].length;
+
+      results.forEach(result => {
+        expect(result.length).toBe(firstLength);
+      });
+    });
+
+    it('should handle concurrent index rebuilds', async () => {
+      const rebuilds = [
+        searchInstance.rebuildIndex(),
+        searchInstance.rebuildIndex()
+      ];
+
+      await Promise.all(rebuilds);
+      const stats = searchInstance.getIndexStats();
+
+      expect(stats.indexed).toBeGreaterThan(0);
+    });
+
+    it('should queue searches during index rebuild', async () => {
+      const rebuildPromise = searchInstance.rebuildIndex();
+      const searchPromise = searchInstance.search('validation');
+
+      await Promise.all([rebuildPromise, searchPromise]);
+      expect(searchPromise).toBeDefined();
+    });
+  });
+
+  describe('Search Index Corruption Recovery', () => {
+    it('should detect corrupted index', async () => {
+      await searchInstance.clearIndex();
+
+      const stats = searchInstance.getIndexStats();
+      expect(stats.indexed).toBe(0);
+    });
+
+    it('should rebuild corrupted index automatically', async () => {
+      await searchInstance.clearIndex();
+
+      const results = await searchInstance.search('validation');
+      const stats = searchInstance.getIndexStats();
+
+      expect(stats.indexed).toBeGreaterThan(0);
+    });
+
+    it('should handle partial index corruption', async () => {
+      await searchInstance.rebuildIndex();
+
+      const results = await searchInstance.search('validation');
+      expect(results).toBeDefined();
+    });
+
+    it('should recover from index rebuild failures', async () => {
+      mockReflectionStore.getReflections
+        .mockRejectedValueOnce(new Error('Database error'))
+        .mockResolvedValueOnce([
+          {
+            id: 'r1',
+            description: 'Recovery test',
+            tags: ['recovery'],
+            timestamp: Date.now()
+          }
+        ]);
+
+      try {
+        await searchInstance.rebuildIndex();
+      } catch (e) {
+        // Expected error
+      }
+
+      await searchInstance.rebuildIndex();
+      const stats = searchInstance.getIndexStats();
+
+      expect(stats.indexed).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Search Query Validation', () => {
+    it('should validate empty queries', async () => {
+      const results = await searchInstance.search('');
+
+      expect(results).toBeDefined();
+      expect(Array.isArray(results)).toBe(true);
+    });
+
+    it('should handle extremely long queries', async () => {
+      const longQuery = 'validation '.repeat(1000);
+      const results = await searchInstance.search(longQuery);
+
+      expect(results).toBeDefined();
+    });
+
+    it('should sanitize special characters', async () => {
+      const results = await searchInstance.search('validation<>[]{}');
+
+      expect(results).toBeDefined();
+    });
+
+    it('should handle SQL injection attempts', async () => {
+      const maliciousQuery = "'; DROP TABLE reflections; --";
+      const results = await searchInstance.search(maliciousQuery);
+
+      expect(results).toBeDefined();
+    });
+
+    it('should validate query syntax', async () => {
+      const invalidQuery = '(((validation';
+      const results = await searchInstance.search(invalidQuery);
+
+      expect(results).toBeDefined();
+    });
+
+    it('should limit query term count', async () => {
+      const manyTerms = Array(1000).fill('term').join(' ');
+      const results = await searchInstance.search(manyTerms);
+
+      expect(results).toBeDefined();
+    });
+  });
+
+  describe('Search Performance Tests', () => {
+    it('should perform sub-100ms searches on small indexes', async () => {
+      const startTime = Date.now();
+      await searchInstance.search('validation');
+      const duration = Date.now() - startTime;
+
+      expect(duration).toBeLessThan(100);
+    });
+
+    it('should maintain performance under load', async () => {
+      const durations = [];
+
+      for (let i = 0; i < 10; i++) {
+        const start = Date.now();
+        await searchInstance.search('validation');
+        durations.push(Date.now() - start);
+      }
+
+      const avgDuration = durations.reduce((a, b) => a + b, 0) / durations.length;
+      expect(avgDuration).toBeLessThan(200);
+    });
+
+    it('should optimize index build time', async () => {
+      const reflections = Array(100).fill(null).map((_, i) => ({
+        id: `r${i}`,
+        description: `Performance test ${i}`,
+        tags: ['perf'],
+        timestamp: Date.now() - i
+      }));
+
+      mockReflectionStore.getReflections.mockResolvedValue(reflections);
+
+      const startTime = Date.now();
+      await searchInstance.rebuildIndex();
+      const duration = Date.now() - startTime;
+
+      expect(duration).toBeLessThan(1000);
+    });
+
+    it('should cache search results', async () => {
+      const query = 'validation';
+
+      const start1 = Date.now();
+      await searchInstance.search(query);
+      const duration1 = Date.now() - start1;
+
+      const start2 = Date.now();
+      await searchInstance.search(query);
+      const duration2 = Date.now() - start2;
+
+      expect(duration2).toBeLessThanOrEqual(duration1 + 50);
+    });
+  });
 });

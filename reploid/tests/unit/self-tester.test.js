@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import SelfTester from '../../upgrades/self-tester.js';
 
 describe('SelfTester Module', () => {
-  let SelfTester;
   let mockDeps;
   let testerInstance;
 
@@ -34,101 +34,6 @@ describe('SelfTester Module', () => {
       StateManager: { getState: vi.fn(() => ({})) }
     };
 
-    SelfTester = {
-      metadata: {
-        id: 'SelfTester',
-        version: '1.0.0',
-        dependencies: ['Utils', 'EventBus', 'StateManager'],
-        async: true,
-        type: 'validation'
-      },
-      factory: (deps) => {
-        const { Utils, EventBus } = deps;
-        const { logger } = Utils;
-
-        let lastTestResults = null;
-        let testHistory = [];
-
-        const testModuleLoading = async () => {
-          const results = { name: 'Module Loading', passed: 8, failed: 0, tests: [] };
-          results.tests.push({ name: 'DI Container exists', passed: true });
-          results.tests.push({ name: 'Module Utils loaded', passed: true });
-          return results;
-        };
-
-        const testToolExecution = async () => {
-          const results = { name: 'Tool Execution', passed: 3, failed: 0, tests: [] };
-          results.tests.push({ name: 'ToolRunner available', passed: true });
-          return results;
-        };
-
-        const testFSMTransitions = async () => {
-          const results = { name: 'FSM Transitions', passed: 5, failed: 0, tests: [] };
-          results.tests.push({ name: 'StateManager available', passed: true });
-          return results;
-        };
-
-        const testStorageSystems = async () => {
-          const results = { name: 'Storage Systems', passed: 2, failed: 0, tests: [] };
-          results.tests.push({ name: 'IndexedDB available', passed: true });
-          return results;
-        };
-
-        const testPerformanceMonitoring = async () => {
-          const results = { name: 'Performance Monitoring', passed: 3, failed: 0, tests: [] };
-          results.tests.push({ name: 'PerformanceMonitor available', passed: true });
-          return results;
-        };
-
-        const runAllTests = async () => {
-          logger.info('[SelfTester] Running comprehensive test suite...');
-          const startTime = Date.now();
-
-          const suites = [testModuleLoading, testToolExecution, testFSMTransitions, testStorageSystems, testPerformanceMonitoring];
-          const results = {
-            timestamp: startTime,
-            suites: [],
-            summary: { totalTests: 0, passed: 0, failed: 0, successRate: 0 },
-            duration: 0
-          };
-
-          for (const suite of suites) {
-            const suiteResult = await suite();
-            results.suites.push(suiteResult);
-            results.summary.passed += suiteResult.passed;
-            results.summary.failed += suiteResult.failed;
-            results.summary.totalTests += (suiteResult.passed + suiteResult.failed);
-          }
-
-          results.duration = Date.now() - startTime;
-          results.summary.successRate = results.summary.totalTests > 0 ? (results.summary.passed / results.summary.totalTests) * 100 : 0;
-
-          lastTestResults = results;
-          testHistory.push({ timestamp: startTime, summary: results.summary, duration: results.duration });
-          if (testHistory.length > 10) testHistory = testHistory.slice(-10);
-
-          EventBus.emit('self-test:complete', results);
-          logger.info(`[SelfTester] Tests complete: ${results.summary.passed}/${results.summary.totalTests} passed (${results.summary.successRate.toFixed(1)}%)`);
-
-          return results;
-        };
-
-        const getLastResults = () => lastTestResults;
-        const getTestHistory = () => testHistory;
-        const generateReport = (results = lastTestResults) => {
-          if (!results) return '# Self-Test Report\n\nNo test results available.';
-          let md = '# REPLOID Self-Test Report\n\n';
-          md += `**Generated:** ${new Date(results.timestamp).toISOString()}\n`;
-          return md;
-        };
-
-        const init = async () => {
-          logger.info('[SelfTester] Initialized');
-        };
-
-        return { init, testModuleLoading, testToolExecution, testFSMTransitions, testStorageSystems, testPerformanceMonitoring, runAllTests, getLastResults, getTestHistory, generateReport };
-      }
-    };
 
     testerInstance = SelfTester.factory(mockDeps);
   });

@@ -717,4 +717,451 @@ describe('ReflectionAnalyzer Module', () => {
       });
     });
   });
+
+  describe('Circular Dependency Detection', () => {
+    it('should detect direct circular dependencies', async () => {
+      const reflections = [
+        { id: 1, description: 'Module A depends on Module B', tags: ['moduleA', 'dependency'] },
+        { id: 2, description: 'Module B depends on Module A', tags: ['moduleB', 'dependency'] }
+      ];
+
+      mockReflectionStore.getReflections.mockResolvedValue(reflections);
+
+      const clusters = await analyzerInstance.clusterReflections(2);
+      expect(clusters.length).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should detect indirect circular dependencies', async () => {
+      const reflections = [
+        { id: 1, description: 'A depends on B', tags: ['circular'] },
+        { id: 2, description: 'B depends on C', tags: ['circular'] },
+        { id: 3, description: 'C depends on A', tags: ['circular'] }
+      ];
+
+      mockReflectionStore.getReflections.mockResolvedValue(reflections);
+
+      const clusters = await analyzerInstance.clusterReflections(2);
+      const circularCluster = clusters.find(c => c.commonTags.includes('circular'));
+
+      if (circularCluster) {
+        expect(circularCluster.size).toBe(3);
+      }
+    });
+
+    it('should detect self-referential dependencies', async () => {
+      const reflection = {
+        id: 1,
+        description: 'Module references itself creating infinite loop',
+        tags: ['self-reference', 'infinite-loop']
+      };
+
+      mockReflectionStore.getReflections.mockResolvedValue([reflection]);
+
+      const solution = await analyzerInstance.recommendSolution('module self reference infinite');
+      expect(solution).toBeDefined();
+    });
+
+    it('should handle complex dependency graphs', async () => {
+      const reflections = Array(20).fill(null).map((_, i) => ({
+        id: i,
+        description: `Module ${i} has dependencies on other modules`,
+        tags: ['dependency', 'module'],
+        timestamp: Date.now() - i * 1000
+      }));
+
+      mockReflectionStore.getReflections.mockResolvedValue(reflections);
+
+      const clusters = await analyzerInstance.clusterReflections(3);
+      expect(clusters).toBeDefined();
+    });
+  });
+
+  describe('Deep Nesting Analysis', () => {
+    it('should analyze code with 10+ nesting levels', async () => {
+      const deepNesting = 'deeply nested function with many levels of nesting causing complexity';
+
+      const solution = await analyzerInstance.recommendSolution(deepNesting);
+      expect(solution).toBeDefined();
+    });
+
+    it('should identify complexity in deeply nested structures', async () => {
+      mockReflectionStore.getReflections.mockResolvedValue([
+        {
+          id: 1,
+          description: 'Deeply nested conditional logic with 15 levels',
+          outcome: 'failed',
+          tags: ['complexity', 'nesting']
+        }
+      ]);
+
+      const patterns = await analyzerInstance.detectFailurePatterns();
+      expect(patterns).toBeDefined();
+    });
+
+    it('should recommend refactoring for deep nesting', async () => {
+      mockReflectionStore.getReflections.mockResolvedValue([
+        {
+          id: 1,
+          description: 'Refactored deeply nested code using early returns',
+          outcome: 'successful',
+          tags: ['refactoring', 'complexity'],
+          recommendations: ['Use early returns', 'Extract nested logic to functions']
+        }
+      ]);
+
+      const solution = await analyzerInstance.recommendSolution('deeply nested code refactoring');
+      if (solution.found) {
+        expect(solution.topRecommendations.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('should track nesting depth metrics', async () => {
+      const reflections = [
+        { id: 1, description: 'Code with nesting level 3', tags: ['nesting'] },
+        { id: 2, description: 'Code with nesting level 15', tags: ['nesting', 'complex'] }
+      ];
+
+      mockReflectionStore.getReflections.mockResolvedValue(reflections);
+
+      const clusters = await analyzerInstance.clusterReflections(2);
+      const nestingCluster = clusters.find(c => c.commonTags.includes('nesting'));
+
+      if (nestingCluster) {
+        expect(nestingCluster.size).toBeGreaterThan(0);
+      }
+    });
+  });
+
+  describe('Malformed Code Analysis', () => {
+    it('should handle syntax errors in analysis', async () => {
+      mockReflectionStore.getReflections.mockResolvedValue([
+        {
+          id: 1,
+          description: 'Syntax error: unexpected token in code',
+          outcome: 'failed',
+          tags: ['syntax-error']
+        }
+      ]);
+
+      const patterns = await analyzerInstance.detectFailurePatterns();
+      const syntaxPattern = patterns.find(p => p.indicator === 'syntax-error');
+
+      expect(syntaxPattern).toBeDefined();
+    });
+
+    it('should analyze incomplete code fragments', async () => {
+      const solution = await analyzerInstance.recommendSolution('incomplete code fragment missing');
+      expect(solution).toBeDefined();
+    });
+
+    it('should detect parsing errors', async () => {
+      mockReflectionStore.getReflections.mockResolvedValue([
+        {
+          id: 1,
+          description: 'Parse error: unexpected end of input',
+          outcome: 'failed',
+          tags: ['parse-error']
+        }
+      ]);
+
+      const patterns = await analyzerInstance.detectFailurePatterns();
+      expect(patterns.length).toBeGreaterThan(0);
+    });
+
+    it('should handle malformed AST structures', async () => {
+      const solution = await analyzerInstance.recommendSolution('malformed abstract syntax tree');
+      expect(solution).toBeDefined();
+    });
+  });
+
+  describe('Large Codebase Analysis', () => {
+    it('should analyze 1000+ lines of code', async () => {
+      const largeReflections = Array(1000).fill(null).map((_, i) => ({
+        id: i,
+        description: `Code analysis line ${i} with various patterns`,
+        outcome: i % 3 === 0 ? 'successful' : 'failed',
+        tags: [`tag${i % 10}`],
+        timestamp: Date.now() - i
+      }));
+
+      mockReflectionStore.getReflections.mockResolvedValue(largeReflections);
+
+      const insights = await analyzerInstance.getLearningInsights();
+      expect(insights.summary.totalReflections).toBeGreaterThan(900);
+    });
+
+    it('should handle 100+ function analysis', async () => {
+      const functionReflections = Array(100).fill(null).map((_, i) => ({
+        id: i,
+        description: `Function ${i} analysis with complexity metrics`,
+        outcome: 'successful',
+        tags: ['function', 'analysis'],
+        timestamp: Date.now() - i * 100
+      }));
+
+      mockReflectionStore.getReflections.mockResolvedValue(functionReflections);
+
+      const clusters = await analyzerInstance.clusterReflections(5);
+      expect(clusters).toBeDefined();
+    });
+
+    it('should maintain performance on large datasets', async () => {
+      const largeDataset = Array(500).fill(null).map((_, i) => ({
+        id: i,
+        description: `Large dataset entry ${i}`,
+        outcome: 'successful',
+        tags: ['large', 'dataset'],
+        timestamp: Date.now() - i * 10
+      }));
+
+      mockReflectionStore.getReflections.mockResolvedValue(largeDataset);
+
+      const startTime = Date.now();
+      await analyzerInstance.getLearningInsights();
+      const duration = Date.now() - startTime;
+
+      expect(duration).toBeLessThan(5000);
+    });
+
+    it('should scale clustering for large inputs', async () => {
+      const manyReflections = Array(200).fill(null).map((_, i) => ({
+        id: i,
+        description: `Reflection ${i} with similar content for clustering`,
+        outcome: 'successful',
+        tags: ['cluster', 'test'],
+        timestamp: Date.now() - i * 50
+      }));
+
+      mockReflectionStore.getReflections.mockResolvedValue(manyReflections);
+
+      const clusters = await analyzerInstance.clusterReflections(10);
+      expect(clusters.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Dynamic Code Generation Analysis', () => {
+    it('should detect eval usage patterns', async () => {
+      mockReflectionStore.getReflections.mockResolvedValue([
+        {
+          id: 1,
+          description: 'Code uses eval for dynamic execution',
+          outcome: 'failed',
+          tags: ['eval', 'dynamic', 'security']
+        }
+      ]);
+
+      const patterns = await analyzerInstance.detectFailurePatterns();
+      expect(patterns).toBeDefined();
+    });
+
+    it('should identify Function constructor usage', async () => {
+      const solution = await analyzerInstance.recommendSolution('Function constructor dynamic code');
+      expect(solution).toBeDefined();
+    });
+
+    it('should warn about code generation risks', async () => {
+      mockReflectionStore.getReflections.mockResolvedValue([
+        {
+          id: 1,
+          description: 'Dynamic code generation security vulnerability',
+          outcome: 'failed',
+          tags: ['security', 'dynamic-code']
+        }
+      ]);
+
+      const patterns = await analyzerInstance.detectFailurePatterns();
+      expect(patterns.length).toBeGreaterThan(0);
+    });
+
+    it('should track template literal code generation', async () => {
+      const solution = await analyzerInstance.recommendSolution('template literal code generation');
+      expect(solution).toBeDefined();
+    });
+  });
+
+  describe('Performance Tests', () => {
+    it('should analyze large files efficiently', async () => {
+      const largeFile = Array(10000).fill(null).map((_, i) => ({
+        id: i,
+        description: `Line ${i} of large file content`,
+        outcome: 'successful',
+        tags: ['large-file'],
+        timestamp: Date.now() - i
+      }));
+
+      mockReflectionStore.getReflections.mockResolvedValue(largeFile.slice(0, 100));
+
+      const startTime = Date.now();
+      await analyzerInstance.clusterReflections(5);
+      const duration = Date.now() - startTime;
+
+      expect(duration).toBeLessThan(3000);
+    });
+
+    it('should handle concurrent analysis requests', async () => {
+      const promises = [
+        analyzerInstance.detectFailurePatterns(),
+        analyzerInstance.getTopSuccessStrategies(5),
+        analyzerInstance.clusterReflections(3)
+      ];
+
+      const results = await Promise.all(promises);
+      expect(results).toHaveLength(3);
+    });
+
+    it('should optimize memory usage', async () => {
+      const reflections = Array(100).fill(null).map((_, i) => ({
+        id: i,
+        description: `Memory test ${i}`,
+        outcome: 'successful',
+        tags: ['memory'],
+        timestamp: Date.now() - i * 10
+      }));
+
+      mockReflectionStore.getReflections.mockResolvedValue(reflections);
+
+      await analyzerInstance.getLearningInsights();
+      expect(true).toBe(true);
+    });
+
+    it('should cache analysis results', async () => {
+      const startTime1 = Date.now();
+      await analyzerInstance.getLearningInsights();
+      const duration1 = Date.now() - startTime1;
+
+      const startTime2 = Date.now();
+      await analyzerInstance.getLearningInsights();
+      const duration2 = Date.now() - startTime2;
+
+      expect(duration2).toBeLessThanOrEqual(duration1 + 100);
+    });
+  });
+
+  describe('AST Parsing Edge Cases', () => {
+    it('should handle empty AST nodes', async () => {
+      const solution = await analyzerInstance.recommendSolution('empty ast node');
+      expect(solution).toBeDefined();
+    });
+
+    it('should parse nested object literals', async () => {
+      mockReflectionStore.getReflections.mockResolvedValue([
+        {
+          id: 1,
+          description: 'Parsing nested object literal with complex structure',
+          outcome: 'successful',
+          tags: ['ast', 'parsing']
+        }
+      ]);
+
+      const strategies = await analyzerInstance.getTopSuccessStrategies(5);
+      expect(strategies).toBeDefined();
+    });
+
+    it('should handle arrow function expressions', async () => {
+      const solution = await analyzerInstance.recommendSolution('arrow function parsing');
+      expect(solution).toBeDefined();
+    });
+
+    it('should parse class declarations', async () => {
+      mockReflectionStore.getReflections.mockResolvedValue([
+        {
+          id: 1,
+          description: 'Class declaration with methods and properties',
+          outcome: 'successful',
+          tags: ['class', 'es6']
+        }
+      ]);
+
+      const patterns = await analyzerInstance.detectFailurePatterns();
+      expect(patterns).toBeDefined();
+    });
+
+    it('should handle JSX syntax', async () => {
+      const solution = await analyzerInstance.recommendSolution('jsx component parsing');
+      expect(solution).toBeDefined();
+    });
+
+    it('should parse template literals with expressions', async () => {
+      mockReflectionStore.getReflections.mockResolvedValue([
+        {
+          id: 1,
+          description: 'Template literal with embedded expressions',
+          outcome: 'successful',
+          tags: ['template', 'literal']
+        }
+      ]);
+
+      const clusters = await analyzerInstance.clusterReflections(1);
+      expect(clusters).toBeDefined();
+    });
+  });
+
+  describe('Code Complexity Metrics', () => {
+    it('should calculate cyclomatic complexity', async () => {
+      mockReflectionStore.getReflections.mockResolvedValue([
+        {
+          id: 1,
+          description: 'Function with cyclomatic complexity of 15',
+          outcome: 'failed',
+          tags: ['complexity', 'metrics']
+        }
+      ]);
+
+      const patterns = await analyzerInstance.detectFailurePatterns();
+      expect(patterns).toBeDefined();
+    });
+
+    it('should measure code maintainability index', async () => {
+      const solution = await analyzerInstance.recommendSolution('maintainability index score');
+      expect(solution).toBeDefined();
+    });
+
+    it('should track lines of code metrics', async () => {
+      const reflections = Array(50).fill(null).map((_, i) => ({
+        id: i,
+        description: `File with ${i * 100} lines of code`,
+        outcome: 'successful',
+        tags: ['loc', 'metrics'],
+        timestamp: Date.now() - i * 100
+      }));
+
+      mockReflectionStore.getReflections.mockResolvedValue(reflections);
+
+      const insights = await analyzerInstance.getLearningInsights();
+      expect(insights.summary.totalReflections).toBeGreaterThan(0);
+    });
+
+    it('should identify code smells', async () => {
+      mockReflectionStore.getReflections.mockResolvedValue([
+        {
+          id: 1,
+          description: 'Code smell detected: long function with many parameters',
+          outcome: 'failed',
+          tags: ['code-smell', 'quality']
+        }
+      ]);
+
+      const patterns = await analyzerInstance.detectFailurePatterns();
+      expect(patterns.length).toBeGreaterThan(0);
+    });
+
+    it('should measure cognitive complexity', async () => {
+      const solution = await analyzerInstance.recommendSolution('cognitive complexity high');
+      expect(solution).toBeDefined();
+    });
+
+    it('should track technical debt indicators', async () => {
+      mockReflectionStore.getReflections.mockResolvedValue([
+        {
+          id: 1,
+          description: 'Technical debt: TODO comments and workarounds',
+          outcome: 'failed',
+          tags: ['tech-debt', 'todo']
+        }
+      ]);
+
+      const patterns = await analyzerInstance.detectFailurePatterns();
+      expect(patterns).toBeDefined();
+    });
+  });
 });

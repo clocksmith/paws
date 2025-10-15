@@ -1035,4 +1035,91 @@ function test() {
       expect(mockDeps.Utils.logger.warn).toHaveBeenCalled();
     });
   });
+
+  describe('Performance and Scalability', () => {
+    it('should handle large state snapshots efficiently', () => {
+      const largeState = {
+        modules: Array(1000).fill(null).map((_, i) => ({ id: `mod${i}`, loaded: true })),
+        artifacts: Array(500).fill(null).map((_, i) => ({ path: `/file${i}.js` }))
+      };
+
+      mockDeps.StateManager.getState.mockReturnValue(largeState);
+
+      const snapshot = introspectorInstance.api.getStateSnapshot();
+      expect(snapshot).toBeDefined();
+    });
+
+    it('should cache expensive introspection results', async () => {
+      const firstCall = await introspectorInstance.api.getToolCatalog();
+      const secondCall = await introspectorInstance.api.getToolCatalog();
+
+      expect(firstCall).toEqual(secondCall);
+    });
+
+    it('should handle concurrent introspection requests', async () => {
+      const promises = [
+        introspectorInstance.api.getStateSnapshot(),
+        introspectorInstance.api.getModuleGraph(),
+        introspectorInstance.api.getToolCatalog()
+      ];
+
+      const results = await Promise.all(promises);
+      expect(results).toHaveLength(3);
+    });
+  });
+
+  describe('Error Recovery', () => {
+    it('should recover from state access errors', () => {
+      mockDeps.StateManager.getState.mockImplementation(() => {
+        throw new Error('State corrupted');
+      });
+
+      expect(() => introspectorInstance.api.getStateSnapshot()).not.toThrow();
+      expect(mockDeps.Utils.logger.error).toHaveBeenCalled();
+    });
+
+    it('should provide fallback data on failures', async () => {
+      mockDeps.StateManager.getArtifactContent.mockRejectedValue(new Error('Artifact unavailable'));
+
+      const catalog = await introspectorInstance.api.getToolCatalog();
+      expect(catalog).toBeDefined();
+      expect(Array.isArray(catalog.tools)).toBe(true);
+    });
+
+    it('should handle malformed module metadata gracefully', () => {
+      mockDeps.StateManager.getState.mockReturnValue({
+        modules: [
+          { id: 'valid', version: '1.0.0' },
+          null,
+          { id: '', version: undefined },
+          { id: 'partial' }
+        ]
+      });
+
+      const graph = introspectorInstance.api.getModuleGraph();
+      expect(graph.nodes.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Data Consistency', () => {
+    it('should maintain snapshot consistency during state changes', () => {
+      const snapshot1 = introspectorInstance.api.getStateSnapshot();
+
+      mockDeps.StateManager.getState.mockReturnValue({
+        currentGoal: 'New goal',
+        totalCycles: 100
+      });
+
+      const snapshot2 = introspectorInstance.api.getStateSnapshot();
+      expect(snapshot2.currentGoal).not.toBe(snapshot1.currentGoal);
+    });
+
+    it('should validate snapshot completeness', () => {
+      const snapshot = introspectorInstance.api.getStateSnapshot();
+
+      expect(snapshot).toHaveProperty('currentGoal');
+      expect(snapshot).toHaveProperty('totalCycles');
+      expect(snapshot).toHaveProperty('timestamp');
+    });
+  });
 });

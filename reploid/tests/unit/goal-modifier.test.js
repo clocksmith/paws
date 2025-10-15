@@ -921,4 +921,100 @@ Respond with JSON: {"score": 0.0-1.0, "reasoning": "explanation"}`;
       expect(state.can_modify).toBe(false);
     });
   });
+
+  describe('Error Handling', () => {
+    it('should throw on API errors during alignment check', async () => {
+      mockApiClient.callApiWithRetry.mockRejectedValue(new Error('API error'));
+
+      await expect(goalModifier.evaluateAlignment('Test proposal', 'TEST')).rejects.toThrow(
+        'Failed to evaluate goal alignment'
+      );
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.stringContaining('Alignment evaluation failed')
+      );
+    });
+
+    it('should throw on malformed JSON from API', async () => {
+      mockApiClient.callApiWithRetry.mockResolvedValue({
+        content: 'Invalid JSON {'
+      });
+
+      await expect(goalModifier.evaluateAlignment('Test', 'T1')).rejects.toThrow();
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should handle state update failures gracefully', async () => {
+      mockStateManager.updateAndSaveState.mockRejectedValue(new Error('Save failed'));
+      mockApiClient.callApiWithRetry.mockResolvedValue({
+        content: JSON.stringify({ score: 0.9, reasoning: 'Good' })
+      });
+
+      await expect(goalModifier.refineGoal('Refinement', 'R1')).rejects.toThrow();
+    });
+
+    it('should allow empty refinement text', async () => {
+      mockApiClient.callApiWithRetry.mockResolvedValue({
+        content: JSON.stringify({ score: 0.9, reasoning: 'OK' })
+      });
+
+      await goalModifier.refineGoal('', 'R1');
+      expect(mockStateManager.updateAndSaveState).toHaveBeenCalled();
+    });
+  });
+
+  describe('Boundary Conditions', () => {
+    it('should build goal stack with multiple subgoals', async () => {
+      mockApiClient.callApiWithRetry.mockResolvedValue({
+        content: JSON.stringify({ score: 0.9, reasoning: 'OK' })
+      });
+
+      // Add subgoals up to rate limit
+      await goalModifier.addSubgoal('Subgoal 1', 0, 'S1');
+      await goalModifier.addSubgoal('Subgoal 2', 0, 'S2');
+
+      const state = goalModifier.getCurrentGoalState();
+      expect(state.stack.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should handle rapid successive modifications', async () => {
+      mockApiClient.callApiWithRetry.mockResolvedValue({
+        content: JSON.stringify({ score: 0.9, reasoning: 'OK' })
+      });
+
+      const promises = [
+        goalModifier.refineGoal('Refinement 1', 'R1'),
+        goalModifier.refineGoal('Refinement 2', 'R2'),
+        goalModifier.refineGoal('Refinement 3', 'R3')
+      ];
+
+      await Promise.all(promises);
+
+      const stats = goalModifier.getGoalStatistics();
+      expect(stats.total_modifications).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe('Goal History', () => {
+    it('should track goal modifications in history', async () => {
+      mockApiClient.callApiWithRetry.mockResolvedValue({
+        content: JSON.stringify({ score: 0.9, reasoning: 'OK' })
+      });
+
+      await goalModifier.refineGoal('Historical refinement', 'H1');
+
+      expect(mockState.goalHistory).toBeDefined();
+      expect(mockStateManager.updateAndSaveState).toHaveBeenCalled();
+    });
+
+    it('should preserve modification metadata', async () => {
+      mockApiClient.callApiWithRetry.mockResolvedValue({
+        content: JSON.stringify({ score: 0.9, reasoning: 'OK' })
+      });
+
+      await goalModifier.refineGoal('Refinement', 'R1');
+
+      expect(mockState.currentGoal.metadata.modification_count).toBeGreaterThanOrEqual(0);
+    });
+  });
 });

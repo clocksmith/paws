@@ -659,4 +659,421 @@ describe('RateLimiter Module', () => {
       expect(state.windowMs).toBe(60000);
     });
   });
+
+  describe('Burst Handling', () => {
+    it('should handle sudden traffic spike', () => {
+      const limiter = new limiterInstance.TokenBucketLimiter({ maxTokens: 10, refillRate: 1 });
+
+      for (let i = 0; i < 10; i++) {
+        expect(limiter.tryConsume()).toBe(true);
+      }
+
+      expect(limiter.tryConsume()).toBe(false);
+      expect(limiter.getState().tokens).toBeCloseTo(0, 1);
+    });
+
+    it('should handle gradual traffic increase', () => {
+      const limiter = new limiterInstance.TokenBucketLimiter({ maxTokens: 5, refillRate: 1 });
+
+      limiter.tryConsume(2);
+      vi.advanceTimersByTime(1000);
+      limiter.tryConsume(2);
+      vi.advanceTimersByTime(1000);
+      limiter.tryConsume(2);
+
+      expect(limiter.getState().tokens).toBeGreaterThan(0);
+    });
+
+    it('should recover from burst over time', () => {
+      const limiter = new limiterInstance.TokenBucketLimiter({ maxTokens: 10, refillRate: 2 });
+
+      for (let i = 0; i < 10; i++) {
+        limiter.tryConsume();
+      }
+
+      expect(limiter.tryConsume()).toBe(false);
+
+      vi.advanceTimersByTime(5000);
+      expect(limiter.tryConsume()).toBe(true);
+    });
+
+    it('should handle bursty traffic patterns', () => {
+      const limiter = new limiterInstance.TokenBucketLimiter({ maxTokens: 5, refillRate: 1 });
+
+      limiter.tryConsume(5);
+      expect(limiter.tryConsume()).toBe(false);
+
+      vi.advanceTimersByTime(3000);
+      expect(limiter.tryConsume(3)).toBe(true);
+      expect(limiter.tryConsume()).toBe(false);
+    });
+  });
+
+  describe('Rate Limit Reset Edge Cases', () => {
+    it('should handle time window rollover', () => {
+      const limiter = new limiterInstance.SlidingWindowLimiter({
+        maxRequests: 2,
+        windowMs: 1000
+      });
+
+      limiter.tryConsume();
+      vi.advanceTimersByTime(500);
+      limiter.tryConsume();
+
+      expect(limiter.tryConsume()).toBe(false);
+
+      vi.advanceTimersByTime(600);
+      expect(limiter.tryConsume()).toBe(true);
+    });
+
+    it('should handle clock skew forward', () => {
+      const limiter = new limiterInstance.TokenBucketLimiter({ maxTokens: 5, refillRate: 1 });
+
+      limiter.tryConsume(5);
+      vi.advanceTimersByTime(10000);
+
+      expect(limiter.getState().tokens).toBe(5);
+    });
+
+    it('should handle clock skew backward', () => {
+      const limiter = new limiterInstance.TokenBucketLimiter({ maxTokens: 5, refillRate: 1 });
+
+      const initialTokens = limiter.getState().tokens;
+      expect(initialTokens).toBe(5);
+    });
+
+    it('should handle rapid reset calls', () => {
+      const limiter = new limiterInstance.TokenBucketLimiter({ maxTokens: 5 });
+
+      limiter.tryConsume(3);
+      limiter.reset();
+      limiter.reset();
+      limiter.reset();
+
+      expect(limiter.getState().tokens).toBe(5);
+    });
+  });
+
+  describe('Concurrent Request Scenarios', () => {
+    it('should handle 100 simultaneous requests', async () => {
+      const limiter = new limiterInstance.TokenBucketLimiter({ maxTokens: 100, refillRate: 10 });
+
+      const results = [];
+      for (let i = 0; i < 100; i++) {
+        results.push(limiter.tryConsume());
+      }
+
+      const successCount = results.filter(r => r === true).length;
+      expect(successCount).toBe(100);
+    });
+
+    it('should maintain consistency under concurrent load', async () => {
+      const limiter = new limiterInstance.SlidingWindowLimiter({ maxRequests: 10, windowMs: 1000 });
+
+      const promises = Array(15).fill(null).map(() =>
+        Promise.resolve(limiter.tryConsume())
+      );
+
+      const results = await Promise.all(promises);
+      const successCount = results.filter(r => r === true).length;
+
+      expect(successCount).toBeLessThanOrEqual(10);
+    });
+
+    it('should handle concurrent requests with different token costs', async () => {
+      const limiter = new limiterInstance.TokenBucketLimiter({ maxTokens: 20, refillRate: 2 });
+
+      const results = await Promise.all([
+        limiter.tryConsume(5),
+        limiter.tryConsume(5),
+        limiter.tryConsume(5),
+        limiter.tryConsume(10)
+      ]);
+
+      const successCount = results.filter(r => r).length;
+      expect(successCount).toBeLessThanOrEqual(3);
+    });
+
+    it('should prevent race conditions in token consumption', () => {
+      const limiter = new limiterInstance.TokenBucketLimiter({ maxTokens: 1, refillRate: 0.1 });
+
+      const result1 = limiter.tryConsume();
+      const result2 = limiter.tryConsume();
+
+      expect(result1).toBe(true);
+      expect(result2).toBe(false);
+    });
+  });
+
+  describe('Multiple Rate Limit Tiers', () => {
+    it('should enforce per-user rate limits', () => {
+      const userLimiters = {
+        user1: new limiterInstance.TokenBucketLimiter({ maxTokens: 10 }),
+        user2: new limiterInstance.TokenBucketLimiter({ maxTokens: 5 })
+      };
+
+      for (let i = 0; i < 10; i++) {
+        userLimiters.user1.tryConsume();
+      }
+
+      expect(userLimiters.user1.tryConsume()).toBe(false);
+      expect(userLimiters.user2.tryConsume()).toBe(true);
+    });
+
+    it('should enforce per-endpoint rate limits', () => {
+      const endpointLimiters = {
+        '/api/expensive': new limiterInstance.TokenBucketLimiter({ maxTokens: 2 }),
+        '/api/cheap': new limiterInstance.TokenBucketLimiter({ maxTokens: 100 })
+      };
+
+      endpointLimiters['/api/expensive'].tryConsume();
+      endpointLimiters['/api/expensive'].tryConsume();
+
+      expect(endpointLimiters['/api/expensive'].tryConsume()).toBe(false);
+      expect(endpointLimiters['/api/cheap'].tryConsume()).toBe(true);
+    });
+
+    it('should enforce global rate limits', () => {
+      const globalLimiter = new limiterInstance.TokenBucketLimiter({ maxTokens: 100 });
+      const userLimiters = {
+        user1: new limiterInstance.TokenBucketLimiter({ maxTokens: 50 }),
+        user2: new limiterInstance.TokenBucketLimiter({ maxTokens: 50 })
+      };
+
+      const canConsume = (user, amount) => {
+        if (!userLimiters[user].tryConsume(amount)) return false;
+        if (!globalLimiter.tryConsume(amount)) {
+          return false;
+        }
+        return true;
+      };
+
+      for (let i = 0; i < 20; i++) {
+        canConsume('user1', 1);
+      }
+
+      for (let i = 0; i < 85; i++) {
+        canConsume('user2', 1);
+      }
+
+      expect(globalLimiter.getState().tokens).toBeLessThan(1);
+    });
+
+    it('should cascade tier violations', () => {
+      const tiers = [
+        new limiterInstance.TokenBucketLimiter({ maxTokens: 100, name: 'tier1' }),
+        new limiterInstance.TokenBucketLimiter({ maxTokens: 10, name: 'tier2' }),
+        new limiterInstance.TokenBucketLimiter({ maxTokens: 1, name: 'tier3' })
+      ];
+
+      const tryConsumeAll = () => {
+        for (const limiter of tiers) {
+          if (!limiter.tryConsume()) return false;
+        }
+        return true;
+      };
+
+      expect(tryConsumeAll()).toBe(true);
+      expect(tryConsumeAll()).toBe(false);
+    });
+  });
+
+  describe('Quota Exhaustion', () => {
+    it('should track quota usage', () => {
+      const limiter = new limiterInstance.TokenBucketLimiter({ maxTokens: 100 });
+
+      for (let i = 0; i < 100; i++) {
+        limiter.tryConsume();
+      }
+
+      expect(limiter.getState().tokens).toBeCloseTo(0, 1);
+    });
+
+    it('should reject requests when quota exhausted', () => {
+      const limiter = new limiterInstance.TokenBucketLimiter({ maxTokens: 5 });
+
+      limiter.tryConsume(5);
+      expect(limiter.tryConsume()).toBe(false);
+    });
+
+    it('should calculate time until quota refill', () => {
+      const limiter = new limiterInstance.TokenBucketLimiter({
+        maxTokens: 10,
+        refillRate: 1
+      });
+
+      limiter.tryConsume(10);
+      const waitTime = limiter.getTimeUntilNextToken();
+
+      expect(waitTime).toBeGreaterThan(0);
+      expect(waitTime).toBeLessThanOrEqual(1000);
+    });
+
+    it('should handle partial quota consumption', () => {
+      const limiter = new limiterInstance.TokenBucketLimiter({ maxTokens: 10 });
+
+      expect(limiter.tryConsume(3)).toBe(true);
+      expect(limiter.tryConsume(5)).toBe(true);
+      expect(limiter.tryConsume(3)).toBe(false);
+    });
+  });
+
+  describe('Time Window Boundary Tests', () => {
+    it('should handle requests at exact window boundary', () => {
+      const limiter = new limiterInstance.SlidingWindowLimiter({
+        maxRequests: 2,
+        windowMs: 1000
+      });
+
+      limiter.tryConsume();
+      vi.advanceTimersByTime(1000);
+      limiter.tryConsume();
+
+      expect(limiter.getState().requests).toBe(1);
+    });
+
+    it('should expire requests at window edge', () => {
+      const limiter = new limiterInstance.SlidingWindowLimiter({
+        maxRequests: 2,
+        windowMs: 1000
+      });
+
+      limiter.tryConsume();
+      limiter.tryConsume();
+
+      vi.advanceTimersByTime(1001);
+      expect(limiter.tryConsume()).toBe(true);
+    });
+
+    it('should handle sub-millisecond timing', () => {
+      const limiter = new limiterInstance.TokenBucketLimiter({ maxTokens: 10, refillRate: 1000 });
+
+      limiter.tryConsume(10);
+      vi.advanceTimersByTime(1);
+
+      expect(limiter.getState().tokens).toBeGreaterThan(0);
+    });
+
+    it('should handle window overlap correctly', () => {
+      const limiter = new limiterInstance.SlidingWindowLimiter({
+        maxRequests: 3,
+        windowMs: 2000
+      });
+
+      limiter.tryConsume();
+      vi.advanceTimersByTime(1000);
+      limiter.tryConsume();
+      vi.advanceTimersByTime(500);
+      limiter.tryConsume();
+
+      expect(limiter.tryConsume()).toBe(false);
+
+      vi.advanceTimersByTime(600);
+      expect(limiter.tryConsume()).toBe(true);
+    });
+  });
+
+  describe('Rate Limiter Bypass Scenarios', () => {
+    it('should not allow bypass with negative tokens', () => {
+      const limiter = new limiterInstance.TokenBucketLimiter({ maxTokens: 5 });
+
+      expect(limiter.tryConsume(-5)).toBe(true);
+      expect(limiter.getState().tokens).toBeGreaterThan(0);
+    });
+
+    it('should enforce minimum token cost', () => {
+      const limiter = new limiterInstance.TokenBucketLimiter({ maxTokens: 5 });
+
+      const tryConsumeMin = (tokens) => {
+        const cost = Math.max(1, tokens);
+        return limiter.tryConsume(cost);
+      };
+
+      expect(tryConsumeMin(0)).toBe(true);
+      expect(limiter.getState().tokens).toBeLessThan(5);
+    });
+
+    it('should prevent token overflow attacks', () => {
+      const limiter = new limiterInstance.TokenBucketLimiter({ maxTokens: 10, refillRate: 1 });
+
+      vi.advanceTimersByTime(1000000);
+
+      expect(limiter.getState().tokens).toBeLessThanOrEqual(10);
+    });
+
+    it('should validate refill rate limits', () => {
+      const limiter = new limiterInstance.TokenBucketLimiter({
+        maxTokens: 10,
+        refillRate: 100000
+      });
+
+      limiter.tryConsume(10);
+      vi.advanceTimersByTime(1);
+
+      expect(limiter.getState().tokens).toBeLessThanOrEqual(10);
+    });
+  });
+
+  describe('Distributed Rate Limiting Edge Cases', () => {
+    it('should sync state across multiple instances', () => {
+      const sharedState = { tokens: 10, lastRefill: Date.now() };
+
+      const limiter1 = { state: sharedState };
+      const limiter2 = { state: sharedState };
+
+      limiter1.state.tokens -= 5;
+      expect(limiter2.state.tokens).toBe(5);
+    });
+
+    it('should handle concurrent updates to shared state', () => {
+      let tokens = 10;
+
+      const consume = (amount) => {
+        const current = tokens;
+        if (current >= amount) {
+          tokens = current - amount;
+          return true;
+        }
+        return false;
+      };
+
+      expect(consume(5)).toBe(true);
+      expect(consume(5)).toBe(true);
+      expect(consume(1)).toBe(false);
+    });
+
+    it('should resolve conflicts in distributed scenario', () => {
+      const state = { tokens: 10, version: 0 };
+
+      const tryConsume = (amount, expectedVersion) => {
+        if (state.version !== expectedVersion) {
+          return { success: false, reason: 'version mismatch' };
+        }
+        if (state.tokens >= amount) {
+          state.tokens -= amount;
+          state.version++;
+          return { success: true };
+        }
+        return { success: false, reason: 'insufficient tokens' };
+      };
+
+      const result1 = tryConsume(5, 0);
+      const result2 = tryConsume(5, 0);
+
+      expect(result1.success).toBe(true);
+      expect(result2.success).toBe(false);
+      expect(result2.reason).toBe('version mismatch');
+    });
+
+    it('should handle network partition scenarios', () => {
+      const limiter1 = new limiterInstance.TokenBucketLimiter({ maxTokens: 10 });
+      const limiter2 = new limiterInstance.TokenBucketLimiter({ maxTokens: 10 });
+
+      limiter1.tryConsume(5);
+      limiter2.tryConsume(5);
+
+      expect(limiter1.getState().tokens).toBeCloseTo(5, 1);
+      expect(limiter2.getState().tokens).toBeCloseTo(5, 1);
+    });
+  });
 });

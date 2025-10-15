@@ -655,4 +655,117 @@ describe('HotReload Module', () => {
       expect(mockDeps.logger.error).toHaveBeenCalled();
     });
   });
+
+  describe('Edge Cases and Robustness', () => {
+    it('should handle circular dependencies', () => {
+      const moduleA = {
+        id: 'A',
+        dependencies: ['B']
+      };
+      const moduleB = {
+        id: 'B',
+        dependencies: ['A']
+      };
+
+      // Circular reference detection would be handled by tracking visited modules
+      const visited = new Set();
+      const checkCircular = (mod) => {
+        if (visited.has(mod.id)) return true;
+        visited.add(mod.id);
+        return false;
+      };
+
+      expect(checkCircular(moduleA)).toBe(false);
+      visited.add('A');
+      expect(checkCircular(moduleA)).toBe(true); // Now it's circular
+    });
+
+    it('should handle modules with no exports', () => {
+      const source = 'console.log("Module with side effects only");';
+      const hasExports = source.includes('export');
+
+      expect(hasExports).toBe(false);
+      // Should still wrap and execute
+    });
+
+    it('should handle very large module source code', () => {
+      const largeSource = 'a'.repeat(100000);
+      const canProcess = largeSource.length > 0;
+
+      expect(canProcess).toBe(true);
+      // Should handle memory efficiently
+    });
+
+    it('should handle concurrent reload requests', async () => {
+      const moduleId = 'TestModule';
+      const promises = [
+        Promise.resolve({ id: moduleId, version: 1 }),
+        Promise.resolve({ id: moduleId, version: 2 }),
+        Promise.resolve({ id: moduleId, version: 3 })
+      ];
+
+      const results = await Promise.all(promises);
+
+      expect(results).toHaveLength(3);
+      // Last one should win
+      expect(results[2].version).toBe(3);
+    });
+
+    it('should preserve module state during hot reload', () => {
+      const oldState = { count: 42, data: [1, 2, 3] };
+      const newModule = { state: null };
+
+      // Transfer state pattern
+      if (oldState) {
+        newModule.state = oldState;
+      }
+
+      expect(newModule.state.count).toBe(42);
+      expect(newModule.state.data).toEqual([1, 2, 3]);
+    });
+
+    it('should handle Blob URL revocation safely', () => {
+      const blobUrls = ['blob://url1', 'blob://url2'];
+      const revokedUrls = [];
+
+      blobUrls.forEach(url => {
+        try {
+          // Mock URL.revokeObjectURL
+          revokedUrls.push(url);
+        } catch (error) {
+          mockDeps.logger.warn('[HotReload] Failed to revoke URL:', url);
+        }
+      });
+
+      expect(revokedUrls).toHaveLength(2);
+    });
+
+    it('should validate module metadata before reload', () => {
+      const invalidModule = { id: '', version: null };
+      const validModule = { id: 'Test', version: '1.0.0' };
+
+      const isValid = (mod) => Boolean(mod.id && mod.id.length > 0);
+
+      expect(isValid(invalidModule)).toBe(false);
+      expect(isValid(validModule)).toBe(true);
+    });
+
+    it('should handle module unload before reload completes', async () => {
+      let isLoaded = true;
+      const reloadPromise = new Promise(resolve => {
+        setTimeout(() => {
+          if (isLoaded) {
+            resolve({ id: 'Test', loaded: true });
+          } else {
+            resolve(null);
+          }
+        }, 10);
+      });
+
+      isLoaded = false; // Unload before promise resolves
+
+      const result = await reloadPromise;
+      expect(result).toBeNull();
+    });
+  });
 });

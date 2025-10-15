@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import ApiClient from '../../upgrades/api-client.js';
+import ApiClientMulti from '../../upgrades/api-client-multi.js';
 
 /**
  * Comprehensive test suite for api-client.js and api-client-multi.js
@@ -6,7 +8,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
  */
 
 describe('ApiClient Module (api-client.js)', () => {
-  let ApiClient;
   let mockDeps;
   let mockFetch;
   let mockAbortController;
@@ -73,220 +74,6 @@ describe('ApiClient Module (api-client.js)', () => {
       }
     };
 
-    // Load ApiClient module structure
-    ApiClient = {
-      metadata: {
-        id: 'ApiClient',
-        version: '2.0.0',
-        dependencies: ['config', 'Utils', 'StateManager', 'RateLimiter'],
-        async: false,
-        type: 'service'
-      },
-      factory: (deps) => {
-        const { config, Utils, StateManager, RateLimiter } = deps;
-        const { logger, Errors } = Utils;
-        const { ApiError, AbortError } = Errors;
-
-        if (!config || !logger || !Errors || !Utils || !StateManager) {
-          throw new Error('ApiClient: Missing required dependencies');
-        }
-
-        const rateLimiter = RateLimiter ? RateLimiter.getLimiter('api') : null;
-        let currentAbortController = null;
-        let useProxy = false;
-        let proxyChecked = false;
-
-        const checkProxyAvailability = async () => {
-          if (proxyChecked) return useProxy;
-
-          try {
-            const response = await fetch('/api/proxy-status');
-            if (response.ok) {
-              const data = await response.json();
-              useProxy = data.proxyAvailable && data.hasApiKey;
-            }
-          } catch (e) {
-            useProxy = false;
-          }
-          proxyChecked = true;
-          return useProxy;
-        };
-
-        const sanitizeLlmJsonResp = (rawText) => {
-          return Utils.sanitizeLlmJsonRespPure(rawText, logger).sanitizedJson;
-        };
-
-        const callApiWithRetry = async (history, apiKey, funcDecls = []) => {
-          if (rateLimiter) {
-            const allowed = await RateLimiter.waitForToken(rateLimiter, 5000);
-            if (!allowed) {
-              throw new ApiError(
-                'Rate limit exceeded. Please wait before making another request.',
-                429,
-                'RATE_LIMIT_EXCEEDED'
-              );
-            }
-          }
-
-          if (!proxyChecked) {
-            await checkProxyAvailability();
-          }
-
-          if (currentAbortController) {
-            currentAbortController.abort("New call initiated");
-          }
-          currentAbortController = new AbortController();
-
-          const modelName = "gemini-1.5-flash-latest";
-          let apiEndpoint;
-          let fetchOptions;
-
-          if (useProxy) {
-            apiEndpoint = `/api/gemini/models/${modelName}:generateContent`;
-            fetchOptions = {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              signal: currentAbortController.signal,
-            };
-          } else {
-            apiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
-            fetchOptions = {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              signal: currentAbortController.signal,
-            };
-          }
-
-          const reqBody = {
-            contents: history,
-            safetySettings: [
-              "HARASSMENT", "HATE_SPEECH", "SEXUALLY_EXPLICIT", "DANGEROUS_CONTENT"
-            ].map(cat => ({
-              category: `HARM_CATEGORY_${cat}`,
-              threshold: "BLOCK_ONLY_HIGH"
-            })),
-            generationConfig: {
-              temperature: 0.8,
-              maxOutputTokens: 8192,
-              responseMimeType: "application/json"
-            },
-          };
-
-          if (funcDecls && funcDecls.length > 0) {
-            reqBody.tools = [{ functionDeclarations: funcDecls }];
-            reqBody.tool_config = { function_calling_config: { mode: "AUTO" } };
-            delete reqBody.generationConfig.responseMimeType;
-          }
-
-          try {
-            const url = useProxy ? apiEndpoint : `${apiEndpoint}?key=${apiKey}`;
-
-            const response = await fetch(url, {
-              ...fetchOptions,
-              body: JSON.stringify(reqBody),
-            });
-
-            if (!response.ok) {
-              const errBody = await response.text();
-              throw new ApiError(
-                `API Error (${response.status}): ${errBody}`,
-                response.status
-              );
-            }
-
-            const data = await response.json();
-
-            if (!data.candidates || data.candidates.length === 0) {
-              if (data.promptFeedback && data.promptFeedback.blockReason) {
-                throw new ApiError(
-                  `Request blocked: ${data.promptFeedback.blockReason}`,
-                  400,
-                  "PROMPT_BLOCK",
-                  data.promptFeedback
-                );
-              }
-              throw new ApiError("API returned no candidates.", 500, "NO_CANDIDATES");
-            }
-
-            const candidate = data.candidates[0];
-            const part = candidate.content.parts[0];
-
-            let resultType = "empty";
-            let resultContent = "";
-
-            if (part.text) {
-              resultType = "text";
-              resultContent = part.text;
-            } else if (part.functionCall) {
-              resultType = "functionCall";
-              resultContent = part.functionCall;
-            }
-
-            return {
-              type: resultType,
-              content: resultContent,
-              rawResp: data,
-            };
-
-          } catch (error) {
-            if (error.name === 'AbortError') {
-              throw new AbortError("API call was cancelled. You can start a new request.");
-            }
-
-            if (!navigator.onLine) {
-              throw new ApiError(
-                "No internet connection detected. Please check your network and try again.",
-                0,
-                "NETWORK_OFFLINE"
-              );
-            }
-
-            if (error.statusCode === 401 || error.statusCode === 403) {
-              throw new ApiError(
-                "Authentication failed. Please check your API key in settings or .env file.",
-                error.statusCode,
-                "AUTH_FAILED"
-              );
-            }
-
-            if (error.statusCode === 429) {
-              throw new ApiError(
-                "Rate limit exceeded. Please wait a moment before trying again.",
-                429,
-                "RATE_LIMIT"
-              );
-            }
-
-            if (error.statusCode >= 500) {
-              throw new ApiError(
-                `The AI service is temporarily unavailable (${error.statusCode}). Please try again in a few moments.`,
-                error.statusCode,
-                "SERVER_ERROR"
-              );
-            }
-
-            throw error;
-          } finally {
-            currentAbortController = null;
-          }
-        };
-
-        const abortCurrentCall = (reason = "User requested abort") => {
-          if (currentAbortController) {
-            currentAbortController.abort(reason);
-            currentAbortController = null;
-          }
-        };
-
-        return {
-          api: {
-            callApiWithRetry,
-            abortCurrentCall,
-            sanitizeLlmJsonResp
-          }
-        };
-      }
-    };
 
     clientInstance = ApiClient.factory(mockDeps);
   });
@@ -674,18 +461,21 @@ describe('ApiClient Module (api-client.js)', () => {
 });
 
 describe('ApiClientMulti Module (api-client-multi.js)', () => {
-  let ApiClientMulti;
   let mockDeps;
   let mockFetch;
+  let mockAbortController;
   let clientInstance;
 
   beforeEach(() => {
     mockFetch = vi.fn();
     global.fetch = mockFetch;
-    global.AbortController = vi.fn(() => ({
+
+    // Mock AbortController
+    mockAbortController = {
       signal: {},
       abort: vi.fn()
-    }));
+    };
+    global.AbortController = vi.fn(() => mockAbortController);
 
     mockDeps = {
       config: {
@@ -724,75 +514,6 @@ describe('ApiClientMulti Module (api-client-multi.js)', () => {
       }
     };
 
-    // Simplified ApiClientMulti structure for testing
-    ApiClientMulti = {
-      metadata: {
-        id: 'ApiClientMulti',
-        version: '2.0.0',
-        dependencies: ['config', 'Utils', 'StateManager'],
-        async: false,
-        type: 'service'
-      },
-      factory: (deps) => {
-        const { config, Utils } = deps;
-        const { logger } = Utils;
-
-        let currentProvider = config.apiProvider || 'gemini';
-        let proxyStatus = null;
-        let proxyChecked = false;
-
-        const checkProxyAvailability = async () => {
-          if (proxyChecked) return proxyStatus;
-
-          try {
-            const response = await fetch('/api/proxy-status');
-            if (response.ok) {
-              proxyStatus = await response.json();
-            }
-          } catch (e) {
-            proxyStatus = null;
-          }
-          proxyChecked = true;
-          return proxyStatus;
-        };
-
-        const setProvider = (provider) => {
-          const validProviders = ['gemini', 'openai', 'anthropic', 'local'];
-          if (!validProviders.includes(provider)) {
-            throw new Error(`Invalid provider: ${provider}`);
-          }
-          currentProvider = provider;
-        };
-
-        const getAvailableProviders = () => {
-          if (!proxyStatus) {
-            return ['local'];
-          }
-          const available = [];
-          if (proxyStatus.providers?.gemini) available.push('gemini');
-          if (proxyStatus.providers?.openai) available.push('openai');
-          if (proxyStatus.providers?.anthropic) available.push('anthropic');
-          available.push('local');
-          return available;
-        };
-
-        const callApiWithRetry = async () => {
-          return { type: 'text', content: 'test' };
-        };
-
-        return {
-          api: {
-            callApiWithRetry,
-            setProvider,
-            getAvailableProviders,
-            getCurrentProvider: () => currentProvider,
-            checkProxyAvailability,
-            abortCurrentCall: vi.fn(),
-            sanitizeLlmJsonResp: (text) => text.trim()
-          }
-        };
-      }
-    };
 
     clientInstance = ApiClientMulti.factory(mockDeps);
   });

@@ -255,4 +255,4 @@ const ApiClient = {
 };
 
 // Export standardized module
-ApiClient;
+export default ApiClient;

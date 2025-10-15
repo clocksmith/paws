@@ -1021,4 +1021,449 @@ describe('PyodideRuntime', () => {
       expect(mockDeps.Storage.getArtifactContent).toHaveBeenCalled();
     });
   });
+
+  describe('Package Installation Failures', () => {
+    beforeEach(async () => {
+      instance = PyodideRuntime.factory(mockDeps);
+      const initPromise = instance.init();
+      mockWorker.onmessage({ data: { type: 'ready', data: {} } });
+      const initMessage = mockWorker.postMessage.mock.calls[0];
+      mockWorker.onmessage({ data: { id: initMessage[0].id, type: 'response', data: {} } });
+      await initPromise;
+    });
+
+    it('should handle network errors during package install', async () => {
+      const installPromise = instance.api.installPackage('numpy');
+
+      const installMessage = mockWorker.postMessage.mock.calls.find(
+        call => call[0].type === 'install'
+      );
+      mockWorker.onmessage({
+        data: { id: installMessage[0].id, type: 'error', data: { message: 'Network error' } }
+      });
+
+      await expect(installPromise).rejects.toThrow('Network error');
+    });
+
+    it('should handle package not found errors', async () => {
+      const installPromise = instance.api.installPackage('nonexistent-package');
+
+      const installMessage = mockWorker.postMessage.mock.calls.find(
+        call => call[0].type === 'install'
+      );
+      mockWorker.onmessage({
+        data: { id: installMessage[0].id, type: 'error', data: { message: 'Package not found' } }
+      });
+
+      await expect(installPromise).rejects.toThrow();
+    });
+
+    it('should handle incompatible package versions', async () => {
+      const installPromise = instance.api.installPackage('package@999.999.999');
+
+      const installMessage = mockWorker.postMessage.mock.calls.find(
+        call => call[0].type === 'install'
+      );
+      mockWorker.onmessage({
+        data: { id: installMessage[0].id, type: 'error', data: { message: 'Version not found' } }
+      });
+
+      await expect(installPromise).rejects.toThrow();
+    });
+  });
+
+  describe('Workspace Sync Edge Cases', () => {
+    beforeEach(async () => {
+      instance = PyodideRuntime.factory(mockDeps);
+      const initPromise = instance.init();
+      mockWorker.onmessage({ data: { type: 'ready', data: {} } });
+      const initMessage = mockWorker.postMessage.mock.calls[0];
+      mockWorker.onmessage({ data: { id: initMessage[0].id, type: 'response', data: {} } });
+      await initPromise;
+    });
+
+    it('should handle empty workspace', async () => {
+      mockDeps.StateManager.getState.mockReturnValue({ artifactMetadata: {} });
+
+      const result = await instance.api.syncWorkspace();
+
+      expect(result.success).toBe(true);
+      expect(result.synced).toBe(0);
+    });
+
+    it('should handle partial sync failures', async () => {
+      mockDeps.StateManager.getState.mockReturnValue({
+        artifactMetadata: {
+          '/file1.py': { type: 'python' },
+          '/file2.py': { type: 'python' }
+        }
+      });
+
+      mockDeps.Storage.getArtifactContent
+        .mockResolvedValueOnce('content1')
+        .mockRejectedValueOnce(new Error('Read failed'));
+
+      const syncPromise = instance.api.syncWorkspace();
+
+      const writeMessages = mockWorker.postMessage.mock.calls.filter(
+        call => call[0].type === 'writeFile'
+      );
+      writeMessages.forEach(msg => {
+        mockWorker.onmessage({
+          data: { id: msg[0].id, type: 'response', data: { success: true } }
+        });
+      });
+
+      const result = await syncPromise;
+
+      expect(result.failed).toBeGreaterThan(0);
+    });
+
+    it('should handle large workspace sync', async () => {
+      const artifacts = {};
+      for (let i = 0; i < 100; i++) {
+        artifacts[`/file${i}.py`] = { type: 'python' };
+      }
+      mockDeps.StateManager.getState.mockReturnValue({ artifactMetadata: artifacts });
+      mockDeps.Storage.getArtifactContent.mockResolvedValue('content');
+
+      const syncPromise = instance.api.syncWorkspace();
+
+      const writeMessages = mockWorker.postMessage.mock.calls.filter(
+        call => call[0].type === 'writeFile'
+      );
+      writeMessages.forEach(msg => {
+        mockWorker.onmessage({
+          data: { id: msg[0].id, type: 'response', data: { success: true } }
+        });
+      });
+
+      const result = await syncPromise;
+
+      expect(result.synced).toBeLessThanOrEqual(100);
+    });
+  });
+
+  describe('Python Execution Timeout Scenarios', () => {
+    beforeEach(async () => {
+      instance = PyodideRuntime.factory(mockDeps);
+      const initPromise = instance.init();
+      mockWorker.onmessage({ data: { type: 'ready', data: {} } });
+      const initMessage = mockWorker.postMessage.mock.calls[0];
+      mockWorker.onmessage({ data: { id: initMessage[0].id, type: 'response', data: {} } });
+      await initPromise;
+    });
+
+    it('should timeout long-running Python code', async () => {
+      const executePromise = instance.api.execute('while True: pass');
+
+      const timeoutCall = global.setTimeout.mock.calls.find(
+        call => typeof call[0] === 'function'
+      );
+      if (timeoutCall) {
+        timeoutCall[0]();
+      }
+
+      await expect(executePromise).rejects.toThrow('timeout');
+    });
+
+    it('should handle infinite loops gracefully', async () => {
+      const executePromise = instance.api.execute('while True: x = 1');
+
+      const timeoutCall = global.setTimeout.mock.calls.find(
+        call => typeof call[0] === 'function'
+      );
+      if (timeoutCall) {
+        timeoutCall[0]();
+      }
+
+      await expect(executePromise).rejects.toThrow();
+    });
+  });
+
+  describe('Memory Exhaustion Tests', () => {
+    beforeEach(async () => {
+      instance = PyodideRuntime.factory(mockDeps);
+      const initPromise = instance.init();
+      mockWorker.onmessage({ data: { type: 'ready', data: {} } });
+      const initMessage = mockWorker.postMessage.mock.calls[0];
+      mockWorker.onmessage({ data: { id: initMessage[0].id, type: 'response', data: {} } });
+      await initPromise;
+    });
+
+    it('should handle memory allocation errors', async () => {
+      const executePromise = instance.api.execute('x = [0] * (10**9)');
+
+      const executeMessage = mockWorker.postMessage.mock.calls.find(
+        call => call[0].type === 'execute'
+      );
+      mockWorker.onmessage({
+        data: { id: executeMessage[0].id, type: 'error', data: { message: 'Memory error' } }
+      });
+
+      await expect(executePromise).rejects.toThrow();
+    });
+
+    it('should handle out of memory during large file operations', async () => {
+      const largeContent = 'x' .repeat(100 * 1024 * 1024);
+      mockDeps.Storage.getArtifactContent.mockResolvedValue(largeContent);
+
+      const syncPromise = instance.api.syncFileToWorker('/large.txt');
+
+      const syncMessage = mockWorker.postMessage.mock.calls.find(
+        call => call[0].type === 'writeFile'
+      );
+      mockWorker.onmessage({
+        data: { id: syncMessage[0].id, type: 'error', data: { message: 'Out of memory' } }
+      });
+
+      await expect(syncPromise).rejects.toThrow();
+    });
+  });
+
+  describe('Concurrent Execution Tests', () => {
+    beforeEach(async () => {
+      instance = PyodideRuntime.factory(mockDeps);
+      const initPromise = instance.init();
+      mockWorker.onmessage({ data: { type: 'ready', data: {} } });
+      const initMessage = mockWorker.postMessage.mock.calls[0];
+      mockWorker.onmessage({ data: { id: initMessage[0].id, type: 'response', data: {} } });
+      await initPromise;
+    });
+
+    it('should handle multiple concurrent execute calls', async () => {
+      const promises = [
+        instance.api.execute('x = 1'),
+        instance.api.execute('y = 2'),
+        instance.api.execute('z = 3')
+      ];
+
+      const executeMessages = mockWorker.postMessage.mock.calls.filter(
+        call => call[0].type === 'execute'
+      );
+      executeMessages.forEach(msg => {
+        mockWorker.onmessage({
+          data: { id: msg[0].id, type: 'response', data: { success: true } }
+        });
+      });
+
+      const results = await Promise.all(promises);
+
+      expect(results).toHaveLength(3);
+      results.forEach(result => {
+        expect(result.success).toBe(true);
+      });
+    });
+
+    it('should handle concurrent package installations', async () => {
+      const promises = [
+        instance.api.installPackage('numpy'),
+        instance.api.installPackage('pandas')
+      ];
+
+      const installMessages = mockWorker.postMessage.mock.calls.filter(
+        call => call[0].type === 'install'
+      );
+      installMessages.forEach(msg => {
+        mockWorker.onmessage({
+          data: { id: msg[0].id, type: 'response', data: { success: true } }
+        });
+      });
+
+      const results = await Promise.all(promises);
+
+      expect(results).toHaveLength(2);
+    });
+  });
+
+  describe('Python Error Handling', () => {
+    beforeEach(async () => {
+      instance = PyodideRuntime.factory(mockDeps);
+      const initPromise = instance.init();
+      mockWorker.onmessage({ data: { type: 'ready', data: {} } });
+      const initMessage = mockWorker.postMessage.mock.calls[0];
+      mockWorker.onmessage({ data: { id: initMessage[0].id, type: 'response', data: {} } });
+      await initPromise;
+    });
+
+    it('should handle Python SyntaxError', async () => {
+      const executePromise = instance.api.execute('if True');
+
+      const executeMessage = mockWorker.postMessage.mock.calls.find(
+        call => call[0].type === 'execute'
+      );
+      mockWorker.onmessage({
+        data: { id: executeMessage[0].id, type: 'error', data: { message: 'SyntaxError: invalid syntax' } }
+      });
+
+      await expect(executePromise).rejects.toThrow('SyntaxError');
+    });
+
+    it('should handle Python ImportError', async () => {
+      const executePromise = instance.api.execute('import nonexistent_module');
+
+      const executeMessage = mockWorker.postMessage.mock.calls.find(
+        call => call[0].type === 'execute'
+      );
+      mockWorker.onmessage({
+        data: { id: executeMessage[0].id, type: 'error', data: { message: 'ImportError: No module named nonexistent_module' } }
+      });
+
+      await expect(executePromise).rejects.toThrow('ImportError');
+    });
+
+    it('should handle Python NameError', async () => {
+      const executePromise = instance.api.execute('print(undefined_variable)');
+
+      const executeMessage = mockWorker.postMessage.mock.calls.find(
+        call => call[0].type === 'execute'
+      );
+      mockWorker.onmessage({
+        data: { id: executeMessage[0].id, type: 'error', data: { message: 'NameError: name undefined_variable is not defined' } }
+      });
+
+      await expect(executePromise).rejects.toThrow('NameError');
+    });
+
+    it('should handle Python TypeError', async () => {
+      const executePromise = instance.api.execute('x = "string" + 5');
+
+      const executeMessage = mockWorker.postMessage.mock.calls.find(
+        call => call[0].type === 'execute'
+      );
+      mockWorker.onmessage({
+        data: { id: executeMessage[0].id, type: 'error', data: { message: 'TypeError: unsupported operand type(s)' } }
+      });
+
+      await expect(executePromise).rejects.toThrow('TypeError');
+    });
+
+    it('should handle Python ValueError', async () => {
+      const executePromise = instance.api.execute('int("not_a_number")');
+
+      const executeMessage = mockWorker.postMessage.mock.calls.find(
+        call => call[0].type === 'execute'
+      );
+      mockWorker.onmessage({
+        data: { id: executeMessage[0].id, type: 'error', data: { message: 'ValueError: invalid literal' } }
+      });
+
+      await expect(executePromise).rejects.toThrow('ValueError');
+    });
+
+    it('should handle Python IndexError', async () => {
+      const executePromise = instance.api.execute('x = [1, 2]; y = x[10]');
+
+      const executeMessage = mockWorker.postMessage.mock.calls.find(
+        call => call[0].type === 'execute'
+      );
+      mockWorker.onmessage({
+        data: { id: executeMessage[0].id, type: 'error', data: { message: 'IndexError: list index out of range' } }
+      });
+
+      await expect(executePromise).rejects.toThrow('IndexError');
+    });
+
+    it('should handle Python KeyError', async () => {
+      const executePromise = instance.api.execute('x = {}; y = x["missing_key"]');
+
+      const executeMessage = mockWorker.postMessage.mock.calls.find(
+        call => call[0].type === 'execute'
+      );
+      mockWorker.onmessage({
+        data: { id: executeMessage[0].id, type: 'error', data: { message: 'KeyError: missing_key' } }
+      });
+
+      await expect(executePromise).rejects.toThrow('KeyError');
+    });
+  });
+
+  describe('File System Operations Tests', () => {
+    beforeEach(async () => {
+      instance = PyodideRuntime.factory(mockDeps);
+      const initPromise = instance.init();
+      mockWorker.onmessage({ data: { type: 'ready', data: {} } });
+      const initMessage = mockWorker.postMessage.mock.calls[0];
+      mockWorker.onmessage({ data: { id: initMessage[0].id, type: 'response', data: {} } });
+      await initPromise;
+    });
+
+    it('should handle file permission errors', async () => {
+      mockDeps.Storage.getArtifactContent.mockResolvedValue('content');
+
+      const syncPromise = instance.api.syncFileToWorker('/readonly/file.py');
+
+      const syncMessage = mockWorker.postMessage.mock.calls.find(
+        call => call[0].type === 'writeFile'
+      );
+      mockWorker.onmessage({
+        data: { id: syncMessage[0].id, type: 'error', data: { message: 'Permission denied' } }
+      });
+
+      await expect(syncPromise).rejects.toThrow();
+    });
+
+    it('should handle directory not found errors', async () => {
+      const listPromise = instance.api.listFiles('/nonexistent');
+
+      const listMessage = mockWorker.postMessage.mock.calls.find(
+        call => call[0].type === 'listDir'
+      );
+      mockWorker.onmessage({
+        data: { id: listMessage[0].id, type: 'error', data: { message: 'Directory not found' } }
+      });
+
+      await expect(listPromise).rejects.toThrow();
+    });
+
+    it('should handle reading non-existent files', async () => {
+      const syncPromise = instance.api.syncFileFromWorker('/missing.py');
+
+      const syncMessage = mockWorker.postMessage.mock.calls.find(
+        call => call[0].type === 'readFile'
+      );
+      mockWorker.onmessage({
+        data: { id: syncMessage[0].id, type: 'response', data: { success: false, error: 'File not found' } }
+      });
+
+      const result = await syncPromise;
+
+      expect(result.success).toBe(false);
+    });
+
+    it('should handle binary file operations', async () => {
+      const binaryContent = new Uint8Array([0xFF, 0xD8, 0xFF, 0xE0]);
+      mockDeps.Storage.getArtifactContent.mockResolvedValue(binaryContent);
+
+      const syncPromise = instance.api.syncFileToWorker('/image.jpg');
+
+      const syncMessage = mockWorker.postMessage.mock.calls.find(
+        call => call[0].type === 'writeFile'
+      );
+      mockWorker.onmessage({
+        data: { id: syncMessage[0].id, type: 'response', data: { success: true } }
+      });
+
+      const result = await syncPromise;
+
+      expect(result.success).toBe(true);
+    });
+
+    it('should handle nested directory creation', async () => {
+      mockDeps.Storage.getArtifactContent.mockResolvedValue('content');
+
+      const syncPromise = instance.api.syncFileToWorker('/a/b/c/deep.py');
+
+      const syncMessage = mockWorker.postMessage.mock.calls.find(
+        call => call[0].type === 'writeFile'
+      );
+      mockWorker.onmessage({
+        data: { id: syncMessage[0].id, type: 'response', data: { success: true } }
+      });
+
+      const result = await syncPromise;
+
+      expect(result.success).toBe(true);
+    });
+  });
 });

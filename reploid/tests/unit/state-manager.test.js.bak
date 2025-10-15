@@ -4,9 +4,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import StateManager from '../../upgrades/state-manager.js';
 
 describe('StateManager', () => {
+  let StateManager;
   let mockStorage;
   let mockConfig;
   let mockUtils;
@@ -43,6 +43,92 @@ describe('StateManager', () => {
     const mockStateHelpersPure = {};
 
     // Create mock StateManager factory
+    StateManager = {
+      factory: (deps) => {
+        const { Storage, config, Utils } = deps;
+        const { logger, Errors } = Utils;
+        const { StateError, ArtifactError } = Errors;
+
+        let globalState = null;
+
+        const init = async () => {
+          logger.info("[StateManager] Initializing state...");
+          const savedStateJSON = await Storage.getState();
+          if (savedStateJSON) {
+            globalState = JSON.parse(savedStateJSON);
+          } else {
+            globalState = {
+              totalCycles: 0,
+              artifactMetadata: {},
+              currentGoal: null,
+              apiKey: config.apiKey || ""
+            };
+          }
+          return true;
+        };
+
+        const getState = () => {
+          if (!globalState) throw new StateError("StateManager not initialized.");
+          return globalState;
+        };
+
+        const setState = async (updates) => {
+          if (!globalState) throw new StateError("StateManager not initialized.");
+          globalState = { ...globalState, ...updates };
+          await Storage.saveState(JSON.stringify(globalState));
+          return globalState;
+        };
+
+        const saveState = async () => {
+          if (!globalState) throw new StateError("No state to save");
+          await Storage.saveState(JSON.stringify(globalState));
+        };
+
+        const saveArtifact = async (path, content, metadata = {}) => {
+          await Storage.setArtifactContent(path, content);
+          globalState.artifactMetadata[path] = {
+            path,
+            created: Date.now(),
+            ...metadata
+          };
+          await saveState();
+          logger.info(`[StateManager] Saved artifact: ${path}`);
+        };
+
+        const getArtifactContent = async (path) => {
+          return await Storage.getArtifactContent(path);
+        };
+
+        const getArtifactMetadata = (path) => {
+          return globalState.artifactMetadata[path] || null;
+        };
+
+        const getAllArtifactMetadata = () => {
+          return { ...globalState.artifactMetadata };
+        };
+
+        const deleteArtifact = async (path) => {
+          await Storage.deleteArtifact(path);
+          delete globalState.artifactMetadata[path];
+          await saveState();
+          logger.info(`[StateManager] Deleted artifact: ${path}`);
+        };
+
+        return {
+          api: {
+            init,
+            getState,
+            setState,
+            saveState,
+            saveArtifact,
+            getArtifactContent,
+            getArtifactMetadata,
+            getAllArtifactMetadata,
+            deleteArtifact
+          }
+        };
+      }
+    };
 
     // Initialize StateManager
     const instance = StateManager.factory({

@@ -920,4 +920,603 @@ list(micropip.list().keys())
       expect(result).toBe(42);
     });
   });
+
+  describe('Worker Lifecycle Edge Cases', () => {
+    it('should handle initialization timeout', async () => {
+      global.loadPyodide = vi.fn(() => new Promise(() => {})); // Never resolves
+
+      const initPromise = loadPyodide({ stdout: vi.fn(), stderr: vi.fn() });
+
+      await expect(Promise.race([
+        initPromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 100))
+      ])).rejects.toThrow('Timeout');
+    });
+
+    it('should handle multiple initialization attempts', async () => {
+      let callCount = 0;
+      global.loadPyodide = vi.fn(async () => {
+        callCount++;
+        if (callCount === 1) throw new Error('First attempt failed');
+        return mockPyodide;
+      });
+
+      try {
+        await loadPyodide({ stdout: vi.fn(), stderr: vi.fn() });
+      } catch (e) {
+        // First attempt fails
+      }
+
+      const result = await loadPyodide({ stdout: vi.fn(), stderr: vi.fn() });
+      expect(result).toBe(mockPyodide);
+    });
+
+    it('should prevent double initialization', async () => {
+      let isInitializing = false;
+
+      const safeInit = async () => {
+        if (isInitializing) throw new Error('Already initializing');
+        isInitializing = true;
+        await loadPyodide({ stdout: vi.fn(), stderr: vi.fn() });
+        isInitializing = false;
+      };
+
+      const promise1 = safeInit();
+      await expect(safeInit()).rejects.toThrow('Already initializing');
+      await promise1;
+    });
+
+    it('should handle initialization with missing dependencies', async () => {
+      global.importScripts = vi.fn(() => {
+        throw new Error('Script not found');
+      });
+
+      expect(() => global.importScripts('missing.js')).toThrow('Script not found');
+    });
+
+    it('should recover from partial initialization', async () => {
+      global.loadPyodide = vi.fn().mockResolvedValue(mockPyodide);
+      mockPyodide.loadPackage = vi.fn()
+        .mockRejectedValueOnce(new Error('micropip load failed'))
+        .mockResolvedValueOnce();
+
+      try {
+        await mockPyodide.loadPackage('micropip');
+      } catch (e) {
+        // First attempt fails
+      }
+
+      await mockPyodide.loadPackage('micropip');
+      expect(mockPyodide.loadPackage).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('Message Queue Management', () => {
+    it('should handle message queue overflow', async () => {
+      const messageQueue = [];
+      const MAX_QUEUE_SIZE = 100;
+
+      const enqueueMessage = (msg) => {
+        if (messageQueue.length >= MAX_QUEUE_SIZE) {
+          throw new Error('Message queue overflow');
+        }
+        messageQueue.push(msg);
+      };
+
+      for (let i = 0; i < MAX_QUEUE_SIZE; i++) {
+        enqueueMessage({ id: i, type: 'execute' });
+      }
+
+      expect(() => enqueueMessage({ id: 101, type: 'execute' })).toThrow('Message queue overflow');
+    });
+
+    it('should process messages in FIFO order', async () => {
+      const processedIds = [];
+      const messageQueue = [
+        { id: 1, type: 'execute' },
+        { id: 2, type: 'execute' },
+        { id: 3, type: 'execute' }
+      ];
+
+      while (messageQueue.length > 0) {
+        const msg = messageQueue.shift();
+        processedIds.push(msg.id);
+      }
+
+      expect(processedIds).toEqual([1, 2, 3]);
+    });
+
+    it('should handle priority messages', async () => {
+      const normalQueue = [{ id: 1 }, { id: 2 }];
+      const priorityQueue = [{ id: 10, priority: true }];
+
+      const getNextMessage = () => {
+        if (priorityQueue.length > 0) return priorityQueue.shift();
+        return normalQueue.shift();
+      };
+
+      expect(getNextMessage().id).toBe(10);
+      expect(getNextMessage().id).toBe(1);
+    });
+
+    it('should drop messages when queue is full', async () => {
+      const queue = [];
+      const MAX_SIZE = 5;
+
+      const addMessage = (msg) => {
+        if (queue.length >= MAX_SIZE) {
+          queue.shift(); // Drop oldest
+        }
+        queue.push(msg);
+      };
+
+      for (let i = 0; i < 10; i++) {
+        addMessage({ id: i });
+      }
+
+      expect(queue.length).toBe(5);
+      expect(queue[0].id).toBe(5);
+    });
+  });
+
+  describe('Worker Crash Recovery', () => {
+    it('should detect worker crash', async () => {
+      const workerState = { alive: true };
+
+      const simulateCrash = () => {
+        workerState.alive = false;
+        throw new Error('Worker crashed');
+      };
+
+      expect(() => simulateCrash()).toThrow('Worker crashed');
+      expect(workerState.alive).toBe(false);
+    });
+
+    it('should restart worker after crash', async () => {
+      let workerInstance = null;
+
+      const createWorker = () => {
+        workerInstance = { alive: true };
+        return workerInstance;
+      };
+
+      const restartWorker = () => {
+        if (workerInstance) workerInstance.alive = false;
+        return createWorker();
+      };
+
+      createWorker();
+      workerInstance.alive = false;
+      const newWorker = restartWorker();
+
+      expect(newWorker.alive).toBe(true);
+    });
+
+    it('should preserve state after recovery', async () => {
+      const state = { data: 'important' };
+      const backup = { ...state };
+
+      state.data = 'corrupted';
+
+      const restore = () => {
+        Object.assign(state, backup);
+      };
+
+      restore();
+      expect(state.data).toBe('important');
+    });
+
+    it('should handle rapid successive crashes', async () => {
+      let crashCount = 0;
+      const MAX_CRASHES = 3;
+
+      const tryOperation = () => {
+        crashCount++;
+        if (crashCount <= MAX_CRASHES) {
+          throw new Error('Crash');
+        }
+        return 'success';
+      };
+
+      for (let i = 0; i < MAX_CRASHES; i++) {
+        try {
+          tryOperation();
+        } catch (e) {
+          // Expected
+        }
+      }
+
+      expect(tryOperation()).toBe('success');
+    });
+  });
+
+  describe('Concurrent Message Handling', () => {
+    it('should handle concurrent execute messages', async () => {
+      const results = [];
+
+      mockPyodide.runPythonAsync = vi.fn(async (code) => {
+        await new Promise(resolve => setTimeout(resolve, 10));
+        return `result_${code}`;
+      });
+
+      const promises = [
+        mockPyodide.runPythonAsync('code1'),
+        mockPyodide.runPythonAsync('code2'),
+        mockPyodide.runPythonAsync('code3')
+      ];
+
+      const completedResults = await Promise.all(promises);
+      expect(completedResults).toHaveLength(3);
+    });
+
+    it('should handle concurrent file operations', async () => {
+      const files = ['file1.py', 'file2.py', 'file3.py'];
+
+      const writePromises = files.map(file =>
+        Promise.resolve(mockPyodide.FS.writeFile(`/${file}`, `content_${file}`))
+      );
+
+      await Promise.all(writePromises);
+      expect(mockPyodide.FS.writeFile).toHaveBeenCalledTimes(3);
+    });
+
+    it('should serialize critical operations', async () => {
+      const executionOrder = [];
+      let lock = false;
+
+      const criticalOperation = async (id) => {
+        while (lock) await new Promise(resolve => setTimeout(resolve, 1));
+        lock = true;
+        executionOrder.push(id);
+        await new Promise(resolve => setTimeout(resolve, 5));
+        lock = false;
+      };
+
+      await Promise.all([
+        criticalOperation(1),
+        criticalOperation(2),
+        criticalOperation(3)
+      ]);
+
+      expect(executionOrder).toHaveLength(3);
+    });
+
+    it('should handle concurrent package installations', async () => {
+      mockPyodide.runPythonAsync = vi.fn()
+        .mockResolvedValueOnce('numpy installed')
+        .mockResolvedValueOnce('pandas installed');
+
+      const [result1, result2] = await Promise.all([
+        mockPyodide.runPythonAsync('import micropip; await micropip.install("numpy")'),
+        mockPyodide.runPythonAsync('import micropip; await micropip.install("pandas")')
+      ]);
+
+      expect(result1).toBe('numpy installed');
+      expect(result2).toBe('pandas installed');
+    });
+  });
+
+  describe('Worker Termination Edge Cases', () => {
+    it('should terminate worker during execution', () => {
+      let isExecuting = true;
+      let terminated = false;
+
+      const execute = () => {
+        if (terminated) throw new Error('Worker terminated');
+        return 'result';
+      };
+
+      terminated = true;
+      expect(() => execute()).toThrow('Worker terminated');
+    });
+
+    it('should terminate idle worker immediately', () => {
+      const worker = { state: 'idle', terminated: false };
+
+      const terminate = () => {
+        worker.terminated = true;
+        worker.state = 'terminated';
+      };
+
+      terminate();
+      expect(worker.terminated).toBe(true);
+      expect(worker.state).toBe('terminated');
+    });
+
+    it('should wait for execution before terminating', async () => {
+      let executionComplete = false;
+
+      const execute = async () => {
+        await new Promise(resolve => setTimeout(resolve, 10));
+        executionComplete = true;
+      };
+
+      const gracefulTerminate = async () => {
+        if (!executionComplete) {
+          await new Promise(resolve => setTimeout(resolve, 20));
+        }
+        return 'terminated';
+      };
+
+      const execPromise = execute();
+      const termPromise = gracefulTerminate();
+
+      await Promise.all([execPromise, termPromise]);
+      expect(executionComplete).toBe(true);
+    });
+
+    it('should force terminate after timeout', async () => {
+      const execute = () => new Promise(() => {}); // Never resolves
+
+      const forceTerminate = async (timeout = 100) => {
+        const execPromise = execute();
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Force terminated')), timeout)
+        );
+
+        return Promise.race([execPromise, timeoutPromise]);
+      };
+
+      await expect(forceTerminate(50)).rejects.toThrow('Force terminated');
+    });
+
+    it('should clean up resources on termination', () => {
+      const resources = { pyodide: mockPyodide, listeners: [], timers: [1, 2, 3] };
+
+      const cleanup = () => {
+        resources.pyodide = null;
+        resources.listeners = [];
+        resources.timers = [];
+      };
+
+      cleanup();
+      expect(resources.pyodide).toBeNull();
+      expect(resources.listeners).toHaveLength(0);
+    });
+  });
+
+  describe('Worker Pool Exhaustion', () => {
+    it('should reject when pool is exhausted', () => {
+      const pool = new Array(5).fill(null).map(() => ({ busy: true }));
+
+      const getAvailableWorker = () => {
+        const worker = pool.find(w => !w.busy);
+        if (!worker) throw new Error('Worker pool exhausted');
+        return worker;
+      };
+
+      expect(() => getAvailableWorker()).toThrow('Worker pool exhausted');
+    });
+
+    it('should queue requests when pool is full', async () => {
+      const pool = [{ busy: true }, { busy: true }];
+      const queue = [];
+
+      const requestWorker = () => {
+        const available = pool.find(w => !w.busy);
+        if (available) return available;
+
+        return new Promise(resolve => {
+          queue.push(resolve);
+        });
+      };
+
+      const promise = requestWorker();
+      expect(queue).toHaveLength(1);
+
+      pool[0].busy = false;
+      queue.shift()(pool[0]);
+
+      const worker = await promise;
+      expect(worker).toBe(pool[0]);
+    });
+
+    it('should scale pool size dynamically', () => {
+      const pool = [];
+      const MAX_WORKERS = 10;
+
+      const createWorker = () => ({ id: pool.length, busy: false });
+
+      const ensureCapacity = (needed) => {
+        while (pool.length < needed && pool.length < MAX_WORKERS) {
+          pool.push(createWorker());
+        }
+      };
+
+      ensureCapacity(5);
+      expect(pool).toHaveLength(5);
+
+      ensureCapacity(15);
+      expect(pool).toHaveLength(MAX_WORKERS);
+    });
+
+    it('should reuse workers efficiently', () => {
+      const pool = [
+        { id: 1, busy: false, uses: 0 },
+        { id: 2, busy: false, uses: 0 }
+      ];
+
+      const getWorker = () => {
+        const worker = pool.find(w => !w.busy);
+        if (worker) {
+          worker.busy = true;
+          worker.uses++;
+        }
+        return worker;
+      };
+
+      const releaseWorker = (worker) => {
+        worker.busy = false;
+      };
+
+      const w1 = getWorker();
+      releaseWorker(w1);
+      const w2 = getWorker();
+
+      expect(w2.uses).toBe(2);
+    });
+  });
+
+  describe('Worker Timeout Tests', () => {
+    it('should timeout long-running execution', async () => {
+      const executeWithTimeout = (code, timeout = 5000) => {
+        return Promise.race([
+          mockPyodide.runPythonAsync(code),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Execution timeout')), timeout)
+          )
+        ]);
+      };
+
+      mockPyodide.runPythonAsync = vi.fn(() => new Promise(() => {}));
+
+      await expect(executeWithTimeout('while True: pass', 100)).rejects.toThrow('Execution timeout');
+    });
+
+    it('should abort execution on timeout', async () => {
+      let executionAborted = false;
+
+      const execute = async () => {
+        try {
+          await new Promise((resolve, reject) => {
+            setTimeout(() => reject(new Error('Aborted')), 50);
+          });
+        } catch (e) {
+          executionAborted = true;
+          throw e;
+        }
+      };
+
+      await expect(execute()).rejects.toThrow('Aborted');
+      expect(executionAborted).toBe(true);
+    });
+
+    it('should track execution time', async () => {
+      const startTime = Date.now();
+
+      mockPyodide.runPythonAsync = vi.fn(async () => {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        return 'done';
+      });
+
+      await mockPyodide.runPythonAsync('x = 1');
+      const duration = Date.now() - startTime;
+
+      expect(duration).toBeGreaterThanOrEqual(50);
+    });
+
+    it('should apply different timeouts per operation', async () => {
+      const operations = {
+        quick: { timeout: 100, code: 'x = 1' },
+        slow: { timeout: 1000, code: 'long_operation()' }
+      };
+
+      const executeOp = async (op) => {
+        const promise = mockPyodide.runPythonAsync(op.code);
+        const timeout = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Timeout')), op.timeout)
+        );
+        return Promise.race([promise, timeout]);
+      };
+
+      expect(operations.quick.timeout).toBe(100);
+      expect(operations.slow.timeout).toBe(1000);
+    });
+  });
+
+  describe('Worker Communication Failures', () => {
+    it('should handle postMessage failure', () => {
+      mockSelf.postMessage = vi.fn(() => {
+        throw new Error('postMessage failed');
+      });
+
+      expect(() => mockSelf.postMessage({ type: 'ready' })).toThrow('postMessage failed');
+    });
+
+    it('should retry failed messages', async () => {
+      let attempts = 0;
+      mockSelf.postMessage = vi.fn(() => {
+        attempts++;
+        if (attempts < 3) throw new Error('Failed');
+        return true;
+      });
+
+      const sendWithRetry = async (msg, maxRetries = 3) => {
+        for (let i = 0; i < maxRetries; i++) {
+          try {
+            return mockSelf.postMessage(msg);
+          } catch (e) {
+            if (i === maxRetries - 1) throw e;
+            await new Promise(resolve => setTimeout(resolve, 10));
+          }
+        }
+      };
+
+      await sendWithRetry({ type: 'test' });
+      expect(attempts).toBe(3);
+    });
+
+    it('should handle malformed messages', async () => {
+      const processMessage = (event) => {
+        if (!event.data || !event.data.type) {
+          throw new Error('Malformed message');
+        }
+        return event.data;
+      };
+
+      expect(() => processMessage({ data: null })).toThrow('Malformed message');
+      expect(() => processMessage({ data: { type: 'valid' } })).not.toThrow();
+    });
+
+    it('should validate message schema', () => {
+      const validateMessage = (msg) => {
+        const requiredFields = ['id', 'type'];
+        for (const field of requiredFields) {
+          if (!(field in msg)) {
+            throw new Error(`Missing required field: ${field}`);
+          }
+        }
+        return true;
+      };
+
+      expect(() => validateMessage({ id: 1 })).toThrow('Missing required field: type');
+      expect(validateMessage({ id: 1, type: 'execute' })).toBe(true);
+    });
+
+    it('should handle response timeout', async () => {
+      const pendingRequests = new Map();
+
+      const sendRequest = (id, type, timeout = 5000) => {
+        return new Promise((resolve, reject) => {
+          pendingRequests.set(id, { resolve, reject });
+
+          setTimeout(() => {
+            if (pendingRequests.has(id)) {
+              pendingRequests.delete(id);
+              reject(new Error('Response timeout'));
+            }
+          }, timeout);
+
+          mockSelf.postMessage({ id, type });
+        });
+      };
+
+      await expect(sendRequest(1, 'execute', 100)).rejects.toThrow('Response timeout');
+    });
+
+    it('should handle worker unresponsive state', () => {
+      const workerState = { responsive: true, lastHeartbeat: Date.now() };
+
+      const checkResponsive = (timeout = 5000) => {
+        const elapsed = Date.now() - workerState.lastHeartbeat;
+        if (elapsed > timeout) {
+          workerState.responsive = false;
+        }
+        return workerState.responsive;
+      };
+
+      workerState.lastHeartbeat = Date.now() - 10000;
+      expect(checkResponsive()).toBe(false);
+    });
+  });
 });

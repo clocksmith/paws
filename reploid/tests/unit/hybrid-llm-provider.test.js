@@ -750,4 +750,80 @@ describe('HybridLLMProvider Module', () => {
       expect(config.preferLocal).toBe(true);
     });
   });
+
+  describe('Performance and Reliability', () => {
+    it('should handle rapid mode switching', async () => {
+      mockLocalLLM.isReady.mockReturnValue(true);
+      await providerInstance.init(mockCloudAPIClient);
+
+      providerInstance.api.setMode('local');
+      providerInstance.api.setMode('cloud');
+      providerInstance.api.setMode('local');
+
+      expect(mockDeps.Utils.logger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Provider mode set')
+      );
+    });
+
+    it('should handle concurrent requests', async () => {
+      await providerInstance.init(mockCloudAPIClient);
+      mockCloudAPIClient.generateContent.mockResolvedValue({ response: 'ok' });
+
+      const promises = [
+        providerInstance.api.complete([{ role: 'user', parts: [{ text: 'Q1' }] }]),
+        providerInstance.api.complete([{ role: 'user', parts: [{ text: 'Q2' }] }]),
+        providerInstance.api.complete([{ role: 'user', parts: [{ text: 'Q3' }] }])
+      ];
+
+      await Promise.all(promises);
+
+      expect(mockCloudAPIClient.generateContent).toHaveBeenCalledTimes(3);
+    });
+
+    it('should maintain state across multiple calls', async () => {
+      await providerInstance.init(mockCloudAPIClient);
+      mockCloudAPIClient.generateContent.mockResolvedValue({ response: 'ok' });
+
+      await providerInstance.api.complete([{ role: 'user', parts: [{ text: 'First' }] }]);
+      const state1 = providerInstance.api.getMode();
+
+      await providerInstance.api.complete([{ role: 'user', parts: [{ text: 'Second' }] }]);
+      const state2 = providerInstance.api.getMode();
+
+      expect(state1).toBe(state2);
+    });
+
+    it('should handle errors without corrupting state', async () => {
+      await providerInstance.init(mockCloudAPIClient);
+      mockCloudAPIClient.generateContent.mockRejectedValueOnce(new Error('Temporary error'));
+
+      await expect(
+        providerInstance.api.complete([{ role: 'user', parts: [{ text: 'Test' }] }])
+      ).rejects.toThrow();
+
+      // Should still be usable after error
+      mockCloudAPIClient.generateContent.mockResolvedValueOnce({ response: 'OK' });
+      await providerInstance.api.complete([{ role: 'user', parts: [{ text: 'Retry' }] }]);
+
+      expect(mockCloudAPIClient.generateContent).toHaveBeenCalledTimes(2);
+    });
+
+    it('should track performance metrics across providers', async () => {
+      mockLocalLLM.isReady.mockReturnValue(true);
+      mockLocalLLM.chat.mockResolvedValue({ response: 'local response' });
+      mockCloudAPIClient.generateContent.mockResolvedValue({ response: 'cloud response' });
+      await providerInstance.init(mockCloudAPIClient);
+
+      // Cloud call
+      providerInstance.api.setMode('cloud');
+      await providerInstance.api.complete([{ role: 'user', parts: [{ text: 'Cloud test' }] }]);
+
+      // Local call
+      providerInstance.api.setMode('local');
+      await providerInstance.api.complete([{ role: 'user', parts: [{ text: 'Local test' }] }]);
+
+      expect(mockCloudAPIClient.generateContent).toHaveBeenCalled();
+      expect(mockLocalLLM.chat).toHaveBeenCalled();
+    });
+  });
 });

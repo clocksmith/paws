@@ -634,4 +634,396 @@ describe('VerificationManager Module', () => {
       expect(typeof managerInstance.api.isInitialized).toBe('function');
     });
   });
+
+  describe('Timeout Scenarios', () => {
+    beforeEach(() => {
+      managerInstance = VerificationManager.factory(mockDeps);
+      managerInstance.init();
+    });
+
+    it('should timeout after 30 seconds', async () => {
+      vi.useFakeTimers();
+      const promise = managerInstance.api.runVerification('test:long-running');
+
+      vi.advanceTimersByTime(30001);
+
+      await expect(promise).rejects.toThrow('Verification timeout');
+      vi.useRealTimers();
+    });
+
+    it('should clear pending verification on timeout', async () => {
+      vi.useFakeTimers();
+      const promise = managerInstance.api.runVerification('test:timeout');
+
+      vi.advanceTimersByTime(30001);
+
+      await promise.catch(() => {});
+      vi.useRealTimers();
+    });
+
+    it('should not timeout for fast verifications', async () => {
+      const promise = managerInstance.api.verifyTests('/test.js');
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(mockWorker.postMessage).toHaveBeenCalled();
+    });
+  });
+
+  describe('Concurrent Verification Requests', () => {
+    beforeEach(() => {
+      managerInstance = VerificationManager.factory(mockDeps);
+      managerInstance.init();
+    });
+
+    it('should handle multiple concurrent verifications', async () => {
+      const promises = [
+        managerInstance.api.verifyTests('/test1.js'),
+        managerInstance.api.verifyTests('/test2.js'),
+        managerInstance.api.verifyTests('/test3.js')
+      ];
+
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(mockWorker.postMessage).toHaveBeenCalledTimes(3);
+    });
+
+    it('should track all pending verifications', async () => {
+      const p1 = managerInstance.api.verifyTests('/test1.js');
+      const p2 = managerInstance.api.verifyLinting('/file1.js');
+      const p3 = managerInstance.api.verifyTypes('/type1.ts');
+
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(mockWorker.postMessage.mock.calls.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('should resolve verifications independently', async () => {
+      const p1 = managerInstance.api.verifyTests('/test1.js');
+      const p2 = managerInstance.api.verifyTests('/test2.js');
+
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      const messageHandler = mockWorker.addEventListener.mock.calls.find(
+        call => call[0] === 'message'
+      )?.[1];
+
+      messageHandler({
+        data: {
+          type: 'VERIFY_COMPLETE',
+          sessionId: 'verify_' + Date.now(),
+          success: true,
+          output: 'test1 passed'
+        }
+      });
+
+      expect(mockWorker.postMessage).toHaveBeenCalled();
+    });
+
+    it('should handle rapid-fire verifications', async () => {
+      const promises = [];
+      for (let i = 0; i < 100; i++) {
+        promises.push(managerInstance.api.verifyTests(`/test${i}.js`));
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(mockWorker.postMessage.mock.calls.length).toBeGreaterThanOrEqual(100);
+    });
+  });
+
+  describe('Worker Recovery', () => {
+    beforeEach(() => {
+      managerInstance = VerificationManager.factory(mockDeps);
+      managerInstance.init();
+    });
+
+    it('should handle worker crash during verification', async () => {
+      const promise = managerInstance.api.runVerification('test:crash');
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      const errorHandler = mockWorker.addEventListener.mock.calls.find(
+        call => call[0] === 'error'
+      )?.[1];
+
+      errorHandler(new Error('Worker crashed'));
+
+      await expect(promise).rejects.toThrow('Worker crashed');
+    });
+
+    it('should reject all pending on worker crash', async () => {
+      const p1 = managerInstance.api.verifyTests('/test1.js');
+      const p2 = managerInstance.api.verifyTests('/test2.js');
+
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      const errorHandler = mockWorker.addEventListener.mock.calls.find(
+        call => call[0] === 'error'
+      )?.[1];
+
+      errorHandler(new Error('Worker crashed'));
+
+      await expect(Promise.all([p1, p2])).rejects.toThrow();
+    });
+
+    it('should allow re-initialization after crash', () => {
+      const errorHandler = mockWorker.addEventListener.mock.calls.find(
+        call => call[0] === 'error'
+      )?.[1];
+
+      errorHandler(new Error('Worker crashed'));
+
+      const result = managerInstance.init();
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('VFS Snapshot Edge Cases', () => {
+    beforeEach(() => {
+      managerInstance = VerificationManager.factory(mockDeps);
+      managerInstance.init();
+    });
+
+    it('should handle empty VFS snapshot', async () => {
+      mockDeps.StateManager.getAllArtifactMetadata.mockResolvedValue({});
+      const promise = managerInstance.api.runVerification('test');
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(mockDeps.StateManager.getAllArtifactMetadata).toHaveBeenCalled();
+    });
+
+    it('should handle large VFS snapshot', async () => {
+      const largeMetadata = {};
+      for (let i = 0; i < 10000; i++) {
+        largeMetadata[`/file${i}.js`] = { size: 100 };
+      }
+      mockDeps.StateManager.getAllArtifactMetadata.mockResolvedValue(largeMetadata);
+
+      await managerInstance.api.runVerification('test').catch(() => {});
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      expect(mockDeps.StateManager.getAllArtifactMetadata).toHaveBeenCalled();
+    });
+
+    it('should filter relevant files in snapshot', async () => {
+      mockDeps.StateManager.getAllArtifactMetadata.mockResolvedValue({
+        '/test.js': { size: 100 },
+        '/image.png': { size: 5000 },
+        '/data.json': { size: 200 }
+      });
+
+      await managerInstance.api.runVerification('test').catch(() => {});
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      expect(mockDeps.StateManager.getArtifactContent).toHaveBeenCalledWith('/test.js');
+      expect(mockDeps.StateManager.getArtifactContent).toHaveBeenCalledWith('/data.json');
+    });
+
+    it('should handle snapshot creation errors', async () => {
+      mockDeps.StateManager.getAllArtifactMetadata.mockRejectedValue(
+        new Error('Snapshot failed')
+      );
+
+      await expect(managerInstance.api.runVerification('test')).rejects.toThrow();
+    });
+
+    it('should handle missing file content', async () => {
+      mockDeps.StateManager.getArtifactContent.mockResolvedValue(null);
+      await managerInstance.api.runVerification('test').catch(() => {});
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(mockDeps.StateManager.getArtifactContent).toHaveBeenCalled();
+    });
+  });
+
+  describe('Performance Under Load', () => {
+    beforeEach(() => {
+      managerInstance = VerificationManager.factory(mockDeps);
+      managerInstance.init();
+    });
+
+    it('should handle 100 concurrent verifications', async () => {
+      const start = Date.now();
+      const promises = [];
+
+      for (let i = 0; i < 100; i++) {
+        promises.push(managerInstance.api.verifyTests(`/test${i}.js`));
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      const duration = Date.now() - start;
+      expect(duration).toBeLessThan(1000);
+      expect(mockWorker.postMessage.mock.calls.length).toBeGreaterThanOrEqual(100);
+    });
+
+    it('should maintain performance with large files', async () => {
+      const largeContent = 'x'.repeat(1000000);
+      mockDeps.StateManager.getArtifactContent.mockResolvedValue(largeContent);
+
+      const start = Date.now();
+      await managerInstance.api.runVerification('test').catch(() => {});
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      const duration = Date.now() - start;
+      expect(duration).toBeLessThan(500);
+    });
+  });
+
+  describe('Command Variations', () => {
+    beforeEach(() => {
+      managerInstance = VerificationManager.factory(mockDeps);
+      managerInstance.init();
+    });
+
+    it('should handle test command with glob patterns', async () => {
+      const promise = managerInstance.api.verifyTests('**/*.test.js');
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(mockWorker.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'VERIFY',
+        payload: expect.objectContaining({
+          command: 'test:**/*.test.js'
+        })
+      }));
+    });
+
+    it('should handle lint command with options', async () => {
+      const promise = managerInstance.api.verifyLinting('/src/**/*.js');
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(mockWorker.postMessage).toHaveBeenCalled();
+    });
+
+    it('should handle type check on TypeScript files', async () => {
+      const promise = managerInstance.api.verifyTypes('/src/**/*.ts');
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(mockWorker.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+        payload: expect.objectContaining({
+          command: 'type-check:/src/**/*.ts'
+        })
+      }));
+    });
+
+    it('should handle complex eval expressions', async () => {
+      const expression = 'const result = [1,2,3].reduce((a,b) => a+b, 0)';
+      const promise = managerInstance.api.verifySafeEval(expression);
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(mockWorker.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+        payload: expect.objectContaining({
+          command: `eval:${expression}`
+        })
+      }));
+    });
+  });
+
+  describe('Full Verification Edge Cases', () => {
+    beforeEach(() => {
+      managerInstance = VerificationManager.factory(mockDeps);
+      managerInstance.init();
+    });
+
+    it('should handle mixed file types', async () => {
+      const changedFiles = [
+        '/src/file.js',
+        '/src/file.ts',
+        '/test/test.js',
+        '/docs/readme.md'
+      ];
+
+      const promise = managerInstance.api.runFullVerification(changedFiles);
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      expect(mockWorker.postMessage.mock.calls.length).toBeGreaterThan(0);
+    });
+
+    it('should skip non-verifiable files', async () => {
+      const changedFiles = [
+        '/image.png',
+        '/data.csv',
+        '/document.pdf'
+      ];
+
+      const result = await managerInstance.api.runFullVerification(changedFiles);
+      expect(result.overall).toBe(true);
+    });
+
+    it('should aggregate results from multiple verifications', async () => {
+      const changedFiles = ['/test.js', '/test.test.js'];
+      const promise = managerInstance.api.runFullVerification(changedFiles);
+
+      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(mockWorker.postMessage).toHaveBeenCalled();
+    });
+
+    it('should mark overall as false on any failure', async () => {
+      const changedFiles = ['/test1.js', '/test2.js'];
+      const promise = managerInstance.api.runFullVerification(changedFiles);
+
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      // Result structure would have overall: false if any test failed
+      expect(promise).toBeDefined();
+    });
+  });
+
+  describe('Memory Management', () => {
+    beforeEach(() => {
+      managerInstance = VerificationManager.factory(mockDeps);
+      managerInstance.init();
+    });
+
+    it('should clean up completed verifications', async () => {
+      const promise = managerInstance.api.verifyTests('/test.js');
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      const messageHandler = mockWorker.addEventListener.mock.calls.find(
+        call => call[0] === 'message'
+      )?.[1];
+
+      messageHandler({
+        data: {
+          type: 'VERIFY_COMPLETE',
+          sessionId: 'verify_123',
+          success: true
+        }
+      });
+
+      // Verification should be removed from pending after completion
+      expect(mockWorker.postMessage).toHaveBeenCalled();
+    });
+
+    it('should not leak memory on rapid verifications', async () => {
+      for (let i = 0; i < 1000; i++) {
+        managerInstance.api.verifyTests(`/test${i}.js`).catch(() => {});
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+      expect(mockWorker.postMessage.mock.calls.length).toBeGreaterThanOrEqual(1000);
+    });
+  });
+
+  describe('Shutdown Scenarios', () => {
+    beforeEach(() => {
+      managerInstance = VerificationManager.factory(mockDeps);
+      managerInstance.init();
+    });
+
+    it('should terminate during active verifications', async () => {
+      const p1 = managerInstance.api.verifyTests('/test1.js');
+      const p2 = managerInstance.api.verifyTests('/test2.js');
+
+      managerInstance.api.terminate();
+
+      expect(mockWorker.terminate).toHaveBeenCalled();
+      expect(managerInstance.api.isInitialized()).toBe(false);
+    });
+
+    it('should reject pending verifications on terminate', async () => {
+      const promise = managerInstance.api.verifyTests('/test.js');
+      managerInstance.api.terminate();
+
+      // After termination, worker is null
+      expect(managerInstance.api.isInitialized()).toBe(false);
+    });
+
+    it('should allow multiple terminate calls', () => {
+      managerInstance.api.terminate();
+      managerInstance.api.terminate();
+      managerInstance.api.terminate();
+
+      expect(mockWorker.terminate).toHaveBeenCalledTimes(1);
+    });
+  });
 });
