@@ -11,6 +11,7 @@ import sys
 import tempfile
 import shutil
 import json
+import subprocess
 from pathlib import Path
 from unittest.mock import patch, MagicMock, Mock
 
