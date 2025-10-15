@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
 const express = require('express');
+const http = require('http');
 const path = require('path');
 const fs = require('fs');
 const dotenv = require('dotenv');
+const SignalingServer = require('./signaling-server.js');
 
 // Load environment variables
 dotenv.config();
@@ -332,6 +334,19 @@ app.get('/api/vfs/restore', (req, res) => {
 });
 // --- End VFS Persistence Endpoints ---
 
+// --- WebRTC Signaling Endpoints ---
+let signalingServer = null;
+
+// Get signaling server stats
+app.get('/api/signaling/stats', (req, res) => {
+  if (!signalingServer) {
+    return res.status(503).json({ error: 'Signaling server not initialized' });
+  }
+
+  res.json(signalingServer.getStats());
+});
+// --- End WebRTC Signaling Endpoints ---
+
 // Serve static files from the project root
 app.use(express.static(path.join(__dirname, '..')));
 
@@ -340,20 +355,45 @@ app.use((req, res) => {
   res.status(404).send('File not found');
 });
 
+// Create HTTP server (needed for WebSocket)
+const server = http.createServer(app);
+
+// Initialize WebRTC Signaling Server
+try {
+  signalingServer = new SignalingServer(server, {
+    path: '/signaling',
+    heartbeatInterval: 30000,
+    peerTimeout: 60000
+  });
+
+  signalingServer.on('peer-joined', ({ peerId, roomId }) => {
+    console.log(`[Proxy] Peer ${peerId} joined room ${roomId}`);
+  });
+
+  signalingServer.on('peer-left', ({ peerId, roomId }) => {
+    console.log(`[Proxy] Peer ${peerId} left room ${roomId}`);
+  });
+
+  console.log('✅ WebRTC signaling server initialized');
+} catch (error) {
+  console.error('⚠️  Failed to initialize signaling server:', error.message);
+}
+
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   const providers = [];
   if (GEMINI_API_KEY) providers.push('Gemini');
   if (OPENAI_API_KEY) providers.push('OpenAI');
   if (ANTHROPIC_API_KEY) providers.push('Anthropic');
   providers.push('Local');
-  
+
   console.log(`
 ╔════════════════════════════════════════════════════════╗
 ║                                                        ║
 ║   REPLOID Multi-Provider Proxy Server                 ║
 ║                                                        ║
-║   URL: http://localhost:${PORT}                           ║
+║   HTTP API: http://localhost:${PORT}                      ║
+║   WebRTC Signaling: ws://localhost:${PORT}/signaling      ║
 ║   Providers: ${providers.join(', ').padEnd(25)}    ║
 ║   Local endpoint: ${LOCAL_MODEL_ENDPOINT.padEnd(21)}║
 ║                                                        ║
@@ -361,4 +401,16 @@ app.listen(PORT, () => {
 ║                                                        ║
 ╚════════════════════════════════════════════════════════╝
   `);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  if (signalingServer) {
+    signalingServer.close();
+  }
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });

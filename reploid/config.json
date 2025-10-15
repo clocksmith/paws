@@ -91,6 +91,24 @@
   "openaiModel": "gpt-4-turbo-preview",
   "anthropicModel": "claude-3-opus-20240229"
 },
+"webrtc": {
+  "signalingServer": "ws://localhost:8000/signaling",
+  "roomId": "reploid-swarm-default",
+  "reconnectInterval": 5000,
+  "peerTimeout": 60000,
+  "iceServers": [
+    {
+      "urls": "stun:stun.l.google.com:19302"
+    },
+    {
+      "urls": "stun:stun1.l.google.com:19302"
+    }
+  ],
+  "turnServers": {
+    "enabled": false,
+    "servers": []
+  }
+},
 "upgrades": [
 {
 "id": "MLDR",

@@ -40,6 +40,7 @@ Start here if you're new to REPLOID:
 ### Status Tracking
 - **[/RFC-STATUS.md](../RFC-STATUS.md)** - Project-level completion status
 - **[/SECURITY-NOTES.md](../SECURITY-NOTES.md)** - Security concerns and mitigations
+- **[docs/REFERENCES.md](./REFERENCES.md)** - Citations and external sources
 
 ---
 
@@ -53,6 +54,11 @@ Start here if you're new to REPLOID:
 ### Local Models
 - **[docs/LOCAL_MODELS.md](./LOCAL_MODELS.md)** - Running local LLMs
 - **[docs/rfcs/rfc-2025-05-10-local-llm-in-browser.md](./rfcs/rfc-2025-05-10-local-llm-in-browser.md)** - Browser LLM RFC
+
+### Multi-Agent Swarm (WebRTC P2P)
+- **[/WEBRTC_QUICKSTART.md](../WEBRTC_QUICKSTART.md)** - Quick start guide (5 minutes)
+- **[docs/WEBRTC_SETUP.md](./WEBRTC_SETUP.md)** - Complete setup guide with TURN servers
+- **[tests/webrtc-signaling.test.js](../tests/webrtc-signaling.test.js)** - Test suite
 
 ---
 
@@ -141,7 +147,8 @@ REPLOID uses a **Dependency Injection (DI) container** pattern. All modules are 
 ### For New Users
 1. [README.md](../README.md) - Understand what REPLOID is
 2. [test-sentinel-flow.md](../test-sentinel-flow.md) - Try the Sentinel Agent
-3. [docs/PERSONAS.md](./PERSONAS.md) - Learn about personas
+3. [WEBRTC_QUICKSTART.md](../WEBRTC_QUICKSTART.md) - Set up P2P multi-agent swarm
+4. [docs/PERSONAS.md](./PERSONAS.md) - Learn about personas
 
 ### For Developers
 1. [docs/SYSTEM_ARCHITECTURE.md](./SYSTEM_ARCHITECTURE.md) - Understand architecture

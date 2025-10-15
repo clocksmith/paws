@@ -12,23 +12,30 @@ const WebRTCSwarm = {
 
   factory: (deps) => {
     const { logger, Utils, StateManager } = deps;
-    
+
     // Swarm configuration
     const CONFIG = {
+      signalingServer: 'ws://localhost:8000/signaling', // WebSocket signaling server
+      roomId: 'reploid-swarm-default', // Default room ID
+      reconnectInterval: 5000, // Reconnect interval in ms
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' }
+        // TURN servers can be added here:
+        // { urls: 'turn:turnserver.example.com:3478', username: 'user', credential: 'pass' }
       ],
       channelOptions: {
         ordered: true,
         maxRetransmits: 3
       }
     };
-    
+
     // Swarm state
     let peerId = null;
     let peers = new Map();
-    let discoveryChannel = null;
+    let signalingWs = null;
+    let signalingConnected = false;
+    let reconnectTimer = null;
     let messageHandlers = new Map();
     let swarmMetadata = {
       capabilities: [],
@@ -39,58 +46,187 @@ const WebRTCSwarm = {
     // Initialize swarm
     const initialize = async () => {
       logger.info('[WebRTCSwarm] Initializing swarm module');
-      
+
       // Generate unique peer ID
       peerId = 'reploid-' + Utils.generateId();
       logger.info(`[WebRTCSwarm] Local peer ID: ${peerId}`);
-      
-      // Set up discovery channel (using BroadcastChannel as signaling)
-      discoveryChannel = new BroadcastChannel('reploid-swarm-discovery');
-      discoveryChannel.onmessage = handleDiscoveryMessage;
-      
-      // Announce presence
-      announcePresence();
-      
+
+      // Connect to signaling server
+      connectToSignalingServer();
+
       // Set up periodic heartbeat
       setInterval(sendHeartbeat, 30000);
-      
+
       logger.info('[WebRTCSwarm] Swarm initialized');
+    };
+
+    // Connect to WebSocket signaling server
+    const connectToSignalingServer = () => {
+      if (signalingWs) {
+        signalingWs.close();
+      }
+
+      logger.info(`[WebRTCSwarm] Connecting to signaling server: ${CONFIG.signalingServer}`);
+
+      try {
+        signalingWs = new WebSocket(CONFIG.signalingServer);
+
+        signalingWs.onopen = () => {
+          logger.info('[WebRTCSwarm] Connected to signaling server');
+          signalingConnected = true;
+
+          // Clear reconnect timer
+          if (reconnectTimer) {
+            clearTimeout(reconnectTimer);
+            reconnectTimer = null;
+          }
+
+          // Join room
+          sendSignalingMessage({
+            type: 'join',
+            peerId,
+            roomId: CONFIG.roomId,
+            metadata: swarmMetadata
+          });
+        };
+
+        signalingWs.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            handleSignalingMessage(message);
+          } catch (error) {
+            logger.error('[WebRTCSwarm] Failed to parse signaling message:', error);
+          }
+        };
+
+        signalingWs.onerror = (error) => {
+          logger.error('[WebRTCSwarm] Signaling WebSocket error:', error);
+        };
+
+        signalingWs.onclose = () => {
+          logger.warn('[WebRTCSwarm] Disconnected from signaling server');
+          signalingConnected = false;
+
+          // Attempt to reconnect
+          if (!reconnectTimer) {
+            reconnectTimer = setTimeout(() => {
+              logger.info('[WebRTCSwarm] Attempting to reconnect to signaling server');
+              connectToSignalingServer();
+            }, CONFIG.reconnectInterval);
+          }
+        };
+      } catch (error) {
+        logger.error('[WebRTCSwarm] Failed to create WebSocket connection:', error);
+
+        // Attempt to reconnect
+        if (!reconnectTimer) {
+          reconnectTimer = setTimeout(() => {
+            connectToSignalingServer();
+          }, CONFIG.reconnectInterval);
+        }
+      }
+    };
+
+    // Send message through signaling server
+    const sendSignalingMessage = (message) => {
+      if (!signalingWs || signalingWs.readyState !== WebSocket.OPEN) {
+        logger.warn('[WebRTCSwarm] Cannot send signaling message: not connected');
+        return false;
+      }
+
+      try {
+        signalingWs.send(JSON.stringify(message));
+        return true;
+      } catch (error) {
+        logger.error('[WebRTCSwarm] Failed to send signaling message:', error);
+        return false;
+      }
     };
     
     // Announce presence to other peers
     const announcePresence = () => {
       logger.debug('[WebRTCSwarm] Announcing presence to swarm');
-      
-      discoveryChannel.postMessage({
+
+      sendSignalingMessage({
         type: 'announce',
         peerId,
-        metadata: swarmMetadata,
-        timestamp: Date.now()
+        roomId: CONFIG.roomId,
+        metadata: swarmMetadata
       });
     };
-    
-    // Handle discovery messages
-    const handleDiscoveryMessage = async (event) => {
-      const { type, peerId: remotePeerId, metadata, offer, answer, candidate } = event.data;
-      
-      if (remotePeerId === peerId) return; // Ignore own messages
-      
+
+    // Handle signaling messages from server
+    const handleSignalingMessage = async (message) => {
+      const { type } = message;
+
       switch (type) {
-        case 'announce':
-          await handlePeerAnnouncement(remotePeerId, metadata);
+        case 'welcome':
+          logger.debug('[WebRTCSwarm] Received welcome from signaling server');
           break;
+
+        case 'joined':
+          logger.info(`[WebRTCSwarm] Joined room ${message.roomId}`);
+          // Connect to existing peers
+          if (message.peers && message.peers.length > 0) {
+            logger.info(`[WebRTCSwarm] Found ${message.peers.length} existing peers`);
+            message.peers.forEach(remotePeerId => {
+              connectToPeer(remotePeerId, {});
+            });
+          }
+          break;
+
+        case 'peer-joined':
+          // New peer joined, they will initiate connection
+          logger.info(`[WebRTCSwarm] Peer ${message.peerId} joined room`);
+          break;
+
+        case 'peer-left':
+          handlePeerLeft(message.peerId);
+          break;
+
+        case 'peer-announced':
+          handlePeerAnnouncement(message.peerId, message.metadata);
+          break;
+
         case 'offer':
-          await handleOffer(remotePeerId, offer);
+          await handleOffer(message.peerId, message.offer);
           break;
+
         case 'answer':
-          await handleAnswer(remotePeerId, answer);
+          await handleAnswer(message.peerId, message.answer);
           break;
+
         case 'ice-candidate':
-          await handleIceCandidate(remotePeerId, candidate);
+          await handleIceCandidate(message.peerId, message.candidate);
           break;
-        case 'heartbeat':
-          updatePeerStatus(remotePeerId, 'alive');
+
+        case 'broadcast':
+          await handlePeerMessage(message.peerId, message.data);
           break;
+
+        case 'error':
+          logger.error(`[WebRTCSwarm] Signaling error: ${message.error}`);
+          break;
+
+        case 'server-shutdown':
+          logger.warn('[WebRTCSwarm] Signaling server is shutting down');
+          break;
+
+        default:
+          logger.warn(`[WebRTCSwarm] Unknown signaling message type: ${type}`);
+      }
+    };
+
+    // Handle peer leaving
+    const handlePeerLeft = (remotePeerId) => {
+      logger.info(`[WebRTCSwarm] Peer ${remotePeerId} left`);
+
+      const peer = peers.get(remotePeerId);
+      if (peer) {
+        if (peer.connection) {
+          peer.connection.close();
+        }
+        peers.delete(remotePeerId);
       }
     };
     
@@ -125,7 +261,7 @@ const WebRTCSwarm = {
       // Set up connection handlers
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-          discoveryChannel.postMessage({
+          sendSignalingMessage({
             type: 'ice-candidate',
             peerId,
             targetPeer: remotePeerId,
@@ -151,8 +287,8 @@ const WebRTCSwarm = {
       // Create and send offer
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
-      
-      discoveryChannel.postMessage({
+
+      sendSignalingMessage({
         type: 'offer',
         peerId,
         targetPeer: remotePeerId,
@@ -180,7 +316,7 @@ const WebRTCSwarm = {
       // Set up connection handlers
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-          discoveryChannel.postMessage({
+          sendSignalingMessage({
             type: 'ice-candidate',
             peerId,
             targetPeer: remotePeerId,
@@ -206,8 +342,8 @@ const WebRTCSwarm = {
       await peerConnection.setRemoteDescription(offer);
       const answer = await peerConnection.createAnswer();
       await peerConnection.setLocalDescription(answer);
-      
-      discoveryChannel.postMessage({
+
+      sendSignalingMessage({
         type: 'answer',
         peerId,
         targetPeer: remotePeerId,
@@ -592,12 +728,12 @@ const WebRTCSwarm = {
     
     // Send heartbeat to maintain connections
     const sendHeartbeat = () => {
-      discoveryChannel.postMessage({
+      sendSignalingMessage({
         type: 'heartbeat',
         peerId,
-        timestamp: Date.now()
+        roomId: CONFIG.roomId
       });
-      
+
       // Check for stale peers
       const now = Date.now();
       peers.forEach((peer, peerId) => {
@@ -651,24 +787,71 @@ const WebRTCSwarm = {
     // Disconnect from swarm
     const disconnect = () => {
       logger.info('[WebRTCSwarm] Disconnecting from swarm');
-      
+
+      // Send leave message
+      sendSignalingMessage({
+        type: 'leave',
+        peerId,
+        roomId: CONFIG.roomId
+      });
+
       // Close all peer connections
       peers.forEach(peer => {
         peer.connection.close();
       });
       peers.clear();
-      
-      // Close discovery channel
-      if (discoveryChannel) {
-        discoveryChannel.close();
+
+      // Clear reconnect timer
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
       }
-      
+
+      // Close WebSocket connection
+      if (signalingWs) {
+        signalingWs.close();
+        signalingWs = null;
+      }
+
+      signalingConnected = false;
+
       logger.info('[WebRTCSwarm] Disconnected');
     };
     
     // Initialize on module load
     initialize();
     
+    // Configure signaling server
+    const configureSignaling = (options) => {
+      if (options.signalingServer) {
+        CONFIG.signalingServer = options.signalingServer;
+      }
+      if (options.roomId) {
+        CONFIG.roomId = options.roomId;
+      }
+      if (options.iceServers) {
+        CONFIG.iceServers = options.iceServers;
+      }
+
+      logger.info('[WebRTCSwarm] Signaling configuration updated');
+
+      // Reconnect with new settings
+      if (signalingConnected) {
+        disconnect();
+        connectToSignalingServer();
+      }
+    };
+
+    // Get signaling connection status
+    const getSignalingStatus = () => {
+      return {
+        connected: signalingConnected,
+        server: CONFIG.signalingServer,
+        roomId: CONFIG.roomId,
+        peerId
+      };
+    };
+
     // Public API
     return {
       api: {
@@ -681,6 +864,8 @@ const WebRTCSwarm = {
         requestConsensus,
         registerMessageHandler,
         updateCapabilities,
+        configureSignaling,
+        getSignalingStatus,
         disconnect
       }
     };

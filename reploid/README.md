@@ -28,11 +28,13 @@ REPLOID is the browser-native visual interface for PAWS, providing interactive m
 
 ## Context Engineering Alignment
 
-Anthropic’s September 2025 study _“Context Engineering Outperforms Prompt Engineering for AI Agents”_ validates the approach REPLOID has championed since launch. REPLOID leans on the canonical PAWS `cats` and `dogs` engines for curated bundles and auditable application:
+Anthropic's September 2025 engineering post [_"Effective context engineering for AI agents"_](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) validates the approach REPLOID has championed since launch. The research demonstrates that context engineering yields **up to 54% gains in agent tasks** by controlling what tokens land in the context window rather than just optimizing prompt wording.
 
-- `reploid/bin/cats` and `reploid/bin/dogs` are vendored copies so the browser app can ship standalone.  
-- A checksum guard (`npm run check:reploid-sync`) enforces parity with `../js/cats.js` and `../js/dogs.js`.  
-- Shared session libraries (`../js/paws-session.js`) keep context synchronized between CLI and browser, preventing the “context rot” highlighted by Anthropic.
+REPLOID leans on the canonical PAWS `cats` and `dogs` engines for curated bundles and auditable application:
+
+- `reploid/bin/cats` and `reploid/bin/dogs` are vendored copies so the browser app can ship standalone.
+- A checksum guard (`npm run check:reploid-sync`) enforces parity with `../js/cats.js` and `../js/dogs.js`.
+- Shared session libraries (`../js/paws-session.js`) keep context synchronized between CLI and browser, preventing the **"context rot"** phenomenon identified by Anthropic where model accuracy decreases as context window size increases.
 
 ---
 
@@ -317,9 +319,10 @@ REPLOID supports running models entirely in your browser:
 4. Use agent with zero cost
 
 **Requirements:**
-- Chrome/Edge with WebGPU support
+- Chrome 113+ or Edge 113+ ([WebGPU support](https://caniuse.com/webgpu))
 - 8GB+ RAM recommended
-- GPU acceleration for best performance
+- GPU acceleration enabled (check `chrome://gpu`)
+- HTTPS or localhost (WebGPU requires secure context)
 
 ---
 
@@ -358,13 +361,24 @@ npm run test:e2e:ui
 
 ## Documentation
 
+### Getting Started
 - **[Quick Start Guide](docs/QUICK-START.md)** - Interactive tutorial
+- **[WebRTC Quick Start](WEBRTC_QUICKSTART.md)** - P2P swarm setup in 5 minutes
+
+### Configuration & Setup
 - **[Operational Modes](docs/OPERATIONAL_MODES.md)** - Client-only, Server, Local WebGPU
+- **[Local Models](docs/LOCAL_MODELS.md)** - WebGPU/WebGL setup
+- **[WebRTC Setup Guide](docs/WEBRTC_SETUP.md)** - Cross-origin P2P swarm configuration
+
+### Development
 - **[API Reference](docs/API.md)** - Module documentation
 - **[Personas Guide](docs/PERSONAS.md)** - Custom agent personalities
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues
-- **[Local Models](docs/LOCAL_MODELS.md)** - WebGPU/WebGL setup
 - **[Testing](tests/README.md)** - Test suite documentation
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues
+
+### Complete Index
+- **[Documentation Index](docs/INDEX.md)** - Complete guide to all documentation
+- **[References & Citations](docs/REFERENCES.md)** - External sources and research papers
 
 ---
 
