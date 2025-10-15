@@ -765,4 +765,133 @@ describe('LocalLLM Module', () => {
       expect(status.progress).toBe(0);
     });
   });
+
+  describe('Concurrent Operations', () => {
+    it('should handle multiple simultaneous queries', async () => {
+      await localLLMInstance.init();
+      mockWebLLM.chat.completions.create.mockResolvedValue({
+        choices: [{ message: { content: 'Response' } }]
+      });
+
+      const promises = [
+        localLLMInstance.api.query('Query 1'),
+        localLLMInstance.api.query('Query 2'),
+        localLLMInstance.api.query('Query 3')
+      ];
+
+      const results = await Promise.all(promises);
+      expect(results).toHaveLength(3);
+      expect(mockWebLLM.chat.completions.create).toHaveBeenCalledTimes(3);
+    });
+
+    it('should queue requests during loading', async () => {
+      const loadPromise = localLLMInstance.init();
+
+      const queryPromise = localLLMInstance.api.query('Test during load');
+
+      await loadPromise;
+      mockWebLLM.chat.completions.create.mockResolvedValue({
+        choices: [{ message: { content: 'Response' } }]
+      });
+
+      const result = await queryPromise;
+      expect(result).toBeDefined();
+    });
+
+    it('should handle rapid load/unload cycles', async () => {
+      await localLLMInstance.init();
+      await localLLMInstance.api.unload();
+      await localLLMInstance.init();
+      await localLLMInstance.api.unload();
+
+      expect(mockWebLLM.engine.unload).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('Memory Management', () => {
+    it('should release resources on unload', async () => {
+      await localLLMInstance.init();
+      await localLLMInstance.api.unload();
+
+      const status = localLLMInstance.api.getStatus();
+      expect(status.ready).toBe(false);
+      expect(mockWebLLM.engine.unload).toHaveBeenCalled();
+    });
+
+    it('should handle memory pressure during operation', async () => {
+      await localLLMInstance.init();
+      mockWebLLM.chat.completions.create.mockRejectedValue(
+        new Error('Out of memory')
+      );
+
+      await expect(localLLMInstance.api.query('Test')).rejects.toThrow();
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should clean up on initialization failure', async () => {
+      mockWebLLM.engine.reload.mockRejectedValue(new Error('Load failed'));
+
+      await expect(localLLMInstance.init()).rejects.toThrow();
+
+      const status = localLLMInstance.api.getStatus();
+      expect(status.ready).toBe(false);
+    });
+  });
+
+  describe('Progress Tracking Edge Cases', () => {
+    it('should handle progress updates after completion', async () => {
+      const initPromise = localLLMInstance.init();
+
+      progressCallback({ progress: 1.0, text: 'Complete' });
+
+      await initPromise;
+
+      const status = localLLMInstance.api.getStatus();
+      expect(status.progress).toBe(100);
+    });
+
+    it('should cap progress at 100%', async () => {
+      localLLMInstance.init();
+
+      progressCallback({ progress: 1.5, text: 'Over 100%' });
+
+      const status = localLLMInstance.api.getStatus();
+      expect(status.progress).toBeLessThanOrEqual(100);
+    });
+
+    it('should handle negative progress values', async () => {
+      localLLMInstance.init();
+
+      progressCallback({ progress: -0.1, text: 'Negative' });
+
+      const status = localLLMInstance.api.getStatus();
+      expect(status.progress).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('Configuration Variations', () => {
+    it('should support different model configurations', async () => {
+      const customConfig = {
+        model: 'custom-model-v2',
+        temperature: 0.5,
+        maxTokens: 2048
+      };
+
+      await localLLMInstance.init(customConfig);
+
+      expect(mockWebLLM.engine.reload).toHaveBeenCalledWith(
+        customConfig.model,
+        expect.any(Object)
+      );
+    });
+
+    it('should apply default configuration when none provided', async () => {
+      await localLLMInstance.init();
+
+      expect(mockWebLLM.engine.reload).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(Object)
+      );
+    });
+  });
 });

@@ -477,6 +477,9 @@ describe('ApiClientMulti Module (api-client-multi.js)', () => {
     };
     global.AbortController = vi.fn(() => mockAbortController);
 
+    // Mock navigator
+    global.navigator = { onLine: true };
+
     mockDeps = {
       config: {
         apiKey: 'test-api-key',
@@ -522,6 +525,7 @@ describe('ApiClientMulti Module (api-client-multi.js)', () => {
     vi.clearAllMocks();
     delete global.fetch;
     delete global.AbortController;
+    delete global.navigator;
   });
 
   describe('Module Metadata', () => {
@@ -596,6 +600,24 @@ describe('ApiClientMulti Module (api-client-multi.js)', () => {
 
   describe('API Calls', () => {
     it('should make successful API call', async () => {
+      // Mock proxy check
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ proxyAvailable: false })
+      });
+
+      // Mock successful API response
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          candidates: [{
+            content: {
+              parts: [{ text: 'test' }]
+            }
+          }]
+        })
+      });
+
       const result = await clientInstance.api.callApiWithRetry([], 'key');
       expect(result.type).toBe('text');
       expect(result.content).toBe('test');

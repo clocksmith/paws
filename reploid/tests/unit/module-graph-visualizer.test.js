@@ -714,4 +714,112 @@ describe('ModuleGraphVisualizer Module', () => {
       expect(zoom.scaleExtent).toHaveBeenCalledWith([0.1, 4]);
     });
   });
+
+  describe('Performance with Large Graphs', () => {
+    it('should handle 100+ modules efficiently', () => {
+      const largeData = {
+        nodes: Array(150).fill(null).map((_, i) => ({
+          id: `mod${i}`,
+          label: `Module ${i}`,
+          category: 'core'
+        })),
+        edges: Array(200).fill(null).map((_, i) => ({
+          source: `mod${i}`,
+          target: `mod${i + 1}`
+        }))
+      };
+
+      visualizerInstance.init(mockContainer);
+      visualizerInstance.render(largeData);
+
+      expect(mockD3.select).toHaveBeenCalled();
+    });
+
+    it('should batch DOM updates for performance', () => {
+      const data = {
+        nodes: Array(50).fill(null).map((_, i) => ({ id: `n${i}`, label: `Node ${i}` })),
+        edges: []
+      };
+
+      visualizerInstance.init(mockContainer);
+      visualizerInstance.render(data);
+
+      expect(mockSimulation.nodes).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('Interactive Features', () => {
+    it('should support node click handlers', () => {
+      const clickHandler = vi.fn();
+      visualizerInstance.init(mockContainer);
+
+      visualizerInstance.onNodeClick(clickHandler);
+
+      expect(clickHandler).toBeDefined();
+    });
+
+    it('should support drag and drop', () => {
+      visualizerInstance.init(mockContainer);
+
+      const drag = mockD3.drag();
+      expect(drag.on).toHaveBeenCalledWith('start', expect.any(Function));
+      expect(drag.on).toHaveBeenCalledWith('drag', expect.any(Function));
+      expect(drag.on).toHaveBeenCalledWith('end', expect.any(Function));
+    });
+
+    it('should highlight connected nodes on hover', () => {
+      const data = {
+        nodes: [{ id: 'A' }, { id: 'B' }],
+        edges: [{ source: 'A', target: 'B' }]
+      };
+
+      visualizerInstance.init(mockContainer);
+      visualizerInstance.render(data);
+      visualizerInstance.highlightNode('A');
+
+      expect(mockD3.selectAll).toHaveBeenCalled();
+    });
+  });
+
+  describe('Layout Algorithms', () => {
+    it('should apply force-directed layout', () => {
+      visualizerInstance.init(mockContainer);
+
+      expect(mockD3.forceSimulation).toHaveBeenCalled();
+      expect(mockD3.forceManyBody).toHaveBeenCalled();
+      expect(mockD3.forceLink).toHaveBeenCalled();
+    });
+
+    it('should support custom layout configuration', () => {
+      const customConfig = {
+        linkDistance: 100,
+        chargeStrength: -500
+      };
+
+      visualizerInstance.init(mockContainer, customConfig);
+
+      expect(mockSimulation.force).toHaveBeenCalled();
+    });
+  });
+
+  describe('Export and Serialization', () => {
+    it('should export graph as SVG', () => {
+      visualizerInstance.init(mockContainer);
+      const data = { nodes: [{ id: 'A' }], edges: [] };
+      visualizerInstance.render(data);
+
+      const svgData = visualizerInstance.exportSVG();
+      expect(svgData).toBeDefined();
+    });
+
+    it('should serialize graph state', () => {
+      const data = { nodes: [{ id: 'A' }], edges: [] };
+      visualizerInstance.init(mockContainer);
+      visualizerInstance.render(data);
+
+      const state = visualizerInstance.getState();
+      expect(state).toHaveProperty('nodes');
+      expect(state).toHaveProperty('edges');
+    });
+  });
 });

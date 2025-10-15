@@ -236,4 +236,157 @@ describe('DIContainer', () => {
 
     expect(service.async).toBe(true);
   });
+
+  describe('Error Handling', () => {
+    it('should throw on circular dependencies', () => {
+      container.register('A', () => ({ dep: container.resolve('B') }));
+      container.register('B', () => ({ dep: container.resolve('A') }));
+
+      expect(() => container.resolve('A')).toThrow();
+    });
+
+    it('should handle factory errors gracefully', () => {
+      container.register('error-service', () => {
+        throw new Error('Factory failed');
+      });
+
+      expect(() => container.resolve('error-service')).toThrow('Factory failed');
+    });
+
+    it('should handle missing dependencies', () => {
+      expect(() => container.resolve('nonexistent')).toThrow();
+    });
+  });
+
+  describe('Lifecycle Management', () => {
+    it('should support singleton pattern', () => {
+      let callCount = 0;
+      container.register('singleton', () => {
+        callCount++;
+        return { id: callCount };
+      });
+
+      const instance1 = container.resolve('singleton');
+      const instance2 = container.resolve('singleton');
+
+      expect(instance1).toBe(instance2);
+      expect(callCount).toBe(1);
+    });
+
+    it('should support transient pattern', () => {
+      let callCount = 0;
+      container.register('transient', () => {
+        callCount++;
+        return { id: callCount };
+      }, { lifecycle: 'transient' });
+
+      const instance1 = container.resolve('transient');
+      const instance2 = container.resolve('transient');
+
+      expect(instance1).not.toBe(instance2);
+      expect(callCount).toBe(2);
+    });
+
+    it('should clear all registrations', () => {
+      container.register('A', () => ({ value: 'A' }));
+      container.register('B', () => ({ value: 'B' }));
+
+      container.clear();
+
+      expect(() => container.resolve('A')).toThrow();
+      expect(() => container.resolve('B')).toThrow();
+    });
+  });
+
+  describe('Dependency Injection Patterns', () => {
+    it('should inject dependencies into factories', () => {
+      container.register('config', () => ({ port: 3000 }));
+      container.register('server', (deps) => ({
+        config: deps.config,
+        start: () => 'started'
+      }));
+
+      const server = container.resolve('server');
+      expect(server.config.port).toBe(3000);
+    });
+
+    it('should handle optional dependencies', () => {
+      container.register('service', (deps) => ({
+        optional: deps.optional || { default: true }
+      }));
+
+      const service = container.resolve('service');
+      expect(service.optional.default).toBe(true);
+    });
+
+    it('should support dependency overrides', () => {
+      container.register('logger', () => ({ log: () => 'real' }));
+      container.register('app', (deps) => ({ logger: deps.logger }));
+
+      const mockLogger = { log: () => 'mock' };
+      container.register('logger', () => mockLogger);
+
+      const app = container.resolve('app');
+      expect(app.logger.log()).toBe('mock');
+    });
+  });
+
+  describe('Module Loading Performance', () => {
+    it('should handle large dependency graphs', () => {
+      for (let i = 0; i < 100; i++) {
+        container.register(`service${i}`, () => ({ id: i }));
+      }
+
+      const service50 = container.resolve('service50');
+      expect(service50.id).toBe(50);
+    });
+
+    it('should cache resolved instances', () => {
+      let callCount = 0;
+      container.register('cached', () => {
+        callCount++;
+        return { value: 'cached' };
+      });
+
+      container.resolve('cached');
+      container.resolve('cached');
+      container.resolve('cached');
+
+      expect(callCount).toBe(1);
+    });
+  });
+
+  describe('ES6 Module Features', () => {
+    it('should support named exports', () => {
+      container.register('exports', () => ({
+        namedExport1: 'value1',
+        namedExport2: 'value2'
+      }));
+
+      const exports = container.resolve('exports');
+      expect(exports.namedExport1).toBe('value1');
+      expect(exports.namedExport2).toBe('value2');
+    });
+
+    it('should support default exports', () => {
+      container.register('default', () => ({
+        default: { main: 'export' }
+      }));
+
+      const module = container.resolve('default');
+      expect(module.default.main).toBe('export');
+    });
+
+    it('should handle re-exports', () => {
+      container.register('base', () => ({ feature: 'original' }));
+      container.register('reexport', (deps) => ({
+        ...deps.base,
+        additional: 'extended'
+      }));
+
+      const reexport = container.resolve('reexport');
+      expect(reexport.feature).toBe('original');
+      expect(reexport.additional).toBe('extended');
+    });
+  });
 });

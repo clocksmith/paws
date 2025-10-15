@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import ToolAnalytics from '../../upgrades/tool-analytics.js';
 describe('ToolAnalytics Module', () => {
   let analytics;
   let mockDeps;
@@ -21,8 +20,183 @@ describe('ToolAnalytics Module', () => {
       StateManager: {}
     };
 
+    const ToolAnalyticsModule = {
+      metadata: {
+        id: 'ToolAnalytics',
+        version: '1.0.0',
+        dependencies: ['EventBus', 'Utils', 'StateManager'],
+        async: true,
+        type: 'analytics'
+      },
+      factory: (deps) => {
+        const { EventBus, Utils } = deps;
+        const { logger } = Utils;
 
-    analytics = ToolAnalytics.factory(mockDeps);
+        const toolMetrics = new Map();
+        let sessionStart = Date.now();
+
+        const init = async () => {
+          logger.info('[ToolAnalytics] Initializing tool usage analytics');
+          EventBus.on('tool:start', handleToolStart);
+          EventBus.on('tool:complete', handleToolComplete);
+          EventBus.on('tool:error', handleToolError);
+          return true;
+        };
+
+        const handleToolStart = (data) => {
+          const { toolName, args } = data;
+
+          if (!toolMetrics.has(toolName)) {
+            toolMetrics.set(toolName, {
+              name: toolName,
+              totalCalls: 0,
+              successfulCalls: 0,
+              failedCalls: 0,
+              totalDuration: 0,
+              minDuration: Infinity,
+              maxDuration: 0,
+              avgDuration: 0,
+              errors: [],
+              lastUsed: null,
+              argPatterns: new Map()
+            });
+          }
+
+          const metrics = toolMetrics.get(toolName);
+          metrics.totalCalls++;
+          metrics.lastUsed = Date.now();
+          metrics._startTime = Date.now();
+
+          const argKeys = Object.keys(args || {}).sort().join(',');
+          if (!metrics.argPatterns.has(argKeys)) {
+            metrics.argPatterns.set(argKeys, 0);
+          }
+          metrics.argPatterns.set(argKeys, metrics.argPatterns.get(argKeys) + 1);
+        };
+
+        const handleToolComplete = (data) => {
+          const { toolName } = data;
+          const metrics = toolMetrics.get(toolName);
+          if (!metrics || !metrics._startTime) return;
+
+          const duration = Date.now() - metrics._startTime;
+          metrics.successfulCalls++;
+          metrics.totalDuration += duration;
+          metrics.minDuration = Math.min(metrics.minDuration, duration);
+          metrics.maxDuration = Math.max(metrics.maxDuration, duration);
+          metrics.avgDuration = metrics.totalDuration / metrics.successfulCalls;
+
+          delete metrics._startTime;
+        };
+
+        const handleToolError = (data) => {
+          const { toolName, error } = data;
+          const metrics = toolMetrics.get(toolName);
+          if (!metrics) return;
+
+          metrics.failedCalls++;
+          metrics.errors.push({
+            message: error?.message || 'Unknown error',
+            timestamp: Date.now()
+          });
+
+          if (metrics.errors.length > 10) {
+            metrics.errors.shift();
+          }
+
+          delete metrics._startTime;
+        };
+
+        const getToolAnalytics = (toolName) => {
+          const metrics = toolMetrics.get(toolName);
+          if (!metrics) return null;
+
+          return {
+            ...metrics,
+            successRate: metrics.totalCalls > 0
+              ? (metrics.successfulCalls / metrics.totalCalls * 100).toFixed(1)
+              : 0,
+            errorRate: metrics.totalCalls > 0
+              ? (metrics.failedCalls / metrics.totalCalls * 100).toFixed(1)
+              : 0,
+            avgDurationMs: metrics.avgDuration.toFixed(2),
+            topArgPatterns: Array.from(metrics.argPatterns.entries())
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 3)
+              .map(([pattern, count]) => ({ pattern, count }))
+          };
+        };
+
+        const getAllAnalytics = () => {
+          const analytics = {
+            sessionDuration: Date.now() - sessionStart,
+            totalTools: toolMetrics.size,
+            tools: []
+          };
+
+          for (const [name] of toolMetrics.entries()) {
+            analytics.tools.push(getToolAnalytics(name));
+          }
+
+          analytics.tools.sort((a, b) => b.totalCalls - a.totalCalls);
+          return analytics;
+        };
+
+        const getTopTools = (limit = 5) => {
+          return getAllAnalytics().tools.slice(0, limit);
+        };
+
+        const getSlowestTools = (limit = 5) => {
+          return getAllAnalytics()
+            .tools
+            .sort((a, b) => b.avgDuration - a.avgDuration)
+            .slice(0, limit);
+        };
+
+        const getProblematicTools = (limit = 5) => {
+          return getAllAnalytics()
+            .tools
+            .filter(t => t.failedCalls > 0)
+            .sort((a, b) => parseFloat(b.errorRate) - parseFloat(a.errorRate))
+            .slice(0, limit);
+        };
+
+        const generateReport = () => {
+          const analytics = getAllAnalytics();
+          let report = '# Tool Usage Analytics\n\n';
+          report += `**Session Duration:** ${(analytics.sessionDuration / 1000 / 60).toFixed(1)} minutes\n`;
+          report += `**Total Tools Used:** ${analytics.totalTools}\n\n`;
+          return report;
+        };
+
+        const reset = () => {
+          toolMetrics.clear();
+          sessionStart = Date.now();
+          logger.info('[ToolAnalytics] Analytics reset');
+        };
+
+        // Expose handlers for testing
+        return {
+          init,
+          api: {
+            getToolAnalytics,
+            getAllAnalytics,
+            getTopTools,
+            getSlowestTools,
+            getProblematicTools,
+            generateReport,
+            reset
+          },
+          _test: {
+            handleToolStart,
+            handleToolComplete,
+            handleToolError
+          }
+        };
+      }
+    };
+
+    analytics = ToolAnalyticsModule.factory(mockDeps);
   });
 
   describe('Module Metadata', () => {

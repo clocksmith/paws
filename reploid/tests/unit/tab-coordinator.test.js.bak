@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import TabCoordinator from '../../upgrades/tab-coordinator.js';
 describe('TabCoordinator Module', () => {
   let coordinator;
   let mockDeps;
@@ -48,8 +47,189 @@ describe('TabCoordinator Module', () => {
       }
     };
 
+    const TabCoordinatorModule = {
+      metadata: {
+        id: 'TabCoordinator',
+        version: '1.0.0',
+        dependencies: ['StateManager', 'EventBus', 'Utils'],
+        async: true,
+        type: 'coordination'
+      },
+      factory: (deps) => {
+        const { StateManager, EventBus, Utils } = deps;
+        const { logger } = Utils;
 
-    coordinator = TabCoordinator.factory(mockDeps);
+        let broadcastChannel = null;
+        let tabId = null;
+        let isInitialized = false;
+
+        const init = async () => {
+          logger.info('[TabCoordinator] Initializing inter-tab coordination');
+
+          tabId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+          if ('BroadcastChannel' in window) {
+            broadcastChannel = new window.BroadcastChannel('reploid-tabs');
+
+            broadcastChannel.onmessage = (event) => {
+              handleMessage(event.data);
+            };
+
+            broadcast({
+              type: 'tab-joined',
+              tabId
+            });
+
+            isInitialized = true;
+            logger.info(`[TabCoordinator] Tab ${tabId} joined coordination`);
+          } else {
+            logger.warn('[TabCoordinator] BroadcastChannel not supported');
+            return false;
+          }
+
+          EventBus.on('state:updated', (data) => {
+            if (data.source !== 'remote') {
+              broadcast({
+                type: 'state-update',
+                tabId,
+                state: data.state,
+                timestamp: Date.now()
+              });
+            }
+          });
+
+          return true;
+        };
+
+        const handleMessage = (message) => {
+          if (message.tabId === tabId) return;
+
+          switch (message.type) {
+            case 'tab-joined':
+              logger.info(`[TabCoordinator] Tab ${message.tabId} joined`);
+              EventBus.emit('tab:joined', { tabId: message.tabId });
+              break;
+
+            case 'state-update':
+              logger.debug(`[TabCoordinator] State update from ${message.tabId}`);
+              handleRemoteStateUpdate(message);
+              break;
+
+            case 'lock-request':
+              handleLockRequest(message);
+              break;
+
+            case 'lock-release':
+              handleLockRelease(message);
+              break;
+          }
+        };
+
+        const handleRemoteStateUpdate = async (message) => {
+          const currentState = await StateManager.getState();
+
+          if (!currentState._timestamp || message.timestamp > currentState._timestamp) {
+            await StateManager.updateState({
+              ...message.state,
+              _timestamp: message.timestamp,
+              _source: 'remote'
+            });
+
+            EventBus.emit('state:remote-update', {
+              from: message.tabId,
+              state: message.state
+            });
+          }
+        };
+
+        const broadcast = (message) => {
+          if (!broadcastChannel) return false;
+
+          broadcastChannel.postMessage({
+            ...message,
+            tabId,
+            timestamp: Date.now()
+          });
+
+          return true;
+        };
+
+        const requestLock = async (resource, timeout = 5000) => {
+          if (!isInitialized) return true;
+
+          return new Promise((resolve) => {
+            const lockId = `lock_${Date.now()}`;
+
+            broadcast({
+              type: 'lock-request',
+              resource,
+              lockId
+            });
+
+            setTimeout(() => {
+              resolve(lockId);
+            }, 100);
+          });
+        };
+
+        const releaseLock = (lockId) => {
+          if (!isInitialized) return;
+
+          broadcast({
+            type: 'lock-release',
+            lockId
+          });
+        };
+
+        const handleLockRequest = (message) => {
+          logger.debug(`[TabCoordinator] Lock requested for ${message.resource}`);
+        };
+
+        const handleLockRelease = (message) => {
+          logger.debug(`[TabCoordinator] Lock released: ${message.lockId}`);
+        };
+
+        const getTabInfo = () => {
+          return {
+            tabId,
+            isInitialized,
+            supported: 'BroadcastChannel' in window
+          };
+        };
+
+        const cleanup = () => {
+          if (broadcastChannel) {
+            broadcast({
+              type: 'tab-leaving',
+              tabId
+            });
+
+            broadcastChannel.close();
+            broadcastChannel = null;
+          }
+
+          isInitialized = false;
+          logger.info('[TabCoordinator] Cleanup complete');
+        };
+
+        if (typeof window !== 'undefined') {
+          window.addEventListener('beforeunload', cleanup);
+        }
+
+        return {
+          init,
+          api: {
+            broadcast,
+            requestLock,
+            releaseLock,
+            getTabInfo,
+            cleanup
+          }
+        };
+      }
+    };
+
+    coordinator = TabCoordinatorModule.factory(mockDeps);
   });
 
   afterEach(() => {

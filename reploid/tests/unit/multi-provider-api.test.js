@@ -646,4 +646,207 @@ describe('MultiProviderAPI', () => {
       expect(calledWith[0].content).toBe('Test message');
     });
   });
+
+  describe('Provider Management', () => {
+    it('should list all registered providers', () => {
+      const provider1 = { call: vi.fn() };
+      const provider2 = { call: vi.fn() };
+
+      instance.registerProvider('provider1', provider1);
+      instance.registerProvider('provider2', provider2);
+
+      const providers = instance.getProviders();
+      expect(providers).toContain('provider1');
+      expect(providers).toContain('provider2');
+    });
+
+    it('should unregister providers', () => {
+      const provider = { call: vi.fn() };
+      instance.registerProvider('test', provider);
+
+      instance.unregisterProvider('test');
+
+      expect(instance.getProviders()).not.toContain('test');
+    });
+
+    it('should get current provider name', () => {
+      const provider = { call: vi.fn() };
+      instance.registerProvider('active', provider);
+      instance.setProvider('active');
+
+      expect(instance.getCurrentProvider()).toBe('active');
+    });
+  });
+
+  describe('Load Balancing', () => {
+    it('should distribute requests across providers', async () => {
+      const provider1 = { call: vi.fn().mockResolvedValue({ content: 'p1' }) };
+      const provider2 = { call: vi.fn().mockResolvedValue({ content: 'p2' }) };
+
+      instance = new MultiProviderAPI({
+        ...mockConfig,
+        loadBalancing: 'round-robin'
+      }, mockLogger);
+
+      instance.registerProvider('p1', provider1);
+      instance.registerProvider('p2', provider2);
+
+      await instance.callAPI([{ role: 'user', content: 'Test 1' }]);
+      await instance.callAPI([{ role: 'user', content: 'Test 2' }]);
+
+      expect(provider1.call).toHaveBeenCalled();
+      expect(provider2.call).toHaveBeenCalled();
+    });
+
+    it('should handle provider unavailability during load balancing', async () => {
+      const provider1 = { call: vi.fn().mockRejectedValue(new Error('Unavailable')) };
+      const provider2 = { call: vi.fn().mockResolvedValue({ content: 'success' }) };
+
+      instance = new MultiProviderAPI({
+        ...mockConfig,
+        fallbackProviders: ['p2']
+      }, mockLogger);
+
+      instance.registerProvider('p1', provider1);
+      instance.registerProvider('p2', provider2);
+      instance.setProvider('p1');
+
+      const result = await instance.callAPI([{ role: 'user', content: 'Test' }]);
+
+      expect(result.content).toBe('success');
+      expect(provider2.call).toHaveBeenCalled();
+    });
+  });
+
+  describe('Rate Limiting', () => {
+    it('should enforce rate limits per provider', async () => {
+      const provider = { call: vi.fn().mockResolvedValue({ content: 'ok' }) };
+
+      instance = new MultiProviderAPI({
+        ...mockConfig,
+        rateLimit: { requestsPerMinute: 2 }
+      }, mockLogger);
+
+      instance.registerProvider('limited', provider);
+      instance.setProvider('limited');
+
+      await instance.callAPI([{ role: 'user', content: '1' }]);
+      await instance.callAPI([{ role: 'user', content: '2' }]);
+
+      await expect(
+        instance.callAPI([{ role: 'user', content: '3' }])
+      ).rejects.toThrow();
+    });
+
+    it('should reset rate limits after time window', async () => {
+      vi.useFakeTimers();
+
+      const provider = { call: vi.fn().mockResolvedValue({ content: 'ok' }) };
+      instance = new MultiProviderAPI({
+        ...mockConfig,
+        rateLimit: { requestsPerMinute: 1 }
+      }, mockLogger);
+
+      instance.registerProvider('test', provider);
+      instance.setProvider('test');
+
+      await instance.callAPI([{ role: 'user', content: '1' }]);
+
+      vi.advanceTimersByTime(61000); // Advance past 1 minute
+
+      await instance.callAPI([{ role: 'user', content: '2' }]);
+
+      expect(provider.call).toHaveBeenCalledTimes(2);
+
+      vi.useRealTimers();
+    });
+  });
+
+  describe('Health Monitoring', () => {
+    it('should track provider health metrics', async () => {
+      const provider = { call: vi.fn().mockResolvedValue({ content: 'ok' }) };
+
+      instance.registerProvider('monitored', provider);
+      instance.setProvider('monitored');
+
+      await instance.callAPI([{ role: 'user', content: 'Test' }]);
+
+      const health = instance.getProviderHealth('monitored');
+      expect(health).toBeDefined();
+      expect(health.totalRequests).toBeGreaterThan(0);
+    });
+
+    it('should mark unhealthy providers', async () => {
+      const provider = {
+        call: vi.fn()
+          .mockRejectedValueOnce(new Error('Fail'))
+          .mockRejectedValueOnce(new Error('Fail'))
+          .mockRejectedValueOnce(new Error('Fail'))
+      };
+
+      instance.registerProvider('unhealthy', provider);
+      instance.setProvider('unhealthy');
+
+      for (let i = 0; i < 3; i++) {
+        await instance.callAPI([{ role: 'user', content: 'Test' }]).catch(() => {});
+      }
+
+      const health = instance.getProviderHealth('unhealthy');
+      expect(health.healthy).toBe(false);
+    });
+
+    it('should recover unhealthy providers on success', async () => {
+      const provider = {
+        call: vi.fn()
+          .mockRejectedValueOnce(new Error('Fail'))
+          .mockResolvedValue({ content: 'ok' })
+      };
+
+      instance.registerProvider('recovering', provider);
+      instance.setProvider('recovering');
+
+      await instance.callAPI([{ role: 'user', content: 'Fail' }]).catch(() => {});
+      await instance.callAPI([{ role: 'user', content: 'Success' }]);
+
+      const health = instance.getProviderHealth('recovering');
+      expect(health.lastSuccess).toBeDefined();
+    });
+  });
+
+  describe('Cost Optimization', () => {
+    it('should track cost per provider', async () => {
+      const provider = { call: vi.fn().mockResolvedValue({ content: 'ok', tokens: 100 }) };
+
+      instance = new MultiProviderAPI({
+        ...mockConfig,
+        costTracking: { pricePerToken: 0.001 }
+      }, mockLogger);
+
+      instance.registerProvider('paid', provider);
+      instance.setProvider('paid');
+
+      await instance.callAPI([{ role: 'user', content: 'Test' }]);
+
+      const cost = instance.getProviderCost('paid');
+      expect(cost).toBeGreaterThan(0);
+    });
+
+    it('should select cheapest available provider', async () => {
+      const expensive = { call: vi.fn().mockResolvedValue({ content: 'ok', cost: 10 }) };
+      const cheap = { call: vi.fn().mockResolvedValue({ content: 'ok', cost: 1 }) };
+
+      instance = new MultiProviderAPI({
+        ...mockConfig,
+        optimizeFor: 'cost'
+      }, mockLogger);
+
+      instance.registerProvider('expensive', expensive);
+      instance.registerProvider('cheap', cheap);
+
+      await instance.callAPI([{ role: 'user', content: 'Test' }]);
+
+      expect(cheap.call).toHaveBeenCalled();
+      expect(expensive.call).not.toHaveBeenCalled();
+    });
+  });
 });

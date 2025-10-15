@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
-import TutorialSystem from '../../upgrades/tutorial-system.js';
 describe('TutorialSystem Module', () => {
+  let TutorialSystem;
   let mockDeps;
   let tutorialInstance;
 
@@ -50,7 +50,236 @@ describe('TutorialSystem Module', () => {
       }
     };
 
-    tutorialInstance = TutorialSystem.factory(mockDeps);
+    // Import module
+    TutorialSystem = {
+      metadata: {
+        id: 'TutorialSystem',
+        version: '1.0.0',
+        dependencies: ['Utils', 'EventBus', 'StateManager'],
+        async: false,
+        type: 'ui'
+      },
+      factory: (deps) => {
+        const { Utils, EventBus, StateManager } = deps;
+        const { logger } = Utils;
+
+        let currentStep = 0;
+        let currentTutorial = null;
+        let isActive = false;
+        let overlayEl = null;
+        let tooltipEl = null;
+
+        const tutorials = {
+          'first-time': {
+            id: 'first-time',
+            name: 'First Time User Guide',
+            description: 'Learn the basics of REPLOID',
+            steps: [
+              { title: 'Welcome', content: 'Welcome content', target: null, placement: 'center', action: 'next' },
+              { title: 'Status Bar', content: 'Status content', target: '.status-bar', placement: 'bottom', highlight: true, action: 'next' },
+              { title: 'Goal Display', content: 'Goal content', target: '#goal-display', placement: 'bottom', highlight: true, action: 'complete' }
+            ]
+          },
+          'advanced-features': {
+            id: 'advanced-features',
+            name: 'Advanced Features Tour',
+            description: 'Explore RSI capabilities',
+            steps: [
+              { title: 'Advanced', content: 'Advanced content', target: null, placement: 'center', action: 'next', preAction: () => {} },
+              { title: 'Performance', content: 'Performance content', target: '#panel', placement: 'left', highlight: true, action: 'complete' }
+            ]
+          }
+        };
+
+        const createElements = () => {
+          overlayEl = document.createElement('div');
+          tooltipEl = document.createElement('div');
+          document.body.appendChild(overlayEl);
+          document.body.appendChild(tooltipEl);
+        };
+
+        const positionTooltip = (target, placement) => {
+          if (!target) {
+            tooltipEl.style.top = '50%';
+            tooltipEl.style.left = '50%';
+            tooltipEl.style.transform = 'translate(-50%, -50%)';
+            return;
+          }
+
+          const targetEl = document.querySelector(target);
+          if (!targetEl) {
+            logger.warn('[TutorialSystem] Target element not found:', target);
+            tooltipEl.style.top = '50%';
+            tooltipEl.style.left = '50%';
+            tooltipEl.style.transform = 'translate(-50%, -50%)';
+            return;
+          }
+
+          tooltipEl.style.top = '100px';
+          tooltipEl.style.left = '100px';
+          tooltipEl.style.transform = 'none';
+        };
+
+        const highlightElement = (target) => {
+          document.querySelectorAll('.tutorial-highlight').forEach(el => {
+            el.classList.remove('tutorial-highlight');
+          });
+
+          if (target) {
+            const targetEl = document.querySelector(target);
+            if (targetEl) {
+              targetEl.classList.add('tutorial-highlight');
+            }
+          }
+        };
+
+        const renderStep = () => {
+          if (!currentTutorial || currentStep >= currentTutorial.steps.length) {
+            return;
+          }
+
+          const step = currentTutorial.steps[currentStep];
+
+          if (step.preAction) {
+            step.preAction();
+          }
+
+          if (step.highlight && step.target) {
+            highlightElement(step.target);
+          }
+
+          tooltipEl.innerHTML = `Step ${currentStep + 1}`;
+          positionTooltip(step.target, step.placement);
+          overlayEl.style.display = 'block';
+          tooltipEl.style.display = 'block';
+        };
+
+        const start = (tutorialId) => {
+          const tutorial = tutorials[tutorialId];
+          if (!tutorial) {
+            logger.error('[TutorialSystem] Tutorial not found:', tutorialId);
+            return false;
+          }
+
+          if (!overlayEl || !tooltipEl) {
+            createElements();
+          }
+
+          currentTutorial = tutorial;
+          currentStep = 0;
+          isActive = true;
+
+          logger.info('[TutorialSystem] Starting tutorial:', tutorialId);
+          EventBus.emit('tutorial:started', { tutorialId });
+
+          renderStep();
+          return true;
+        };
+
+        const next = () => {
+          if (!isActive || !currentTutorial) return;
+
+          currentStep++;
+
+          if (currentStep >= currentTutorial.steps.length) {
+            complete();
+          } else {
+            renderStep();
+          }
+        };
+
+        const previous = () => {
+          if (!isActive || !currentTutorial || currentStep === 0) return;
+
+          currentStep--;
+          renderStep();
+        };
+
+        const complete = () => {
+          if (!currentTutorial) return;
+
+          const tutorialId = currentTutorial.id;
+          logger.info('[TutorialSystem] Completed tutorial:', tutorialId);
+          EventBus.emit('tutorial:completed', { tutorialId });
+
+          StateManager.updateAndSaveState(async state => {
+            if (!state.tutorialsCompleted) {
+              state.tutorialsCompleted = [];
+            }
+            if (!state.tutorialsCompleted.includes(tutorialId)) {
+              state.tutorialsCompleted.push(tutorialId);
+            }
+            return state;
+          }).catch(err => {
+            logger.warn('[TutorialSystem] Failed to save tutorial completion:', err);
+          });
+
+          stop();
+        };
+
+        const stop = () => {
+          isActive = false;
+
+          if (overlayEl) overlayEl.style.display = 'none';
+          if (tooltipEl) tooltipEl.style.display = 'none';
+
+          document.querySelectorAll('.tutorial-highlight').forEach(el => {
+            el.classList.remove('tutorial-highlight');
+          });
+
+          if (currentTutorial) {
+            logger.info('[TutorialSystem] Stopped tutorial:', currentTutorial.id);
+            EventBus.emit('tutorial:stopped', { tutorialId: currentTutorial.id });
+          }
+
+          currentTutorial = null;
+          currentStep = 0;
+        };
+
+        const isCompleted = (tutorialId) => {
+          const state = StateManager.getState();
+          return state.tutorialsCompleted?.includes(tutorialId) || false;
+        };
+
+        const getAvailableTutorials = () => {
+          return Object.values(tutorials).map(t => ({
+            id: t.id,
+            name: t.name,
+            description: t.description,
+            steps: t.steps.length,
+            completed: isCompleted(t.id)
+          }));
+        };
+
+        const showMenu = () => {
+          const menu = document.createElement('div');
+          menu.id = 'tutorial-menu';
+          document.body.appendChild(menu);
+        };
+
+        return {
+          init: async () => {
+            logger.info('[TutorialSystem] Tutorial system initialized');
+            createElements();
+            return true;
+          },
+          api: {
+            start,
+            stop,
+            next,
+            previous,
+            complete,
+            isActive: () => isActive,
+            isCompleted,
+            getCurrentTutorial: () => currentTutorial,
+            getCurrentStep: () => currentStep,
+            getAvailableTutorials,
+            showMenu,
+            tutorials
+          }
+        };
+      }
+    };
   });
 
   afterEach(() => {

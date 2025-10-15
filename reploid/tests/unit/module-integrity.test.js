@@ -724,4 +724,135 @@ describe('ModuleIntegrity', () => {
       expect(mockCrypto.subtle.digest).toHaveBeenCalled();
     });
   });
+
+  describe('Cryptographic Edge Cases', () => {
+    it('should handle empty module content', async () => {
+      const hash = await instance.calculateHash('');
+      expect(hash).toBeDefined();
+      expect(typeof hash).toBe('string');
+    });
+
+    it('should produce different hashes for different content', async () => {
+      const hash1 = await instance.calculateHash('content1');
+      const hash2 = await instance.calculateHash('content2');
+
+      expect(hash1).not.toBe(hash2);
+    });
+
+    it('should produce consistent hashes for same content', async () => {
+      const hash1 = await instance.calculateHash('test');
+      const hash2 = await instance.calculateHash('test');
+
+      expect(hash1).toBe(hash2);
+    });
+
+    it('should handle very large module content', async () => {
+      const largeContent = 'x'.repeat(1000000);
+      const hash = await instance.calculateHash(largeContent);
+
+      expect(hash).toBeDefined();
+      expect(hash.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Signature Verification Edge Cases', () => {
+    it('should reject tampered signatures', async () => {
+      mockDeps.StateManager.getArtifactContent.mockResolvedValue('module content');
+      mockDeps.StateManager.getAllArtifactMetadata.mockResolvedValue({
+        '/test/module.js': {
+          hash: 'validhash',
+          signature: 'tamperedsignature'
+        }
+      });
+
+      mockCrypto.subtle.verify.mockResolvedValue(false);
+
+      const result = await instance.verifyModule('/test/module.js');
+
+      expect(result.valid).toBe(false);
+      expect(result.reason).toContain('INVALID_SIGNATURE');
+    });
+
+    it('should handle missing signature gracefully', async () => {
+      mockDeps.StateManager.getAllArtifactMetadata.mockResolvedValue({
+        '/test/module.js': { hash: 'somehash' }
+      });
+
+      const result = await instance.verifyModule('/test/module.js');
+
+      expect(result.valid).toBe(false);
+    });
+
+    it('should validate signature format', async () => {
+      mockDeps.StateManager.getAllArtifactMetadata.mockResolvedValue({
+        '/test/module.js': {
+          hash: 'hash',
+          signature: 'invalid-format'
+        }
+      });
+
+      const result = await instance.verifyModule('/test/module.js');
+
+      expect(result.valid).toBe(false);
+    });
+  });
+
+  describe('Batch Operations', () => {
+    it('should verify multiple modules concurrently', async () => {
+      mockDeps.StateManager.getAllArtifactMetadata.mockResolvedValue({
+        '/mod1.js': { hash: 'hash1', signature: 'sig1' },
+        '/mod2.js': { hash: 'hash2', signature: 'sig2' },
+        '/mod3.js': { hash: 'hash3', signature: 'sig3' }
+      });
+
+      mockDeps.StateManager.getArtifactContent.mockResolvedValue('content');
+      mockCrypto.subtle.verify.mockResolvedValue(true);
+
+      const results = await Promise.all([
+        instance.verifyModule('/mod1.js'),
+        instance.verifyModule('/mod2.js'),
+        instance.verifyModule('/mod3.js')
+      ]);
+
+      expect(results).toHaveLength(3);
+      expect(results.every(r => r.valid)).toBe(true);
+    });
+
+    it('should handle partial batch failures', async () => {
+      mockDeps.StateManager.getArtifactContent.mockResolvedValue('content');
+      mockDeps.StateManager.getAllArtifactMetadata.mockResolvedValue({
+        '/good.js': { hash: 'hash1', signature: 'sig1' },
+        '/bad.js': { hash: 'hash2', signature: 'sig2' }
+      });
+
+      mockCrypto.subtle.verify
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false);
+
+      const results = await Promise.all([
+        instance.verifyModule('/good.js'),
+        instance.verifyModule('/bad.js')
+      ]);
+
+      expect(results[0].valid).toBe(true);
+      expect(results[1].valid).toBe(false);
+    });
+  });
+
+  describe('Performance Under Load', () => {
+    it('should handle rapid verification requests', async () => {
+      mockDeps.StateManager.getArtifactContent.mockResolvedValue('content');
+      mockDeps.StateManager.getAllArtifactMetadata.mockResolvedValue({
+        '/test.js': { hash: 'hash', signature: 'sig' }
+      });
+      mockCrypto.subtle.verify.mockResolvedValue(true);
+
+      const promises = Array(100).fill(null).map(() =>
+        instance.verifyModule('/test.js')
+      );
+
+      const results = await Promise.all(promises);
+      expect(results).toHaveLength(100);
+    });
+  });
 });
