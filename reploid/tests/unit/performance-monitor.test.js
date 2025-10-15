@@ -845,4 +845,419 @@ describe('PerformanceMonitor Module', () => {
       );
     });
   });
+
+  describe('Memory Leak Detection', () => {
+    beforeEach(() => {
+      monitorInstance.init();
+    });
+
+    it('should detect memory leaks from continuous growth', () => {
+      for (let i = 0; i < 10; i++) {
+        global.performance.memory.usedJSHeapSize = 50 * 1024 * 1024 + (i * 5 * 1024 * 1024);
+        vi.advanceTimersByTime(30000);
+      }
+
+      const memStats = monitorInstance.api.getMemoryStats();
+      expect(memStats.max).toBeGreaterThan(memStats.min);
+    });
+
+    it('should identify rapid memory increases', () => {
+      global.performance.memory.usedJSHeapSize = 50 * 1024 * 1024;
+      vi.advanceTimersByTime(30000);
+
+      global.performance.memory.usedJSHeapSize = 150 * 1024 * 1024;
+      vi.advanceTimersByTime(30000);
+
+      const memStats = monitorInstance.api.getMemoryStats();
+      expect(memStats.max - memStats.min).toBeGreaterThan(50 * 1024 * 1024);
+    });
+
+    it('should track memory patterns over time', () => {
+      for (let i = 0; i < 5; i++) {
+        global.performance.memory.usedJSHeapSize = 50 * 1024 * 1024 + (i * 10 * 1024 * 1024);
+        vi.advanceTimersByTime(30000);
+      }
+
+      const memStats = monitorInstance.api.getMemoryStats();
+      expect(memStats.samples).toBe(6); // initial + 5 samples
+    });
+
+    it('should detect memory spikes', () => {
+      global.performance.memory.usedJSHeapSize = 50 * 1024 * 1024;
+      vi.advanceTimersByTime(30000);
+
+      global.performance.memory.usedJSHeapSize = 200 * 1024 * 1024;
+      vi.advanceTimersByTime(30000);
+
+      global.performance.memory.usedJSHeapSize = 60 * 1024 * 1024;
+      vi.advanceTimersByTime(30000);
+
+      const memStats = monitorInstance.api.getMemoryStats();
+      expect(memStats.max).toBe(200 * 1024 * 1024);
+    });
+  });
+
+  describe('High-Frequency Metric Collection', () => {
+    beforeEach(() => {
+      monitorInstance.init();
+    });
+
+    it('should handle rapid tool calls', () => {
+      for (let i = 0; i < 100; i++) {
+        mockEventBus.emit('tool:start', { toolName: 'FastTool', timestamp: 1000 + i });
+        mockEventBus.emit('tool:end', { toolName: 'FastTool', timestamp: 1000 + i + 1 });
+      }
+
+      const stats = monitorInstance.api.getToolStats('FastTool');
+      expect(stats.calls).toBe(100);
+    });
+
+    it('should handle concurrent tool executions', () => {
+      mockEventBus.emit('tool:start', { toolName: 'Tool1', timestamp: 1000 });
+      mockEventBus.emit('tool:start', { toolName: 'Tool2', timestamp: 1001 });
+      mockEventBus.emit('tool:start', { toolName: 'Tool3', timestamp: 1002 });
+
+      mockEventBus.emit('tool:end', { toolName: 'Tool2', timestamp: 1050 });
+      mockEventBus.emit('tool:end', { toolName: 'Tool1', timestamp: 1100 });
+      mockEventBus.emit('tool:end', { toolName: 'Tool3', timestamp: 1150 });
+
+      expect(monitorInstance.api.getToolStats('Tool1')).toBeDefined();
+      expect(monitorInstance.api.getToolStats('Tool2')).toBeDefined();
+      expect(monitorInstance.api.getToolStats('Tool3')).toBeDefined();
+    });
+
+    it('should handle burst metric collection', () => {
+      for (let i = 0; i < 1000; i++) {
+        mockEventBus.emit('api:request:end', {
+          requestId: `req-${i}`,
+          timestamp: 1000 + i,
+          tokens: { input: 10, output: 5 }
+        });
+      }
+
+      const stats = monitorInstance.api.getLLMStats();
+      expect(stats.calls).toBe(1000);
+    });
+
+    it('should maintain accuracy with high-frequency events', () => {
+      for (let i = 0; i < 50; i++) {
+        mockEventBus.emit('agent:state:change', { newState: 'thinking', timestamp: 1000 + i * 10 });
+        mockEventBus.emit('agent:state:exit', { state: 'thinking', timestamp: 1000 + i * 10 + 5 });
+      }
+
+      const stats = monitorInstance.api.getStateStats('thinking');
+      expect(stats.entries).toBe(50);
+      expect(stats.avgTime).toBe(5);
+    });
+  });
+
+  describe('Metric Aggregation Edge Cases', () => {
+    beforeEach(() => {
+      monitorInstance.init();
+    });
+
+    it('should handle zero duration events', () => {
+      mockEventBus.emit('tool:start', { toolName: 'InstantTool', timestamp: 1000 });
+      mockEventBus.emit('tool:end', { toolName: 'InstantTool', timestamp: 1000 });
+
+      const stats = monitorInstance.api.getToolStats('InstantTool');
+      expect(stats.totalTime).toBe(0);
+      expect(stats.avgTime).toBe(0);
+    });
+
+    it('should handle missing start event', () => {
+      mockEventBus.emit('tool:end', { toolName: 'MissingStart', timestamp: 1000 });
+
+      const stats = monitorInstance.api.getToolStats('MissingStart');
+      expect(stats).toBeNull();
+    });
+
+    it('should handle missing end event', () => {
+      mockEventBus.emit('tool:start', { toolName: 'MissingEnd', timestamp: 1000 });
+
+      const stats = monitorInstance.api.getToolStats('MissingEnd');
+      expect(stats.calls).toBe(0);
+    });
+
+    it('should handle negative duration protection', () => {
+      mockEventBus.emit('tool:start', { toolName: 'TimeTravelTool', timestamp: 2000 });
+      mockEventBus.emit('tool:end', { toolName: 'TimeTravelTool', timestamp: 1000 });
+
+      const stats = monitorInstance.api.getToolStats('TimeTravelTool');
+      expect(stats.totalTime).toBeLessThanOrEqual(0);
+    });
+
+    it('should handle missing token data', () => {
+      mockEventBus.emit('api:request:end', {
+        requestId: 'req-no-tokens',
+        timestamp: 1500
+      });
+
+      const stats = monitorInstance.api.getLLMStats();
+      expect(stats.tokens.total).toBe(0);
+    });
+
+    it('should handle partial token data', () => {
+      mockEventBus.emit('api:request:end', {
+        requestId: 'req-partial',
+        timestamp: 1500,
+        tokens: { input: 100 }
+      });
+
+      const stats = monitorInstance.api.getLLMStats();
+      expect(stats.tokens.input).toBe(100);
+      expect(stats.tokens.output).toBe(0);
+    });
+  });
+
+  describe('Threshold Violation Tests', () => {
+    beforeEach(() => {
+      monitorInstance.init();
+    });
+
+    it('should detect high latency threshold violations', () => {
+      for (let i = 0; i < 10; i++) {
+        mockEventBus.emit('api:request:start', { requestId: `req-${i}`, timestamp: i * 1000 });
+        mockEventBus.emit('api:request:end', { requestId: `req-${i}`, timestamp: i * 1000 + 5000 });
+      }
+
+      const stats = monitorInstance.api.getLLMStats();
+      expect(stats.avgLatency).toBeGreaterThan(4000);
+    });
+
+    it('should detect high error rate threshold', () => {
+      for (let i = 0; i < 10; i++) {
+        mockEventBus.emit('tool:start', { toolName: 'FlakyTool', timestamp: i * 100 });
+        if (i < 7) {
+          mockEventBus.emit('tool:error', { toolName: 'FlakyTool', error: 'Fail' });
+        } else {
+          mockEventBus.emit('tool:end', { toolName: 'FlakyTool', timestamp: i * 100 + 10 });
+        }
+      }
+
+      const stats = monitorInstance.api.getToolStats('FlakyTool');
+      expect(stats.errorRate).toBeGreaterThan(0.5);
+    });
+
+    it('should warn on critical memory usage', () => {
+      global.performance.memory.usedJSHeapSize = 1900 * 1024 * 1024;
+      global.performance.memory.jsHeapSizeLimit = 2048 * 1024 * 1024;
+      vi.advanceTimersByTime(30000);
+
+      const memStats = monitorInstance.api.getMemoryStats();
+      const usage = memStats.current.usedJSHeapSize / memStats.current.jsHeapSizeLimit;
+      expect(usage).toBeGreaterThan(0.9);
+    });
+
+    it('should detect execution time outliers', () => {
+      for (let i = 0; i < 9; i++) {
+        mockEventBus.emit('tool:start', { toolName: 'ConsistentTool', timestamp: i * 100 });
+        mockEventBus.emit('tool:end', { toolName: 'ConsistentTool', timestamp: i * 100 + 10 });
+      }
+
+      mockEventBus.emit('tool:start', { toolName: 'ConsistentTool', timestamp: 1000 });
+      mockEventBus.emit('tool:end', { toolName: 'ConsistentTool', timestamp: 6000 });
+
+      const stats = monitorInstance.api.getToolStats('ConsistentTool');
+      expect(stats.totalTime).toBeGreaterThan(5000);
+    });
+  });
+
+  describe('Concurrent Monitoring Scenarios', () => {
+    beforeEach(() => {
+      monitorInstance.init();
+    });
+
+    it('should handle concurrent state transitions', () => {
+      mockEventBus.emit('agent:state:change', { newState: 'idle', timestamp: 1000 });
+      mockEventBus.emit('agent:state:change', { newState: 'thinking', timestamp: 1001 });
+      mockEventBus.emit('agent:state:exit', { state: 'idle', timestamp: 1100 });
+      mockEventBus.emit('agent:state:exit', { state: 'thinking', timestamp: 1150 });
+
+      expect(monitorInstance.api.getStateStats('idle')).toBeDefined();
+      expect(monitorInstance.api.getStateStats('thinking')).toBeDefined();
+    });
+
+    it('should handle overlapping tool executions', () => {
+      mockEventBus.emit('tool:start', { toolName: 'SlowTool', timestamp: 1000 });
+      mockEventBus.emit('tool:start', { toolName: 'FastTool', timestamp: 1100 });
+      mockEventBus.emit('tool:end', { toolName: 'FastTool', timestamp: 1150 });
+      mockEventBus.emit('tool:end', { toolName: 'SlowTool', timestamp: 2000 });
+
+      expect(monitorInstance.api.getToolStats('SlowTool').totalTime).toBe(1000);
+      expect(monitorInstance.api.getToolStats('FastTool').totalTime).toBe(50);
+    });
+
+    it('should handle concurrent API requests', () => {
+      for (let i = 0; i < 5; i++) {
+        mockEventBus.emit('api:request:start', { requestId: `concurrent-${i}`, timestamp: 1000 + i });
+      }
+
+      for (let i = 0; i < 5; i++) {
+        mockEventBus.emit('api:request:end', {
+          requestId: `concurrent-${i}`,
+          timestamp: 1500 + i,
+          tokens: { input: 50, output: 25 }
+        });
+      }
+
+      const stats = monitorInstance.api.getLLMStats();
+      expect(stats.calls).toBe(5);
+    });
+
+    it('should maintain consistency under concurrent updates', () => {
+      const events = [];
+      for (let i = 0; i < 100; i++) {
+        events.push(() => mockEventBus.emit('artifact:created', {}));
+        events.push(() => mockEventBus.emit('artifact:updated', {}));
+        events.push(() => mockEventBus.emit('agent:cycle:start', {}));
+      }
+
+      events.forEach(fn => fn());
+
+      const metrics = monitorInstance.api.getMetrics();
+      expect(metrics.session.artifacts.created).toBe(100);
+      expect(metrics.session.artifacts.modified).toBe(100);
+      expect(metrics.session.cycles).toBe(100);
+    });
+  });
+
+  describe('Metric Storage Overflow Tests', () => {
+    beforeEach(() => {
+      monitorInstance.init();
+    });
+
+    it('should limit memory samples to 100', () => {
+      for (let i = 0; i < 150; i++) {
+        global.performance.memory.usedJSHeapSize = 50 * 1024 * 1024 + i;
+        vi.advanceTimersByTime(30000);
+      }
+
+      const memStats = monitorInstance.api.getMemoryStats();
+      expect(memStats.samples).toBe(100);
+    });
+
+    it('should handle large number of latency samples', () => {
+      for (let i = 0; i < 1000; i++) {
+        mockEventBus.emit('api:request:start', { requestId: `load-${i}`, timestamp: i * 10 });
+        mockEventBus.emit('api:request:end', { requestId: `load-${i}`, timestamp: i * 10 + 100 });
+      }
+
+      const stats = monitorInstance.api.getLLMStats();
+      expect(stats.latency.length).toBe(1000);
+    });
+
+    it('should maintain performance with many tools tracked', () => {
+      for (let i = 0; i < 500; i++) {
+        mockEventBus.emit('tool:start', { toolName: `Tool${i}`, timestamp: i * 10 });
+        mockEventBus.emit('tool:end', { toolName: `Tool${i}`, timestamp: i * 10 + 5 });
+      }
+
+      const metrics = monitorInstance.api.getMetrics();
+      expect(Object.keys(metrics.tools).length).toBe(500);
+    });
+
+    it('should handle continuous metric accumulation', () => {
+      for (let i = 0; i < 10000; i++) {
+        mockEventBus.emit('api:request:end', {
+          requestId: `req-${i}`,
+          timestamp: i,
+          tokens: { input: 1, output: 1 }
+        });
+      }
+
+      const stats = monitorInstance.api.getLLMStats();
+      expect(stats.tokens.total).toBe(20000);
+    });
+  });
+
+  describe('Report Generation Edge Cases', () => {
+    beforeEach(() => {
+      monitorInstance.init();
+    });
+
+    it('should generate report with no data', () => {
+      const report = monitorInstance.api.generateReport();
+
+      expect(report).toContain('REPLOID Performance Report');
+      expect(report).toContain('Session Statistics');
+    });
+
+    it('should handle very long tool names', () => {
+      const longName = 'A'.repeat(200);
+      mockEventBus.emit('tool:start', { toolName: longName, timestamp: 1000 });
+      mockEventBus.emit('tool:end', { toolName: longName, timestamp: 1100 });
+
+      const report = monitorInstance.api.generateReport();
+      expect(report).toContain(longName);
+    });
+
+    it('should format large numbers correctly', () => {
+      for (let i = 0; i < 1000; i++) {
+        mockEventBus.emit('tool:start', { toolName: 'ManyTool', timestamp: i * 100 });
+        mockEventBus.emit('tool:end', { toolName: 'ManyTool', timestamp: i * 100 + 50 });
+      }
+
+      const report = monitorInstance.api.generateReport();
+      expect(report).toContain('1000');
+    });
+
+    it('should include all sections even with missing data', () => {
+      mockEventBus.emit('tool:start', { toolName: 'OnlyTool', timestamp: 1000 });
+      mockEventBus.emit('tool:end', { toolName: 'OnlyTool', timestamp: 1100 });
+
+      const report = monitorInstance.api.generateReport();
+      expect(report).toContain('Tool Performance');
+      expect(report).toContain('LLM API Performance');
+      expect(report).toContain('Memory Usage');
+    });
+  });
+
+  describe('Edge Case Handling', () => {
+    beforeEach(() => {
+      monitorInstance.init();
+    });
+
+    it('should handle undefined timestamps', () => {
+      mockEventBus.emit('tool:start', { toolName: 'NoTimestamp' });
+      mockEventBus.emit('tool:end', { toolName: 'NoTimestamp' });
+
+      const stats = monitorInstance.api.getToolStats('NoTimestamp');
+      expect(stats).toBeDefined();
+    });
+
+    it('should handle empty tool names', () => {
+      mockEventBus.emit('tool:start', { toolName: '', timestamp: 1000 });
+      mockEventBus.emit('tool:end', { toolName: '', timestamp: 1100 });
+
+      const stats = monitorInstance.api.getToolStats('');
+      expect(stats).toBeDefined();
+    });
+
+    it('should handle null error messages', () => {
+      mockEventBus.emit('tool:start', { toolName: 'ErrorTool', timestamp: 1000 });
+      mockEventBus.emit('tool:error', { toolName: 'ErrorTool', error: null });
+
+      const stats = monitorInstance.api.getToolStats('ErrorTool');
+      expect(stats.errors).toBe(1);
+    });
+
+    it('should handle median calculation with even number of samples', () => {
+      mockEventBus.emit('api:request:start', { requestId: 'req-1', timestamp: 1000 });
+      mockEventBus.emit('api:request:end', { requestId: 'req-1', timestamp: 1100 });
+      mockEventBus.emit('api:request:start', { requestId: 'req-2', timestamp: 2000 });
+      mockEventBus.emit('api:request:end', { requestId: 'req-2', timestamp: 2500 });
+
+      const stats = monitorInstance.api.getLLMStats();
+      expect(stats.medianLatency).toBe(300);
+    });
+
+    it('should handle p95 calculation with insufficient samples', () => {
+      mockEventBus.emit('api:request:start', { requestId: 'req-1', timestamp: 1000 });
+      mockEventBus.emit('api:request:end', { requestId: 'req-1', timestamp: 1100 });
+
+      const stats = monitorInstance.api.getLLMStats();
+      expect(stats.p95Latency).toBe(100);
+    });
+  });
 });

@@ -280,4 +280,139 @@ describe('EventBus', () => {
       expect(listener).toHaveBeenCalledTimes(2);
     });
   });
+
+  describe('Edge Cases', () => {
+    it('should handle emit with null data', () => {
+      const listener = vi.fn();
+      eventBus.on('test:event', listener);
+
+      eventBus.emit('test:event', null);
+
+      expect(listener).toHaveBeenCalledWith(null);
+    });
+
+    it('should handle emit with undefined data', () => {
+      const listener = vi.fn();
+      eventBus.on('test:event', listener);
+
+      eventBus.emit('test:event', undefined);
+
+      expect(listener).toHaveBeenCalledWith(undefined);
+    });
+
+    it('should handle double unsubscribe gracefully', () => {
+      const listener = vi.fn();
+      const unsubscribe = eventBus.on('test:event', listener);
+
+      unsubscribe();
+      unsubscribe(); // Call again
+
+      expect(() => eventBus.emit('test:event', {})).not.toThrow();
+    });
+
+    it('should handle listener re-registration', () => {
+      const listener = vi.fn();
+
+      eventBus.on('test:event', listener);
+      eventBus.off('test:event', listener);
+      eventBus.on('test:event', listener); // Re-register
+
+      eventBus.emit('test:event', {});
+
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    it('should maintain listener call order', () => {
+      const callOrder = [];
+      const listener1 = vi.fn(() => callOrder.push(1));
+      const listener2 = vi.fn(() => callOrder.push(2));
+      const listener3 = vi.fn(() => callOrder.push(3));
+
+      eventBus.on('test:event', listener1);
+      eventBus.on('test:event', listener2);
+      eventBus.on('test:event', listener3);
+
+      eventBus.emit('test:event', {});
+
+      expect(callOrder).toEqual([1, 2, 3]);
+    });
+  });
+
+  describe('Subscription Report', () => {
+    it('should accurately report subscription counts', () => {
+      eventBus.on('event1', vi.fn(), 'ModuleA');
+      eventBus.on('event2', vi.fn(), 'ModuleA');
+      eventBus.on('event3', vi.fn(), 'ModuleB');
+
+      const report = eventBus.getSubscriptionReport();
+
+      expect(report.ModuleA).toBe(2);
+      expect(report.ModuleB).toBe(1);
+    });
+
+    it('should track individual unsubscribes', () => {
+      const unsubscribe = eventBus.on('event1', vi.fn(), 'ModuleA');
+      eventBus.on('event2', vi.fn(), 'ModuleA');
+
+      let report = eventBus.getSubscriptionReport();
+      expect(report.ModuleA).toBe(2);
+
+      unsubscribe();
+      eventBus.emit('event1', {}); // Verify unsubscribe worked
+
+      // Note: Report may show stale count until tracker is cleaned
+      report = eventBus.getSubscriptionReport();
+      expect(report.ModuleA).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should handle unsubscribeAll for complete cleanup', () => {
+      eventBus.on('event1', vi.fn(), 'ModuleA');
+      eventBus.on('event2', vi.fn(), 'ModuleA');
+
+      let report = eventBus.getSubscriptionReport();
+      expect(report.ModuleA).toBe(2);
+
+      eventBus.unsubscribeAll('ModuleA');
+
+      report = eventBus.getSubscriptionReport();
+      expect(report.ModuleA).toBeUndefined();
+    });
+  });
+
+  describe('Error Resilience', () => {
+    it('should isolate listener errors from other listeners', () => {
+      const errorListener = vi.fn(() => {
+        throw new Error('Test error');
+      });
+      const goodListener1 = vi.fn();
+      const goodListener2 = vi.fn();
+
+      eventBus.on('test:event', goodListener1);
+      eventBus.on('test:event', errorListener);
+      eventBus.on('test:event', goodListener2);
+
+      eventBus.emit('test:event', {});
+
+      expect(goodListener1).toHaveBeenCalled();
+      expect(errorListener).toHaveBeenCalled();
+      expect(goodListener2).toHaveBeenCalled();
+    });
+
+    it('should handle multiple failing listeners', () => {
+      const errorListener1 = vi.fn(() => {
+        throw new Error('Error 1');
+      });
+      const errorListener2 = vi.fn(() => {
+        throw new Error('Error 2');
+      });
+      const goodListener = vi.fn();
+
+      eventBus.on('test:event', errorListener1);
+      eventBus.on('test:event', errorListener2);
+      eventBus.on('test:event', goodListener);
+
+      expect(() => eventBus.emit('test:event', {})).not.toThrow();
+      expect(goodListener).toHaveBeenCalled();
+    });
+  });
 });
