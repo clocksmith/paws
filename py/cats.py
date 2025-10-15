@@ -237,14 +237,24 @@ class ProjectAnalyzer:
     
     def _should_ignore(self, path: Path) -> bool:
         """Check if path should be ignored"""
-        path_str = str(path.relative_to(self.root_path))
-        
+        try:
+            path_str = str(path.relative_to(self.root_path))
+        except ValueError:
+            path_str = str(path)
+
         for pattern in self.gitignore_patterns:
+            # Check substring match
             if pattern in path_str:
                 return True
+            # Check exact filename match
             if path.name == pattern:
                 return True
-        
+            # Check glob pattern match
+            if glob_module.fnmatch.fnmatch(path.name, pattern):
+                return True
+            if glob_module.fnmatch.fnmatch(path_str, pattern):
+                return True
+
         return False
     
     def build_file_tree(self) -> FileTreeNode:
@@ -448,14 +458,14 @@ Example:
         paths = []
         for line in response.split('\n'):
             line = line.strip()
-            if line and (line.endswith('.py') or line.endswith('.js') or 
+            if line and (line.endswith('.py') or line.endswith('.js') or
                         line.endswith('.ts') or line.endswith('.java') or
                         line.endswith('.go') or line.endswith('.rs')):
-                # Clean up the path
-                line = line.strip('"\'`,-')
+                # Clean up the path - remove common prefixes and quotes
+                line = line.strip('"\'`,-').strip()
                 if line and not line.startswith('#'):
                     paths.append(line)
-        
+
         return paths
 
 
@@ -481,16 +491,18 @@ def get_paths_to_process(config: BundleConfig, cwd: Path) -> Dict[str, Any]:
     # Process path specs
     for spec in config.path_specs:
         spec_path = Path(spec)
-        if spec_path.is_absolute():
-            if spec_path.exists():
-                if spec_path.is_file():
-                    included_paths.add(spec_path)
-                else:
-                    for file_path in spec_path.rglob("*"):
-                        if file_path.is_file():
-                            included_paths.add(file_path)
+
+        # Check if it's a directory
+        if spec_path.exists() and spec_path.is_dir():
+            # Recursively include all files in directory
+            for file_path in spec_path.rglob("*"):
+                if file_path.is_file():
+                    included_paths.add(file_path.resolve())
+        elif spec_path.is_absolute():
+            if spec_path.exists() and spec_path.is_file():
+                included_paths.add(spec_path)
         else:
-            # Use glob for relative paths
+            # Use glob for patterns
             matches = glob_module.glob(spec, recursive=True)
             for match in matches:
                 match_path = Path(match)
@@ -501,8 +513,17 @@ def get_paths_to_process(config: BundleConfig, cwd: Path) -> Dict[str, Any]:
     final_paths = []
     for path in included_paths:
         should_exclude = False
+        # Try to get relative path from cwd
+        try:
+            rel_path = path.relative_to(cwd)
+            path_str = str(rel_path)
+        except ValueError:
+            path_str = str(path)
+
         for pattern in excluded_patterns:
-            if glob_module.fnmatch.fnmatch(str(path), pattern):
+            # Check both absolute and relative paths
+            if (glob_module.fnmatch.fnmatch(path_str, pattern) or
+                glob_module.fnmatch.fnmatch(str(path), pattern)):
                 should_exclude = True
                 break
         if not should_exclude:
@@ -518,13 +539,33 @@ def find_common_ancestor(paths: List[Path], cwd: Path) -> Path:
     """Find common ancestor directory"""
     if not paths:
         return cwd
+
+    # If all paths share a common parent, use that parent's parent
+    # This preserves directory names when explicitly specified
     common = Path(os.path.commonpath([str(p) for p in paths]))
-    return common if common.is_dir() else common.parent
+    common_dir = common if common.is_dir() else common.parent
+
+    # If the common directory is not the cwd, use its parent
+    # This ensures that when you run "cats src", files appear as "src/file.py"
+    if common_dir != cwd and common_dir.parent.exists():
+        return common_dir.parent
+
+    return common_dir
 
 
 def detect_is_binary(content_bytes: bytes) -> bool:
     """Detect if content is binary"""
-    return b"\x00" in content_bytes[:1024]
+    # Check for null bytes
+    if b"\x00" in content_bytes[:1024]:
+        return True
+
+    # Check for high proportion of non-text bytes
+    if len(content_bytes) > 0:
+        non_text_bytes = sum(1 for b in content_bytes[:1024] if b < 32 and b not in (9, 10, 13))
+        if non_text_bytes / min(len(content_bytes), 1024) > 0.3:
+            return True
+
+    return False
 
 
 def prepare_file_object(file_path: Path, common_ancestor: Path, encoding_mode: str) -> Dict[str, Any]:
@@ -532,8 +573,13 @@ def prepare_file_object(file_path: Path, common_ancestor: Path, encoding_mode: s
     try:
         with open(file_path, "rb") as f:
             content_bytes = f.read()
-        
-        is_binary = detect_is_binary(content_bytes)
+
+        # Check by extension first for known binary formats
+        binary_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.pdf', '.zip', '.tar', '.gz',
+                           '.exe', '.dll', '.so', '.dylib', '.bin', '.dat', '.pyc'}
+        is_binary_ext = file_path.suffix.lower() in binary_extensions
+
+        is_binary = is_binary_ext or detect_is_binary(content_bytes)
         rel_path = file_path.relative_to(common_ancestor)
         
         if is_binary:
