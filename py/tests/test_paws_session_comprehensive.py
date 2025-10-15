@@ -169,7 +169,8 @@ class TestSessionManager(unittest.TestCase):
         # Create initial commit
         test_file = self.test_dir / "test.txt"
         test_file.write_text("initial content")
-        self.repo.index.add([str(test_file)])
+        # Use relative path to avoid macOS symlink issues (/var vs /private/var)
+        self.repo.index.add(["test.txt"])
         self.repo.index.commit("Initial commit")
 
     def tearDown(self):
@@ -419,7 +420,8 @@ class TestSessionCLI(unittest.TestCase):
         self.repo = Repo.init(self.test_dir)
         test_file = self.test_dir / "test.txt"
         test_file.write_text("initial content")
-        self.repo.index.add([str(test_file)])
+        # Use relative path to avoid macOS symlink issues
+        self.repo.index.add(["test.txt"])
         self.repo.index.commit("Initial commit")
 
     def tearDown(self):
@@ -471,7 +473,8 @@ class TestSessionEdgeCases(unittest.TestCase):
         self.repo = Repo.init(self.test_dir)
         test_file = self.test_dir / "test.txt"
         test_file.write_text("initial")
-        self.repo.index.add([str(test_file)])
+        # Use relative path to avoid macOS symlink issues
+        self.repo.index.add(["test.txt"])
         self.repo.index.commit("Initial commit")
 
     def tearDown(self):
