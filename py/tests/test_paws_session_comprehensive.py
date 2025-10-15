@@ -13,6 +13,7 @@ import shutil
 import json
 import subprocess
 from pathlib import Path
+from datetime import datetime
 from unittest.mock import patch, MagicMock, Mock
 
 # Add parent directory to path for imports
@@ -573,6 +574,339 @@ class TestSessionEdgeCases(unittest.TestCase):
         retrieved = manager.get_session(session.session_id)
         self.assertEqual(retrieved.metadata["custom_field"], "custom_value")
         self.assertEqual(retrieved.metadata["tags"], ["tag1", "tag2"])
+
+
+class TestSessionManagerErrors(unittest.TestCase):
+    """Test SessionManager error handling"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="session_errors_"))
+        self.original_cwd = Path.cwd()
+
+    def tearDown(self):
+        os.chdir(self.original_cwd)
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_manager_no_git_available(self):
+        """Test SessionManager when git is not available (line 113)"""
+        # Create non-git directory
+        os.chdir(self.test_dir)
+
+        with patch('paws_session.GIT_AVAILABLE', False):
+            with self.assertRaises(RuntimeError) as cm:
+                SessionManager(self.test_dir)
+            self.assertIn("Git support is required", str(cm.exception))
+
+    def test_manager_not_git_repo(self):
+        """Test SessionManager when not in git repo (lines 117-118)"""
+        # Directory without git
+        os.chdir(self.test_dir)
+
+        with self.assertRaises(RuntimeError) as cm:
+            SessionManager(self.test_dir)
+        self.assertIn("Not in a git repository", str(cm.exception))
+
+    def test_gitignore_update(self):
+        """Test gitignore update for .paws (lines 131-135)"""
+        # Create git repo without .paws in gitignore
+        os.chdir(self.test_dir)
+        subprocess.run(["git", "init"], check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "Test"], check=True, capture_output=True)
+
+        # Create .gitignore without .paws
+        gitignore = self.test_dir / ".gitignore"
+        gitignore.write_text("*.pyc\n")
+
+        # Create initial commit
+        subprocess.run(["git", "add", ".gitignore"], check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "init"], check=True, capture_output=True)
+
+        # Create session manager
+        manager = SessionManager(self.test_dir)
+
+        # Check .paws was added to gitignore
+        gitignore_content = gitignore.read_text()
+        self.assertIn(".paws/", gitignore_content)
+
+
+class TestSessionRewind(unittest.TestCase):
+    """Test session rewind functionality"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="session_rewind_"))
+        self.original_cwd = Path.cwd()
+        os.chdir(self.test_dir)
+
+        # Initialize git
+        subprocess.run(["git", "init"], check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "Test"], check=True, capture_output=True)
+
+        # Create initial commit
+        (self.test_dir / "README.md").write_text("# Test")
+        subprocess.run(["git", "add", "README.md"], check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "init"], check=True, capture_output=True)
+
+        self.manager = SessionManager(self.test_dir)
+
+    def tearDown(self):
+        os.chdir(self.original_cwd)
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_rewind_session_not_found(self):
+        """Test rewinding nonexistent session (line 258)"""
+        with self.assertRaises(ValueError) as cm:
+            self.manager.rewind_session("nonexistent", 1)
+        self.assertIn("not found", str(cm.exception))
+
+    def test_rewind_session_checkpoint_failure(self):
+        """Test rewinding with git reset failure (lines 278-280)"""
+        session = self.manager.create_session("Test Session")
+
+        # Add a turn but with invalid commit hash
+        turn = SessionTurn(
+            turn_number=1,
+            timestamp=datetime.now().isoformat(),
+            command="test",
+            commit_hash="invalid_hash"
+        )
+        session.turns.append(turn)
+        self.manager._save_session(session)
+
+        # Try to rewind - should fail with invalid commit
+        result = self.manager.rewind_session(session.session_id, 1)
+        self.assertFalse(result)
+
+
+class TestSessionMerge(unittest.TestCase):
+    """Test session merge functionality"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="session_merge_"))
+        self.original_cwd = Path.cwd()
+        os.chdir(self.test_dir)
+
+        # Initialize git
+        subprocess.run(["git", "init"], check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "Test"], check=True, capture_output=True)
+
+        # Create initial commit
+        (self.test_dir / "README.md").write_text("# Test")
+        subprocess.run(["git", "add", "README.md"], check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "init"], check=True, capture_output=True)
+
+        self.manager = SessionManager(self.test_dir)
+
+    def tearDown(self):
+        os.chdir(self.original_cwd)
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_merge_session_not_found(self):
+        """Test merging nonexistent session (line 286)"""
+        with self.assertRaises(ValueError) as cm:
+            self.manager.merge_session("nonexistent")
+        self.assertIn("not found", str(cm.exception))
+
+
+class TestSessionArchive(unittest.TestCase):
+    """Test session archive functionality"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="session_archive_"))
+        self.original_cwd = Path.cwd()
+        os.chdir(self.test_dir)
+
+        # Initialize git
+        subprocess.run(["git", "init"], check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "Test"], check=True, capture_output=True)
+
+        # Create initial commit
+        (self.test_dir / "README.md").write_text("# Test")
+        subprocess.run(["git", "add", "README.md"], check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "init"], check=True, capture_output=True)
+
+        self.manager = SessionManager(self.test_dir)
+
+    def tearDown(self):
+        os.chdir(self.original_cwd)
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_archive_session_not_found(self):
+        """Test archiving nonexistent session (line 318)"""
+        with self.assertRaises(ValueError) as cm:
+            self.manager.archive_session("nonexistent")
+        self.assertIn("not found", str(cm.exception))
+
+
+class TestSessionCLIMain(unittest.TestCase):
+    """Test main() CLI function (lines 513-578)"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="session_cli_"))
+        self.original_cwd = Path.cwd()
+        os.chdir(self.test_dir)
+
+        # Initialize git
+        subprocess.run(["git", "init"], check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "Test"], check=True, capture_output=True)
+
+        # Create initial commit
+        (self.test_dir / "README.md").write_text("# Test")
+        subprocess.run(["git", "add", "README.md"], check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "init"], check=True, capture_output=True)
+
+    def tearDown(self):
+        os.chdir(self.original_cwd)
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_main_no_command(self):
+        """Test main() with no command (lines 552-554)"""
+        test_args = ['paws_session.py']
+
+        with patch('sys.argv', test_args):
+            with patch('sys.stdout', new=MagicMock()):
+                result = paws_session.main()
+
+        # Should return error code
+        self.assertEqual(result, 1)
+
+    def test_main_start_command(self):
+        """Test main() with start command (lines 559-560)"""
+        test_args = [
+            'paws_session.py',
+            'start',
+            'Test Session',
+            '--base', 'main'
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('sys.stdout', new=MagicMock()):
+                result = paws_session.main()
+
+        # Should succeed
+        self.assertEqual(result, 0)
+
+    def test_main_list_command(self):
+        """Test main() with list command (lines 561-562)"""
+        # Create a session first
+        manager = SessionManager(self.test_dir)
+        manager.create_session("Test Session")
+
+        test_args = [
+            'paws_session.py',
+            'list'
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('sys.stdout', new=MagicMock()):
+                result = paws_session.main()
+
+        # Should succeed
+        self.assertEqual(result, 0)
+
+    def test_main_list_command_with_all(self):
+        """Test main() with list --all command (line 562)"""
+        test_args = [
+            'paws_session.py',
+            'list',
+            '--all'
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('sys.stdout', new=MagicMock()):
+                result = paws_session.main()
+
+        # Should succeed
+        self.assertEqual(result, 0)
+
+    def test_main_show_command(self):
+        """Test main() with show command (lines 563-564)"""
+        # Create a session first
+        manager = SessionManager(self.test_dir)
+        session = manager.create_session("Test Session")
+
+        test_args = [
+            'paws_session.py',
+            'show',
+            session.session_id
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('sys.stdout', new=MagicMock()):
+                result = paws_session.main()
+
+        # Should succeed
+        self.assertEqual(result, 0)
+
+    def test_main_exception_handling(self):
+        """Test main() exception handling (lines 576-578)"""
+        # Try to show nonexistent session
+        test_args = [
+            'paws_session.py',
+            'show',
+            'nonexistent'
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('sys.stdout', new=MagicMock()):
+                # Will raise exception when trying to show nonexistent session
+                result = paws_session.main()
+
+        # Should handle exception and return 0 (show_session just prints error)
+        self.assertEqual(result, 0)
+
+
+class TestSessionCLIDisplay(unittest.TestCase):
+    """Test CLI display methods"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="session_display_"))
+        self.original_cwd = Path.cwd()
+        os.chdir(self.test_dir)
+
+        # Initialize git
+        subprocess.run(["git", "init"], check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "Test"], check=True, capture_output=True)
+
+        # Create initial commit
+        (self.test_dir / "README.md").write_text("# Test")
+        subprocess.run(["git", "add", "README.md"], check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "init"], check=True, capture_output=True)
+
+        self.manager = SessionManager(self.test_dir)
+
+    def tearDown(self):
+        os.chdir(self.original_cwd)
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_show_list_no_rich(self):
+        """Test show_list fallback without Rich (lines 428-435)"""
+        cli = paws_session.SessionCLI()
+
+        # Create a session
+        self.manager.create_session("Test Session")
+
+        # Mock Rich as unavailable
+        with patch('paws_session.RICH_AVAILABLE', False):
+            with patch('sys.stdout', new=MagicMock()):
+                cli.list_sessions(show_archived=False)
+
+    def test_show_session_no_rich(self):
+        """Test show_session fallback without Rich (lines 468-473)"""
+        cli = paws_session.SessionCLI()
+
+        # Create a session
+        session = self.manager.create_session("Test Session")
+
+        # Mock Rich as unavailable
+        with patch('paws_session.RICH_AVAILABLE', False):
+            with patch('sys.stdout', new=MagicMock()):
+                cli.show_session(session.session_id)
 
 
 if __name__ == "__main__":

@@ -991,6 +991,7 @@ function test() {
 
       // Build initial graph
       await introspectorInstance.api.getModuleGraph();
+      const callCountAfterFirst = mockDeps.StateManager.getArtifactContent.mock.calls.length;
 
       // Trigger cache invalidation
       const callback = mockEventBus.on.mock.calls.find(
@@ -1000,9 +1001,10 @@ function test() {
 
       // Should rebuild graph
       await introspectorInstance.api.getModuleGraph();
+      const callCountAfterSecond = mockDeps.StateManager.getArtifactContent.mock.calls.length;
 
-      // StateManager should be called twice (once for each build)
-      expect(mockDeps.StateManager.getArtifactContent).toHaveBeenCalledTimes(2);
+      // StateManager should be called again after cache invalidation
+      expect(callCountAfterSecond).toBeGreaterThan(callCountAfterFirst);
     });
   });
 

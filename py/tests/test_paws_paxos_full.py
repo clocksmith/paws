@@ -310,6 +310,390 @@ This is test context for the orchestrator
         self.assertEqual(len(competitors), 0)
 
 
+class TestPaxosRunCompetitor(unittest.TestCase):
+    """Test run_competitor method (lines 235-290)"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="paxos_competitor_"))
+        self.context_file = self.test_dir / "context.md"
+        self.context_file.write_text("# Test context")
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_run_competitor_success_with_verification(self):
+        """Test successful competitor run with verification (lines 237-283)"""
+        orchestrator = PaxosOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            verify_cmd="echo VERIFICATION PASSED",
+            output_dir=str(self.test_dir / "output")
+        )
+
+        competitor = CompetitorConfig(
+            name="Test Agent",
+            model_id="gemini-pro",
+            provider="gemini",
+            api_key="test_key"
+        )
+
+        # Mock LLMClient
+        with patch('paws_paxos.LLMClient') as mock_llm:
+            mock_client = Mock()
+            mock_client.generate.return_value = ("Solution code", 100)
+            mock_llm.return_value = mock_client
+
+            # Mock verify_solution
+            with patch.object(orchestrator, 'verify_solution', return_value="VERIFICATION PASSED"):
+                with patch('sys.stdout', new=MagicMock()):
+                    result = orchestrator.run_competitor(competitor)
+
+        # Check result
+        self.assertEqual(result.name, "Test Agent")
+        self.assertEqual(result.status, "PASS")
+        self.assertEqual(result.token_count, 100)
+        self.assertGreater(result.execution_time, 0)
+
+    def test_run_competitor_verification_failed(self):
+        """Test competitor run with failed verification (lines 265-268)"""
+        orchestrator = PaxosOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            verify_cmd="pytest",
+            output_dir=str(self.test_dir / "output")
+        )
+
+        competitor = CompetitorConfig(
+            name="Test Agent",
+            model_id="gemini-pro",
+            provider="gemini",
+            api_key="test_key"
+        )
+
+        # Mock LLMClient
+        with patch('paws_paxos.LLMClient') as mock_llm:
+            mock_client = Mock()
+            mock_client.generate.return_value = ("Solution code", 100)
+            mock_llm.return_value = mock_client
+
+            # Mock verify_solution to return failure
+            with patch.object(orchestrator, 'verify_solution', return_value="Tests failed"):
+                with patch('sys.stdout', new=MagicMock()):
+                    result = orchestrator.run_competitor(competitor)
+
+        # Should be FAIL
+        self.assertEqual(result.status, "FAIL")
+
+    def test_run_competitor_no_verification(self):
+        """Test competitor run without verification (lines 269-271)"""
+        orchestrator = PaxosOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            verify_cmd=None,
+            output_dir=str(self.test_dir / "output")
+        )
+
+        competitor = CompetitorConfig(
+            name="Test Agent",
+            model_id="gemini-pro",
+            provider="gemini",
+            api_key="test_key"
+        )
+
+        # Mock LLMClient
+        with patch('paws_paxos.LLMClient') as mock_llm:
+            mock_client = Mock()
+            mock_client.generate.return_value = ("Solution code", 100)
+            mock_llm.return_value = mock_client
+
+            with patch('sys.stdout', new=MagicMock()):
+                result = orchestrator.run_competitor(competitor)
+
+        # Should pass without verification
+        self.assertEqual(result.status, "PASS")
+        self.assertEqual(result.verification_output, "No verification requested")
+
+    def test_run_competitor_exception(self):
+        """Test competitor run with exception (lines 285-290)"""
+        orchestrator = PaxosOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            verify_cmd=None,
+            output_dir=str(self.test_dir / "output")
+        )
+
+        competitor = CompetitorConfig(
+            name="Test Agent",
+            model_id="gemini-pro",
+            provider="gemini",
+            api_key="test_key"
+        )
+
+        # Mock LLMClient to raise exception
+        with patch('paws_paxos.LLMClient') as mock_llm:
+            mock_llm.side_effect = Exception("API error")
+
+            with patch('sys.stdout', new=MagicMock()):
+                result = orchestrator.run_competitor(competitor)
+
+        # Should return ERROR status
+        self.assertEqual(result.status, "ERROR")
+        self.assertIn("API error", result.error_message)
+
+
+class TestPaxosVerification(unittest.TestCase):
+    """Test verify_solution method (lines 302-373)"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="paxos_verify_"))
+        self.context_file = self.test_dir / "context.md"
+        self.context_file.write_text("# Test context")
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_verify_solution_worktree_creation_failed(self):
+        """Test verification when worktree creation fails (lines 317-318)"""
+        orchestrator = PaxosOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            verify_cmd="pytest",
+            output_dir=str(self.test_dir / "output")
+        )
+
+        solution_path = self.test_dir / "solution.dogs.md"
+        solution_path.write_text("test")
+
+        # Mock subprocess to fail worktree creation
+        with patch('subprocess.run') as mock_run:
+            mock_result = Mock()
+            mock_result.returncode = 1
+            mock_result.stderr = "Worktree error"
+            mock_run.return_value = mock_result
+
+            with patch('sys.stdout', new=MagicMock()):
+                output = orchestrator.verify_solution("TestAgent", solution_path)
+
+        # Should indicate failure
+        self.assertIn("VERIFICATION FAILED", output)
+        self.assertIn("worktree", output.lower())
+
+
+class TestPaxosRunCompetition(unittest.TestCase):
+    """Test run_competition method (lines 375-397)"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="paxos_comp_"))
+        self.context_file = self.test_dir / "context.md"
+        self.context_file.write_text("# Test context")
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_run_competition_sequential(self):
+        """Test sequential competition execution (lines 391-395)"""
+        orchestrator = PaxosOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            verify_cmd=None,
+            output_dir=str(self.test_dir / "output")
+        )
+
+        competitors = [
+            CompetitorConfig(name="Agent1", model_id="gemini-pro", api_key="key1"),
+            CompetitorConfig(name="Agent2", model_id="gemini-pro", api_key="key2")
+        ]
+
+        # Mock run_competitor
+        mock_results = [
+            CompetitionResult(name="Agent1", model_id="gemini-pro", solution_path="/path1", status="PASS"),
+            CompetitionResult(name="Agent2", model_id="gemini-pro", solution_path="/path2", status="PASS")
+        ]
+
+        with patch.object(orchestrator, 'run_competitor', side_effect=mock_results):
+            with patch('sys.stdout', new=MagicMock()):
+                results = orchestrator.run_competition(competitors, parallel=False)
+
+        # Should return both results
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0].name, "Agent1")
+        self.assertEqual(results[1].name, "Agent2")
+
+    def test_run_competition_parallel(self):
+        """Test parallel competition execution (lines 380-390)"""
+        orchestrator = PaxosOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            verify_cmd=None,
+            output_dir=str(self.test_dir / "output")
+        )
+
+        competitors = [
+            CompetitorConfig(name="Agent1", model_id="gemini-pro", api_key="key1"),
+            CompetitorConfig(name="Agent2", model_id="gemini-pro", api_key="key2")
+        ]
+
+        # Mock run_competitor
+        mock_result = CompetitionResult(
+            name="TestAgent", model_id="gemini-pro", solution_path="/path", status="PASS"
+        )
+
+        with patch.object(orchestrator, 'run_competitor', return_value=mock_result):
+            with patch('sys.stdout', new=MagicMock()):
+                results = orchestrator.run_competition(competitors, parallel=True)
+
+        # Should return results for both (parallel)
+        self.assertEqual(len(results), 2)
+
+    def test_run_competition_single_competitor_parallel(self):
+        """Test parallel with single competitor (line 380 check)"""
+        orchestrator = PaxosOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            verify_cmd=None,
+            output_dir=str(self.test_dir / "output")
+        )
+
+        competitors = [
+            CompetitorConfig(name="Agent1", model_id="gemini-pro", api_key="key1")
+        ]
+
+        mock_result = CompetitionResult(
+            name="Agent1", model_id="gemini-pro", solution_path="/path", status="PASS"
+        )
+
+        with patch.object(orchestrator, 'run_competitor', return_value=mock_result):
+            with patch('sys.stdout', new=MagicMock()):
+                # With parallel=True but only 1 competitor, should run sequentially
+                results = orchestrator.run_competition(competitors, parallel=True)
+
+        self.assertEqual(len(results), 1)
+
+
+class TestPaxosGenerateReport(unittest.TestCase):
+    """Test generate_report method (lines 399-446)"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="paxos_report_"))
+        self.context_file = self.test_dir / "context.md"
+        self.context_file.write_text("# Test context")
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_generate_report_all_pass(self):
+        """Test report generation with all passing (lines 432, 437-446)"""
+        orchestrator = PaxosOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            verify_cmd=None,
+            output_dir=str(self.test_dir / "output")
+        )
+
+        results = [
+            CompetitionResult(
+                name="Agent1",
+                model_id="gemini-pro",
+                solution_path="/path1",
+                status="PASS",
+                execution_time=2.5,
+                token_count=1000
+            ),
+            CompetitionResult(
+                name="Agent2",
+                model_id="gpt-4",
+                solution_path="/path2",
+                status="PASS",
+                execution_time=3.0,
+                token_count=1500
+            )
+        ]
+
+        with patch('sys.stdout', new=MagicMock()):
+            exit_code = orchestrator.generate_report(results)
+
+        # Should return 0 (success)
+        self.assertEqual(exit_code, 0)
+
+    def test_generate_report_all_fail(self):
+        """Test report generation with no passing (lines 432-436)"""
+        orchestrator = PaxosOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            verify_cmd="pytest",
+            output_dir=str(self.test_dir / "output")
+        )
+
+        results = [
+            CompetitionResult(
+                name="Agent1",
+                model_id="gemini-pro",
+                solution_path="/path1",
+                status="FAIL",
+                execution_time=2.5,
+                token_count=1000
+            ),
+            CompetitionResult(
+                name="Agent2",
+                model_id="gpt-4",
+                solution_path="",
+                status="ERROR",
+                error_message="API error",
+                execution_time=1.0,
+                token_count=0
+            )
+        ]
+
+        with patch('sys.stdout', new=MagicMock()):
+            exit_code = orchestrator.generate_report(results)
+
+        # Should return 1 (failure)
+        self.assertEqual(exit_code, 1)
+
+    def test_generate_report_mixed_results(self):
+        """Test report with mixed pass/fail/error (lines 405-429)"""
+        orchestrator = PaxosOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            verify_cmd="pytest",
+            output_dir=str(self.test_dir / "output")
+        )
+
+        results = [
+            CompetitionResult(
+                name="Agent1",
+                model_id="gemini-pro",
+                solution_path="/path1",
+                status="PASS",
+                execution_time=2.5,
+                token_count=1000
+            ),
+            CompetitionResult(
+                name="Agent2",
+                model_id="gpt-4",
+                solution_path="/path2",
+                status="FAIL",
+                execution_time=3.0,
+                token_count=1500
+            ),
+            CompetitionResult(
+                name="Agent3",
+                model_id="claude-3",
+                solution_path="",
+                status="ERROR",
+                error_message="Timeout",
+                execution_time=5.0,
+                token_count=500
+            )
+        ]
+
+        with patch('sys.stdout', new=MagicMock()):
+            exit_code = orchestrator.generate_report(results)
+
+        # Should return 0 (at least one passed)
+        self.assertEqual(exit_code, 0)
+
+
 class TestPaxosEdgeCases(unittest.TestCase):
     """Test edge cases"""
 

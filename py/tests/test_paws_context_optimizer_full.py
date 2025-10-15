@@ -11,7 +11,7 @@ import sys
 import tempfile
 import shutil
 from pathlib import Path
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, MagicMock
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -367,6 +367,207 @@ def func2():
         except AttributeError:
             # Method might not be fully implemented
             self.skipTest("create_context_window not fully implemented")
+
+
+class TestCreateOptimizedBundle(unittest.TestCase):
+    """Test create_optimized_bundle method (lines 254-303)"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="context_bundle_"))
+        self.optimizer = ContextOptimizer(self.test_dir, max_tokens=100000)
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_create_optimized_bundle_with_core_files(self):
+        """Test bundle creation with core files (lines 265-283)"""
+        # Create test files
+        file1 = self.test_dir / "core.py"
+        file1.write_text("def main():\n    pass\n")
+
+        file2 = self.test_dir / "utils.py"
+        file2.write_text("def helper():\n    return True\n")
+
+        # Create window
+        window = ContextWindow(
+            core_files=[file1, file2],
+            summary_files=[],
+            total_lines=10,
+            estimated_tokens=100
+        )
+
+        # Create bundle
+        output_path = self.test_dir / "bundle.md"
+        self.optimizer.create_optimized_bundle(window, output_path)
+
+        # Check bundle was created
+        self.assertTrue(output_path.exists())
+
+        # Check bundle content
+        content = output_path.read_text()
+        self.assertIn("Optimized Context Bundle", content)
+        self.assertIn("Core Files (Full Content)", content)
+        self.assertIn("CATS_START_FILE", content)
+        self.assertIn("core.py", content)
+        self.assertIn("utils.py", content)
+        self.assertIn("def main()", content)
+        self.assertIn("def helper()", content)
+
+    def test_create_optimized_bundle_with_summary_files(self):
+        """Test bundle creation with summary files (lines 286-297)"""
+        # Create test files
+        file1 = self.test_dir / "main.py"
+        file1.write_text("def main():\n    pass\n")
+
+        file2 = self.test_dir / "lib.py"
+        file2.write_text("class Library:\n    pass\n")
+
+        # Analyze summary file
+        module2 = self.optimizer.analyzer.analyze_python_file(file2)
+        self.optimizer.analyzer.modules[str(file2)] = module2
+
+        # Create window with summary files
+        window = ContextWindow(
+            core_files=[file1],
+            summary_files=[file2],
+            total_lines=10,
+            estimated_tokens=100
+        )
+
+        # Create bundle
+        output_path = self.test_dir / "bundle.md"
+        self.optimizer.create_optimized_bundle(window, output_path)
+
+        # Check bundle content
+        content = output_path.read_text()
+        self.assertIn("Related Files (CATSCAN Summaries)", content)
+        self.assertIn("lib.py", content)
+        # Should have summary, not full content
+        self.assertIn("Size:", content)  # From CATSCAN summary
+
+    def test_create_optimized_bundle_file_read_error(self):
+        """Test bundle creation with unreadable file (lines 282-283)"""
+        # Create window with nonexistent file
+        nonexistent = self.test_dir / "nonexistent.py"
+
+        window = ContextWindow(
+            core_files=[nonexistent],
+            summary_files=[],
+            total_lines=0,
+            estimated_tokens=0
+        )
+
+        # Should not crash, just print warning
+        output_path = self.test_dir / "bundle.md"
+        with patch('sys.stdout', new=MagicMock()):
+            self.optimizer.create_optimized_bundle(window, output_path)
+
+        # Bundle should still be created
+        self.assertTrue(output_path.exists())
+
+
+class TestContextOptimizerMain(unittest.TestCase):
+    """Test main() CLI function (lines 307-348)"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="context_main_"))
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_main_with_files_argument(self):
+        """Test main() with --files argument (lines 323-324)"""
+        # Create test files
+        file1 = self.test_dir / "test1.py"
+        file1.write_text("def test1(): pass")
+        file2 = self.test_dir / "test2.py"
+        file2.write_text("def test2(): pass")
+
+        output_path = self.test_dir / "output.md"
+
+        test_args = [
+            'paws_context_optimizer.py',
+            'Test task',
+            '--files', str(file1), str(file2),
+            '--output', str(output_path),
+            '--max-tokens', '50000'
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('sys.stdout', new=MagicMock()):
+                result = paws_context_optimizer.main()
+
+        # Should succeed
+        self.assertEqual(result, 0)
+        # Output should be created
+        self.assertTrue(output_path.exists())
+
+    def test_main_with_scan_argument(self):
+        """Test main() with --scan argument (lines 325-328)"""
+        # Create test directory with Python files
+        scan_dir = self.test_dir / "code"
+        scan_dir.mkdir()
+        (scan_dir / "file1.py").write_text("def func1(): pass")
+        (scan_dir / "file2.py").write_text("def func2(): pass")
+        (scan_dir / "file3.js").write_text("function func3() {}")
+
+        output_path = self.test_dir / "output.md"
+
+        test_args = [
+            'paws_context_optimizer.py',
+            'Test task',
+            '--scan', str(scan_dir),
+            '--output', str(output_path)
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('sys.stdout', new=MagicMock()):
+                result = paws_context_optimizer.main()
+
+        # Should succeed
+        self.assertEqual(result, 0)
+        # Output should be created
+        self.assertTrue(output_path.exists())
+
+    def test_main_missing_required_args(self):
+        """Test main() with missing required arguments (lines 330-331)"""
+        test_args = [
+            'paws_context_optimizer.py',
+            'Test task'
+            # Missing both --files and --scan
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('sys.stdout', new=MagicMock()):
+                result = paws_context_optimizer.main()
+
+        # Should return error code
+        self.assertEqual(result, 1)
+
+    def test_main_interactive_task_prompt(self):
+        """Test main() with interactive task prompt (line 320)"""
+        # Create test file
+        file1 = self.test_dir / "test.py"
+        file1.write_text("def test(): pass")
+
+        output_path = self.test_dir / "output.md"
+
+        test_args = [
+            'paws_context_optimizer.py',
+            # No task argument
+            '--files', str(file1),
+            '--output', str(output_path)
+        ]
+
+        # Mock input to provide task interactively
+        with patch('sys.argv', test_args):
+            with patch('builtins.input', return_value="Interactive task"):
+                with patch('sys.stdout', new=MagicMock()):
+                    result = paws_context_optimizer.main()
+
+        # Should succeed
+        self.assertEqual(result, 0)
+        self.assertTrue(output_path.exists())
 
 
 class TestEdgeCases(unittest.TestCase):

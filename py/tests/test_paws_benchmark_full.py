@@ -448,6 +448,266 @@ class TestPerformanceBenchmark(unittest.TestCase):
                 self.assertIn("summary", saved_report)
                 self.assertIn("detailed_results", saved_report)
 
+    def test_calculate_rankings(self):
+        """Test ranking calculation (lines 200-242)"""
+        metrics = [
+            BenchmarkMetrics(
+                model_name="FastAgent",
+                model_id="gemini-pro",
+                provider="gemini",
+                execution_time=1.0,
+                token_count=500,
+                test_passed=True,
+                solution_quality=0.9,
+                estimated_cost=0.001,
+                error_rate=0.0
+            ),
+            BenchmarkMetrics(
+                model_name="SlowAgent",
+                model_id="gpt-4",
+                provider="openai",
+                execution_time=5.0,
+                token_count=2000,
+                test_passed=True,
+                solution_quality=1.0,
+                estimated_cost=0.06,
+                error_rate=0.0
+            )
+        ]
+
+        results = {"task_1": metrics}
+        rankings = self.benchmark._calculate_rankings(results)
+
+        # Check ranking categories
+        self.assertIn("by_pass_rate", rankings)
+        self.assertIn("by_speed", rankings)
+        self.assertIn("by_token_efficiency", rankings)
+        self.assertIn("by_cost", rankings)
+        self.assertIn("by_quality", rankings)
+
+        # FastAgent should be fastest
+        self.assertEqual(rankings["by_speed"][0], "FastAgent")
+        # FastAgent should be most token efficient
+        self.assertEqual(rankings["by_token_efficiency"][0], "FastAgent")
+        # FastAgent should have best cost
+        self.assertEqual(rankings["by_cost"][0], "FastAgent")
+        # SlowAgent should have best quality
+        self.assertEqual(rankings["by_quality"][0], "SlowAgent")
+
+    def test_calculate_rankings_empty(self):
+        """Test rankings with empty results (line 204-205)"""
+        rankings = self.benchmark._calculate_rankings({})
+        self.assertEqual(rankings, {})
+
+    def test_print_report(self):
+        """Test report printing to console (lines 244-273)"""
+        report = {
+            "summary": {
+                "Agent1": {
+                    "total_runs": 2,
+                    "pass_rate": 1.0,
+                    "avg_execution_time": 2.5,
+                    "avg_token_count": 1250,
+                    "avg_solution_quality": 1.0,
+                    "avg_error_rate": 0.0,
+                    "total_cost": 0.0025
+                }
+            },
+            "rankings": {
+                "by_pass_rate": ["Agent1"],
+                "by_speed": ["Agent1"],
+                "by_token_efficiency": ["Agent1"],
+                "by_cost": ["Agent1"],
+                "by_quality": ["Agent1"]
+            },
+            "detailed_results": {}
+        }
+
+        # Capture stdout
+        with patch('sys.stdout', new=MagicMock()):
+            self.benchmark._print_report(report)
+            # Just verify it doesn't crash
+
+    def test_generate_report_full_without_mocks(self):
+        """Test full report generation without mocking"""
+        metrics = [
+            BenchmarkMetrics(
+                model_name="Agent1",
+                model_id="gemini-pro",
+                provider="gemini",
+                execution_time=2.0,
+                token_count=1000,
+                test_passed=True,
+                solution_quality=1.0,
+                estimated_cost=0.001,
+                error_rate=0.0
+            )
+        ]
+
+        results = {"task_1": metrics}
+
+        # Don't mock anything - test real implementation
+        with patch('sys.stdout', new=MagicMock()):  # Just suppress console output
+            report = self.benchmark.generate_report(results, "full_report.json")
+
+        # Check full report structure
+        self.assertIn("summary", report)
+        self.assertIn("detailed_results", report)
+        self.assertIn("rankings", report)
+
+        # Check rankings were calculated
+        self.assertIn("by_pass_rate", report["rankings"])
+        self.assertEqual(report["rankings"]["by_pass_rate"][0], "Agent1")
+
+
+class TestBenchmarkMain(unittest.TestCase):
+    """Test main() CLI function (lines 276-364, 368)"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="benchmark_main_"))
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_main_with_suite(self):
+        """Test main() with benchmark suite (lines 336-347)"""
+        # Create config file
+        config_file = self.test_dir / "config.json"
+        config_file.write_text(json.dumps({
+            "competitors": [
+                {
+                    "name": "Test Agent",
+                    "model_id": "gemini-pro",
+                    "provider": "gemini"
+                }
+            ]
+        }))
+
+        # Create context file
+        context_file = self.test_dir / "context.md"
+        context_file.write_text("# Test context")
+
+        # Create suite file
+        suite_file = self.test_dir / "suite.json"
+        suite_file.write_text(json.dumps({
+            "name": "Test Suite",
+            "description": "Test",
+            "tasks": [
+                {
+                    "task": "Test task",
+                    "context_bundle": str(context_file),
+                    "verify_cmd": "pytest"
+                }
+            ]
+        }))
+
+        # Mock PaxosOrchestrator
+        with patch('paws_benchmark.PaxosOrchestrator') as mock_paxos:
+            mock_result = CompetitionResult(
+                name="Test Agent",
+                model_id="gemini-pro",
+                solution_path="/path",
+                status="PASS",
+                execution_time=2.0,
+                token_count=1000
+            )
+
+            mock_orchestrator = Mock()
+            mock_orchestrator.run_competition.return_value = [mock_result]
+            mock_paxos.return_value = mock_orchestrator
+
+            # Mock sys.argv
+            test_args = [
+                'paws_benchmark.py',
+                '--config', str(config_file),
+                '--suite', str(suite_file),
+                '--output-dir', str(self.test_dir / "output"),
+                '--output-file', 'test_report.json'
+            ]
+
+            with patch('sys.argv', test_args):
+                with patch('sys.stdout', new=MagicMock()):
+                    result = paws_benchmark.main()
+
+            # Should succeed
+            self.assertEqual(result, 0)
+
+            # Check report was created
+            report_file = self.test_dir / "output" / "test_report.json"
+            self.assertTrue(report_file.exists())
+
+    def test_main_with_single_task(self):
+        """Test main() with single task (lines 348-356)"""
+        # Create config file
+        config_file = self.test_dir / "config.json"
+        config_file.write_text(json.dumps({
+            "competitors": [
+                {
+                    "name": "Test Agent",
+                    "model_id": "gemini-pro",
+                    "provider": "gemini"
+                }
+            ]
+        }))
+
+        # Create context file
+        context_file = self.test_dir / "context.md"
+        context_file.write_text("# Test context")
+
+        # Mock PaxosOrchestrator
+        with patch('paws_benchmark.PaxosOrchestrator') as mock_paxos:
+            mock_result = CompetitionResult(
+                name="Test Agent",
+                model_id="gemini-pro",
+                solution_path="/path",
+                status="PASS",
+                execution_time=2.0,
+                token_count=1000
+            )
+
+            mock_orchestrator = Mock()
+            mock_orchestrator.run_competition.return_value = [mock_result]
+            mock_paxos.return_value = mock_orchestrator
+
+            # Mock sys.argv
+            test_args = [
+                'paws_benchmark.py',
+                '--config', str(config_file),
+                '--task', 'Test task',
+                '--context', str(context_file),
+                '--verify-cmd', 'pytest',
+                '--output-dir', str(self.test_dir / "output")
+            ]
+
+            with patch('sys.argv', test_args):
+                with patch('sys.stdout', new=MagicMock()):
+                    result = paws_benchmark.main()
+
+            # Should succeed
+            self.assertEqual(result, 0)
+
+    def test_main_missing_required_args(self):
+        """Test main() with missing required arguments (lines 357-359)"""
+        # Create config file
+        config_file = self.test_dir / "config.json"
+        config_file.write_text(json.dumps({
+            "competitors": []
+        }))
+
+        # Mock sys.argv with incomplete args
+        test_args = [
+            'paws_benchmark.py',
+            '--config', str(config_file)
+            # Missing --suite or (--task, --context, --verify-cmd)
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('sys.stdout', new=MagicMock()):
+                result = paws_benchmark.main()
+
+        # Should return error code
+        self.assertEqual(result, 1)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

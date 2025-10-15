@@ -296,7 +296,7 @@ Test context for swarm orchestrator
         self.assertEqual(len(task.subtasks), 0)
 
     def test_decompose_task_with_architect(self):
-        """Test task decomposition with architect"""
+        """Test task decomposition with architect (lines 140-175)"""
         orchestrator = SwarmOrchestrator(
             task="Implement feature X",
             context_bundle=str(self.context_file),
@@ -313,27 +313,363 @@ Test context for swarm orchestrator
 
         # Mock the LLM client by patching _client field
         mock_client = Mock()
-        mock_response = Mock()
-        mock_response.text = """
+        mock_client.generate.return_value = ("""
 {
   "subtasks": [
     {"id": "1", "description": "Subtask 1"},
     {"id": "2", "description": "Subtask 2"}
   ]
 }
-"""
-        mock_client.generate.return_value = mock_response
+""", 100)
         agent._client = mock_client
 
         # Decompose task
-        try:
+        with patch('sys.stdout', new=MagicMock()):  # Suppress output
             task = orchestrator.decompose_task()
 
-            # Should have called LLM
-            self.assertTrue(mock_client.generate.called)
-        except Exception as e:
-            # Implementation might not be complete
-            self.skipTest(f"Task decomposition not fully implemented: {e}")
+        # Should have called LLM
+        self.assertTrue(mock_client.generate.called)
+        # Should have created task tree
+        self.assertEqual(task.task_id, "root")
+        self.assertEqual(len(task.subtasks), 2)
+        self.assertEqual(task.subtasks[0].task_id, "1")
+        self.assertEqual(task.subtasks[1].task_id, "2")
+
+    def test_decompose_task_parse_error_fallback(self):
+        """Test task decomposition fallback on parse error (lines 167-175)"""
+        orchestrator = SwarmOrchestrator(
+            task="Implement feature X",
+            context_bundle=str(self.context_file),
+            output_dir=str(self.test_dir / "output")
+        )
+
+        # Add architect agent
+        agent = SwarmAgent(
+            name="architect1",
+            role=AgentRole.ARCHITECT,
+            config=self.config1
+        )
+        orchestrator.add_agent(agent)
+
+        # Mock the LLM client to return invalid JSON
+        mock_client = Mock()
+        mock_client.generate.return_value = ("This is not valid JSON", 50)
+        agent._client = mock_client
+
+        # Decompose task
+        with patch('sys.stdout', new=MagicMock()):
+            task = orchestrator.decompose_task()
+
+        # Should fall back to single task
+        self.assertEqual(task.task_id, "task_1")
+        self.assertEqual(task.description, "Implement feature X")
+        self.assertEqual(len(task.subtasks), 0)
+
+    def test_solve_subtask_collaboratively(self):
+        """Test collaborative subtask solving (lines 177-217)"""
+        orchestrator = SwarmOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            output_dir=str(self.test_dir / "output")
+        )
+
+        # Add implementer and reviewer agents
+        implementer = SwarmAgent(
+            name="implementer1",
+            role=AgentRole.IMPLEMENTER,
+            config=self.config1
+        )
+        reviewer = SwarmAgent(
+            name="reviewer1",
+            role=AgentRole.REVIEWER,
+            config=self.config2
+        )
+        orchestrator.add_agent(implementer)
+        orchestrator.add_agent(reviewer)
+
+        # Mock LLM clients
+        impl_client = Mock()
+        impl_client.generate.return_value = ("Initial solution", 100)
+        implementer._client = impl_client
+
+        rev_client = Mock()
+        rev_client.generate.return_value = ("LGTM: Looks good!", 50)
+        reviewer._client = rev_client
+
+        # Create subtask
+        subtask = TaskDecomposition(
+            task_id="test_1",
+            description="Test subtask"
+        )
+
+        # Solve collaboratively
+        with patch('sys.stdout', new=MagicMock()):
+            solution = orchestrator.solve_subtask_collaboratively(subtask, round_limit=3)
+
+        # Should return solution
+        self.assertEqual(solution, "Initial solution")
+        # Should have generated initial solution
+        self.assertTrue(impl_client.generate.called)
+        # Should have reviewed
+        self.assertTrue(rev_client.generate.called)
+        # Should have messages
+        self.assertGreater(len(orchestrator.messages), 0)
+
+    def test_solve_subtask_no_implementer(self):
+        """Test collaborative solving without implementer (lines 190-192)"""
+        orchestrator = SwarmOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            output_dir=str(self.test_dir / "output")
+        )
+
+        subtask = TaskDecomposition(
+            task_id="test_1",
+            description="Test subtask"
+        )
+
+        # Solve without implementer
+        with patch('sys.stdout', new=MagicMock()):
+            solution = orchestrator.solve_subtask_collaboratively(subtask)
+
+        # Should return empty string
+        self.assertEqual(solution, "")
+
+    def test_solve_subtask_needs_revision(self):
+        """Test collaborative solving with revision (lines 201-217)"""
+        orchestrator = SwarmOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            output_dir=str(self.test_dir / "output")
+        )
+
+        # Add implementer and reviewer
+        implementer = SwarmAgent(
+            name="implementer1",
+            role=AgentRole.IMPLEMENTER,
+            config=self.config1
+        )
+        reviewer = SwarmAgent(
+            name="reviewer1",
+            role=AgentRole.REVIEWER,
+            config=self.config2
+        )
+        orchestrator.add_agent(implementer)
+        orchestrator.add_agent(reviewer)
+
+        # Mock LLM clients
+        impl_client = Mock()
+        impl_client.generate.side_effect = [
+            ("Initial solution", 100),        # Initial
+            ("Revised solution v1", 120),     # After revision round 2
+            ("Revised solution v2", 130)      # After revision round 3
+        ]
+        implementer._client = impl_client
+
+        rev_client = Mock()
+        rev_client.generate.return_value = ("Needs improvement: Add error handling", 50)
+        reviewer._client = rev_client
+
+        # Create subtask
+        subtask = TaskDecomposition(
+            task_id="test_1",
+            description="Test subtask"
+        )
+
+        # Solve collaboratively
+        with patch('sys.stdout', new=MagicMock()):
+            solution = orchestrator.solve_subtask_collaboratively(subtask, round_limit=3)
+
+        # Should return final revised solution
+        self.assertEqual(solution, "Revised solution v2")
+        # Implementer should be called three times (initial + 2 revisions for rounds 2 and 3)
+        self.assertEqual(impl_client.generate.call_count, 3)
+
+    def test_generate_initial_solution(self):
+        """Test initial solution generation (lines 219-253)"""
+        orchestrator = SwarmOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            output_dir=str(self.test_dir / "output")
+        )
+
+        implementer = SwarmAgent(
+            name="implementer1",
+            role=AgentRole.IMPLEMENTER,
+            config=self.config1
+        )
+
+        # Mock LLM client
+        mock_client = Mock()
+        mock_client.generate.return_value = ("Solution code here", 100)
+        implementer._client = mock_client
+
+        subtask = TaskDecomposition(
+            task_id="test_1",
+            description="Implement feature"
+        )
+
+        # Generate initial solution
+        with patch('sys.stdout', new=MagicMock()):
+            solution = orchestrator._generate_initial_solution(implementer, subtask)
+
+        # Should return solution
+        self.assertEqual(solution, "Solution code here")
+        # Should have saved message
+        self.assertEqual(len(orchestrator.messages), 1)
+        self.assertEqual(orchestrator.messages[0].message_type, "proposal")
+
+    def test_generate_critique(self):
+        """Test critique generation (lines 255-291)"""
+        orchestrator = SwarmOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            output_dir=str(self.test_dir / "output")
+        )
+
+        reviewer = SwarmAgent(
+            name="reviewer1",
+            role=AgentRole.REVIEWER,
+            config=self.config1
+        )
+
+        # Mock LLM client
+        mock_client = Mock()
+        mock_client.generate.return_value = ("Needs improvement", 80)
+        reviewer._client = mock_client
+
+        subtask = TaskDecomposition(
+            task_id="test_1",
+            description="Implement feature"
+        )
+
+        # Generate critique
+        with patch('sys.stdout', new=MagicMock()):
+            critique = orchestrator._generate_critique(reviewer, subtask, "Solution here")
+
+        # Should return critique
+        self.assertEqual(critique, "Needs improvement")
+        # Should have saved message
+        self.assertEqual(len(orchestrator.messages), 1)
+        self.assertEqual(orchestrator.messages[0].message_type, "critique")
+
+    def test_revise_solution(self):
+        """Test solution revision (lines 293-325)"""
+        orchestrator = SwarmOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            output_dir=str(self.test_dir / "output")
+        )
+
+        implementer = SwarmAgent(
+            name="implementer1",
+            role=AgentRole.IMPLEMENTER,
+            config=self.config1
+        )
+
+        # Mock LLM client
+        mock_client = Mock()
+        mock_client.generate.return_value = ("Revised solution", 120)
+        implementer._client = mock_client
+
+        subtask = TaskDecomposition(
+            task_id="test_1",
+            description="Implement feature"
+        )
+
+        # Revise solution
+        with patch('sys.stdout', new=MagicMock()):
+            revised = orchestrator._revise_solution(
+                implementer, subtask, "Original solution", "Needs improvement"
+            )
+
+        # Should return revised solution
+        self.assertEqual(revised, "Revised solution")
+        # Should have saved message
+        self.assertEqual(len(orchestrator.messages), 1)
+        self.assertEqual(orchestrator.messages[0].message_type, "revision")
+
+    def test_merge_solutions_no_architect(self):
+        """Test merging solutions without architect (lines 327-337)"""
+        orchestrator = SwarmOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            output_dir=str(self.test_dir / "output")
+        )
+
+        solutions = {
+            "task_1": "Solution 1",
+            "task_2": "Solution 2"
+        }
+
+        # Merge without architect
+        with patch('sys.stdout', new=MagicMock()):
+            merged = orchestrator.merge_solutions(solutions)
+
+        # Should concatenate solutions
+        self.assertIn("Solution 1", merged)
+        self.assertIn("Solution 2", merged)
+
+    def test_merge_solutions_with_architect(self):
+        """Test merging solutions with architect (lines 334-364)"""
+        orchestrator = SwarmOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            output_dir=str(self.test_dir / "output")
+        )
+
+        # Add architect
+        architect = SwarmAgent(
+            name="architect1",
+            role=AgentRole.ARCHITECT,
+            config=self.config1
+        )
+        orchestrator.add_agent(architect)
+
+        # Mock LLM client
+        mock_client = Mock()
+        mock_client.generate.return_value = ("Merged solution", 200)
+        architect._client = mock_client
+
+        solutions = {
+            "task_1": "Solution 1",
+            "task_2": "Solution 2"
+        }
+
+        # Merge with architect
+        with patch('sys.stdout', new=MagicMock()):
+            merged = orchestrator.merge_solutions(solutions)
+
+        # Should return merged solution from architect
+        self.assertEqual(merged, "Merged solution")
+        self.assertTrue(mock_client.generate.called)
+
+    def test_merge_solutions_single_solution(self):
+        """Test merging with single solution (line 335-337)"""
+        orchestrator = SwarmOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            output_dir=str(self.test_dir / "output")
+        )
+
+        # Add architect but only one solution
+        architect = SwarmAgent(
+            name="architect1",
+            role=AgentRole.ARCHITECT,
+            config=self.config1
+        )
+        orchestrator.add_agent(architect)
+
+        solutions = {
+            "task_1": "Only solution"
+        }
+
+        # Merge single solution
+        with patch('sys.stdout', new=MagicMock()):
+            merged = orchestrator.merge_solutions(solutions)
+
+        # Should just return the single solution
+        self.assertEqual(merged, "Only solution")
 
 
 class TestSwarmEdgeCases(unittest.TestCase):
