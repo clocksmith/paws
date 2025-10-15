@@ -26,6 +26,16 @@ REPLOID is the browser-native visual interface for PAWS, providing interactive m
 
 ---
 
+## Context Engineering Alignment
+
+Anthropic’s September 2025 study _“Context Engineering Outperforms Prompt Engineering for AI Agents”_ validates the approach REPLOID has championed since launch. REPLOID leans on the canonical PAWS `cats` and `dogs` engines for curated bundles and auditable application:
+
+- `reploid/bin/cats` and `reploid/bin/dogs` are vendored copies so the browser app can ship standalone.  
+- A checksum guard (`npm run check:reploid-sync`) enforces parity with `../js/cats.js` and `../js/dogs.js`.  
+- Shared session libraries (`../js/paws-session.js`) keep context synchronized between CLI and browser, preventing the “context rot” highlighted by Anthropic.
+
+---
+
 ## Quick Start
 
 ### Client-Only Mode (Simplest)

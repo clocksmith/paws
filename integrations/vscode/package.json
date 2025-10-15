@@ -1,0 +1,41 @@
+{
+  "name": "paws-vscode",
+  "displayName": "PAWS Toolkit",
+  "description": "VS Code helpers for PAWS cats/dogs workflows.",
+  "version": "0.1.0",
+  "publisher": "paws",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.82.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:paws.createContextBundle",
+    "onCommand:paws.applyChangeBundle"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "paws.createContextBundle",
+        "title": "PAWS: Create Context Bundle"
+      },
+      {
+        "command": "paws.applyChangeBundle",
+        "title": "PAWS: Apply Change Bundle"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -w -p ./",
+    "package": "vsce package || echo \"Install 'vsce' to package the extension\""
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.19",
+    "@types/vscode": "^1.82.0",
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "paws-mcp-server",
+  "version": "0.1.0",
+  "description": "Model Context Protocol server exposing PAWS cats/dogs/paxos tools.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "^0.1.0"
+  }
+}

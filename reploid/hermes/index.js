@@ -9,14 +9,19 @@ const express = require('express');
 const WebSocket = require('ws');
 const { execSync, spawn } = require('child_process');
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 const http = require('http');
+const readline = require('readline');
+const { getProgressLogPath } = require('../../js/progress-bus.js');
 
 // Use the full paws-session SessionManager from shared js/
 const { SessionManager: PawsSessionManager, SessionStatus } = require('../../js/paws-session.js');
 
 // Configuration
 const PORT = process.env.PORT || 3000;
+const REPO_ROOT = path.resolve(__dirname, '..', '..');
+const PROGRESS_LOG_PATH = getProgressLogPath(REPO_ROOT);
 
 // Create Express app and HTTP server
 const app = express();
@@ -81,6 +86,120 @@ class SessionManager {
 
   async addTurn(sessionId, command, options) {
     return await this.pawsManager.addTurn(sessionId, command, options);
+  }
+}
+
+class ProgressWatcher {
+  constructor(logPath) {
+    this.logPath = logPath;
+    this.clients = new Set();
+    this.lastSize = 0;
+    this.watcher = null;
+    this.initialized = false;
+  }
+
+  async start() {
+    await fs.mkdir(path.dirname(this.logPath), { recursive: true });
+    try {
+      await fs.access(this.logPath);
+    } catch {
+      await fs.writeFile(this.logPath, '', 'utf-8');
+    }
+
+    try {
+      const stats = await fs.stat(this.logPath);
+      this.lastSize = stats.size;
+    } catch {
+      this.lastSize = 0;
+    }
+
+    this.watcher = fsSync.watch(this.logPath, { persistent: false }, () => {
+      this.readNewLines().catch(() => {});
+    });
+    this.initialized = true;
+  }
+
+  async attach(ws) {
+    this.clients.add(ws);
+    ws.on('close', () => this.clients.delete(ws));
+    await this.sendRecent(ws);
+  }
+
+  async sendRecent(ws, limit = 25) {
+    try {
+      const content = await fs.readFile(this.logPath, 'utf-8');
+      const lines = content.split('\n').filter(Boolean);
+      const recent = lines.slice(-limit);
+      for (const line of recent) {
+        const payload = this.parseLine(line);
+        if (payload) {
+          ws.send(JSON.stringify({ type: 'PROGRESS_EVENT', data: payload }));
+        }
+      }
+    } catch (err) {
+      if (process.env.PAWS_DEBUG) {
+        console.warn('[ProgressWatcher] Failed to send recent events:', err.message);
+      }
+    }
+  }
+
+  parseLine(line) {
+    if (!line) return null;
+    try {
+      return JSON.parse(line);
+    } catch {
+      return null;
+    }
+  }
+
+  async readNewLines() {
+    if (!this.initialized) {
+      return;
+    }
+
+    try {
+      const stats = await fs.stat(this.logPath);
+      if (stats.size < this.lastSize) {
+        this.lastSize = 0;
+      }
+      if (stats.size === this.lastSize) {
+        return;
+      }
+
+      const stream = fsSync.createReadStream(this.logPath, {
+        start: this.lastSize,
+        end: stats.size
+      });
+
+      const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+      for await (const line of rl) {
+        const payload = this.parseLine(line.trim());
+        if (payload) {
+          this.broadcast(payload);
+        }
+      }
+
+      this.lastSize = stats.size;
+    } catch (err) {
+      if (process.env.PAWS_DEBUG) {
+        console.warn('[ProgressWatcher] Failed to read progress log:', err.message);
+      }
+    }
+  }
+
+  broadcast(payload) {
+    for (const client of this.clients) {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({ type: 'PROGRESS_EVENT', data: payload }));
+      }
+    }
+  }
+
+  async close() {
+    if (this.watcher) {
+      this.watcher.close();
+    }
+    this.clients.clear();
   }
 }
 
@@ -224,6 +343,7 @@ Successfully completed: ${this.currentSession.goal}
 // Initialize components
 const sessionManager = new SessionManager();
 const agent = new SentinelAgent(sessionManager);
+const progressWatcher = new ProgressWatcher(PROGRESS_LOG_PATH);
 
 // API Routes
 app.get('/api/status', (req, res) => {
@@ -301,6 +421,8 @@ app.post('/api/paxos', (req, res) => {
 wss.on('connection', (ws) => {
   console.log('WebSocket client connected');
 
+  progressWatcher.attach(ws).catch(() => {});
+
   // Send current state
   ws.send(JSON.stringify({
     type: 'STATE_SYNC',
@@ -340,6 +462,7 @@ wss.on('connection', (ws) => {
 
 // Start server
 const main = async () => {
+  await progressWatcher.start();
   server.listen(PORT, () => {
     console.log(`
 🚀 Project Hermes - REPLOID Node.js Port
@@ -368,6 +491,8 @@ process.on('SIGINT', async () => {
   } catch (err) {
     console.error(`Error during cleanup: ${err.message}`);
   }
+
+  await progressWatcher.close();
 
   process.exit(0);
 });

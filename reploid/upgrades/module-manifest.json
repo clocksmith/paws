@@ -101,6 +101,12 @@
       "path": "/modules/blueprint-creator.js",
       "description": "Blueprint generation system",
       "requiredUpgrade": "BLPR"
+    },
+    {
+      "id": "PenteractVisualizer",
+      "path": "/modules/penteract-visualizer.js",
+      "description": "Penteract analytics and visualization stub",
+      "requiredUpgrade": "H5"
     }
   ],
   "dataFiles": [

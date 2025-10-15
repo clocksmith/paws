@@ -3,14 +3,17 @@
  * Enhanced CATS bundler with AI-curated context selection.
  * Part of the PAWS CLI Evolution - Phase 2 Implementation.
  */
+// @sync-checksum: 551a5f232e39d76d9a311b1e8914c35e460de00b0f579e4314bc7f1f950f1522
 
 const fs = require('fs').promises;
 const path = require('path');
 const { glob } = require('glob');
+const crypto = require('crypto');
 const ignore = require('ignore');
 const chalk = require('chalk');
 const ora = require('ora');
 const { program } = require('commander');
+const { ProgressBus } = require('./progress-bus.js');
 
 // AI Provider SDKs
 let GoogleGenerativeAI, Anthropic, OpenAI;
@@ -251,13 +254,214 @@ class ProjectAnalyzer {
 }
 
 /**
+ * Persists bundle metadata to support incremental bundling.
+ */
+class CatsCache {
+  constructor(rootPath, options = {}) {
+    this.rootPath = path.resolve(rootPath);
+    this.enabled = options.enabled !== false;
+    this.cacheDir = path.join(this.rootPath, '.paws', 'cache');
+    this.cacheFile = path.join(this.cacheDir, 'cats-manifest.json');
+    this.data = { version: 1, entries: {} };
+    this.touched = new Set();
+    this.loaded = false;
+  }
+
+  normalize(filePath) {
+    const absolute = path.isAbsolute(filePath)
+      ? filePath
+      : path.join(this.rootPath, filePath);
+    const relative = path.relative(this.rootPath, absolute) || path.basename(absolute);
+    return relative.split(path.sep).join('/');
+  }
+
+  async load() {
+    if (!this.enabled || this.loaded) {
+      return;
+    }
+
+    try {
+      const content = await fs.readFile(this.cacheFile, 'utf-8');
+      const parsed = JSON.parse(content);
+      if (parsed && parsed.entries && typeof parsed.entries === 'object') {
+        this.data = { ...parsed, entries: parsed.entries };
+      }
+    } catch {
+      // No cache yet or unreadable; start fresh
+      this.data = { version: 1, entries: {} };
+    }
+
+    this.loaded = true;
+  }
+
+  get(filePath) {
+    if (!this.enabled) {
+      return null;
+    }
+    const key = this.normalize(filePath);
+    const entry = this.data.entries[key];
+    if (entry) {
+      this.touched.add(key);
+    }
+    return entry || null;
+  }
+
+  set(filePath, entry) {
+    if (!this.enabled) {
+      return;
+    }
+    const key = this.normalize(filePath);
+    this.data.entries[key] = entry;
+    this.touched.add(key);
+  }
+
+  purgeUnused() {
+    if (!this.enabled) {
+      return;
+    }
+    const entries = this.data.entries;
+    for (const key of Object.keys(entries)) {
+      if (!this.touched.has(key)) {
+        delete entries[key];
+      }
+    }
+  }
+
+  async save() {
+    if (!this.enabled) {
+      return;
+    }
+
+    this.purgeUnused();
+
+    const payload = {
+      version: this.data.version,
+      generatedAt: new Date().toISOString(),
+      entries: this.data.entries
+    };
+
+    await fs.mkdir(this.cacheDir, { recursive: true });
+    await fs.writeFile(this.cacheFile, JSON.stringify(payload, null, 2), 'utf-8');
+  }
+}
+
+/**
+ * Caches AI curation responses keyed by prompt hash.
+ */
+class AICache {
+  constructor(rootPath, options = {}) {
+    this.rootPath = path.resolve(rootPath);
+    this.enabled = options.enabled !== false;
+    this.ttlMs = options.ttlMs ?? 1000 * 60 * 60 * 24; // default 24h
+    this.cacheDir = path.join(this.rootPath, '.paws', 'cache');
+    this.cacheFile = path.join(this.cacheDir, 'ai-curations.json');
+    this.data = { version: 1, entries: {} };
+    this.loaded = false;
+    this.dirty = false;
+  }
+
+  async load() {
+    if (!this.enabled || this.loaded) {
+      return;
+    }
+
+    try {
+      const content = await fs.readFile(this.cacheFile, 'utf-8');
+      const parsed = JSON.parse(content);
+      if (parsed && parsed.entries && typeof parsed.entries === 'object') {
+        this.data = { ...parsed, entries: parsed.entries };
+      }
+    } catch {
+      this.data = { version: 1, entries: {} };
+    }
+
+    this.pruneExpired();
+    this.loaded = true;
+  }
+
+  pruneExpired() {
+    if (!this.enabled) {
+      return;
+    }
+
+    if (!this.ttlMs) {
+      return;
+    }
+
+    const now = Date.now();
+    for (const [key, entry] of Object.entries(this.data.entries)) {
+      if (!entry.timestamp || now - entry.timestamp > this.ttlMs) {
+        delete this.data.entries[key];
+        this.dirty = true;
+      }
+    }
+  }
+
+  get(key) {
+    if (!this.enabled) {
+      return null;
+    }
+
+    const entry = this.data.entries[key];
+    if (!entry) {
+      return null;
+    }
+
+    if (this.ttlMs && entry.timestamp && Date.now() - entry.timestamp > this.ttlMs) {
+      delete this.data.entries[key];
+      this.dirty = true;
+      return null;
+    }
+
+    return entry;
+  }
+
+  set(key, value) {
+    if (!this.enabled) {
+      return;
+    }
+
+    this.data.entries[key] = {
+      ...value,
+      timestamp: Date.now()
+    };
+    this.dirty = true;
+  }
+
+  async save() {
+    if (!this.enabled || !this.dirty) {
+      return;
+    }
+
+    await fs.mkdir(this.cacheDir, { recursive: true });
+    await fs.writeFile(
+      this.cacheFile,
+      JSON.stringify(
+        {
+          version: this.data.version,
+          generatedAt: new Date().toISOString(),
+          entries: this.data.entries
+        },
+        null,
+        2
+      ),
+      'utf-8'
+    );
+    this.dirty = false;
+  }
+}
+
+/**
  * Handles AI-powered context curation
  */
 class AICurator {
-  constructor(apiKey, provider = 'gemini') {
+  constructor(apiKey, provider = 'gemini', options = {}) {
     this.provider = provider;
     this.apiKey = apiKey || process.env[`${provider.toUpperCase()}_API_KEY`];
+    this.cache = options.cache && options.cache.enabled !== false ? options.cache : null;
+    this.quiet = options.quiet ?? false;
     this.client = null;
+    this.lastCacheStatus = 'unknown';
 
     if (!this.apiKey) {
       throw new Error(`No API key provided for ${provider}`);
@@ -303,17 +507,38 @@ class AICurator {
    */
   async curateFiles(taskDescription, fileTree, maxFiles = 20) {
     const prompt = this.buildCurationPrompt(taskDescription, fileTree, maxFiles);
+    const cacheKey = this.cache
+      ? this.buildCacheKey(prompt, maxFiles)
+      : null;
+
+    if (cacheKey && this.cache) {
+      const cached = this.cache.get(cacheKey);
+      if (cached && Array.isArray(cached.files)) {
+        this.lastCacheStatus = 'hit';
+        if (!this.quiet) {
+          console.log(chalk.gray(`[AI] Using cached file selection (${cached.files.length} files).`));
+        }
+        return cached.files;
+      }
+    }
+
+    this.lastCacheStatus = 'miss';
     
     switch (this.provider) {
       case 'gemini':
-        return await this.curateWithGemini(prompt);
+        return await this.curateWithGemini(prompt, cacheKey);
       case 'claude':
-        return await this.curateWithClaude(prompt);
+        return await this.curateWithClaude(prompt, cacheKey);
       case 'openai':
-        return await this.curateWithOpenAI(prompt);
+        return await this.curateWithOpenAI(prompt, cacheKey);
       default:
         throw new Error(`Unknown provider: ${this.provider}`);
     }
+  }
+
+  buildCacheKey(prompt, maxFiles) {
+    const hash = crypto.createHash('sha256').update(prompt).digest('hex');
+    return `${this.provider}:${maxFiles}:${hash}`;
   }
 
   /**
@@ -356,12 +581,13 @@ Example:
   /**
    * Use Gemini to curate files
    */
-  async curateWithGemini(prompt) {
+  async curateWithGemini(prompt, cacheKey) {
     try {
       const result = await this.client.generateContent(prompt);
       const response = await result.response;
-      return this.parseAIResponse(response.text());
+      return await this.handleAIResponse(response.text(), cacheKey);
     } catch (error) {
+      this.lastCacheStatus = 'error';
       console.error(`Gemini curation failed: ${error.message}`);
       return [];
     }
@@ -370,15 +596,16 @@ Example:
   /**
    * Use Claude to curate files
    */
-  async curateWithClaude(prompt) {
+  async curateWithClaude(prompt, cacheKey) {
     try {
       const response = await this.client.messages.create({
         model: 'claude-3-sonnet-20240229',
         max_tokens: 1000,
         messages: [{ role: 'user', content: prompt }]
       });
-      return this.parseAIResponse(response.content[0].text);
+      return await this.handleAIResponse(response.content[0].text, cacheKey);
     } catch (error) {
+      this.lastCacheStatus = 'error';
       console.error(`Claude curation failed: ${error.message}`);
       return [];
     }
@@ -387,18 +614,31 @@ Example:
   /**
    * Use OpenAI to curate files
    */
-  async curateWithOpenAI(prompt) {
+  async curateWithOpenAI(prompt, cacheKey) {
     try {
       const response = await this.client.chat.completions.create({
         model: 'gpt-4',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.3
       });
-      return this.parseAIResponse(response.choices[0].message.content);
+      return await this.handleAIResponse(response.choices[0].message.content, cacheKey);
     } catch (error) {
+      this.lastCacheStatus = 'error';
       console.error(`OpenAI curation failed: ${error.message}`);
       return [];
     }
+  }
+
+  async handleAIResponse(raw, cacheKey) {
+    const files = this.parseAIResponse(raw);
+    if (this.cache && cacheKey && files.length) {
+      this.cache.set(cacheKey, { files });
+      await this.cache.save();
+    }
+    if (this.lastCacheStatus !== 'hit') {
+      this.lastCacheStatus = 'miss';
+    }
+    return files;
   }
 
   /**
@@ -446,15 +686,32 @@ class CatsBundler {
   constructor(config) {
     this.config = config;
     this.rootPath = path.resolve(config.root || '.');
+    this.cache = new CatsCache(this.rootPath, { enabled: config.incremental !== false });
+    this.aiCache = new AICache(this.rootPath, {
+      enabled: config.aiCache !== false,
+      ttlMs: config.aiCacheTtlMs
+    });
+    this.progressBus = config.progressStream === false ? null : new ProgressBus(this.rootPath);
+  }
+
+  emitProgress(event) {
+    if (!this.progressBus) {
+      return;
+    }
+
+    this.progressBus.publish({
+      source: 'cats',
+      ...event
+    }).catch(() => {});
   }
 
   /**
    * Check if file is binary
    */
-  async isBinary(filePath) {
+  async isBinary(filePath, buffer = null) {
     try {
-      const buffer = await fs.readFile(filePath);
-      const slice = buffer.slice(0, 1024);
+      const data = buffer ?? await fs.readFile(filePath);
+      const slice = data.slice(0, 1024);
       
       // Check for null bytes
       for (let i = 0; i < slice.length; i++) {
@@ -498,8 +755,20 @@ class CatsBundler {
       }
     }
 
+    await this.cache.load();
+
     // Build the bundle
     const bundleLines = [];
+    const cacheStats = { hits: 0, misses: 0 };
+    let processedCount = 0;
+
+    this.emitProgress({
+      event: 'bundle:start',
+      totalRequested: files.length,
+      aiCurate: Boolean(aiCurate),
+      incremental: this.cache.enabled,
+      aiCache: this.aiCache.enabled
+    });
     
     // Add system prompt if configured
     if (this.config.sysPromptFile) {
@@ -547,9 +816,10 @@ class CatsBundler {
       const fullPath = path.isAbsolute(filePath) 
         ? filePath 
         : path.join(this.rootPath, filePath);
-      
+
+      let stats;
       try {
-        await fs.access(fullPath);
+        stats = await fs.stat(fullPath);
       } catch {
         if (!this.config.quiet) {
           console.log(chalk.yellow(`Warning: File not found: ${filePath}`));
@@ -557,17 +827,54 @@ class CatsBundler {
         continue;
       }
 
+      let cacheEntry = this.cache.get(fullPath);
+      let fromCache = false;
+
+      if (cacheEntry && cacheEntry.meta) {
+        const { mtimeMs, size } = cacheEntry.meta;
+        if (mtimeMs === stats.mtimeMs && size === stats.size) {
+          fromCache = true;
+          cacheStats.hits += 1;
+        } else {
+          cacheEntry = null;
+        }
+      }
+
       try {
-        // Check if binary
-        const isBinary = await this.isBinary(fullPath);
+        let isBinary;
         let content;
 
-        if (isBinary) {
+        if (!fromCache) {
           const buffer = await fs.readFile(fullPath);
-          content = buffer.toString('base64');
+          isBinary = await this.isBinary(fullPath, buffer);
+          if (isBinary) {
+            content = buffer.toString('base64');
+          } else {
+            content = buffer.toString('utf-8');
+          }
+
+          const hash = crypto.createHash('sha256').update(buffer).digest('hex');
+          cacheEntry = {
+            meta: {
+              mtimeMs: stats.mtimeMs,
+              size: stats.size,
+              hash,
+              binary: isBinary
+            },
+            content
+          };
+          this.cache.set(fullPath, cacheEntry);
+          if (this.cache.enabled) {
+            cacheStats.misses += 1;
+          }
+        } else {
+          isBinary = !!cacheEntry.meta.binary;
+          content = cacheEntry.content;
+        }
+
+        if (isBinary) {
           bundleLines.push(`🐈 --- CATS_START_FILE: ${filePath} (Content:Base64) ---`);
         } else {
-          content = await fs.readFile(fullPath, 'utf-8');
           bundleLines.push(`🐈 --- CATS_START_FILE: ${filePath} ---`);
           
           // Add language hint
@@ -590,15 +897,47 @@ class CatsBundler {
         bundleLines.push('');
 
         if (!this.config.quiet) {
-          console.log(chalk.green(`✓ Added: ${filePath}`));
+          const cacheNote = fromCache ? chalk.gray(' (cache)') : '';
+          console.log(chalk.green(`✓ Added: ${filePath}`) + cacheNote);
         }
+
+        processedCount += 1;
+        this.emitProgress({
+          event: 'bundle:file',
+          path: filePath,
+          cache: fromCache,
+          binary: isBinary,
+          size: stats.size
+        });
 
       } catch (error) {
         if (!this.config.quiet) {
           console.log(chalk.red(`✗ Failed to add ${filePath}: ${error.message}`));
         }
+        this.emitProgress({
+          event: 'bundle:error',
+          path: filePath,
+          message: error.message
+        });
       }
     }
+
+    await this.cache.save();
+
+    if (this.cache.enabled && !this.config.quiet) {
+      console.log(
+        chalk.blue(
+          `[cache] hits: ${cacheStats.hits}, misses: ${cacheStats.misses}`
+        )
+      );
+    }
+
+    this.emitProgress({
+      event: 'bundle:complete',
+      processed: processedCount,
+      cacheHits: cacheStats.hits,
+      cacheMisses: cacheStats.misses
+    });
 
     return bundleLines.join('\n');
   }
@@ -616,7 +955,11 @@ class CatsBundler {
 
     // Curate files with AI
     try {
-      const curator = new AICurator(apiKey, provider);
+      await this.aiCache.load();
+      const curator = new AICurator(apiKey, provider, {
+        cache: this.aiCache,
+        quiet: this.config.quiet
+      });
       const files = await curator.curateFiles(task, treeStr, this.config.maxFiles);
 
       console.log(chalk.blue(`[AI] Selected ${files.length} files:`));
@@ -624,9 +967,21 @@ class CatsBundler {
         console.log(chalk.gray(`  - ${file}`));
       }
 
+      this.emitProgress({
+        event: 'ai:curation',
+        provider,
+        status: curator.lastCacheStatus,
+        selected: files.length
+      });
+
       return files;
     } catch (error) {
       console.error(chalk.red(`[AI] Curation failed: ${error.message}`));
+      this.emitProgress({
+        event: 'ai:error',
+        provider,
+        message: error.message
+      });
       return [];
     }
   }
@@ -662,6 +1017,10 @@ async function main() {
     .option('--root <dir>', 'Root directory for relative paths', '.')
     .option('--max-files <n>', 'Maximum files for AI curation', '20')
     .option('--include-tests', 'Include test files in AI curation')
+    .option('--no-incremental', 'Disable incremental caching of bundle content')
+    .option('--no-ai-cache', 'Disable AI response caching for file selection')
+    .option('--ai-cache-ttl <hours>', 'Set AI curation cache TTL in hours (default: 24)')
+    .option('--no-progress-stream', 'Disable progress streaming events')
     .parse();
 
   const options = program.opts();
@@ -681,7 +1040,13 @@ async function main() {
     noDefaultExcludes: options.noDefaultExcludes,
     verify: options.verify,
     quiet: options.quiet,
-    yes: options.yes
+    yes: options.yes,
+    incremental: options.incremental,
+    aiCache: options.aiCache,
+    aiCacheTtlMs: options.aiCacheTtl
+      ? Math.max(Number(options.aiCacheTtl) || 0, 0) * 60 * 60 * 1000
+      : undefined,
+    progressStream: options.progressStream
   };
 
   try {
@@ -730,5 +1095,6 @@ module.exports = {
   FileTreeNode,
   ProjectAnalyzer,
   AICurator,
-  CatsBundler
+  CatsBundler,
+  main
 };

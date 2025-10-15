@@ -32,7 +32,8 @@
     "reploid:dev:proxy": "cd reploid && nodemon server/proxy.js",
     "reploid:dev:hermes": "cd reploid/hermes && npm run dev",
     "reploid:dev:browser": "python3 -m http.server 8080 --directory reploid || python -m http.server 8080 --directory reploid",
-    "hermes": "cd reploid/hermes && node index.js"
+    "hermes": "cd reploid/hermes && node index.js",
+    "check:reploid-sync": "node scripts/check-reploid-sync.js"
   },
   "keywords": [
     "paws",

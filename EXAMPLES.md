@@ -146,7 +146,7 @@ Model                     Pass Rate    Avg Time    Tokens      Cost
 ----------------------------------------------------------------------
 claude-sonnet             100.0%       45.2s       3421        $0.103
 gemini-pro                66.7%        32.1s       4102        $0.041
-gpt4-turbo                100.0%       52.8s       3892        $0.389
+gpt5                100.0%       52.8s       3892        $0.389
 
 Rankings:
   ☇ Best Pass Rate:         claude-sonnet
@@ -228,6 +228,49 @@ python py/paws_paxos.py \
 ```
 
 **Why this matters:** Other tools have implicit context (you don't know what files they're seeing). PAWS bundles are explicit and version-controlled.
+
+## Example 6: Using Local Models (Ollama) with Paxos
+
+**Scenario:** You want to use a local model running on Ollama to compete against cloud-based models, keeping your code on your machine.
+
+**Prerequisite:** Ensure your Ollama server is running. The script assumes it's available at `http://localhost:11434`.
+
+```bash
+# Step 1: Create a new config file for local competition
+cat > local_paxos_config.json <<EOF
+{
+  "competitors": [
+    {
+      "name": "ollama-llama3",
+      "model_id": "llama3",
+      "provider": "openai_compatible",
+      "base_url": "http://localhost:11434/v1",
+      "api_key": "ollama"
+    },
+    {
+      "name": "gemini-pro",
+      "model_id": "gemini-pro",
+      "provider": "gemini"
+    }
+  ]
+}
+EOF
+
+# Step 2: Run the competition
+python py/paws_paxos.py \
+  "Refactor the logging utility to be asynchronous" \
+  context.md \
+  --verify-cmd "pytest tests/test_logging.py" \
+  --config local_paxos_config.json
+```
+
+**How it works:**
+1.  **`provider`: "openai_compatible"**: This new provider type tells the script to use the generic OpenAI client.
+2.  **`base_url`**: This specifies the endpoint for your local model server. For Ollama, this is typically `http://localhost:11434/v1`.
+3.  **`api_key`**: For a default Ollama setup, the API key is not required, but the field must be present. You can set it to "ollama" or any other string.
+4.  **`model_id`**: This should be the name of the model you have pulled in Ollama (e.g., "llama3", "codellama").
+
+**Why this matters:** You can now leverage local models for privacy, offline work, or to test models that aren't available through major cloud providers. The competition framework remains the same, allowing you to benchmark local models against cloud models on your own code.
 
 ## Comparison: PAWS vs Others
 

@@ -186,6 +186,12 @@ This catalog provides a comprehensive index of the agent's potential evolutionar
   - **Path**: `/blueprints/0x00001A-rfc-authoring.md`
   - **Summary**: Structure, tone, and components for creating Request for Change documents.
 
+### Analytics & Visualization Blueprints
+
+- **`0x000024`**: **Penteract Analytics & Visualization**
+  - **Path**: `/blueprints/0x000024-penteract-analytics-and-visualization.md`
+  - **Summary**: Defines the progress-stream pipeline and REPLOID dashboard for analysing Penteract/Paxos competitions in real time.
+
 ---
 
 ## Integration with Sentinel Agent

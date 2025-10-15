@@ -3,6 +3,7 @@
  * Enhanced DOGS extractor with interactive review and verification features.
  * Part of the PAWS CLI Evolution - Phase 1 & 2 Implementation.
  */
+// @sync-checksum: d01838036e0dfb79fb9707196599286472d6e47512c0564381eb7e5f2eb08f3c
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -14,6 +15,7 @@ const inquirer = require('inquirer');
 const ora = require('ora');
 const blessed = require('blessed');
 const contrib = require('blessed-contrib');
+const { ProgressBus } = require('./progress-bus.js');
 
 // Try to load optional dependencies
 let simpleGit;
@@ -461,6 +463,17 @@ class BundleProcessor {
     this.config = config;
     this.changeSet = new ChangeSet();
     this.gitHandler = config.verify ? new GitVerificationHandler(config.outputDir) : null;
+    this.progressBus = config.progressBus || null;
+  }
+
+  emitProgress(event) {
+    if (!this.progressBus) {
+      return;
+    }
+    this.progressBus.publish({
+      source: 'dogs',
+      ...event
+    }).catch(() => {});
   }
 
   /**
@@ -472,6 +485,8 @@ class BundleProcessor {
     let currentFile = null;
     let currentContent = [];
     let isBinary = false;
+
+    this.emitProgress({ event: 'parse:start', totalLines: lines.length });
 
     for (const line of lines) {
       const match = DOGS_MARKER_REGEX.exec(line);
@@ -491,6 +506,8 @@ class BundleProcessor {
         currentContent.push(line);
       }
     }
+
+    this.emitProgress({ event: 'parse:complete', total: this.changeSet.changes.length });
 
     return this.changeSet;
   }
@@ -532,6 +549,12 @@ class BundleProcessor {
     );
 
     this.changeSet.addChange(change);
+    this.emitProgress({
+      event: 'parse:file',
+      path: filePath,
+      operation,
+      binary: isBinary
+    });
   }
 
   /**
@@ -566,6 +589,11 @@ class BundleProcessor {
     let successCount = 0;
     let errorCount = 0;
 
+    this.emitProgress({
+      event: 'apply:start',
+      total: changeSet.getAccepted().length
+    });
+
     for (const change of changeSet.getAccepted()) {
       try {
         const absPath = path.join(this.config.outputDir || '.', change.filePath);
@@ -589,13 +617,32 @@ class BundleProcessor {
           console.log(chalk.green(`✓ ${action}: ${change.filePath}`));
           successCount++;
         }
+
+        this.emitProgress({
+          event: 'apply:file',
+          path: change.filePath,
+          operation: change.operation,
+          status: 'success'
+        });
       } catch (e) {
         console.log(chalk.red(`✗ Failed to apply ${change.filePath}: ${e.message}`));
         errorCount++;
+        this.emitProgress({
+          event: 'apply:file',
+          path: change.filePath,
+          operation: change.operation,
+          status: 'error',
+          message: e.message
+        });
       }
     }
 
     console.log(`\nSummary: ${successCount} succeeded, ${errorCount} failed`);
+    this.emitProgress({
+      event: 'apply:complete',
+      succeeded: successCount,
+      failed: errorCount
+    });
     return errorCount === 0;
   }
 
@@ -605,6 +652,7 @@ class BundleProcessor {
   async runWithVerification(changeSet, verifyCommand) {
     if (!this.gitHandler || !(await this.gitHandler.isGitRepo())) {
       console.log(chalk.yellow('Warning: Not in a git repository. Verification without rollback.'));
+      this.emitProgress({ event: 'verify:warning', message: 'Not a git repository' });
       return await this.applyChanges(changeSet);
     }
 
@@ -612,23 +660,29 @@ class BundleProcessor {
     console.log('Creating git checkpoint...');
     if (!(await this.gitHandler.createCheckpoint())) {
       console.log(chalk.red('Failed to create checkpoint. Aborting.'));
+      this.emitProgress({ event: 'verify:checkpoint', status: 'error' });
       return false;
     }
+    this.emitProgress({ event: 'verify:checkpoint', status: 'created' });
 
     // Apply changes
     console.log('Applying changes...');
     if (!(await this.applyChanges(changeSet))) {
       console.log(chalk.red('Failed to apply some changes.'));
+      this.emitProgress({ event: 'verify:apply', status: 'error' });
       await this.gitHandler.rollback();
       return false;
     }
+    this.emitProgress({ event: 'verify:apply', status: 'success' });
 
     // Run verification
     const { success, output } = await this.gitHandler.runVerification(verifyCommand);
+    this.emitProgress({ event: 'verify:run', command: verifyCommand, success });
 
     if (success) {
       console.log(chalk.green('✓ Verification successful!'));
       await this.gitHandler.finalize();
+      this.emitProgress({ event: 'verify:complete', status: 'success' });
       return true;
     } else {
       console.log(chalk.red(`✗ Verification failed:\n${output}`));
@@ -637,6 +691,11 @@ class BundleProcessor {
         await this.gitHandler.rollback();
         console.log('Changes reverted.');
       }
+      this.emitProgress({
+        event: 'verify:complete',
+        status: 'error',
+        output
+      });
       return false;
     }
   }
@@ -665,10 +724,12 @@ async function main() {
     .option('-n, --no', 'Auto-reject all changes')
     .option('-q, --quiet', 'Suppress output')
     .option('--no-blessed', 'Use simple interface instead of TUI')
+    .option('--no-progress-stream', 'Disable progress streaming events')
     .parse();
 
   const options = program.opts();
   const [bundleFile, outputDir] = program.args;
+  let processor;
 
   // Build config
   const config = {
@@ -684,10 +745,14 @@ async function main() {
     autoAccept: options.yes,
     autoReject: options.no,
     quiet: options.quiet,
-    useBlessed: options.blessed !== false
+    useBlessed: options.blessed !== false,
+    progressStream: options.progressStream
   };
 
   try {
+    const progressBus = config.progressStream === false ? null : new ProgressBus(process.cwd());
+    config.progressBus = progressBus;
+
     // Read bundle
     let bundleContent;
     if (bundleFile === '-') {
@@ -701,7 +766,12 @@ async function main() {
     }
 
     // Process bundle
-    const processor = new BundleProcessor(config);
+    processor = new BundleProcessor(config);
+    processor.emitProgress({
+      event: 'session:start',
+      bundle: bundleFile,
+      outputDir
+    });
     const changeSet = await processor.parseBundle(bundleContent);
 
     if (!changeSet.changes.length) {
@@ -730,10 +800,22 @@ async function main() {
       success = await processor.applyChanges(changeSet);
     }
 
+    processor.emitProgress({
+      event: 'session:complete',
+      status: success ? 'success' : 'error'
+    });
+
     return success ? 0 : 1;
 
   } catch (error) {
     console.error(chalk.red(`Error: ${error.message}`));
+    if (config.progressBus) {
+      config.progressBus.publish({
+        source: 'dogs',
+        event: 'session:error',
+        message: error.message
+      }).catch(() => {});
+    }
     return 1;
   }
 }
@@ -750,5 +832,6 @@ module.exports = {
   InteractiveReviewer,
   GitVerificationHandler,
   BundleProcessor,
-  FileOperation
+  FileOperation,
+  main
 };

@@ -17,6 +17,7 @@ import os
 import sys
 import uuid
 import time
+from datetime import datetime
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any
@@ -49,7 +50,8 @@ class CompetitorConfig:
     model_id: str
     persona_file: Optional[str] = None
     api_key: Optional[str] = None
-    provider: str = "gemini"  # gemini, claude, openai
+    base_url: Optional[str] = None
+    provider: str = "gemini"  # gemini, claude, openai, openai_compatible
     temperature: float = 0.7
     max_tokens: int = 4000
 
@@ -93,10 +95,13 @@ class LLMClient:
                 raise ImportError("anthropic not installed. Run: pip install anthropic")
             self.client = anthropic.Anthropic(api_key=api_key)
 
-        elif self.config.provider == "openai":
+        elif self.config.provider == "openai" or self.config.provider == "openai_compatible":
             if not OPENAI_AVAILABLE:
                 raise ImportError("openai not installed. Run: pip install openai")
-            self.client = OpenAI(api_key=api_key)
+            self.client = OpenAI(
+                api_key=api_key,
+                base_url=self.config.base_url
+            )
 
         else:
             raise ValueError(f"Unknown provider: {self.config.provider}")
@@ -110,7 +115,7 @@ class LLMClient:
             return self._generate_gemini(prompt)
         elif self.config.provider == "claude":
             return self._generate_claude(prompt)
-        elif self.config.provider == "openai":
+        elif self.config.provider == "openai" or self.config.provider == "openai_compatible":
             return self._generate_openai(prompt)
 
     def _generate_gemini(self, prompt: str) -> tuple[str, int]:
@@ -178,9 +183,12 @@ class PaxosOrchestrator:
         for comp in config_data.get("competitors", []):
             # Infer provider from model_id if not specified
             provider = comp.get("provider")
+            base_url = comp.get("base_url")
             if not provider:
                 model_id = comp["model_id"].lower()
-                if "gemini" in model_id:
+                if base_url:
+                    provider = "openai_compatible"
+                elif "gemini" in model_id:
                     provider = "gemini"
                 elif "claude" in model_id:
                     provider = "claude"
@@ -194,6 +202,7 @@ class PaxosOrchestrator:
                 model_id=comp["model_id"],
                 persona_file=comp.get("persona"),
                 provider=provider,
+                base_url=base_url,
                 temperature=comp.get("temperature", 0.7),
                 max_tokens=comp.get("max_tokens", 4000)
             ))
@@ -396,6 +405,62 @@ class PaxosOrchestrator:
 
         return results
 
+    def write_analytics_snapshot(self, results: List[CompetitionResult], passing: List[CompetitionResult]):
+        """Persist analytics snapshot for front-end consumption."""
+        try:
+            cache_dir = Path('.paws/cache')
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            analytics_path = cache_dir / 'paxos-analytics.json'
+
+            entry = {
+                "task": self.task,
+                "timestamp": datetime.utcnow().isoformat() + 'Z',
+                "verify": bool(self.verify_cmd),
+                "context_bundle": self.context_bundle,
+                "agents": [
+                    {
+                        "name": result.name,
+                        "model": result.model_id,
+                        "status": result.status,
+                        "execution_time": round(result.execution_time, 3),
+                        "token_count": result.token_count,
+                        "solution_path": result.solution_path,
+                        "error": result.error_message
+                    }
+                    for result in results
+                ],
+                "consensus": {
+                    "status": "success" if passing else "failure",
+                    "passing": [result.name for result in passing]
+                }
+            }
+
+            history_payload = {"history": []}
+            if analytics_path.exists():
+                try:
+                    history_payload = json.loads(analytics_path.read_text(encoding='utf-8'))
+                except Exception:
+                    history_payload = {"history": []}
+
+            history = history_payload.get("history", [])
+            history.append(entry)
+            history_payload["history"] = history[-10:]
+            history_payload["latest"] = entry
+
+            analytics_path.write_text(json.dumps(history_payload, indent=2), encoding='utf-8')
+
+            progress_stream = cache_dir / 'progress-stream.ndjson'
+            progress_line = json.dumps({
+                "source": "paxos",
+                "event": "analytics",
+                "timestamp": entry["timestamp"],
+                "payload": entry
+            })
+            with open(progress_stream, 'a', encoding='utf-8') as stream:
+                stream.write(progress_line + '\n')
+        except Exception as err:
+            print(f"[analytics] Failed to record Paxos analytics: {err}")
+
     def generate_report(self, results: List[CompetitionResult]):
         """Generate and display final consensus report"""
         print(f"\n{'='*60}")
@@ -427,6 +492,8 @@ class PaxosOrchestrator:
             if result.error_message:
                 print(f"     Error: {result.error_message}")
             print()
+
+        self.write_analytics_snapshot(results, passing)
 
         # Consensus outcome
         if not passing:

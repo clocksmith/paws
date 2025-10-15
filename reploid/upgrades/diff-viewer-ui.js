@@ -31,7 +31,8 @@ const DiffViewerUI = {
     // Track event listeners for cleanup
     const eventListeners = {
       showDiff: null,
-      clearDiff: null
+      clearDiff: null,
+      refreshDiff: null
     };
 
     // Cleanup function to remove event listeners
@@ -43,6 +44,10 @@ const DiffViewerUI = {
       if (eventListeners.clearDiff) {
         EventBus.off('diff:clear', eventListeners.clearDiff);
         eventListeners.clearDiff = null;
+      }
+      if (eventListeners.refreshDiff) {
+        EventBus.off('diff:refresh', eventListeners.refreshDiff);
+        eventListeners.refreshDiff = null;
       }
     };
 
@@ -68,8 +73,10 @@ const DiffViewerUI = {
       // Register event listeners and store references
       eventListeners.showDiff = handleShowDiff;
       eventListeners.clearDiff = clearDiff;
+      eventListeners.refreshDiff = handleRefresh;
       EventBus.on('diff:show', eventListeners.showDiff);
       EventBus.on('diff:clear', eventListeners.clearDiff);
+      EventBus.on('diff:refresh', eventListeners.refreshDiff);
 
       logger.info('[DiffViewerUI] Initialized');
     };
@@ -94,6 +101,54 @@ const DiffViewerUI = {
       } catch (error) {
         logger.error('[DiffViewerUI] Error showing diff:', error);
         showError('Failed to load diff');
+      }
+    };
+
+    const mergeChanges = (existing = [], incoming = []) => {
+      if (!Array.isArray(incoming)) {
+        return existing;
+      }
+
+      const approvalMap = new Map();
+      existing.forEach(change => {
+        const key = `${change.operation}:${change.file_path}`;
+        if (!approvalMap.has(key)) {
+          approvalMap.set(key, Boolean(change.approved));
+        } else if (change.approved) {
+          approvalMap.set(key, true);
+        }
+      });
+
+      return incoming.map(change => {
+        const key = `${change.operation}:${change.file_path}`;
+        return {
+          ...change,
+          approved: approvalMap.has(key) ? approvalMap.get(key) : Boolean(change.approved)
+        };
+      });
+    };
+
+    const handleRefresh = (payload = {}) => {
+      if (!currentDiff) {
+        if (payload?.dogs_path) {
+          handleShowDiff(payload);
+        }
+        return;
+      }
+
+      if (payload?.dogs_path) {
+        currentDiff.dogs_path = payload.dogs_path;
+      }
+      if (payload?.session_id) {
+        currentDiff.session_id = payload.session_id;
+      }
+
+      if (Array.isArray(payload?.changes)) {
+        currentDiff.changes = mergeChanges(currentDiff.changes, payload.changes);
+      }
+
+      if (currentDiff.changes && currentDiff.changes.length) {
+        renderDiff(currentDiff.changes);
       }
     };
 
@@ -143,7 +198,8 @@ const DiffViewerUI = {
           file_path: filePath,
           old_content: oldContent,
           new_content: newContent,
-          approved: false
+          approved: false,
+          status: 'pending'
         });
       }
 
@@ -207,6 +263,8 @@ const DiffViewerUI = {
           renderFileDiff(change, index);
         }
       });
+
+      updateApprovalStats();
     };
 
     // Get change statistics
@@ -228,14 +286,28 @@ const DiffViewerUI = {
         MODIFY: '✏️',
         DELETE: '🗑️'
       }[change.operation];
+      const operationClass = change.operation.toLowerCase();
+      const summary = summarizeChange(change);
+      const minimap = renderMiniMap(summary);
+      const summaryBadges = renderChangeSummaryBadges(summary, change.operation);
+      const statusBadge = renderStatusBadge(change.status);
 
       return `
-        <div class="diff-file" data-index="${index}" role="article" aria-labelledby="diff-header-${index}">
+        <div class="diff-file diff-file-${operationClass}" data-index="${index}" role="article" aria-labelledby="diff-header-${index}">
           <div class="diff-file-header" id="diff-header-${index}">
             <div class="diff-file-info">
-              <span class="diff-icon" aria-hidden="true">${icon}</span>
-              <span class="diff-path">${change.file_path}</span>
-              <span class="diff-operation ${change.operation.toLowerCase()}" aria-label="Operation">${change.operation}</span>
+              ${minimap}
+              <div class="diff-file-meta">
+                <div class="diff-file-path-row">
+                  <span class="diff-icon" aria-hidden="true">${icon}</span>
+                  <span class="diff-path">${change.file_path}</span>
+                  <span class="diff-operation ${operationClass}" aria-label="Operation">${change.operation}</span>
+                  ${statusBadge}
+                </div>
+                <div class="diff-change-summary" role="presentation">
+                  ${summaryBadges}
+                </div>
+              </div>
             </div>
             <div class="diff-file-actions" role="group" aria-label="File change actions">
               <label class="checkbox-wrapper">
@@ -302,8 +374,14 @@ const DiffViewerUI = {
 
       try {
         // Get current content
-        const oldContent = await StateManager.getArtifactContent(change.file_path) || '';
+        const oldContent = (change.old_content !== undefined && change.old_content !== null)
+          ? change.old_content
+          : (await StateManager.getArtifactContent(change.file_path) || '');
         const newContent = change.new_content;
+
+        if (change.old_content === undefined) {
+          change.old_content = oldContent;
+        }
 
         // Generate side-by-side diff with syntax highlighting
         const diffHtml = generateSideBySideDiff(oldContent, newContent, change.file_path);
@@ -376,6 +454,76 @@ const DiffViewerUI = {
       }
 
       return { added, removed, modified, unchanged, total: maxLines };
+    };
+
+    const summarizeChange = (change) => {
+      if (!change) {
+        return { added: 0, removed: 0, modified: 0, unchanged: 0, total: 0 };
+      }
+
+      if (change.operation === 'CREATE') {
+        const added = (change.new_content || '').split('\n').filter(() => true).length;
+        return { added, removed: 0, modified: 0, unchanged: 0, total: added };
+      }
+
+      if (change.operation === 'DELETE') {
+        const removed = (change.old_content || '').split('\n').filter(() => true).length;
+        return { added: 0, removed, modified: 0, unchanged: 0, total: removed };
+      }
+
+      const stats = calculateDiffStats(change.old_content || '', change.new_content || '');
+      return stats;
+    };
+
+    const renderChangeSummaryBadges = (summary, operation) => {
+      const pieces = [];
+      if (summary.added) {
+        pieces.push(`<span class="diff-pill added">+${summary.added}</span>`);
+      }
+      if (summary.modified) {
+        pieces.push(`<span class="diff-pill modified">~${summary.modified}</span>`);
+      }
+      if (summary.removed) {
+        pieces.push(`<span class="diff-pill removed">-${summary.removed}</span>`);
+      }
+      if (!pieces.length) {
+        const label = operation === 'DELETE' ? 'Removed' : 'No changes';
+        pieces.push(`<span class="diff-pill neutral">${label}</span>`);
+      }
+      return pieces.join('');
+    };
+
+    const renderMiniMap = (summary) => {
+      const total = summary.added + summary.removed + summary.modified;
+      if (total <= 0) {
+        return '<div class="diff-minimap diff-minimap-empty" aria-hidden="true"></div>';
+      }
+
+      const addedHeight = Math.max((summary.added / total) * 100, 0);
+      const modifiedHeight = Math.max((summary.modified / total) * 100, 0);
+      const removedHeight = Math.max((summary.removed / total) * 100, 0);
+      const title = `+${summary.added} ~${summary.modified} -${summary.removed}`;
+
+      return `
+        <div class="diff-minimap" aria-hidden="true" title="${title}">
+          <span class="segment added" style="height:${addedHeight}%"></span>
+          <span class="segment modified" style="height:${modifiedHeight}%"></span>
+          <span class="segment removed" style="height:${removedHeight}%"></span>
+        </div>
+      `;
+    };
+
+    const renderStatusBadge = (status = 'pending') => {
+      const normalized = (status || 'pending').toLowerCase();
+      const variants = {
+        pending: { label: 'Pending', cls: 'pending' },
+        applying: { label: 'Applying', cls: 'applying' },
+        success: { label: 'Applied', cls: 'success' },
+        applied: { label: 'Applied', cls: 'success' },
+        error: { label: 'Error', cls: 'error' }
+      };
+      const { label, cls } = variants[normalized] || { label: status, cls: 'pending' };
+      return `<span class="diff-status diff-status-${cls}">${label}</span>`;
     };
 
     // Generate side-by-side diff HTML with syntax highlighting
@@ -663,6 +811,10 @@ const DiffViewerUI = {
           overflow: hidden;
         }
 
+        .diff-file.create { border-left: 3px solid #4ec9b0; }
+        .diff-file.modify { border-left: 3px solid #ffd700; }
+        .diff-file.delete { border-left: 3px solid #f48771; }
+
         .diff-file-header {
           align-items: center;
           background: #252526;
@@ -675,6 +827,116 @@ const DiffViewerUI = {
           align-items: center;
           display: flex;
           gap: 12px;
+        }
+
+        .diff-file-meta {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .diff-file-path-row {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .diff-change-summary {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+
+        .diff-pill {
+          align-items: center;
+          border-radius: 999px;
+          display: inline-flex;
+          font-size: 11px;
+          font-weight: 600;
+          padding: 2px 6px;
+        }
+
+        .diff-pill.added {
+          background: rgba(78, 201, 176, 0.15);
+          color: #4ec9b0;
+        }
+
+        .diff-pill.modified {
+          background: rgba(255, 215, 0, 0.15);
+          color: #ffd700;
+        }
+
+        .diff-pill.removed {
+          background: rgba(244, 135, 113, 0.15);
+          color: #f48771;
+        }
+
+        .diff-pill.neutral {
+          background: #333;
+          color: #aaaaaa;
+        }
+
+        .diff-status {
+          border: 1px solid #3a3a3a;
+          border-radius: 999px;
+          font-size: 11px;
+          font-weight: 600;
+          padding: 2px 8px;
+          text-transform: uppercase;
+        }
+
+        .diff-status-pending {
+          background: rgba(255, 255, 255, 0.05);
+          color: #d4d4d4;
+        }
+
+        .diff-status-applying {
+          background: rgba(255, 215, 0, 0.12);
+          color: #ffd700;
+          border-color: rgba(255, 215, 0, 0.4);
+        }
+
+        .diff-status-success {
+          background: rgba(78, 201, 176, 0.18);
+          color: #4ec9b0;
+          border-color: rgba(78, 201, 176, 0.4);
+        }
+
+        .diff-status-error {
+          background: rgba(244, 135, 113, 0.15);
+          color: #f48771;
+          border-color: rgba(244, 135, 113, 0.4);
+        }
+
+        .diff-minimap {
+          background: #1b1b1c;
+          border-radius: 4px;
+          box-shadow: inset 0 0 0 1px #333;
+          height: 48px;
+          overflow: hidden;
+          width: 8px;
+        }
+
+        .diff-minimap .segment {
+          display: block;
+          width: 100%;
+        }
+
+        .diff-minimap .segment.added {
+          background: #4ec9b0;
+        }
+
+        .diff-minimap .segment.modified {
+          background: #ffd700;
+        }
+
+        .diff-minimap .segment.removed {
+          background: #f48771;
+        }
+
+        .diff-minimap.diff-minimap-empty {
+          background: #252526;
         }
 
         .diff-icon {
@@ -954,6 +1216,7 @@ const DiffViewerUI = {
       cancel,
       showDiff: handleShowDiff,
       clearDiff,
+      refresh: handleRefresh,
       getCurrentDiff: () => currentDiff,
       copyToClipboard,
       exportMarkdown,
@@ -1013,6 +1276,13 @@ if (typeof window !== 'undefined') {
         return;
       }
       return sharedInstance.rejectAll();
+    },
+    refresh: (payload) => {
+      if (!sharedInstance) {
+        console.error('[DiffViewerUI] Not initialized. Call init() first.');
+        return;
+      }
+      return sharedInstance.refresh(payload);
     },
     applyApproved: () => {
       if (!sharedInstance) {

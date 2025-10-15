@@ -27,9 +27,183 @@ const UI = {
     let isPyReplView = false;
     let isLlmView = false;
     let bootConfig = null;
+    let progressSocket = null;
+    let progressReconnectTimer = null;
+    let progressAttempts = 0;
 
     // Panel state persistence keys
     const STORAGE_KEY_PANEL = 'reploid_last_panel_view';
+
+    const resolveProgressUrl = () => {
+        const configured = config?.hermes?.websocketUrl ||
+            config?.hermes?.wsUrl ||
+            config?.hermes?.websocketPath ||
+            config?.hermes?.websocket;
+
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        if (configured) {
+            if (configured.startsWith('ws')) return configured;
+            if (configured.startsWith('//')) return `${protocol}${configured}`;
+            if (configured.startsWith('/')) return `${protocol}//${window.location.host}${configured}`;
+            return `${protocol}//${configured}`;
+        }
+
+        const hostname = config?.hermes?.host || window.location.hostname || 'localhost';
+        const port = config?.hermes?.port || 3000;
+        return `${protocol}//${hostname}:${port}`;
+    };
+
+    const handleProgressMessage = (event) => {
+        if (!event?.data) return;
+        let payload;
+        try {
+            payload = JSON.parse(event.data);
+        } catch (err) {
+            logger.warn('[UI] Failed to parse progress event payload:', err);
+            return;
+        }
+
+        if (payload?.type === 'PROGRESS_EVENT') {
+            processProgressEvent(payload.data);
+        } else if (payload?.source && payload?.event) {
+            processProgressEvent(payload);
+        }
+    };
+
+    const processProgressEvent = (payload = {}) => {
+        if (!payload) return;
+        try {
+            EventBus.emit('progress:event', payload);
+        } catch (err) {
+            logger.warn('[UI] Failed to emit progress:event:', err);
+        }
+        logProgressEvent(payload);
+        updateDiffFromProgress(payload);
+        if (payload.source === 'paxos' && payload.event === 'analytics' && payload.payload) {
+            try {
+                EventBus.emit('paxos:analytics', payload.payload);
+            } catch (err) {
+                logger.warn('[UI] Failed to emit paxos analytics event:', err);
+            }
+        }
+    };
+
+    const logProgressEvent = (payload) => {
+        if (!payload?.event) return;
+        const source = payload.source || 'agent';
+        const status = payload.status ? ` [${payload.status}]` : '';
+        const target = payload.path ? ` ${payload.path}` : '';
+        logToAdvanced({
+            message: `${source} ${payload.event}${target}${status}`,
+            level: 'cycle',
+            details: payload
+        });
+    };
+
+    const updateDiffFromProgress = (payload) => {
+        if (!window.DiffViewerUI || typeof window.DiffViewerUI.getCurrentDiff !== 'function') {
+            return;
+        }
+
+        const current = window.DiffViewerUI.getCurrentDiff();
+        if (!current || !Array.isArray(current.changes)) {
+            return;
+        }
+
+        const cloneAndRefresh = () => {
+            const cloned = current.changes.map(change => ({ ...change }));
+            window.DiffViewerUI.refresh({ changes: cloned });
+        };
+
+        if (payload.source === 'dogs') {
+            if (payload.event === 'apply:start') {
+                current.changes.forEach(change => {
+                    if (change.approved) {
+                        change.status = 'applying';
+                    }
+                });
+                cloneAndRefresh();
+                return;
+            }
+
+            if (payload.event === 'apply:file' && payload.path) {
+                const target = current.changes.find(change => change.file_path === payload.path);
+                if (target) {
+                    target.status = payload.status || 'applying';
+                    cloneAndRefresh();
+                }
+                return;
+            }
+
+            if (payload.event === 'session:complete') {
+                current.changes.forEach(change => {
+                    if (payload.status === 'success') {
+                        if (change.approved) {
+                            change.status = 'success';
+                        }
+                    } else if (payload.status === 'error' && change.status === 'applying') {
+                        change.status = 'error';
+                    }
+                });
+                cloneAndRefresh();
+                return;
+            }
+
+            if (payload.event === 'apply:complete') {
+                current.changes.forEach(change => {
+                    if (change.status === 'applying') {
+                        change.status = 'success';
+                    }
+                });
+                cloneAndRefresh();
+                return;
+            }
+        }
+    };
+
+    const setupProgressStream = () => {
+        if (typeof WebSocket === 'undefined') {
+            logger.warn('[UI] Browser lacks WebSocket support; skipping progress stream');
+            return;
+        }
+
+        const url = resolveProgressUrl();
+
+        const connect = () => {
+            try {
+                progressSocket = new WebSocket(url);
+            } catch (err) {
+                logger.warn(`[UI] Unable to connect to progress stream at ${url}:`, err.message || err);
+                return;
+            }
+
+            progressSocket.addEventListener('open', () => {
+                progressAttempts = 0;
+                logger.info(`[UI] Connected to progress stream (${url})`);
+            });
+
+            progressSocket.addEventListener('message', handleProgressMessage);
+
+            progressSocket.addEventListener('close', () => {
+                if (progressAttempts >= 5) {
+                    logger.warn('[UI] Progress stream disconnected; retries exhausted');
+                    return;
+                }
+                progressAttempts += 1;
+                const delay = Math.min(10000, progressAttempts * 1000);
+                if (progressReconnectTimer) {
+                    clearTimeout(progressReconnectTimer);
+                }
+                progressReconnectTimer = setTimeout(connect, delay);
+            });
+
+            progressSocket.addEventListener('error', (event) => {
+                logger.warn('[UI] Progress stream error:', event?.message || event);
+            });
+        };
+
+        connect();
+    };
 
     // Save current panel state to localStorage
     const savePanelState = () => {
@@ -198,6 +372,8 @@ const UI = {
         if (bootContainer) bootContainer.remove();
         
         document.body.style = "";
+
+        setupProgressStream();
 
         const [bodyTemplate, styleContent, vfsExplorerStyle] = await Promise.all([
             fetch('ui-dashboard.html').then(res => res.text()),
