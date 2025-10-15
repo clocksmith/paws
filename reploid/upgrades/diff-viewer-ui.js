@@ -954,6 +954,7 @@ const DiffViewerUI = {
       cancel,
       showDiff: handleShowDiff,
       clearDiff,
+      getCurrentDiff: () => currentDiff,
       copyToClipboard,
       exportMarkdown,
       share

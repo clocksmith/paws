@@ -471,6 +471,9 @@ describe('ModuleGraphVisualizer Module', () => {
     });
 
     it('should visualize module graph', async () => {
+      // Clear the logger mock from init() call
+      mockDeps.Utils.logger.info.mockClear();
+
       await visualizerInstance.visualize();
 
       expect(mockDeps.Introspector.getModuleGraph).toHaveBeenCalled();
@@ -553,6 +556,10 @@ describe('ModuleGraphVisualizer Module', () => {
     });
 
     it('should restart simulation after visualization', async () => {
+      // Clear previous calls
+      mockSimulation.alpha.mockClear();
+      mockSimulation.restart.mockClear();
+
       await visualizerInstance.visualize();
 
       expect(mockSimulation.alpha).toHaveBeenCalledWith(1);

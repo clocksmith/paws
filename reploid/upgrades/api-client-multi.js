@@ -491,5 +491,5 @@ const ApiClientMultiModule = (config, logger, Errors, Utils, StateManager) => {
 };
 
 // Export both formats for compatibility
-ApiClientMulti;
-ApiClientMultiModule;
+export default ApiClientMulti;
+export { ApiClientMultiModule };

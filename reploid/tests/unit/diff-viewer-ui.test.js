@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import DiffViewerUI from '../../upgrades/diff-viewer-ui.js';
 
 describe('DiffViewerUI', () => {
-  let DiffViewerUI;
   let mockDeps;
   let instance;
   let mockContainer;
@@ -22,11 +22,22 @@ describe('DiffViewerUI', () => {
 
     // Mock DOM
     global.document = {
-      getElementById: vi.fn(() => mockContainer),
+      getElementById: vi.fn((id) => {
+        if (id === 'diff-viewer-styles') return null; // For style injection
+        return mockContainer;
+      }),
       createElement: vi.fn((tag) => ({
         id: '',
+        className: '',
         innerHTML: '',
-        textContent: ''
+        textContent: '',
+        style: {},
+        setAttribute: vi.fn(),
+        getAttribute: vi.fn(),
+        addEventListener: vi.fn(),
+        appendChild: vi.fn(),
+        querySelector: vi.fn(),
+        querySelectorAll: vi.fn(() => [])
       })),
       head: {
         appendChild: vi.fn()
@@ -43,7 +54,9 @@ describe('DiffViewerUI', () => {
       ModuleRegistry: {
         register: vi.fn()
       },
-      DiffViewerUI: {}
+      DiffViewerUI: {
+        _setInstance: vi.fn()
+      }
     };
 
     global.URL = {
@@ -72,58 +85,25 @@ describe('DiffViewerUI', () => {
         }
       },
       StateManager: {
-        getArtifactContent: vi.fn(),
+        getArtifactContent: vi.fn((path) => {
+          // Return a valid dogs bundle for testing
+          if (path && path.endsWith('.md')) {
+            return Promise.resolve(`\`\`\`paws-change
+operation: CREATE
+file_path: /test.js
+\`\`\`
+\`\`\`
+console.log('test');
+\`\`\`
+`);
+          }
+          return Promise.resolve(null);
+        }),
         getState: vi.fn(() => ({}))
       },
       EventBus: mockEventBus,
       ConfirmationModal: {
         confirm: vi.fn()
-      }
-    };
-
-    // Import module
-    DiffViewerUI = {
-      metadata: {
-        id: 'DiffViewerUI',
-        version: '2.0.0',
-        dependencies: ['Utils', 'StateManager', 'EventBus', 'ConfirmationModal?']
-      },
-      factory: (deps) => {
-        const { Utils, StateManager, EventBus, ConfirmationModal } = deps;
-        const { logger } = Utils;
-
-        let container = null;
-        let currentDiff = null;
-
-        const init = (containerId) => {
-          container = document.getElementById(containerId);
-          if (!container) {
-            logger.error('[DiffViewerUI] Container not found:', containerId);
-            return;
-          }
-
-          EventBus.on('diff:show', () => {});
-          EventBus.on('diff:clear', () => {});
-          logger.info('[DiffViewerUI] Initialized');
-        };
-
-        const showDiff = (data) => {
-          if (!container) return;
-          container.innerHTML = '<div class="diff-viewer">Mock diff</div>';
-          currentDiff = data;
-        };
-
-        const clearDiff = () => {
-          if (container) container.innerHTML = '';
-          currentDiff = null;
-        };
-
-        return {
-          init,
-          showDiff,
-          clearDiff,
-          getCurrentDiff: () => currentDiff
-        };
       }
     };
   });
@@ -202,12 +182,11 @@ describe('DiffViewerUI', () => {
       instance.init('test-container');
     });
 
-    it('should display diff when showDiff is called', () => {
+    it('should display diff when showDiff is called', async () => {
       const diffData = { changes: [], dogs_path: '/test.md' };
-      instance.showDiff(diffData);
+      await instance.showDiff(diffData);
 
       expect(mockContainer.innerHTML).toContain('diff-viewer');
-      expect(instance.getCurrentDiff()).toEqual(diffData);
     });
 
     it('should clear diff when clearDiff is called', () => {
@@ -226,7 +205,7 @@ describe('DiffViewerUI', () => {
       expect(mockContainer.innerHTML).toBeDefined();
     });
 
-    it('should store current diff data', () => {
+    it('should store current diff data', async () => {
       const diffData = {
         changes: [
           { operation: 'CREATE', file_path: '/new.js', new_content: 'console.log()' }
@@ -235,8 +214,13 @@ describe('DiffViewerUI', () => {
         session_id: 'test-123'
       };
 
-      instance.showDiff(diffData);
-      expect(instance.getCurrentDiff()).toEqual(diffData);
+      await instance.showDiff(diffData);
+      const currentDiff = instance.getCurrentDiff();
+
+      // The module parses the dogs bundle and creates its own changes structure
+      expect(currentDiff).toBeDefined();
+      expect(currentDiff.dogs_path).toBe(diffData.dogs_path);
+      expect(currentDiff.session_id).toBe(diffData.session_id);
     });
   });
 

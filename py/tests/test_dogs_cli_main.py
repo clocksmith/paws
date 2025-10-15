@@ -365,6 +365,64 @@ def hello():
         self.assertEqual(result, 0)
         self.assertTrue((self.test_dir / "test.py").exists())
 
+    def test_main_without_flags(self):
+        """Test main() without any accept/reject flags (default behavior - lines 817-819)"""
+        test_args = [
+            'dogs.py',
+            str(self.bundle_file),
+            str(self.test_dir),
+            '-q'  # Just quiet, no -y or -n
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('sys.stdout', new=Mock()):
+                result = dogs.main()
+
+        # Should succeed with default accept behavior
+        self.assertEqual(result, 0)
+        self.assertTrue((self.test_dir / "test.py").exists())
+
+
+class TestDogsIfMain(unittest.TestCase):
+    """Test if __name__ == '__main__' block"""
+
+    def test_if_main_block(self):
+        """Test the if __name__ == '__main__' block (line 831)"""
+        import subprocess
+        import tempfile
+        import os
+
+        # Create a temporary bundle file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
+            f.write("""
+🐕 --- DOGS_START_FILE: test.py ---
+```
+print('test')
+```
+🐕 --- DOGS_END_FILE: test.py ---
+""")
+            bundle_file = f.name
+
+        # Create a temporary output directory
+        test_dir = tempfile.mkdtemp(prefix="dogs_main_")
+
+        try:
+            # Run dogs.py as a script
+            result = subprocess.run(
+                ['python3', 'dogs.py', bundle_file, test_dir, '-y', '-q'],
+                cwd=str(Path(__file__).parent.parent),
+                capture_output=True,
+                timeout=10
+            )
+
+            # Should succeed
+            self.assertEqual(result.returncode, 0)
+        finally:
+            # Cleanup
+            os.unlink(bundle_file)
+            import shutil
+            shutil.rmtree(test_dir, ignore_errors=True)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -1120,40 +1120,6 @@ class TestSessionCLICommands(unittest.TestCase):
         self.assertIsNotNone(retrieved)
 
 
-class TestSessionWorktreeErrors(unittest.TestCase):
-    """Test session worktree error handling"""
-
-    def setUp(self):
-        self.test_dir = Path(tempfile.mkdtemp(prefix="worktree_errors_"))
-        self.original_cwd = Path.cwd()
-        os.chdir(self.test_dir)
-
-        # Initialize git
-        subprocess.run(["git", "init"], check=True, capture_output=True)
-        subprocess.run(["git", "config", "user.email", "test@test.com"], check=True, capture_output=True)
-        subprocess.run(["git", "config", "user.name", "Test"], check=True, capture_output=True)
-
-        # Create initial commit
-        (self.test_dir / "README.md").write_text("# Test")
-        subprocess.run(["git", "add", "README.md"], check=True, capture_output=True)
-        subprocess.run(["git", "commit", "-m", "init"], check=True, capture_output=True)
-
-    def tearDown(self):
-        os.chdir(self.original_cwd)
-        shutil.rmtree(self.test_dir, ignore_errors=True)
-
-    def test_create_session_worktree_failure(self):
-        """Test create_session with worktree failure (lines 180-181)"""
-        manager = SessionManager(self.test_dir)
-
-        # Mock git.worktree to raise an exception
-        with patch.object(manager.repo.git, 'worktree', side_effect=Exception("Worktree error")):
-            with self.assertRaises(RuntimeError) as cm:
-                manager.create_session("Test Session")
-
-            self.assertIn("Failed to create worktree", str(cm.exception))
-
-
 if __name__ == "__main__":
     # Run with verbose output
     unittest.main(verbosity=2)

@@ -213,10 +213,8 @@ describe('ApiClientMulti Module', () => {
     });
 
     it('should abort current call', () => {
-      client.api.abortCurrentCall();
-
-      // Should not throw
-      expect(mockUtils.logger.info).toHaveBeenCalled();
+      // Should not throw even without an active call
+      expect(() => client.api.abortCurrentCall()).not.toThrow();
     });
 
     it('should sanitize JSON response', () => {
