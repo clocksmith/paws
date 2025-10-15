@@ -463,4 +463,386 @@ Line 3: Text`;
       expect(goalInfo.latestGoal).toBe('Test');
     });
   });
+
+  describe('Boundary Conditions - getArtifactListSummaryPure', () => {
+    it('should handle very large artifact maps', () => {
+      const allMetaMap = {};
+      for (let i = 0; i < 1000; i++) {
+        allMetaMap[`/file${i}.txt`] = [{ latestCycle: i }];
+      }
+
+      const summary = helpers.getArtifactListSummaryPure(allMetaMap);
+
+      expect(summary).toContain('file0.txt');
+      expect(summary).toContain('file999.txt');
+    });
+
+    it('should handle artifacts with special characters in paths', () => {
+      const allMetaMap = {
+        '/path with spaces/file.txt': [{ latestCycle: 1 }],
+        '/path/with/unicode/文件.txt': [{ latestCycle: 2 }],
+        '/path/with-dashes-and_underscores.txt': [{ latestCycle: 3 }]
+      };
+
+      const summary = helpers.getArtifactListSummaryPure(allMetaMap);
+
+      expect(summary).toContain('path with spaces');
+      expect(summary).toContain('文件.txt');
+      expect(summary).toContain('dashes-and_underscores');
+    });
+
+    it('should handle negative cycle numbers', () => {
+      const allMetaMap = {
+        '/file.txt': [{ latestCycle: -1 }]
+      };
+
+      const summary = helpers.getArtifactListSummaryPure(allMetaMap);
+
+      expect(summary).toContain('Cycle -1');
+    });
+
+    it('should handle zero cycle number', () => {
+      const allMetaMap = {
+        '/file.txt': [{ latestCycle: 0 }]
+      };
+
+      const summary = helpers.getArtifactListSummaryPure(allMetaMap);
+
+      expect(summary).toContain('Cycle 0');
+    });
+
+    it('should handle very large cycle numbers', () => {
+      const allMetaMap = {
+        '/file.txt': [{ latestCycle: 999999 }]
+      };
+
+      const summary = helpers.getArtifactListSummaryPure(allMetaMap);
+
+      expect(summary).toContain('Cycle 999999');
+    });
+
+    it('should handle artifacts with null metadata', () => {
+      const allMetaMap = {
+        '/file.txt': [null]
+      };
+
+      const summary = helpers.getArtifactListSummaryPure(allMetaMap);
+
+      expect(summary).toContain('Cycle 0');
+    });
+  });
+
+  describe('Boundary Conditions - getToolListSummaryPure', () => {
+    const mockTruncFn = (str, len) => str.length > len ? str.substring(0, len) + '...' : str;
+
+    it('should handle very long tool names', () => {
+      const staticTools = [
+        { name: 'A'.repeat(200), description: 'Test' }
+      ];
+
+      const summary = helpers.getToolListSummaryPure(staticTools, [], mockTruncFn);
+
+      expect(summary).toBeDefined();
+    });
+
+    it('should handle tools with empty descriptions', () => {
+      const staticTools = [
+        { name: 'tool1', description: '' }
+      ];
+
+      const summary = helpers.getToolListSummaryPure(staticTools, [], mockTruncFn);
+
+      expect(summary).toContain('tool1:');
+    });
+
+    it('should handle tools with special characters in names', () => {
+      const staticTools = [
+        { name: 'tool-with-dashes', description: 'Test' },
+        { name: 'tool_with_underscores', description: 'Test' },
+        { name: 'tool.with.dots', description: 'Test' }
+      ];
+
+      const summary = helpers.getToolListSummaryPure(staticTools, [], mockTruncFn);
+
+      expect(summary).toContain('tool-with-dashes');
+      expect(summary).toContain('tool_with_underscores');
+      expect(summary).toContain('tool.with.dots');
+    });
+
+    it('should handle very large tool lists', () => {
+      const staticTools = [];
+      for (let i = 0; i < 500; i++) {
+        staticTools.push({ name: `tool${i}`, description: `Description ${i}` });
+      }
+
+      const summary = helpers.getToolListSummaryPure(staticTools, [], mockTruncFn);
+
+      expect(summary).toContain('tool0');
+      expect(summary).toContain('tool499');
+    });
+
+    it('should handle mixed static and dynamic tool lists', () => {
+      const staticTools = Array.from({ length: 50 }, (_, i) => ({
+        name: `static${i}`,
+        description: `Static tool ${i}`
+      }));
+
+      const dynamicTools = Array.from({ length: 50 }, (_, i) => ({
+        declaration: {
+          name: `dynamic${i}`,
+          description: `Dynamic tool ${i}`
+        }
+      }));
+
+      const summary = helpers.getToolListSummaryPure(staticTools, dynamicTools, mockTruncFn);
+
+      expect(summary).toContain('[S] static0');
+      expect(summary).toContain('[D] dynamic0');
+    });
+
+    it('should handle tools with multiline descriptions', () => {
+      const staticTools = [
+        { name: 'tool1', description: 'Line 1\nLine 2\nLine 3' }
+      ];
+
+      const summary = helpers.getToolListSummaryPure(staticTools, [], mockTruncFn);
+
+      expect(summary).toContain('tool1');
+    });
+
+    it('should handle tools with unicode in descriptions', () => {
+      const staticTools = [
+        { name: 'tool1', description: 'Tool with emoji 🎉 and unicode ñ' }
+      ];
+
+      const summary = helpers.getToolListSummaryPure(staticTools, [], mockTruncFn);
+
+      expect(summary).toContain('tool1');
+    });
+  });
+
+  describe('Boundary Conditions - assembleCorePromptPure', () => {
+    it('should handle very large templates', () => {
+      const template = 'A'.repeat(10000) + '[[CYCLE_COUNT]]' + 'B'.repeat(10000);
+      const state = { totalCycles: 1 };
+      const goalInfo = { latestGoal: 'Test' };
+
+      const result = helpers.assembleCorePromptPure(template, state, goalInfo, '', '');
+
+      expect(result.prompt).toContain('1');
+    });
+
+    it('should handle templates with multiple same placeholders', () => {
+      const template = '[[CYCLE_COUNT]] [[CYCLE_COUNT]] [[CYCLE_COUNT]]';
+      const state = { totalCycles: 42 };
+      const goalInfo = { latestGoal: 'Test' };
+
+      const result = helpers.assembleCorePromptPure(template, state, goalInfo, '', '');
+
+      expect(result.prompt).toBe('42 42 42');
+    });
+
+    it('should handle cycle count of zero', () => {
+      const template = '[[CYCLE_COUNT]]';
+      const state = { totalCycles: 0 };
+      const goalInfo = { latestGoal: 'Test' };
+
+      const result = helpers.assembleCorePromptPure(template, state, goalInfo, '', '');
+
+      expect(result.prompt).toBe('0');
+    });
+
+    it('should handle negative cycle count', () => {
+      const template = '[[CYCLE_COUNT]]';
+      const state = { totalCycles: -5 };
+      const goalInfo = { latestGoal: 'Test' };
+
+      const result = helpers.assembleCorePromptPure(template, state, goalInfo, '', '');
+
+      expect(result.prompt).toBe('-5');
+    });
+
+    it('should handle very long goals', () => {
+      const template = '[[CUMULATIVE_GOAL]]';
+      const state = { totalCycles: 1 };
+      const goalInfo = { latestGoal: 'A'.repeat(10000) };
+
+      const result = helpers.assembleCorePromptPure(template, state, goalInfo, '', '');
+
+      expect(result.prompt).toHaveLength(10000);
+    });
+
+    it('should handle goals with special characters', () => {
+      const template = '[[CUMULATIVE_GOAL]]';
+      const state = { totalCycles: 1 };
+      const goalInfo = { latestGoal: 'Goal with "quotes" and \'apostrophes\' and \n newlines' };
+
+      const result = helpers.assembleCorePromptPure(template, state, goalInfo, '', '');
+
+      expect(result.prompt).toBe('Goal with "quotes" and \'apostrophes\' and \n newlines');
+    });
+
+    it('should handle empty artifact and tool lists', () => {
+      const template = 'Tools: [[TOOL_LIST]]\nArtifacts: [[ARTIFACT_LIST]]';
+      const state = { totalCycles: 1 };
+      const goalInfo = { latestGoal: 'Test' };
+
+      const result = helpers.assembleCorePromptPure(template, state, goalInfo, '', '');
+
+      expect(result.prompt).toBe('Tools: \nArtifacts: ');
+    });
+
+    it('should handle very large artifact and tool lists', () => {
+      const template = '[[ARTIFACT_LIST]] [[TOOL_LIST]]';
+      const state = { totalCycles: 1 };
+      const goalInfo = { latestGoal: 'Test' };
+      const largeArtifactList = 'A'.repeat(50000);
+      const largeToolList = 'B'.repeat(50000);
+
+      const result = helpers.assembleCorePromptPure(
+        template,
+        state,
+        goalInfo,
+        largeArtifactList,
+        largeToolList
+      );
+
+      expect(result.prompt.length).toBeGreaterThan(100000);
+    });
+  });
+
+  describe('Input Validation Edge Cases', () => {
+    it('should handle getArtifactListSummaryPure with array instead of object', () => {
+      const allMetaMap = ['not', 'an', 'object'];
+
+      const summary = helpers.getArtifactListSummaryPure(allMetaMap);
+
+      // Array has numeric keys, should still work
+      expect(typeof summary).toBe('string');
+    });
+
+    it('should handle getToolListSummaryPure with undefined truncFn', () => {
+      const staticTools = [{ name: 'tool1', description: 'Test' }];
+
+      const summary = helpers.getToolListSummaryPure(staticTools, [], undefined);
+
+      expect(summary).toBe('Error: Tool lists or truncFn not available.');
+    });
+
+    it('should handle assembleCorePromptPure with missing state fields', () => {
+      const template = '[[CYCLE_COUNT]]';
+      const state = {};
+      const goalInfo = {};
+
+      const result = helpers.assembleCorePromptPure(template, state, goalInfo, '', '');
+
+      expect(result.prompt).toContain('undefined');
+    });
+
+    it('should handle assembleCorePromptPure with null state', () => {
+      const template = '[[CYCLE_COUNT]]';
+      const state = null;
+      const goalInfo = { latestGoal: 'Test' };
+
+      expect(() => {
+        helpers.assembleCorePromptPure(template, state, goalInfo, '', '');
+      }).toThrow();
+    });
+  });
+
+  describe('Consistency and Idempotency', () => {
+    it('should produce consistent output for same artifact map', () => {
+      const allMetaMap = {
+        '/file1.txt': [{ latestCycle: 1 }],
+        '/file2.txt': [{ latestCycle: 2 }]
+      };
+
+      const results = [];
+      for (let i = 0; i < 10; i++) {
+        results.push(helpers.getArtifactListSummaryPure(allMetaMap));
+      }
+
+      expect(new Set(results).size).toBe(1);
+    });
+
+    it('should produce consistent output for same tool lists', () => {
+      const mockTruncFn = (str, len) => str.substring(0, len);
+      const staticTools = [
+        { name: 'tool1', description: 'First tool' },
+        { name: 'tool2', description: 'Second tool' }
+      ];
+
+      const results = [];
+      for (let i = 0; i < 10; i++) {
+        results.push(helpers.getToolListSummaryPure(staticTools, [], mockTruncFn));
+      }
+
+      expect(new Set(results).size).toBe(1);
+    });
+
+    it('should produce consistent output for same prompt assembly', () => {
+      const template = '[[CYCLE_COUNT]] [[CUMULATIVE_GOAL]]';
+      const state = { totalCycles: 5 };
+      const goalInfo = { latestGoal: 'Test goal' };
+
+      const results = [];
+      for (let i = 0; i < 10; i++) {
+        results.push(helpers.assembleCorePromptPure(template, state, goalInfo, '', '').prompt);
+      }
+
+      expect(new Set(results).size).toBe(1);
+    });
+  });
+
+  describe('Performance and Scalability', () => {
+    it('should handle large artifact maps efficiently', () => {
+      const allMetaMap = {};
+      for (let i = 0; i < 10000; i++) {
+        allMetaMap[`/file${i}.txt`] = [{ latestCycle: i }];
+      }
+
+      const start = Date.now();
+      const summary = helpers.getArtifactListSummaryPure(allMetaMap);
+      const duration = Date.now() - start;
+
+      expect(duration).toBeLessThan(1000);
+      expect(summary).toBeDefined();
+    });
+
+    it('should handle large tool lists efficiently', () => {
+      const mockTruncFn = (str, len) => str.substring(0, len);
+      const staticTools = Array.from({ length: 5000 }, (_, i) => ({
+        name: `tool${i}`,
+        description: `Description for tool ${i}`
+      }));
+
+      const start = Date.now();
+      const summary = helpers.getToolListSummaryPure(staticTools, [], mockTruncFn);
+      const duration = Date.now() - start;
+
+      expect(duration).toBeLessThan(1000);
+      expect(summary).toBeDefined();
+    });
+
+    it('should handle large prompt assembly efficiently', () => {
+      const template = '[[CYCLE_COUNT]]\n[[CUMULATIVE_GOAL]]\n[[ARTIFACT_LIST]]\n[[TOOL_LIST]]';
+      const state = { totalCycles: 999 };
+      const goalInfo = { latestGoal: 'A'.repeat(1000) };
+      const artifactList = 'B'.repeat(10000);
+      const toolList = 'C'.repeat(10000);
+
+      const start = Date.now();
+      const result = helpers.assembleCorePromptPure(
+        template,
+        state,
+        goalInfo,
+        artifactList,
+        toolList
+      );
+      const duration = Date.now() - start;
+
+      expect(duration).toBeLessThan(100);
+      expect(result.prompt).toBeDefined();
+    });
+  });
 });

@@ -26,6 +26,9 @@ const MetricsDashboard = {
     let toolsChart = null;
     let tokensChart = null;
 
+    // Create api object early so interval can reference it
+    const api = {};
+
     /**
      * Initialize metrics dashboard with Chart.js
      * @param {HTMLElement} container - Container element for charts
@@ -69,9 +72,9 @@ const MetricsDashboard = {
       initToolsChart();
       initTokensChart();
 
-      // Auto-refresh every 5 seconds
+      // Auto-refresh every 5 seconds - call through api so spies work
       setInterval(() => {
-        updateCharts();
+        api.updateCharts();
       }, 5000);
     };
 
@@ -323,14 +326,13 @@ ${Object.entries(metrics.tools)
       `.trim();
     };
 
-    return {
-      api: {
-        init,
-        updateCharts,
-        destroy,
-        generateSummary
-      }
-    };
+    // Populate api object
+    api.init = init;
+    api.updateCharts = updateCharts;
+    api.destroy = destroy;
+    api.generateSummary = generateSummary;
+
+    return { api };
   }
 };
 

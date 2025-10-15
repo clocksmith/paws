@@ -7,11 +7,47 @@ describe('VerificationManager Module', () => {
   let mockWorker;
 
   beforeEach(() => {
-    // Mock Worker
+    // Mock Worker with message handling
+    const messageHandlers = [];
     mockWorker = {
-      postMessage: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
+      postMessage: vi.fn((message) => {
+        // Simulate async worker response
+        setTimeout(() => {
+          if (message.type === 'VERIFY' && message.payload) {
+            // Respond with VERIFY_COMPLETE
+            messageHandlers.forEach(handler => {
+              handler({
+                data: {
+                  type: 'VERIFY_COMPLETE',
+                  sessionId: message.payload.sessionId,
+                  success: true,
+                  output: 'Verification completed'
+                }
+              });
+            });
+          } else if (message.type === 'PING') {
+            // Respond with PONG
+            messageHandlers.forEach(handler => {
+              handler({
+                data: { type: 'PONG' }
+              });
+            });
+          }
+        }, 0);
+      }),
+      addEventListener: vi.fn((event, handler) => {
+        if (event === 'message') {
+          messageHandlers.push(handler);
+        }
+      }),
+      removeEventListener: vi.fn((event, handler) => {
+        if (event === 'message') {
+          const index = messageHandlers.indexOf(handler);
+          if (index > -1) {
+            messageHandlers.splice(index, 1);
+          }
+        }
+      }),
       terminate: vi.fn()
     };
 

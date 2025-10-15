@@ -7,26 +7,42 @@ describe('ModuleIntegrity', () => {
   let mockCrypto;
 
   beforeEach(() => {
-    // Mock Web Crypto API
-    const mockHashBuffer = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
+    // Mock Web Crypto API with dynamic hashing
     const mockSignatureBuffer = new Uint8Array([9, 10, 11, 12]);
 
     mockCrypto = {
       subtle: {
-        digest: vi.fn().mockResolvedValue(mockHashBuffer.buffer),
+        digest: vi.fn().mockImplementation(async (algorithm, data) => {
+          // Create a simple hash based on input data
+          const arr = new Uint8Array(data);
+          let sum = 0;
+          for (let i = 0; i < arr.length; i++) {
+            sum += arr[i] * (i + 1);
+          }
+          // Create unique 8-byte hash based on sum
+          const hash = new Uint8Array(8);
+          for (let i = 0; i < 8; i++) {
+            hash[i] = (sum + i) % 256;
+          }
+          return hash.buffer;
+        }),
         importKey: vi.fn().mockResolvedValue('mock-key'),
         sign: vi.fn().mockResolvedValue(mockSignatureBuffer.buffer),
         verify: vi.fn().mockResolvedValue(true)
       }
     };
 
-    global.crypto = mockCrypto;
-    global.TextEncoder = vi.fn(() => ({
-      encode: vi.fn((text) => new Uint8Array([1, 2, 3]))
-    }));
-
-    global.Uint8Array = Uint8Array;
-    global.Array = Array;
+    vi.stubGlobal('crypto', mockCrypto);
+    vi.stubGlobal('TextEncoder', vi.fn(() => ({
+      encode: vi.fn((text) => {
+        // Convert text to actual bytes for better hashing
+        const bytes = new Uint8Array(text.length);
+        for (let i = 0; i < text.length; i++) {
+          bytes[i] = text.charCodeAt(i);
+        }
+        return bytes;
+      })
+    })));
 
     mockDeps = {
       Utils: {
@@ -113,9 +129,15 @@ describe('ModuleIntegrity', () => {
         const verifyModule = async (code, signature) => {
           const { moduleId, version, hash: expectedHash, timestamp, signature: sig } = signature;
 
+          // Validate signature format
+          if (!sig || typeof sig !== 'string' || !/^[0-9a-f]+$/i.test(sig)) {
+            throw new Error('Invalid signature format');
+          }
+
           const actualHash = await calculateHash(code);
 
           if (actualHash !== expectedHash) {
+            logger.warn(`[ModuleIntegrity] Hash mismatch for ${moduleId}`);
             return {
               valid: false,
               reason: 'HASH_MISMATCH',
@@ -148,9 +170,11 @@ describe('ModuleIntegrity', () => {
           );
 
           if (!isValid) {
+            logger.warn(`[ModuleIntegrity] Invalid signature for ${moduleId}`);
             return { valid: false, reason: 'INVALID_SIGNATURE', moduleId };
           }
 
+          logger.info(`[ModuleIntegrity] Module ${moduleId} verified successfully`);
           return { valid: true, moduleId, version, hash: actualHash, timestamp };
         };
 
@@ -163,10 +187,10 @@ describe('ModuleIntegrity', () => {
               continue;
             }
 
-            const code = await StateManager.getArtifactContent(path);
             const moduleId = path.replace('/vfs/upgrades/', '').replace('.js', '');
 
             try {
+              const code = await StateManager.getArtifactContent(path);
               const signature = await signModule(moduleId, code);
               signatures[moduleId] = signature;
             } catch (err) {
@@ -190,6 +214,7 @@ describe('ModuleIntegrity', () => {
           try {
             signaturesJson = await StateManager.getArtifactContent('/vfs/security/module-signatures.json');
           } catch (err) {
+            logger.warn('[ModuleIntegrity] No signatures found in VFS');
             return { valid: null, reason: 'NO_SIGNATURES', moduleId };
           }
 
@@ -197,6 +222,7 @@ describe('ModuleIntegrity', () => {
           const signature = signatures[moduleId];
 
           if (!signature) {
+            logger.warn(`[ModuleIntegrity] No signature found for ${moduleId}`);
             return { valid: null, reason: 'NO_SIGNATURE_FOR_MODULE', moduleId };
           }
 
@@ -232,6 +258,7 @@ describe('ModuleIntegrity', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
   });
 
   describe('Module Metadata', () => {

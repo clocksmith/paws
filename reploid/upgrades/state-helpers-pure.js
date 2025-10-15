@@ -77,4 +77,4 @@ const StateHelpersPureModule = (() => {
 
 // Export both formats
 StateHelpersPure;
-StateHelpersPureModule;
+export default StateHelpersPureModule;

@@ -619,4 +619,370 @@ describe('CycleLogic Module', () => {
       expect(cycleInstance.api.getCurrentState()).toBe('AWAITING_PROPOSAL_APPROVAL');
     });
   });
+
+  describe('State Transition Combinations', () => {
+    it('should handle IDLE -> CURATING_CONTEXT -> AWAITING_CONTEXT_APPROVAL', async () => {
+      await cycleInstance.api._test.startCycle('Test goal');
+
+      expect(cycleInstance.api.getCurrentState()).toBe('AWAITING_CONTEXT_APPROVAL');
+    });
+
+    it('should handle AWAITING_CONTEXT_APPROVAL -> PLANNING_WITH_CONTEXT', async () => {
+      await cycleInstance.api._test.startCycle('Test goal');
+      await cycleInstance.api._test.userApprovedContext();
+
+      expect(cycleInstance.api.getCurrentState()).toBe('AWAITING_PROPOSAL_APPROVAL');
+    });
+
+    it('should handle AWAITING_PROPOSAL_APPROVAL -> APPLYING_CHANGESET -> IDLE', async () => {
+      await cycleInstance.api._test.startCycle('Test goal');
+      await cycleInstance.api._test.userApprovedContext();
+      await cycleInstance.api._test.userApprovedProposal();
+
+      expect(cycleInstance.api.getCurrentState()).toBe('IDLE');
+    });
+
+    it('should handle failure transition: APPLYING_CHANGESET -> PLANNING_WITH_CONTEXT', async () => {
+      mockToolRunner.runTool
+        .mockResolvedValueOnce({ success: true }) // create_cats_bundle
+        .mockResolvedValueOnce({ success: true }) // create_dogs_bundle
+        .mockResolvedValueOnce({ success: false }) // apply_dogs_bundle
+        .mockResolvedValueOnce({ success: true }); // create_dogs_bundle (retry)
+
+      await cycleInstance.api._test.startCycle('Test goal');
+      await cycleInstance.api._test.userApprovedContext();
+      await cycleInstance.api._test.userApprovedProposal();
+
+      expect(cycleInstance.api.getCurrentState()).toBe('AWAITING_PROPOSAL_APPROVAL');
+    });
+  });
+
+  describe('Error Recovery', () => {
+    it('should handle tool runner errors gracefully', async () => {
+      mockToolRunner.runTool.mockRejectedValue(new Error('Tool failed'));
+
+      await expect(cycleInstance.api._test.startCycle('Test goal')).rejects.toThrow('Tool failed');
+    });
+
+    it('should handle LLM provider errors', async () => {
+      mockHybridLLMProvider.complete.mockRejectedValue(new Error('LLM error'));
+
+      await cycleInstance.api._test.startCycle('Test goal');
+
+      await expect(cycleInstance.api._test.userApprovedContext()).rejects.toThrow('LLM error');
+    });
+
+    it('should handle state manager errors', async () => {
+      mockStateManager.createSession.mockRejectedValue(new Error('State error'));
+
+      await expect(cycleInstance.api._test.startCycle('Test goal')).rejects.toThrow('State error');
+    });
+
+    it('should emit error event on failure', async () => {
+      mockToolRunner.runTool
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: false });
+
+      await cycleInstance.api._test.startCycle('Test goal');
+      await cycleInstance.api._test.userApprovedContext();
+      await cycleInstance.api._test.userApprovedProposal();
+
+      expect(mockEventBus.emit).toHaveBeenCalledWith('agent:error', expect.any(Object));
+    });
+  });
+
+  describe('Cycle Abortion', () => {
+    it('should abort cycle from AWAITING_CONTEXT_APPROVAL', async () => {
+      await cycleInstance.api._test.startCycle('Test goal');
+
+      cycleInstance.api._test.transitionTo('IDLE');
+
+      expect(cycleInstance.api.getCurrentState()).toBe('IDLE');
+    });
+
+    it('should abort cycle from AWAITING_PROPOSAL_APPROVAL', async () => {
+      await cycleInstance.api._test.startCycle('Test goal');
+      await cycleInstance.api._test.userApprovedContext();
+
+      cycleInstance.api._test.transitionTo('IDLE');
+
+      expect(cycleInstance.api.getCurrentState()).toBe('IDLE');
+    });
+
+    it('should prevent starting new cycle while one is running', async () => {
+      await cycleInstance.api._test.startCycle('First goal');
+
+      const sessionCreateCount = mockStateManager.createSession.mock.calls.length;
+
+      await cycleInstance.api._test.startCycle('Second goal');
+
+      expect(mockStateManager.createSession).toHaveBeenCalledTimes(sessionCreateCount);
+    });
+  });
+
+  describe('Concurrent Cycles', () => {
+    it('should prevent concurrent cycle execution', async () => {
+      await cycleInstance.api._test.startCycle('Goal 1');
+
+      // Try to start another cycle
+      await cycleInstance.api._test.startCycle('Goal 2');
+
+      // Should only have created one session
+      expect(mockStateManager.createSession).toHaveBeenCalledTimes(1);
+    });
+
+    it('should allow new cycle after previous completes', async () => {
+      // First cycle
+      await cycleInstance.api._test.startCycle('Goal 1');
+      await cycleInstance.api._test.userApprovedContext();
+      await cycleInstance.api._test.userApprovedProposal();
+
+      expect(cycleInstance.api.getCurrentState()).toBe('IDLE');
+
+      // Second cycle
+      await cycleInstance.api._test.startCycle('Goal 2');
+
+      expect(cycleInstance.api.getCurrentState()).toBe('AWAITING_CONTEXT_APPROVAL');
+      expect(mockStateManager.createSession).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('Long-Running Cycles', () => {
+    it('should handle cycles with many retries', async () => {
+      mockToolRunner.runTool
+        .mockResolvedValueOnce({ success: true }) // create_cats_bundle
+        .mockResolvedValueOnce({ success: true }) // create_dogs_bundle 1
+        .mockResolvedValueOnce({ success: false }) // apply_dogs_bundle 1
+        .mockResolvedValueOnce({ success: true }) // create_dogs_bundle 2
+        .mockResolvedValueOnce({ success: false }) // apply_dogs_bundle 2
+        .mockResolvedValueOnce({ success: true }) // create_dogs_bundle 3
+        .mockResolvedValueOnce({ success: true }); // apply_dogs_bundle 3
+
+      await cycleInstance.api._test.startCycle('Test goal');
+      await cycleInstance.api._test.userApprovedContext();
+
+      // First attempt
+      await cycleInstance.api._test.userApprovedProposal();
+      expect(cycleInstance.api.getCurrentState()).toBe('AWAITING_PROPOSAL_APPROVAL');
+
+      // Second attempt
+      await cycleInstance.api._test.userApprovedProposal();
+      expect(cycleInstance.api.getCurrentState()).toBe('AWAITING_PROPOSAL_APPROVAL');
+
+      // Third attempt succeeds
+      await cycleInstance.api._test.userApprovedProposal();
+      expect(cycleInstance.api.getCurrentState()).toBe('IDLE');
+    });
+
+    it('should maintain cycle context through retries', async () => {
+      mockToolRunner.runTool
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: false })
+        .mockResolvedValueOnce({ success: true });
+
+      await cycleInstance.api._test.startCycle('Test goal');
+      await cycleInstance.api._test.userApprovedContext();
+      await cycleInstance.api._test.userApprovedProposal();
+
+      const context = cycleInstance.api._test.getCycleContext();
+
+      expect(context.goal).toBe('Test goal');
+      expect(context.sessionId).toBeDefined();
+    });
+  });
+
+  describe('Context and Proposal Generation', () => {
+    it('should include goal in context prompt', async () => {
+      await cycleInstance.api._test.startCycle('Build feature X');
+      await cycleInstance.api._test.userApprovedContext();
+
+      expect(mockHybridLLMProvider.complete).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            content: expect.stringContaining('Build feature X')
+          })
+        ]),
+        expect.any(Object)
+      );
+    });
+
+    it('should filter relevant files for context', async () => {
+      mockStateManager.getAllArtifactMetadata.mockResolvedValue({
+        '/ui/dashboard.html': {},
+        '/agent/cycle.js': {},
+        '/other/readme.md': {},
+        '/agent/logic.js': {}
+      });
+
+      await cycleInstance.api._test.startCycle('Test goal');
+
+      const callArgs = mockToolRunner.runTool.mock.calls[0][1];
+
+      expect(callArgs.file_paths).toContain('/ui/dashboard.html');
+      expect(callArgs.file_paths).toContain('/agent/cycle.js');
+      expect(callArgs.file_paths).toContain('/agent/logic.js');
+      expect(callArgs.file_paths).not.toContain('/other/readme.md');
+    });
+
+    it('should pass correct temperature to LLM', async () => {
+      await cycleInstance.api._test.startCycle('Test goal');
+      await cycleInstance.api._test.userApprovedContext();
+
+      expect(mockHybridLLMProvider.complete).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.objectContaining({
+          temperature: 0.7
+        })
+      );
+    });
+
+    it('should pass correct max tokens to LLM', async () => {
+      await cycleInstance.api._test.startCycle('Test goal');
+      await cycleInstance.api._test.userApprovedContext();
+
+      expect(mockHybridLLMProvider.complete).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.objectContaining({
+          maxOutputTokens: 8192
+        })
+      );
+    });
+  });
+
+  describe('Tool Integration', () => {
+    it('should call create_cats_bundle with correct parameters', async () => {
+      await cycleInstance.api._test.startCycle('Test goal');
+
+      expect(mockToolRunner.runTool).toHaveBeenCalledWith(
+        'create_cats_bundle',
+        expect.objectContaining({
+          file_paths: expect.any(Array),
+          reason: expect.any(String),
+          turn_path: expect.stringContaining('cats.md')
+        })
+      );
+    });
+
+    it('should call create_dogs_bundle with changes', async () => {
+      await cycleInstance.api._test.startCycle('Test goal');
+      await cycleInstance.api._test.userApprovedContext();
+
+      expect(mockToolRunner.runTool).toHaveBeenCalledWith(
+        'create_dogs_bundle',
+        expect.objectContaining({
+          changes: expect.any(Array),
+          turn_path: expect.stringContaining('dogs.md')
+        })
+      );
+    });
+
+    it('should call apply_dogs_bundle with correct path', async () => {
+      await cycleInstance.api._test.startCycle('Test goal');
+      await cycleInstance.api._test.userApprovedContext();
+      await cycleInstance.api._test.userApprovedProposal();
+
+      expect(mockToolRunner.runTool).toHaveBeenCalledWith(
+        'apply_dogs_bundle',
+        expect.objectContaining({
+          dogs_path: expect.stringContaining('dogs.md')
+        })
+      );
+    });
+  });
+
+  describe('Event Emission', () => {
+    it('should emit all expected events in successful cycle', async () => {
+      await cycleInstance.api._test.startCycle('Test goal');
+      await cycleInstance.api._test.userApprovedContext();
+      await cycleInstance.api._test.userApprovedProposal();
+
+      expect(mockEventBus.emit).toHaveBeenCalledWith('cycle:start', expect.any(Object));
+      expect(mockEventBus.emit).toHaveBeenCalledWith('agent:thought', expect.any(String));
+      expect(mockEventBus.emit).toHaveBeenCalledWith('agent:state:change', expect.any(Object));
+      expect(mockEventBus.emit).toHaveBeenCalledWith('cycle:complete');
+    });
+
+    it('should emit thought events at each stage', async () => {
+      await cycleInstance.api._test.startCycle('Test goal');
+
+      expect(mockEventBus.emit).toHaveBeenCalledWith(
+        'agent:thought',
+        expect.stringContaining('determine the context')
+      );
+
+      await cycleInstance.api._test.userApprovedContext();
+
+      expect(mockEventBus.emit).toHaveBeenCalledWith(
+        'agent:thought',
+        expect.stringContaining('formulate a plan')
+      );
+
+      await cycleInstance.api._test.userApprovedProposal();
+
+      expect(mockEventBus.emit).toHaveBeenCalledWith(
+        'agent:thought',
+        expect.stringContaining('apply the changes')
+      );
+    });
+
+    it('should emit state change events on transitions', async () => {
+      await cycleInstance.api._test.startCycle('Test goal');
+
+      const stateChangeEvents = mockEventBus.emit.mock.calls.filter(
+        call => call[0] === 'agent:state:change'
+      );
+
+      expect(stateChangeEvents.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Edge Cases and Boundary Conditions', () => {
+    it('should handle empty goal', async () => {
+      await cycleInstance.api._test.startCycle('');
+
+      expect(mockStateManager.createSession).toHaveBeenCalledWith('');
+    });
+
+    it('should handle very long goal', async () => {
+      const longGoal = 'A'.repeat(10000);
+
+      await cycleInstance.api._test.startCycle(longGoal);
+
+      expect(mockStateManager.createSession).toHaveBeenCalledWith(longGoal);
+    });
+
+    it('should handle special characters in goal', async () => {
+      const specialGoal = 'Goal with "quotes" and \n newlines';
+
+      await cycleInstance.api._test.startCycle(specialGoal);
+
+      expect(mockStateManager.createSession).toHaveBeenCalledWith(specialGoal);
+    });
+
+    it('should handle empty artifact list', async () => {
+      mockStateManager.getAllArtifactMetadata.mockResolvedValue({});
+
+      await cycleInstance.api._test.startCycle('Test goal');
+
+      expect(mockToolRunner.runTool).toHaveBeenCalledWith(
+        'create_cats_bundle',
+        expect.objectContaining({
+          file_paths: []
+        })
+      );
+    });
+
+    it('should handle null turn path', async () => {
+      mockStateManager.createTurn.mockResolvedValue({
+        cats_path: null,
+        dogs_path: null
+      });
+
+      await cycleInstance.api._test.startCycle('Test goal');
+
+      expect(mockToolRunner.runTool).toHaveBeenCalled();
+    });
+  });
 });

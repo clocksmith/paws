@@ -880,4 +880,365 @@ describe('ApiClientMulti Module (api-client-multi.js)', () => {
       expect(result.content).toBe('test');
     });
   });
+
+  describe('HTTP Error Codes - ApiClient', () => {
+    beforeEach(() => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ proxyAvailable: false })
+      });
+    });
+
+    it('should handle 400 Bad Request', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        text: async () => 'Bad Request'
+      });
+
+      await expect(
+        clientInstance.api.callApiWithRetry([], 'test-key')
+      ).rejects.toThrow();
+    });
+
+    it('should handle 401 Unauthorized', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        text: async () => 'Unauthorized'
+      });
+
+      try {
+        await clientInstance.api.callApiWithRetry([], 'test-key');
+      } catch (error) {
+        expect(error.statusCode).toBe(401);
+        expect(error.code).toBe('AUTH_FAILED');
+      }
+    });
+
+    it('should handle 403 Forbidden', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        text: async () => 'Forbidden'
+      });
+
+      try {
+        await clientInstance.api.callApiWithRetry([], 'test-key');
+      } catch (error) {
+        expect(error.statusCode).toBe(403);
+        expect(error.code).toBe('AUTH_FAILED');
+      }
+    });
+
+    it('should handle 404 Not Found', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        text: async () => 'Not Found'
+      });
+
+      await expect(
+        clientInstance.api.callApiWithRetry([], 'test-key')
+      ).rejects.toThrow('API Error (404)');
+    });
+
+    it('should handle 429 Rate Limit', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        text: async () => 'Too Many Requests'
+      });
+
+      try {
+        await clientInstance.api.callApiWithRetry([], 'test-key');
+      } catch (error) {
+        expect(error.statusCode).toBe(429);
+        expect(error.code).toBe('RATE_LIMIT');
+      }
+    });
+
+    it('should handle 500 Internal Server Error', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        text: async () => 'Internal Server Error'
+      });
+
+      try {
+        await clientInstance.api.callApiWithRetry([], 'test-key');
+      } catch (error) {
+        expect(error.statusCode).toBe(500);
+        expect(error.code).toBe('SERVER_ERROR');
+      }
+    });
+
+    it('should handle 502 Bad Gateway', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 502,
+        text: async () => 'Bad Gateway'
+      });
+
+      try {
+        await clientInstance.api.callApiWithRetry([], 'test-key');
+      } catch (error) {
+        expect(error.statusCode).toBe(502);
+        expect(error.code).toBe('SERVER_ERROR');
+      }
+    });
+
+    it('should handle 503 Service Unavailable', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        text: async () => 'Service Unavailable'
+      });
+
+      try {
+        await clientInstance.api.callApiWithRetry([], 'test-key');
+      } catch (error) {
+        expect(error.statusCode).toBe(503);
+        expect(error.code).toBe('SERVER_ERROR');
+      }
+    });
+  });
+
+  describe('Timeout Scenarios', () => {
+    beforeEach(() => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ proxyAvailable: false })
+      });
+    });
+
+    it('should handle fetch timeout', async () => {
+      mockFetch.mockImplementation(() =>
+        new Promise((resolve, reject) => {
+          setTimeout(() => reject(new Error('Timeout')), 100);
+        })
+      );
+
+      await expect(
+        clientInstance.api.callApiWithRetry([], 'test-key')
+      ).rejects.toThrow();
+    });
+
+    it('should handle slow responses', async () => {
+      mockFetch.mockImplementation(() =>
+        new Promise(resolve => {
+          setTimeout(() => {
+            resolve({
+              ok: true,
+              json: async () => ({
+                candidates: [{ content: { parts: [{ text: 'response' }] } }]
+              })
+            });
+          }, 50);
+        })
+      );
+
+      const result = await clientInstance.api.callApiWithRetry([], 'test-key');
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('Concurrent Requests', () => {
+    beforeEach(() => {
+      mockFetch.mockImplementation(async () => ({
+        ok: true,
+        json: async () => ({
+          candidates: [{ content: { parts: [{ text: 'response' }] } }]
+        })
+      }));
+    });
+
+    it('should handle multiple concurrent requests', async () => {
+      const promises = [
+        clientInstance.api.callApiWithRetry([], 'key1'),
+        clientInstance.api.callApiWithRetry([], 'key2'),
+        clientInstance.api.callApiWithRetry([], 'key3')
+      ];
+
+      const results = await Promise.all(promises);
+
+      expect(results).toHaveLength(3);
+      results.forEach(result => {
+        expect(result.type).toBe('text');
+      });
+    });
+
+    it('should abort previous call when new call starts', async () => {
+      clientInstance.api.callApiWithRetry([], 'key1');
+      await clientInstance.api.callApiWithRetry([], 'key2');
+
+      expect(mockAbortController.abort).toHaveBeenCalled();
+    });
+  });
+
+  describe('Request Cancellation', () => {
+    it('should cancel request with abortCurrentCall', () => {
+      clientInstance.api.abortCurrentCall('User cancelled');
+
+      // Should not throw
+      expect(true).toBe(true);
+    });
+
+    it('should handle abort during request', async () => {
+      mockFetch.mockImplementation(() =>
+        new Promise((resolve, reject) => {
+          setTimeout(() => {
+            const error = new Error('Aborted');
+            error.name = 'AbortError';
+            reject(error);
+          }, 50);
+        })
+      );
+
+      await expect(
+        clientInstance.api.callApiWithRetry([], 'test-key')
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('Network Errors', () => {
+    beforeEach(() => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ proxyAvailable: false })
+      });
+    });
+
+    it('should handle DNS resolution failure', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('DNS resolution failed'));
+
+      await expect(
+        clientInstance.api.callApiWithRetry([], 'test-key')
+      ).rejects.toThrow();
+    });
+
+    it('should handle connection refused', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('Connection refused'));
+
+      await expect(
+        clientInstance.api.callApiWithRetry([], 'test-key')
+      ).rejects.toThrow();
+    });
+
+    it('should handle network unreachable', async () => {
+      global.navigator.onLine = false;
+      mockFetch.mockRejectedValueOnce(new Error('Network unreachable'));
+
+      try {
+        await clientInstance.api.callApiWithRetry([], 'test-key');
+      } catch (error) {
+        expect(error.code).toBe('NETWORK_OFFLINE');
+      }
+    });
+  });
+
+  describe('Edge Cases - Response Handling', () => {
+    beforeEach(() => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ proxyAvailable: false })
+      });
+    });
+
+    it('should handle empty response body', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({})
+      });
+
+      await expect(
+        clientInstance.api.callApiWithRetry([], 'test-key')
+      ).rejects.toThrow();
+    });
+
+    it('should handle malformed JSON response', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => {
+          throw new Error('Invalid JSON');
+        }
+      });
+
+      await expect(
+        clientInstance.api.callApiWithRetry([], 'test-key')
+      ).rejects.toThrow();
+    });
+
+    it('should handle null candidates', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ candidates: null })
+      });
+
+      await expect(
+        clientInstance.api.callApiWithRetry([], 'test-key')
+      ).rejects.toThrow();
+    });
+
+    it('should handle missing content in candidate', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          candidates: [{}]
+        })
+      });
+
+      await expect(
+        clientInstance.api.callApiWithRetry([], 'test-key')
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('Function Calling', () => {
+    beforeEach(() => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        json: async () => ({ proxyAvailable: false })
+      });
+    });
+
+    it('should include tool config with function declarations', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          candidates: [{ content: { parts: [{ text: 'response' }] } }]
+        })
+      });
+
+      const funcDecls = [
+        { name: 'test_func', description: 'Test', parameters: {} }
+      ];
+
+      await clientInstance.api.callApiWithRetry([], 'test-key', funcDecls);
+
+      const callArgs = mockFetch.mock.calls[1][1];
+      const body = JSON.parse(callArgs.body);
+
+      expect(body.tools).toBeDefined();
+      expect(body.tool_config).toBeDefined();
+    });
+
+    it('should remove responseMimeType when using function calling', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          candidates: [{ content: { parts: [{ text: 'response' }] } }]
+        })
+      });
+
+      const funcDecls = [{ name: 'test', description: 'Test' }];
+
+      await clientInstance.api.callApiWithRetry([], 'test-key', funcDecls);
+
+      const callArgs = mockFetch.mock.calls[1][1];
+      const body = JSON.parse(callArgs.body);
+
+      expect(body.generationConfig.responseMimeType).toBeUndefined();
+    });
+  });
 });

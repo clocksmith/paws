@@ -27,7 +27,9 @@ describe('ModuleGraphVisualizer Module', () => {
       selectAll: vi.fn().mockReturnThis(),
       data: vi.fn().mockReturnThis(),
       enter: vi.fn().mockReturnThis(),
-      remove: vi.fn().mockReturnThis()
+      remove: vi.fn().mockReturnThis(),
+      call: vi.fn().mockReturnThis(),
+      text: vi.fn().mockReturnThis()
     };
 
     mockSvg = {

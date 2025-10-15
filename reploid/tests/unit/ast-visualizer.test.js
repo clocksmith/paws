@@ -428,4 +428,277 @@ describe('ASTVisualizer Module', () => {
       expect(visualizer.getCurrentCode()).toBe('const y = 2;');
     });
   });
+
+  describe('Complex Syntax Trees', () => {
+    beforeEach(() => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+      visualizer.init(container);
+    });
+
+    it('should handle nested object literals', () => {
+      const code = `
+        const obj = {
+          a: 1,
+          b: {
+            c: 2,
+            d: {
+              e: 3
+            }
+          }
+        };
+      `;
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+
+    it('should handle deeply nested function calls', () => {
+      const code = 'foo(bar(baz(qux(test()))));';
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+
+    it('should handle async/await syntax', () => {
+      const code = `
+        async function fetchData() {
+          const result = await fetch('/api/data');
+          return result.json();
+        }
+      `;
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+
+    it('should handle generator functions', () => {
+      const code = `
+        function* generator() {
+          yield 1;
+          yield 2;
+          yield 3;
+        }
+      `;
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+
+    it('should handle destructuring assignments', () => {
+      const code = 'const { a, b: { c } } = obj;';
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+
+    it('should handle spread operators', () => {
+      const code = 'const arr = [...arr1, ...arr2];';
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+
+    it('should handle template literals', () => {
+      const code = 'const str = `Hello ${name}, you are ${age} years old`;';
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+  });
+
+  describe('Different Language ASTs', () => {
+    beforeEach(() => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+      visualizer.init(container);
+    });
+
+    it('should handle ES5 syntax', () => {
+      const code = 'var x = function() { return 42; };';
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+
+    it('should handle ES6 class syntax', () => {
+      const code = `
+        class MyClass extends BaseClass {
+          constructor() {
+            super();
+            this.value = 42;
+          }
+
+          method() {
+            return this.value;
+          }
+        }
+      `;
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+
+    it('should handle JSX-like syntax in comments', () => {
+      const code = '// <Component prop="value" />\nconst x = 1;';
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+
+    it('should handle module imports/exports', () => {
+      const code = `
+        import { foo, bar } from './module';
+        export default function test() {}
+        export { foo as bar };
+      `;
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+  });
+
+  describe('Invalid Syntax Handling', () => {
+    beforeEach(() => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+      visualizer.init(container);
+    });
+
+    it('should handle missing semicolons', () => {
+      const code = 'const x = 1\nconst y = 2';
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+
+    it('should handle trailing commas', () => {
+      const code = 'const arr = [1, 2, 3,];';
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+
+    it('should handle unclosed braces', () => {
+      global.acorn.parse = vi.fn(() => {
+        throw new SyntaxError('Unexpected end of input');
+      });
+
+      visualizer.visualizeCode('function test() {');
+
+      expect(mockUtils.logger.error).toHaveBeenCalled();
+    });
+
+    it('should handle invalid operators', () => {
+      global.acorn.parse = vi.fn(() => {
+        throw new SyntaxError('Unexpected token');
+      });
+
+      visualizer.visualizeCode('const x = 1 ++ 2;');
+
+      expect(mockUtils.logger.error).toHaveBeenCalled();
+    });
+
+    it('should handle reserved keywords as identifiers', () => {
+      global.acorn.parse = vi.fn(() => {
+        throw new SyntaxError('Unexpected reserved word');
+      });
+
+      visualizer.visualizeCode('const class = 1;');
+
+      expect(mockUtils.logger.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('Edge Cases', () => {
+    beforeEach(() => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+      visualizer.init(container);
+    });
+
+    it('should handle very long code', () => {
+      const code = 'const x = ' + '1 + '.repeat(1000) + '1;';
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+
+    it('should handle code with only comments', () => {
+      const code = '// This is a comment\n/* Multi-line\n   comment */';
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+
+    it('should handle code with unicode characters', () => {
+      const code = 'const 変数 = "日本語";';
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+
+    it('should handle code with escape sequences', () => {
+      const code = 'const str = "\\n\\t\\r\\\\";';
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+
+    it('should handle regex literals', () => {
+      const code = 'const regex = /[a-z]+/gi;';
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+
+    it('should handle bigint literals', () => {
+      const code = 'const big = 123456789012345678901234567890n;';
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+  });
+
+  describe('Performance with Large ASTs', () => {
+    beforeEach(() => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+      visualizer.init(container);
+    });
+
+    it('should handle code with many statements', () => {
+      let code = '';
+      for (let i = 0; i < 100; i++) {
+        code += `const var${i} = ${i};\n`;
+      }
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+
+    it('should handle code with deep nesting', () => {
+      let code = 'if (true) {';
+      for (let i = 0; i < 20; i++) {
+        code += ' if (true) {';
+      }
+      code += ' const x = 1;';
+      for (let i = 0; i < 21; i++) {
+        code += ' }';
+      }
+
+      visualizer.visualizeCode(code);
+      expect(global.acorn.parse).toHaveBeenCalled();
+    });
+
+    it('should handle multiple visualizations efficiently', () => {
+      const codes = [
+        'const x = 1;',
+        'function test() {}',
+        'class MyClass {}',
+        'const arr = [1, 2, 3];'
+      ];
+
+      codes.forEach(code => {
+        visualizer.visualizeCode(code);
+      });
+
+      expect(global.acorn.parse).toHaveBeenCalledTimes(codes.length);
+    });
+  });
 });

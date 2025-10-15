@@ -433,3 +433,5 @@ const BlueprintCreatorModule = (
     BLUEPRINT_TEMPLATE
   };
 };
+
+export default BlueprintCreatorModule;

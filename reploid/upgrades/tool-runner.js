@@ -479,4 +479,4 @@ const ToolRunner = {
 };
 
 // Export standardized module
-ToolRunner;
+export default ToolRunner;

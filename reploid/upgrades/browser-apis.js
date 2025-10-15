@@ -501,4 +501,4 @@ const BrowserAPIs = {
 };
 
 // Export
-BrowserAPIs;
+export default BrowserAPIs;

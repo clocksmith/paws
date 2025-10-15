@@ -230,4 +230,4 @@ const TabCoordinator = {
 };
 
 // Export
-TabCoordinator;
+export default TabCoordinator;

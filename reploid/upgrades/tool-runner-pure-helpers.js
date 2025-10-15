@@ -73,4 +73,4 @@ const ToolRunnerPureHelpersModule = (() => {
 
 // Export both formats
 ToolRunnerPureHelpers;
-ToolRunnerPureHelpersModule;
+export default ToolRunnerPureHelpersModule;

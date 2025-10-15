@@ -396,4 +396,659 @@ content
       expect(result.message).toContain('Successfully applied 1 changes');
     });
   });
+
+  describe('Malformed Bundle Parsing', () => {
+    it('should skip blocks with missing closing backticks', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: CREATE
+file_path: /test1.txt
+\`\`\`paws-change
+operation: CREATE
+file_path: /test2.txt
+\`\`\`
+\`\`\`
+Valid content
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockImplementation((path) => {
+        if (path === '/test.dogs') return Promise.resolve(dogsContent);
+        return Promise.resolve(null);
+      });
+
+      const result = await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(result.success).toBe(true);
+      expect(result.changes_applied).toBe(1);
+      expect(mockStateManager.createArtifact).toHaveBeenCalledWith(
+        '/test2.txt',
+        'text',
+        'Valid content\n',
+        'Created by dogs bundle'
+      );
+    });
+
+    it('should skip blocks without operation', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+file_path: /test.txt
+\`\`\`
+\`\`\`
+content
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockResolvedValue(dogsContent);
+
+      const result = await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('No valid changes found');
+    });
+
+    it('should skip blocks without file_path', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: CREATE
+\`\`\`
+\`\`\`
+content
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockResolvedValue(dogsContent);
+
+      const result = await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('No valid changes found');
+    });
+
+    it('should handle empty content blocks', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: CREATE
+file_path: /empty.txt
+\`\`\`
+\`\`\`
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockImplementation((path) => {
+        if (path === '/test.dogs') return Promise.resolve(dogsContent);
+        return Promise.resolve(null);
+      });
+
+      const result = await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(result.success).toBe(true);
+      expect(mockStateManager.createArtifact).toHaveBeenCalledWith(
+        '/empty.txt',
+        'text',
+        '',
+        'Created by dogs bundle'
+      );
+    });
+
+    it('should handle corrupted bundle with no paws-change blocks', async () => {
+      const dogsContent = 'This is just plain text, not a valid bundle';
+      mockStateManager.getArtifactContent.mockResolvedValue(dogsContent);
+
+      const result = await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('No valid changes found');
+    });
+  });
+
+  describe('Edge Cases - File Paths', () => {
+    it('should handle paths with spaces', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: CREATE
+file_path: /path with spaces/file.txt
+\`\`\`
+\`\`\`
+content
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockImplementation((path) => {
+        if (path === '/test.dogs') return Promise.resolve(dogsContent);
+        return Promise.resolve(null);
+      });
+
+      const result = await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(result.success).toBe(true);
+      expect(mockStateManager.createArtifact).toHaveBeenCalledWith(
+        '/path with spaces/file.txt',
+        'text',
+        'content\n',
+        'Created by dogs bundle'
+      );
+    });
+
+    it('should handle deeply nested paths', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: CREATE
+file_path: /deep/nested/folder/structure/file.txt
+\`\`\`
+\`\`\`
+content
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockImplementation((path) => {
+        if (path === '/test.dogs') return Promise.resolve(dogsContent);
+        return Promise.resolve(null);
+      });
+
+      const result = await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(result.success).toBe(true);
+      expect(mockStateManager.createArtifact).toHaveBeenCalledWith(
+        '/deep/nested/folder/structure/file.txt',
+        'text',
+        'content\n',
+        'Created by dogs bundle'
+      );
+    });
+
+    it('should handle paths with special characters', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: CREATE
+file_path: /folder-name_123/file.test.js
+\`\`\`
+\`\`\`
+content
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockImplementation((path) => {
+        if (path === '/test.dogs') return Promise.resolve(dogsContent);
+        return Promise.resolve(null);
+      });
+
+      const result = await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(result.success).toBe(true);
+      expect(mockStateManager.createArtifact).toHaveBeenCalledWith(
+        '/folder-name_123/file.test.js',
+        'text',
+        'content\n',
+        'Created by dogs bundle'
+      );
+    });
+
+    it('should trim whitespace from file paths', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: CREATE
+file_path:   /test.txt
+\`\`\`
+\`\`\`
+content
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockImplementation((path) => {
+        if (path === '/test.dogs') return Promise.resolve(dogsContent);
+        return Promise.resolve(null);
+      });
+
+      const result = await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(result.success).toBe(true);
+      expect(mockStateManager.createArtifact).toHaveBeenCalledWith(
+        '/test.txt',
+        'text',
+        'content\n',
+        'Created by dogs bundle'
+      );
+    });
+  });
+
+  describe('Edge Cases - Content', () => {
+    it('should handle unicode content', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: CREATE
+file_path: /unicode.txt
+\`\`\`
+\`\`\`
+Hello 世界 🌍 مرحبا
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockImplementation((path) => {
+        if (path === '/test.dogs') return Promise.resolve(dogsContent);
+        return Promise.resolve(null);
+      });
+
+      const result = await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(result.success).toBe(true);
+      expect(mockStateManager.createArtifact).toHaveBeenCalledWith(
+        '/unicode.txt',
+        'text',
+        'Hello 世界 🌍 مرحبا\n',
+        'Created by dogs bundle'
+      );
+    });
+
+    it('should handle content with backticks inside', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: CREATE
+file_path: /code.js
+\`\`\`
+\`\`\`
+function test() {
+  const str = \\\`template\\\`;
+}
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockImplementation((path) => {
+        if (path === '/test.dogs') return Promise.resolve(dogsContent);
+        return Promise.resolve(null);
+      });
+
+      const result = await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(result.success).toBe(true);
+      expect(mockStateManager.createArtifact).toHaveBeenCalledWith(
+        '/code.js',
+        'text',
+        expect.stringContaining('template'),
+        'Created by dogs bundle'
+      );
+    });
+
+    it('should handle very long content', async () => {
+      const longContent = 'A'.repeat(10000);
+      const dogsContent = `
+\`\`\`paws-change
+operation: CREATE
+file_path: /large.txt
+\`\`\`
+\`\`\`
+${longContent}
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockImplementation((path) => {
+        if (path === '/test.dogs') return Promise.resolve(dogsContent);
+        return Promise.resolve(null);
+      });
+
+      const result = await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(result.success).toBe(true);
+      expect(mockStateManager.createArtifact).toHaveBeenCalledWith(
+        '/large.txt',
+        'text',
+        expect.stringContaining('A'.repeat(100)),
+        'Created by dogs bundle'
+      );
+    });
+
+    it('should handle content with multiple newlines', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: CREATE
+file_path: /multiline.txt
+\`\`\`
+\`\`\`
+Line 1
+
+Line 3
+
+
+Line 6
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockImplementation((path) => {
+        if (path === '/test.dogs') return Promise.resolve(dogsContent);
+        return Promise.resolve(null);
+      });
+
+      const result = await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(result.success).toBe(true);
+      const call = mockStateManager.createArtifact.mock.calls[0];
+      expect(call[2].split('\n').length).toBeGreaterThan(5);
+    });
+  });
+
+  describe('Complex Multi-Operation Scenarios', () => {
+    it('should handle mixed operations in sequence', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: CREATE
+file_path: /new.txt
+\`\`\`
+\`\`\`
+New content
+\`\`\`
+
+\`\`\`paws-change
+operation: MODIFY
+file_path: /existing.txt
+\`\`\`
+\`\`\`
+Modified content
+\`\`\`
+
+\`\`\`paws-change
+operation: DELETE
+file_path: /old.txt
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockImplementation((path) => {
+        if (path === '/test.dogs') return Promise.resolve(dogsContent);
+        if (path === '/existing.txt') return Promise.resolve('old');
+        return Promise.resolve(null);
+      });
+
+      const result = await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(result.success).toBe(true);
+      expect(result.changes_applied).toBe(3);
+      expect(mockStateManager.createArtifact).toHaveBeenCalledTimes(1);
+      expect(mockStateManager.updateArtifact).toHaveBeenCalledTimes(1);
+      expect(mockStateManager.deleteArtifact).toHaveBeenCalledTimes(1);
+    });
+
+    it('should apply changes in order', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: CREATE
+file_path: /file1.txt
+\`\`\`
+\`\`\`
+First
+\`\`\`
+
+\`\`\`paws-change
+operation: CREATE
+file_path: /file2.txt
+\`\`\`
+\`\`\`
+Second
+\`\`\`
+
+\`\`\`paws-change
+operation: CREATE
+file_path: /file3.txt
+\`\`\`
+\`\`\`
+Third
+\`\`\`
+`;
+      const callOrder = [];
+      mockStateManager.getArtifactContent.mockImplementation((path) => {
+        if (path === '/test.dogs') return Promise.resolve(dogsContent);
+        return Promise.resolve(null);
+      });
+      mockStateManager.createArtifact.mockImplementation((path) => {
+        callOrder.push(path);
+        return Promise.resolve();
+      });
+
+      await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(callOrder).toEqual(['/file1.txt', '/file2.txt', '/file3.txt']);
+    });
+
+    it('should stop and rollback on first error in sequence', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: CREATE
+file_path: /file1.txt
+\`\`\`
+\`\`\`
+First
+\`\`\`
+
+\`\`\`paws-change
+operation: CREATE
+file_path: /file2.txt
+\`\`\`
+\`\`\`
+Second (will fail)
+\`\`\`
+
+\`\`\`paws-change
+operation: CREATE
+file_path: /file3.txt
+\`\`\`
+\`\`\`
+Third (should not run)
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockImplementation((path) => {
+        if (path === '/test.dogs') return Promise.resolve(dogsContent);
+        return Promise.resolve(null);
+      });
+      mockStateManager.createArtifact
+        .mockResolvedValueOnce() // First succeeds
+        .mockRejectedValueOnce(new Error('Disk full')); // Second fails
+
+      await expect(
+        applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps)
+      ).rejects.toThrow();
+
+      expect(mockStateManager.restoreCheckpoint).toHaveBeenCalledWith('checkpoint-123');
+      expect(mockStateManager.createArtifact).toHaveBeenCalledTimes(2); // Third never called
+    });
+
+    it('should handle 10+ operations successfully', async () => {
+      let dogsContent = '';
+      for (let i = 0; i < 15; i++) {
+        dogsContent += `
+\`\`\`paws-change
+operation: CREATE
+file_path: /file${i}.txt
+\`\`\`
+\`\`\`
+Content ${i}
+\`\`\`
+`;
+      }
+
+      mockStateManager.getArtifactContent.mockImplementation((path) => {
+        if (path === '/test.dogs') return Promise.resolve(dogsContent);
+        return Promise.resolve(null);
+      });
+
+      const result = await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(result.success).toBe(true);
+      expect(result.changes_applied).toBe(15);
+      expect(mockStateManager.createArtifact).toHaveBeenCalledTimes(15);
+    });
+  });
+
+  describe('Checkpoint Management', () => {
+    it('should handle checkpoint creation failure', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: CREATE
+file_path: /test.txt
+\`\`\`
+\`\`\`
+content
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockResolvedValue(dogsContent);
+      mockStateManager.createCheckpoint.mockRejectedValue(new Error('Checkpoint failed'));
+
+      await expect(
+        applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps)
+      ).rejects.toThrow('Checkpoint failed');
+
+      expect(mockStateManager.createArtifact).not.toHaveBeenCalled();
+    });
+
+    it('should include dogs path in checkpoint message', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: CREATE
+file_path: /test.txt
+\`\`\`
+\`\`\`
+content
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockImplementation((path) => {
+        if (path === '/custom/path.dogs') return Promise.resolve(dogsContent);
+        return Promise.resolve(null);
+      });
+
+      await applyDogsBundleImplementation({ dogs_path: '/custom/path.dogs' }, mockDeps);
+
+      expect(mockStateManager.createCheckpoint).toHaveBeenCalledWith('Before applying /custom/path.dogs');
+    });
+
+    it('should log checkpoint ID', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: CREATE
+file_path: /test.txt
+\`\`\`
+\`\`\`
+content
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockImplementation((path) => {
+        if (path === '/test.dogs') return Promise.resolve(dogsContent);
+        return Promise.resolve(null);
+      });
+      mockStateManager.createCheckpoint.mockResolvedValue({ id: 'custom-checkpoint-id' });
+
+      await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.stringContaining('custom-checkpoint-id')
+      );
+    });
+  });
+
+  describe('Operation-Specific Errors', () => {
+    it('should handle CREATE with null existing check', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: CREATE
+file_path: /test.txt
+\`\`\`
+\`\`\`
+content
+\`\`\`
+`;
+      mockStateManager.getArtifactContent
+        .mockResolvedValueOnce(dogsContent)
+        .mockResolvedValueOnce(null); // File doesn't exist (correct)
+
+      const result = await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(result.success).toBe(true);
+    });
+
+    it('should handle MODIFY with empty string existing content', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: MODIFY
+file_path: /empty.txt
+\`\`\`
+\`\`\`
+New content
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockImplementation((path) => {
+        if (path === '/test.dogs') return Promise.resolve(dogsContent);
+        if (path === '/empty.txt') return Promise.resolve(''); // Empty but exists
+        return Promise.resolve(null);
+      });
+
+      const result = await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(result.success).toBe(true);
+      expect(mockStateManager.updateArtifact).toHaveBeenCalledWith('/empty.txt', 'New content\n');
+    });
+
+    it('should handle DELETE of non-existent file gracefully', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: DELETE
+file_path: /missing.txt
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockResolvedValue(dogsContent);
+      mockStateManager.deleteArtifact.mockResolvedValue(); // Succeeds even if file missing
+
+      const result = await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(result.success).toBe(true);
+      expect(mockStateManager.deleteArtifact).toHaveBeenCalledWith('/missing.txt');
+    });
+
+    it('should handle unknown operation gracefully', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: RENAME
+file_path: /test.txt
+\`\`\`
+\`\`\`
+content
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockResolvedValue(dogsContent);
+
+      const result = await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      // Should parse but not apply the unknown operation
+      expect(result.success).toBe(true);
+      expect(result.changes_applied).toBe(0);
+    });
+  });
+
+  describe('Logging', () => {
+    it('should log each operation being applied', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: CREATE
+file_path: /test.txt
+\`\`\`
+\`\`\`
+content
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockImplementation((path) => {
+        if (path === '/test.dogs') return Promise.resolve(dogsContent);
+        return Promise.resolve(null);
+      });
+
+      await applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps);
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Applying CREATE to /test.txt')
+      );
+    });
+
+    it('should log error when rolling back', async () => {
+      const dogsContent = `
+\`\`\`paws-change
+operation: CREATE
+file_path: /test.txt
+\`\`\`
+\`\`\`
+content
+\`\`\`
+`;
+      mockStateManager.getArtifactContent.mockResolvedValue(dogsContent);
+      mockStateManager.createArtifact.mockRejectedValue(new Error('Write failed'));
+
+      await expect(
+        applyDogsBundleImplementation({ dogs_path: '/test.dogs' }, mockDeps)
+      ).rejects.toThrow();
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.stringContaining('rolling back to checkpoint')
+      );
+    });
+  });
 });

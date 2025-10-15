@@ -24,27 +24,32 @@ const InterTabCoordinator = {
     // Initialize coordinator
     const initialize = () => {
       logger.info('[InterTabCoordinator] Initializing inter-tab coordination');
-      
+
       // Generate unique tab ID
       tabId = `tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Create broadcast channel
-      channel = new BroadcastChannel('reploid-coordinator');
-      channel.onmessage = handleMessage;
-      
-      // Register tab
-      registerTab();
-      
-      // Start leader election
-      electLeader();
-      
-      // Handle tab close
-      window.addEventListener('beforeunload', handleUnload);
-      
-      // Periodic heartbeat
-      setInterval(sendHeartbeat, 5000);
-      
-      logger.info(`[InterTabCoordinator] Initialized with tab ID: ${tabId}`);
+
+      // Create broadcast channel with error handling
+      try {
+        channel = new BroadcastChannel('reploid-coordinator');
+        channel.onmessage = handleMessage;
+
+        // Register tab
+        registerTab();
+
+        // Start leader election
+        electLeader();
+
+        // Handle tab close
+        window.addEventListener('beforeunload', handleUnload);
+
+        // Periodic heartbeat
+        setInterval(sendHeartbeat, 5000);
+
+        logger.info(`[InterTabCoordinator] Initialized with tab ID: ${tabId}`);
+      } catch (error) {
+        logger.warn('[InterTabCoordinator] BroadcastChannel not available, running in single-tab mode');
+        channel = null;
+      }
     };
     
     // Register this tab
@@ -507,5 +512,5 @@ const InterTabCoordinatorModule = (logger, StateManager, Utils) => {
 };
 
 // Export both formats
-InterTabCoordinator;
-InterTabCoordinatorModule;
+export default InterTabCoordinator;
+export { InterTabCoordinatorModule };

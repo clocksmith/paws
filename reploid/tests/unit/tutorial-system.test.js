@@ -198,15 +198,16 @@ describe('TutorialSystem Module', () => {
         const complete = () => {
           if (!currentTutorial) return;
 
-          logger.info('[TutorialSystem] Completed tutorial:', currentTutorial.id);
-          EventBus.emit('tutorial:completed', { tutorialId: currentTutorial.id });
+          const tutorialId = currentTutorial.id;
+          logger.info('[TutorialSystem] Completed tutorial:', tutorialId);
+          EventBus.emit('tutorial:completed', { tutorialId });
 
           StateManager.updateAndSaveState(async state => {
             if (!state.tutorialsCompleted) {
               state.tutorialsCompleted = [];
             }
-            if (!state.tutorialsCompleted.includes(currentTutorial.id)) {
-              state.tutorialsCompleted.push(currentTutorial.id);
+            if (!state.tutorialsCompleted.includes(tutorialId)) {
+              state.tutorialsCompleted.push(tutorialId);
             }
             return state;
           }).catch(err => {
@@ -685,6 +686,7 @@ describe('TutorialSystem Module', () => {
     it('should handle missing target element', () => {
       document.querySelector.mockReturnValue(null);
       tutorialInstance.api.start('first-time');
+      tutorialInstance.api.next(); // Move to step with target
       expect(mockDeps.Utils.logger.warn).toHaveBeenCalled();
     });
 

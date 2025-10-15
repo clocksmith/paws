@@ -751,4 +751,4 @@ const TutorialSystem = {
 };
 
 // Export standardized module
-TutorialSystem;
+export default TutorialSystem;

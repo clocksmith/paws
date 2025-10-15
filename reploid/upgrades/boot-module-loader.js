@@ -305,4 +305,4 @@ const ModuleLoader = {
 };
 
 // Export for use
-ModuleLoader;
+export default ModuleLoader;

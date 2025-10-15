@@ -113,7 +113,22 @@ const MetaToolCreatorModule = (
   // Create a new dynamic tool
   const createDynamicTool = async (name, description, inputSchema, implementation, metadata = {}) => {
     logger.info(`[MTCP] Creating dynamic tool: ${name}`);
-    
+
+    // Create flat structure for validation
+    const toolDefForValidation = {
+      name,
+      description,
+      inputSchema,
+      implementation
+    };
+
+    // Validate before saving
+    const validation = validateToolDefinition(toolDefForValidation);
+    if (!validation.valid) {
+      throw new ToolError(`Invalid tool definition: ${validation.errors.join('; ')}`);
+    }
+
+    // Create full nested structure for storage
     const toolDef = {
       id: name.toLowerCase().replace(/\s+/g, '_'),
       created_cycle: StateManager.getState()?.totalCycles || 0,
@@ -125,12 +140,6 @@ const MetaToolCreatorModule = (
       },
       implementation
     };
-    
-    // Validate before saving
-    const validation = validateToolDefinition(toolDef);
-    if (!validation.valid) {
-      throw new ToolError(`Invalid tool definition: ${validation.errors.join('; ')}`);
-    }
     
     // Load existing dynamic tools
     const dynamicToolsPath = "/system/tools-dynamic.json";
@@ -172,12 +181,12 @@ const MetaToolCreatorModule = (
     }
     
     logger.info(`[MTCP] Successfully created tool: ${name}`);
-    
+
     // Emit structured event for tool creation (if UI is available)
-    if (UI?.logToAdvanced) {
-      UI.logToAdvanced({type: 'tool_created', toolName: name, cycle: toolDef.created_cycle}, 'tool_created');
+    if (typeof globalThis.UI !== 'undefined' && globalThis.UI?.logToAdvanced) {
+      globalThis.UI.logToAdvanced({type: 'tool_created', toolName: name, cycle: toolDef.created_cycle}, 'tool_created');
     }
-    
+
     return toolDef;
   };
 
@@ -401,3 +410,5 @@ const MetaToolCreatorModule = (
     TOOL_TEMPLATES
   };
 };
+
+export default MetaToolCreatorModule;

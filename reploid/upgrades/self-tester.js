@@ -736,4 +736,4 @@ const SelfTester = {
 };
 
 // Export
-SelfTester;
+export default SelfTester;

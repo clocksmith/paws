@@ -1,21 +1,29 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import InterTabCoordinator from '../../upgrades/inter-tab-coordinator.js';
 
 describe('InterTabCoordinator', () => {
-  let InterTabCoordinator;
   let mockDeps;
   let instance;
   let mockChannel;
   let mockStateManager;
 
   beforeEach(() => {
-    // Mock BroadcastChannel
+    // Mock BroadcastChannel - create once and reuse
     mockChannel = {
       postMessage: vi.fn(),
       close: vi.fn(),
-      onmessage: null
+      onmessage: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn()
     };
 
-    global.BroadcastChannel = vi.fn(() => mockChannel);
+    global.BroadcastChannel = vi.fn(function(name) {
+      // Check mockChannel at call time to support tests that set it to null
+      if (mockChannel === null) {
+        throw new Error('BroadcastChannel not available');
+      }
+      return mockChannel;
+    });
 
     // Mock dependencies
     mockStateManager = {
@@ -50,85 +58,7 @@ describe('InterTabCoordinator', () => {
     global.setInterval = vi.fn((fn, delay) => 'interval-id');
     global.clearTimeout = vi.fn();
     global.setTimeout = vi.fn((fn, delay) => 'timeout-id');
-
-    // Module definition
-    InterTabCoordinator = {
-      metadata: {
-        id: 'InterTabCoordinator',
-        version: '1.0.0',
-        dependencies: ['logger', 'StateManager', 'Utils'],
-        async: false,
-        type: 'service'
-      },
-      factory: (deps) => {
-        const { logger, StateManager, Utils } = deps;
-
-        let tabId = `tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        let isLeader = false;
-        let channel = new BroadcastChannel('reploid-coordinator');
-        let sharedState = new Map();
-        let messageHandlers = new Map();
-
-        const broadcast = (message) => {
-          if (!channel) return;
-          channel.postMessage({ ...message, tabId, timestamp: Date.now() });
-        };
-
-        const getTabId = () => tabId;
-        const isLeaderTab = () => isLeader;
-        const getShared = (key) => sharedState.get(key);
-        const setShared = (key, value) => {
-          sharedState.set(key, value);
-          broadcast({ type: 'shared-update', key, value });
-        };
-
-        const claimTask = async (taskId) => {
-          const claimedBy = sharedState.get(`task-${taskId}`);
-          if (claimedBy && claimedBy !== tabId) {
-            logger.warn(`Task ${taskId} already claimed by ${claimedBy}`);
-            return false;
-          }
-          sharedState.set(`task-${taskId}`, tabId);
-          broadcast({ type: 'task-claim', taskId });
-          return true;
-        };
-
-        const completeTask = (taskId, result) => {
-          sharedState.delete(`task-${taskId}`);
-          broadcast({ type: 'task-complete', taskId, result });
-        };
-
-        const onMessage = (messageType, handler) => {
-          messageHandlers.set(messageType, handler);
-        };
-
-        const cleanup = () => {
-          if (channel) channel.close();
-        };
-
-        const getStats = () => ({
-          tabId,
-          isLeader,
-          activeTabs: 1,
-          sharedStateSize: sharedState.size
-        });
-
-        return {
-          api: {
-            getTabId,
-            isLeader: isLeaderTab,
-            broadcast,
-            claimTask,
-            completeTask,
-            getShared,
-            setShared,
-            onMessage,
-            getStats,
-            cleanup
-          }
-        };
-      }
-    };
+    global.clearInterval = vi.fn();
   });
 
   afterEach(() => {
@@ -432,9 +362,13 @@ describe('InterTabCoordinator', () => {
         throw new Error('Channel creation failed');
       });
 
-      expect(() => {
-        instance = InterTabCoordinator.factory(mockDeps);
-      }).toThrow('Channel creation failed');
+      // Should not throw, should handle gracefully
+      instance = InterTabCoordinator.factory(mockDeps);
+
+      // Should log warning about single-tab mode
+      expect(mockDeps.logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('single-tab mode')
+      );
     });
 
     it('should handle null channel in broadcast', () => {

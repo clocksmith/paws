@@ -385,4 +385,4 @@ const SwarmOrchestrator = {
 };
 
 // Export
-SwarmOrchestrator;
+export default SwarmOrchestrator;

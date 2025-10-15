@@ -474,4 +474,345 @@ describe('CoreLogicModule (app-logic.js)', () => {
       );
     });
   });
+
+  describe('Configuration Edge Cases', () => {
+    it('should handle missing initial config', async () => {
+      const result = await CoreLogicModule(null, mockVfs);
+
+      expect(result).toBeDefined();
+      expect(result.container).toBeDefined();
+    });
+
+    it('should handle empty initial config', async () => {
+      const result = await CoreLogicModule({}, mockVfs);
+
+      expect(result).toBeDefined();
+    });
+
+    it('should handle config with extra properties', async () => {
+      const extendedConfig = {
+        ...mockInitialConfig,
+        extraProp: 'extra',
+        nested: { deep: { value: 123 } }
+      };
+
+      const result = await CoreLogicModule(extendedConfig, mockVfs);
+
+      expect(result).toBeDefined();
+    });
+
+    it('should handle invalid persona ID format', async () => {
+      mockInitialConfig.persona.id = 'invalid-format-with-many-dashes';
+
+      const result = await CoreLogicModule(mockInitialConfig, mockVfs);
+
+      expect(result).toBeDefined();
+    });
+
+    it('should handle persona ID with numbers', async () => {
+      mockInitialConfig.persona.id = 'test_persona_123';
+
+      await CoreLogicModule(mockInitialConfig, mockVfs);
+
+      expect(mockVfs.read).toHaveBeenCalledWith('/personas/TestPersona123Persona.js');
+    });
+  });
+
+  describe('VFS Error Scenarios', () => {
+    it('should handle config.json parse errors', async () => {
+      mockVfs.read = vi.fn(async (path) => {
+        if (path === '/config.json') {
+          return 'invalid json{{{';
+        }
+        return 'const Module = {};';
+      });
+
+      await expect(CoreLogicModule(mockInitialConfig, mockVfs)).rejects.toThrow();
+    });
+
+    it('should handle missing required module files', async () => {
+      mockVfs.read = vi.fn(async (path) => {
+        if (path.includes('/upgrades/state-manager')) {
+          throw new Error('File not found');
+        }
+        if (path === '/config.json') {
+          return JSON.stringify({});
+        }
+        return 'const Module = {};';
+      });
+
+      await expect(CoreLogicModule(mockInitialConfig, mockVfs)).rejects.toThrow();
+    });
+
+    it('should handle VFS timeout', async () => {
+      mockVfs.read = vi.fn(async () => {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        throw new Error('VFS timeout');
+      });
+
+      await expect(CoreLogicModule(mockInitialConfig, mockVfs)).rejects.toThrow('VFS timeout');
+    });
+  });
+
+  describe('Module Registration Edge Cases', () => {
+    it('should handle duplicate module registration', async () => {
+      const result = await CoreLogicModule(mockInitialConfig, mockVfs);
+
+      // Attempt to register same module twice
+      result.container.register({
+        metadata: { id: 'StateManager', type: 'service' },
+        factory: () => ({ duplicate: true })
+      });
+
+      expect(result.container.modules.has('StateManager')).toBe(true);
+    });
+
+    it('should handle module with no factory', async () => {
+      const result = await CoreLogicModule(mockInitialConfig, mockVfs);
+
+      result.container.register({
+        metadata: { id: 'NoFactory', type: 'pure' }
+      });
+
+      expect(result.container.modules.has('NoFactory')).toBe(true);
+    });
+
+    it('should handle module resolution failure', async () => {
+      const result = await CoreLogicModule(mockInitialConfig, mockVfs);
+
+      await expect(result.container.resolve('NonExistentModule')).rejects.toThrow();
+    });
+  });
+
+  describe('Persona Loading Edge Cases', () => {
+    it('should handle persona with underscore prefix', async () => {
+      mockInitialConfig.persona.id = '_special_persona';
+
+      await CoreLogicModule(mockInitialConfig, mockVfs);
+
+      expect(mockVfs.read).toHaveBeenCalledWith('/personas/SpecialPersonaPersona.js');
+    });
+
+    it('should handle single word persona', async () => {
+      mockInitialConfig.persona.id = 'simple';
+
+      await CoreLogicModule(mockInitialConfig, mockVfs);
+
+      expect(mockVfs.read).toHaveBeenCalledWith('/personas/SimplePersona.js');
+    });
+
+    it('should handle empty persona ID', async () => {
+      mockInitialConfig.persona = { id: '' };
+
+      const result = await CoreLogicModule(mockInitialConfig, mockVfs);
+
+      expect(result).toBeDefined();
+    });
+
+    it('should register empty persona on load failure', async () => {
+      mockVfs.read = vi.fn(async (path) => {
+        if (path.includes('/personas/')) {
+          throw new Error('Persona file corrupted');
+        }
+        if (path === '/config.json') {
+          return JSON.stringify({});
+        }
+        return 'const Module = {};';
+      });
+
+      const result = await CoreLogicModule(mockInitialConfig, mockVfs);
+
+      expect(result.container.modules.has('Persona')).toBe(true);
+    });
+  });
+
+  describe('Service Resolution', () => {
+    it('should resolve all required services', async () => {
+      const result = await CoreLogicModule(mockInitialConfig, mockVfs);
+
+      expect(result.container.resolve).toHaveBeenCalledWith('CycleLogic');
+      expect(result.container.resolve).toHaveBeenCalledWith('UI');
+      expect(result.container.resolve).toHaveBeenCalledWith('StateManager');
+      expect(result.container.resolve).toHaveBeenCalledWith('GitVFS');
+      expect(result.container.resolve).toHaveBeenCalledWith('DiffViewerUI');
+    });
+
+    it('should handle service with initialization dependencies', async () => {
+      const result = await CoreLogicModule(mockInitialConfig, mockVfs);
+
+      // UI should be initialized with StateManager and CycleLogic
+      expect(result.container.resolve).toHaveBeenCalled();
+    });
+  });
+
+  describe('DOM Manipulation', () => {
+    it('should handle all DOM elements present', async () => {
+      mockDocument.getElementById = vi.fn((id) => {
+        return {
+          id,
+          style: { display: id === 'boot-container' ? 'block' : 'none' },
+          innerHTML: ''
+        };
+      });
+
+      await CoreLogicModule(mockInitialConfig, mockVfs);
+
+      expect(mockDocument.getElementById).toHaveBeenCalledWith('boot-container');
+      expect(mockDocument.getElementById).toHaveBeenCalledWith('app-root');
+      expect(mockDocument.getElementById).toHaveBeenCalledWith('diff-viewer');
+    });
+
+    it('should handle app-root missing', async () => {
+      mockDocument.getElementById = vi.fn((id) => {
+        if (id === 'app-root') return null;
+        return { style: { display: 'block' } };
+      });
+
+      const result = await CoreLogicModule(mockInitialConfig, mockVfs);
+
+      expect(result).toBeDefined();
+    });
+
+    it('should handle boot-container missing', async () => {
+      mockDocument.getElementById = vi.fn((id) => {
+        if (id === 'boot-container') return null;
+        if (id === 'app-root') return { style: { display: 'none' } };
+        return null;
+      });
+
+      const result = await CoreLogicModule(mockInitialConfig, mockVfs);
+
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('Concurrent Initialization', () => {
+    it('should handle multiple concurrent initializations', async () => {
+      const promises = [
+        CoreLogicModule(mockInitialConfig, mockVfs),
+        CoreLogicModule(mockInitialConfig, mockVfs),
+        CoreLogicModule(mockInitialConfig, mockVfs)
+      ];
+
+      const results = await Promise.all(promises);
+
+      results.forEach(result => {
+        expect(result).toBeDefined();
+        expect(result.container).toBeDefined();
+      });
+    });
+
+    it('should handle initialization with different configs', async () => {
+      const config1 = { persona: { id: 'persona1' } };
+      const config2 = { persona: { id: 'persona2' } };
+
+      const [result1, result2] = await Promise.all([
+        CoreLogicModule(config1, mockVfs),
+        CoreLogicModule(config2, mockVfs)
+      ]);
+
+      expect(result1).toBeDefined();
+      expect(result2).toBeDefined();
+    });
+  });
+
+  describe('Error Recovery', () => {
+    it('should display error message in app-root', async () => {
+      const appRoot = { style: { display: 'none' }, innerHTML: '' };
+      mockDocument.getElementById = vi.fn((id) => {
+        if (id === 'app-root') return appRoot;
+        return null;
+      });
+
+      mockVfs.read = vi.fn().mockRejectedValue(new Error('Critical failure'));
+
+      await expect(CoreLogicModule(mockInitialConfig, mockVfs)).rejects.toThrow();
+
+      expect(appRoot.innerHTML).toContain('FATAL ERROR');
+      expect(appRoot.innerHTML).toContain('Critical failure');
+    });
+
+    it('should set app-root visible on error', async () => {
+      const appRoot = { style: { display: 'none' }, innerHTML: '' };
+      mockDocument.getElementById = vi.fn((id) => {
+        if (id === 'app-root') return appRoot;
+        return null;
+      });
+
+      mockVfs.read = vi.fn().mockRejectedValue(new Error('Test error'));
+
+      await expect(CoreLogicModule(mockInitialConfig, mockVfs)).rejects.toThrow();
+
+      expect(appRoot.style.display).toBe('block');
+    });
+
+    it('should handle error with null app-root', async () => {
+      mockDocument.getElementById = vi.fn(() => null);
+      mockVfs.read = vi.fn().mockRejectedValue(new Error('Test error'));
+
+      await expect(CoreLogicModule(mockInitialConfig, mockVfs)).rejects.toThrow();
+      expect(console.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('Module Loading Order', () => {
+    it('should load utils before other modules', async () => {
+      const callOrder = [];
+      mockVfs.read = vi.fn(async (path) => {
+        callOrder.push(path);
+        if (path === '/config.json') {
+          return JSON.stringify({});
+        }
+        if (path.includes('/personas/')) {
+          return 'const Persona = {};';
+        }
+        return 'const Module = {};';
+      });
+
+      await CoreLogicModule(mockInitialConfig, mockVfs);
+
+      const utilsIndex = callOrder.findIndex(p => p.includes('utils.js'));
+      const stateManagerIndex = callOrder.findIndex(p => p.includes('state-manager'));
+
+      expect(utilsIndex).toBeLessThan(stateManagerIndex);
+    });
+
+    it('should load config early in process', async () => {
+      const callOrder = [];
+      mockVfs.read = vi.fn(async (path) => {
+        callOrder.push(path);
+        if (path === '/config.json') {
+          return JSON.stringify({});
+        }
+        return 'const Module = {};';
+      });
+
+      await CoreLogicModule(mockInitialConfig, mockVfs);
+
+      expect(callOrder[1]).toBe('/config.json');
+    });
+  });
+
+  describe('Optional Dependencies', () => {
+    it('should handle missing DiffViewerUI', async () => {
+      mockDocument.getElementById = vi.fn((id) => {
+        if (id === 'diff-viewer') return null;
+        if (id === 'boot-container') return { style: { display: 'block' } };
+        if (id === 'app-root') return { style: { display: 'none' } };
+        return null;
+      });
+
+      const result = await CoreLogicModule(mockInitialConfig, mockVfs);
+
+      expect(result).toBeDefined();
+    });
+
+    it('should continue without GitVFS on error', async () => {
+      // GitVFS errors should be caught and logged but not stop initialization
+      const result = await CoreLogicModule(mockInitialConfig, mockVfs);
+
+      expect(result).toBeDefined();
+      expect(result.logger).toBeDefined();
+    });
+  });
 });

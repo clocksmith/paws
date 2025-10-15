@@ -385,4 +385,4 @@ const ToolDocGenerator = {
 };
 
 // Export
-ToolDocGenerator;
+export default ToolDocGenerator;

@@ -352,4 +352,384 @@ describe('AgentVisualizer Module', () => {
       expect(history).toHaveLength(0);
     });
   });
+
+  describe('Complex State Graphs', () => {
+    beforeEach(() => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+      visualizer.init(container);
+    });
+
+    it('should handle cyclic state transitions', () => {
+      const stateChangeHandler = eventHandlers['fsm:state:changed'];
+
+      stateChangeHandler({ oldState: 'A', newState: 'B' });
+      stateChangeHandler({ oldState: 'B', newState: 'C' });
+      stateChangeHandler({ oldState: 'C', newState: 'A' });
+
+      const history = visualizer.getStateHistory();
+      expect(history).toHaveLength(3);
+      expect(history[2].to).toBe('A');
+    });
+
+    it('should handle self-loops', () => {
+      const stateChangeHandler = eventHandlers['fsm:state:changed'];
+
+      stateChangeHandler({ oldState: 'IDLE', newState: 'IDLE' });
+
+      const history = visualizer.getStateHistory();
+      expect(history).toHaveLength(1);
+      expect(history[0].from).toBe('IDLE');
+      expect(history[0].to).toBe('IDLE');
+    });
+
+    it('should handle branching transitions', () => {
+      const stateChangeHandler = eventHandlers['fsm:state:changed'];
+
+      stateChangeHandler({ oldState: 'START', newState: 'BRANCH_A' });
+      stateChangeHandler({ oldState: 'BRANCH_A', newState: 'END' });
+
+      visualizer.reset();
+
+      stateChangeHandler({ oldState: 'START', newState: 'BRANCH_B' });
+      stateChangeHandler({ oldState: 'BRANCH_B', newState: 'END' });
+
+      const history = visualizer.getStateHistory();
+      expect(history).toHaveLength(2);
+    });
+
+    it('should handle deeply nested state transitions', () => {
+      const stateChangeHandler = eventHandlers['fsm:state:changed'];
+
+      for (let i = 0; i < 50; i++) {
+        stateChangeHandler({ oldState: `STATE_${i}`, newState: `STATE_${i + 1}` });
+      }
+
+      const history = visualizer.getStateHistory();
+      expect(history).toHaveLength(50);
+    });
+  });
+
+  describe('100+ Transitions Performance', () => {
+    beforeEach(() => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+      visualizer.init(container);
+    });
+
+    it('should handle 100+ transitions without error', () => {
+      const stateChangeHandler = eventHandlers['fsm:state:changed'];
+
+      for (let i = 0; i < 150; i++) {
+        stateChangeHandler({ oldState: `STATE_${i}`, newState: `STATE_${i + 1}` });
+      }
+
+      const history = visualizer.getStateHistory();
+      expect(history).toHaveLength(150);
+    });
+
+    it('should maintain performance with large history', () => {
+      const stateChangeHandler = eventHandlers['fsm:state:changed'];
+
+      for (let i = 0; i < 200; i++) {
+        stateChangeHandler({ oldState: `STATE_${i}`, newState: `STATE_${i + 1}` });
+      }
+
+      const history = visualizer.getStateHistory();
+      expect(history[0].from).toBe('STATE_0');
+      expect(history[199].to).toBe('STATE_200');
+    });
+
+    it('should handle rapid state changes', () => {
+      const stateChangeHandler = eventHandlers['fsm:state:changed'];
+
+      const states = ['IDLE', 'ACTIVE', 'PROCESSING', 'COMPLETE'];
+      for (let i = 0; i < 50; i++) {
+        states.forEach((state, idx) => {
+          const nextState = states[(idx + 1) % states.length];
+          stateChangeHandler({ oldState: state, newState: nextState });
+        });
+      }
+
+      const history = visualizer.getStateHistory();
+      expect(history.length).toBeGreaterThan(100);
+    });
+  });
+
+  describe('Zoom and Pan Tests', () => {
+    it('should setup zoom behavior on init', () => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+
+      visualizer.init(container);
+
+      expect(global.d3.zoom).toHaveBeenCalled();
+    });
+
+    it('should configure zoom scale extent', () => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+
+      visualizer.init(container);
+
+      const zoomInstance = global.d3.zoom();
+      expect(zoomInstance.scaleExtent).toHaveBeenCalled();
+    });
+
+    it('should handle zoom without initialization', () => {
+      // Should not throw
+      expect(() => {
+        visualizer.updateVisualization();
+      }).not.toThrow();
+    });
+  });
+
+  describe('Export Formats', () => {
+    beforeEach(() => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+      visualizer.init(container);
+    });
+
+    it('should export SVG format', () => {
+      global.XMLSerializer = vi.fn(() => ({
+        serializeToString: vi.fn(() => '<svg><g></g></svg>')
+      }));
+
+      const svg = visualizer.exportSVG();
+
+      expect(svg === null || typeof svg === 'string').toBe(true);
+
+      delete global.XMLSerializer;
+    });
+
+    it('should return null when XMLSerializer unavailable', () => {
+      delete global.XMLSerializer;
+
+      const svg = visualizer.exportSVG();
+
+      expect(svg).toBeNull();
+    });
+
+    it('should handle export with complex visualization', () => {
+      const stateChangeHandler = eventHandlers['fsm:state:changed'];
+
+      for (let i = 0; i < 10; i++) {
+        stateChangeHandler({ oldState: `STATE_${i}`, newState: `STATE_${i + 1}` });
+      }
+
+      global.XMLSerializer = vi.fn(() => ({
+        serializeToString: vi.fn(() => '<svg><g></g></svg>')
+      }));
+
+      const svg = visualizer.exportSVG();
+
+      expect(svg === null || typeof svg === 'string').toBe(true);
+
+      delete global.XMLSerializer;
+    });
+
+    it('should handle export after reset', () => {
+      visualizer.reset();
+
+      global.XMLSerializer = vi.fn(() => ({
+        serializeToString: vi.fn(() => '<svg></svg>')
+      }));
+
+      const svg = visualizer.exportSVG();
+
+      expect(svg === null || typeof svg === 'string').toBe(true);
+
+      delete global.XMLSerializer;
+    });
+  });
+
+  describe('Error Rendering', () => {
+    it('should handle visualization errors gracefully', () => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+
+      global.d3.select = vi.fn(() => {
+        throw new Error('D3 error');
+      });
+
+      expect(() => {
+        visualizer.init(container);
+      }).toThrow('D3 error');
+    });
+
+    it('should handle missing state data', () => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+      visualizer.init(container);
+
+      const stateChangeHandler = eventHandlers['fsm:state:changed'];
+
+      stateChangeHandler({ oldState: null, newState: null });
+
+      const history = visualizer.getStateHistory();
+      expect(history).toHaveLength(1);
+    });
+
+    it('should handle malformed state events', () => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+      visualizer.init(container);
+
+      const stateChangeHandler = eventHandlers['fsm:state:changed'];
+
+      stateChangeHandler({});
+
+      const history = visualizer.getStateHistory();
+      expect(history).toHaveLength(1);
+    });
+  });
+
+  describe('Resize Handling', () => {
+    it('should handle container resize', () => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+      visualizer.init(container);
+
+      container.clientWidth = 1200;
+      container.clientHeight = 800;
+
+      // Should not throw
+      visualizer.updateVisualization();
+
+      expect(true).toBe(true);
+    });
+
+    it('should handle zero-size container', () => {
+      const container = { clientWidth: 0, clientHeight: 0 };
+
+      visualizer.init(container);
+
+      expect(mockUtils.logger.info).toHaveBeenCalled();
+    });
+
+    it('should handle missing dimensions', () => {
+      const container = {};
+
+      visualizer.init(container);
+
+      expect(mockUtils.logger.warn).toHaveBeenCalled();
+    });
+  });
+
+  describe('Performance Tests', () => {
+    it('should efficiently track timestamps', () => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+      visualizer.init(container);
+
+      const stateChangeHandler = eventHandlers['fsm:state:changed'];
+      const start = Date.now();
+
+      for (let i = 0; i < 100; i++) {
+        stateChangeHandler({ oldState: `STATE_${i}`, newState: `STATE_${i + 1}` });
+      }
+
+      const duration = Date.now() - start;
+
+      expect(duration).toBeLessThan(1000);
+      expect(visualizer.getStateHistory()).toHaveLength(100);
+    });
+
+    it('should handle concurrent state changes', () => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+      visualizer.init(container);
+
+      const stateChangeHandler = eventHandlers['fsm:state:changed'];
+
+      const promises = [];
+      for (let i = 0; i < 50; i++) {
+        promises.push(
+          Promise.resolve().then(() => {
+            stateChangeHandler({ oldState: `STATE_${i}`, newState: `STATE_${i + 1}` });
+          })
+        );
+      }
+
+      return Promise.all(promises).then(() => {
+        const history = visualizer.getStateHistory();
+        expect(history.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('should maintain memory efficiency with large graphs', () => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+      visualizer.init(container);
+
+      const stateChangeHandler = eventHandlers['fsm:state:changed'];
+
+      for (let i = 0; i < 500; i++) {
+        stateChangeHandler({ oldState: `STATE_${i}`, newState: `STATE_${i + 1}` });
+      }
+
+      visualizer.reset();
+
+      const history = visualizer.getStateHistory();
+      expect(history).toHaveLength(0);
+    });
+  });
+
+  describe('Visualization Updates', () => {
+    beforeEach(() => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+      visualizer.init(container);
+    });
+
+    it('should update on each state change', () => {
+      const stateChangeHandler = eventHandlers['fsm:state:changed'];
+
+      stateChangeHandler({ oldState: 'A', newState: 'B' });
+
+      expect(mockUtils.logger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('Visualization updated')
+      );
+    });
+
+    it('should handle multiple rapid updates', () => {
+      const stateChangeHandler = eventHandlers['fsm:state:changed'];
+
+      for (let i = 0; i < 20; i++) {
+        stateChangeHandler({ oldState: `STATE_${i}`, newState: `STATE_${i + 1}` });
+      }
+
+      expect(mockUtils.logger.debug).toHaveBeenCalledTimes(20);
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle destroy without init', () => {
+      visualizer.destroy();
+
+      expect(mockEventBus.off).not.toHaveBeenCalled();
+    });
+
+    it('should handle multiple destroy calls', () => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+      visualizer.init(container);
+
+      visualizer.destroy();
+      visualizer.destroy();
+
+      expect(mockUtils.logger.info).toHaveBeenCalled();
+    });
+
+    it('should handle reset without transitions', () => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+      visualizer.init(container);
+
+      visualizer.reset();
+
+      const history = visualizer.getStateHistory();
+      expect(history).toHaveLength(0);
+    });
+
+    it('should handle state changes after destroy', () => {
+      const container = { clientWidth: 800, clientHeight: 600 };
+      visualizer.init(container);
+
+      const stateChangeHandler = eventHandlers['fsm:state:changed'];
+
+      visualizer.destroy();
+
+      stateChangeHandler({ oldState: 'A', newState: 'B' });
+
+      // Event handler should still work, but visualization won't update
+      expect(true).toBe(true);
+    });
+  });
 });

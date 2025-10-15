@@ -253,4 +253,4 @@ const ToolAnalytics = {
 };
 
 // Export
-ToolAnalytics;
+export default ToolAnalytics;

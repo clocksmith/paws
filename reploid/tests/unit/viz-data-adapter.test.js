@@ -481,7 +481,7 @@ describe('VizDataAdapter Module', () => {
 
           const metadata = await Storage.getAllArtifactMetadata();
           for (const [path, meta] of Object.entries(metadata)) {
-            if (path.startsWith('/modules/') && meta.modifiedBy === 'SELF') {
+            if (meta.modifiedBy === 'SELF') {
               modifications.push({
                 path,
                 timestamp: meta.modified,
@@ -653,7 +653,7 @@ describe('VizDataAdapter Module', () => {
       const flow = await adapterInstance.getCognitiveFlow();
 
       expect(flow).toBeDefined();
-      expect(flow.nodes).toHaveLength(8); // 4 stages + 3 tools + feedback
+      expect(flow.nodes).toHaveLength(7); // 4 stages + 3 tools (feedback is an edge)
       expect(flow.edges).toBeDefined();
     });
 

@@ -67,6 +67,7 @@ describe('MultiProviderAPI', () => {
                 const fallbackProvider = this.providers.get(fallbackName);
                 if (fallbackProvider) {
                   try {
+                    this.logger.logEvent('info', `Trying fallback provider: ${fallbackName}`);
                     return await fallbackProvider.call(messages, options);
                   } catch (fallbackError) {
                     this.logger.logEvent('error', `Fallback ${fallbackName} also failed`);

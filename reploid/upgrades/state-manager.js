@@ -325,4 +325,4 @@ const StateManager = {
 };
 
 // Export standardized module
-StateManager;
+export default StateManager;
