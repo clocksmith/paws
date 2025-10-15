@@ -544,5 +544,133 @@ class TestProjectAnalysisEdgeCases(unittest.TestCase):
             shutil.rmtree(test_dir, ignore_errors=True)
 
 
+class TestAICuratorExceptionHandling(unittest.TestCase):
+    """Test AICurator exception handling"""
+
+    def test_curate_with_gemini_exception(self):
+        """Test _curate_with_gemini exception handling (lines 413-418)"""
+        from cats import AICurator
+        from unittest.mock import patch, Mock
+
+        curator = AICurator(api_key="test_key", provider="gemini")
+
+        # Mock the client to raise an exception
+        mock_client = Mock()
+        mock_client.generate_content.side_effect = Exception("API Error")
+        curator.client = mock_client
+
+        # Should catch exception and return empty list
+        with patch('sys.stdout', new=Mock()):
+            result = curator._curate_with_gemini("test prompt")
+
+        self.assertEqual(result, [])
+
+    def test_curate_with_claude_exception(self):
+        """Test _curate_with_claude exception handling (lines 422-431)"""
+        from cats import AICurator
+        from unittest.mock import Mock
+
+        # Create curator with gemini (which is available in tests)
+        curator = AICurator(api_key="test_key", provider="gemini")
+
+        # Mock the client to raise an exception when calling messages.create
+        mock_client = Mock()
+        mock_client.messages.create.side_effect = Exception("API Error")
+        curator.client = mock_client
+
+        # Should catch exception and return empty list
+        with patch('sys.stdout', new=Mock()):
+            result = curator._curate_with_claude("test prompt")
+
+        self.assertEqual(result, [])
+
+    def test_curate_with_openai_exception(self):
+        """Test _curate_with_openai exception handling (lines 435-444)"""
+        from cats import AICurator
+        from unittest.mock import patch, Mock
+        import sys
+
+        # Create curator with gemini (which is available in tests)
+        curator = AICurator(api_key="test_key", provider="gemini")
+
+        # Mock openai module at the global level
+        mock_openai = Mock()
+        mock_openai.ChatCompletion.create.side_effect = Exception("API Error")
+
+        with patch.dict(sys.modules, {'openai': mock_openai}):
+            with patch('sys.stdout', new=Mock()):
+                result = curator._curate_with_openai("test prompt")
+
+        self.assertEqual(result, [])
+
+
+class TestProjectAnalyzerGit(unittest.TestCase):
+    """Test ProjectAnalyzer with git"""
+
+    def test_build_tree_with_git(self):
+        """Test _build_tree_with_git method (lines 271-281)"""
+        import tempfile
+        import subprocess
+        from cats import ProjectAnalyzer
+
+        test_dir = Path(tempfile.mkdtemp(prefix="git_tree_"))
+
+        try:
+            # Initialize git repo
+            subprocess.run(["git", "init"], cwd=test_dir, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=test_dir, check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Test"], cwd=test_dir, check=True, capture_output=True)
+
+            # Create and track files
+            (test_dir / "tracked.py").write_text("print('tracked')")
+            (test_dir / "untracked.py").write_text("print('untracked')")
+
+            subprocess.run(["git", "add", "tracked.py"], cwd=test_dir, check=True, capture_output=True)
+            subprocess.run(["git", "commit", "-m", "init"], cwd=test_dir, check=True, capture_output=True)
+
+            # Build tree with git
+            analyzer = ProjectAnalyzer(test_dir)
+            tree = analyzer._build_tree_with_git()
+
+            tree_str = tree.to_string()
+            # Should include tracked file
+            self.assertIn("tracked.py", tree_str)
+
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            self.skipTest("Git not available")
+        finally:
+            shutil.rmtree(test_dir, ignore_errors=True)
+
+
+class TestProjectAnalyzerIgnorePatterns(unittest.TestCase):
+    """Test ProjectAnalyzer ignore patterns"""
+
+    def test_build_tree_with_walk_ignores_dirs(self):
+        """Test _build_tree_with_walk ignoring directories (line 296)"""
+        import tempfile
+        from cats import ProjectAnalyzer
+
+        test_dir = Path(tempfile.mkdtemp(prefix="walk_ignore_"))
+
+        try:
+            # Create directory structure
+            (test_dir / "src").mkdir()
+            (test_dir / "src" / "main.py").write_text("code")
+            (test_dir / "node_modules").mkdir()
+            (test_dir / "node_modules" / "lib.js").write_text("lib")
+
+            analyzer = ProjectAnalyzer(test_dir)
+            tree = analyzer._build_tree_with_walk()
+
+            tree_str = tree.to_string()
+            # Should include src but not node_modules (default exclude)
+            self.assertIn("main.py", tree_str)
+            self.assertNotIn("node_modules", tree_str)
+            self.assertNotIn("lib.js", tree_str)
+
+        finally:
+            shutil.rmtree(test_dir, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

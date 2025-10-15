@@ -502,5 +502,242 @@ modified
             os.chmod(test_file, 0o644)
 
 
+class TestGitHandlerErrors(unittest.TestCase):
+    """Test GitVerificationHandler error paths"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="git_handler_errors_"))
+        self.original_cwd = Path.cwd()
+        os.chdir(self.test_dir)
+
+        # Initialize git repo
+        try:
+            subprocess.run(["git", "init"], check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.email", "test@test.com"], check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Test"], check=True, capture_output=True)
+
+            # Create initial commit
+            test_file = self.test_dir / "initial.txt"
+            test_file.write_text("initial")
+            subprocess.run(["git", "add", "initial.txt"], check=True, capture_output=True)
+            subprocess.run(["git", "commit", "-m", "initial"], check=True, capture_output=True)
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            self.skipTest("Git not available")
+
+    def tearDown(self):
+        os.chdir(self.original_cwd)
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_rollback_exception(self):
+        """Test rollback() exception handling (lines 326-328)"""
+        from dogs import GitVerificationHandler
+        from unittest.mock import patch, Mock
+
+        handler = GitVerificationHandler()
+        handler.create_checkpoint()
+
+        # Mock the repo to raise an exception on stash apply
+        mock_repo = Mock()
+        mock_repo.git.stash.side_effect = Exception("Stash error")
+        handler.repo = mock_repo
+
+        # rollback should catch the exception and return False
+        with patch('sys.stdout', new=Mock()):
+            result = handler.rollback()
+
+        self.assertFalse(result)
+
+    def test_finalize_exception(self):
+        """Test finalize() exception handling (lines 339-341)"""
+        from dogs import GitVerificationHandler
+        from unittest.mock import patch, Mock
+
+        handler = GitVerificationHandler()
+        handler.create_checkpoint()
+
+        # Mock the repo to raise an exception on stash drop
+        mock_repo = Mock()
+        mock_repo.git.stash.side_effect = Exception("Drop error")
+        handler.repo = mock_repo
+        handler.stash_entry = "stash@{0}"
+
+        # finalize should catch the exception and return False
+        with patch('sys.stdout', new=Mock()):
+            result = handler.finalize()
+
+        self.assertFalse(result)
+
+    def test_finalize_without_repo(self):
+        """Test finalize() with no repo (lines 332-333)"""
+        from dogs import GitVerificationHandler
+
+        handler = GitVerificationHandler()
+        handler.repo = None
+        handler.stash_entry = None
+
+        # Should return True early
+        result = handler.finalize()
+        self.assertTrue(result)
+
+
+class TestGitVerificationTimeout(unittest.TestCase):
+    """Test GitVerificationHandler timeout"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="git_timeout_"))
+        self.original_cwd = Path.cwd()
+        os.chdir(self.test_dir)
+
+        # Initialize git repo
+        try:
+            subprocess.run(["git", "init"], check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.email", "test@test.com"], check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Test"], check=True, capture_output=True)
+
+            # Create initial commit
+            test_file = self.test_dir / "initial.txt"
+            test_file.write_text("initial")
+            subprocess.run(["git", "add", "initial.txt"], check=True, capture_output=True)
+            subprocess.run(["git", "commit", "-m", "initial"], check=True, capture_output=True)
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            self.skipTest("Git not available")
+
+    def tearDown(self):
+        os.chdir(self.original_cwd)
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_run_verification_timeout(self):
+        """Test run_verification with timeout (line 356)"""
+        from dogs import GitVerificationHandler
+        from unittest.mock import patch, Mock
+
+        handler = GitVerificationHandler()
+
+        # Mock subprocess.run to raise TimeoutExpired
+        with patch('subprocess.run') as mock_run:
+            mock_run.side_effect = subprocess.TimeoutExpired('sleep 999', 300)
+
+            success, output = handler.run_verification("sleep 999")
+
+        self.assertFalse(success)
+        self.assertIn("timed out", output.lower())
+
+
+class TestBundleProcessorDeltaErrors(unittest.TestCase):
+    """Test BundleProcessor delta loading errors"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="delta_errors_"))
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_load_original_bundle_no_delta(self):
+        """Test _load_original_bundle with no delta path (line 377)"""
+        from dogs import BundleProcessor
+
+        config = {
+            "apply_delta_from": None
+        }
+
+        processor = BundleProcessor(config)
+
+        # Should return empty dict
+        result = processor._load_original_bundle()
+        self.assertEqual(result, {})
+
+    def test_load_original_bundle_file_not_found(self):
+        """Test _load_original_bundle with missing file (lines 394-395)"""
+        from dogs import BundleProcessor
+
+        config = {
+            "apply_delta_from": str(self.test_dir / "nonexistent.md")
+        }
+
+        # Should raise IOError
+        with self.assertRaises(IOError) as cm:
+            processor = BundleProcessor(config)
+
+        self.assertIn("Could not load delta reference bundle", str(cm.exception))
+
+
+class TestBundleProcessorVerifyAndApply(unittest.TestCase):
+    """Test BundleProcessor verify_and_apply error paths"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="verify_apply_"))
+        self.original_cwd = Path.cwd()
+        os.chdir(self.test_dir)
+
+        # Initialize git repo
+        try:
+            subprocess.run(["git", "init"], check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.email", "test@test.com"], check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.name", "Test"], check=True, capture_output=True)
+
+            # Create initial commit
+            test_file = self.test_dir / "initial.txt"
+            test_file.write_text("initial")
+            subprocess.run(["git", "add", "initial.txt"], check=True, capture_output=True)
+            subprocess.run(["git", "commit", "-m", "initial"], check=True, capture_output=True)
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            self.skipTest("Git not available")
+
+    def tearDown(self):
+        os.chdir(self.original_cwd)
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_run_with_verification_checkpoint_failure(self):
+        """Test run_with_verification with checkpoint failure (lines 704-705)"""
+        from dogs import BundleProcessor, ChangeSet, FileChange
+        from unittest.mock import patch, Mock
+
+        config = {
+            "output_dir": str(self.test_dir),
+            "apply_delta_from": None,
+            "interactive": False,
+            "auto_accept": True
+        }
+
+        processor = BundleProcessor(config)
+        changeset = ChangeSet()
+        change = FileChange("test.py", "created", "print('test')")
+        change.status = "accepted"
+        changeset.add_change(change)
+
+        # Mock create_checkpoint to return False
+        if processor.git_handler:
+            with patch.object(processor.git_handler, 'create_checkpoint', return_value=False):
+                with patch('sys.stdout', new=Mock()):
+                    result = processor.run_with_verification(changeset, "echo test")
+
+            self.assertFalse(result)
+
+    def test_run_with_verification_apply_changes_failure(self):
+        """Test run_with_verification with apply_changes failure (lines 710-712)"""
+        from dogs import BundleProcessor, ChangeSet, FileChange
+        from unittest.mock import patch, Mock
+
+        config = {
+            "output_dir": str(self.test_dir),
+            "apply_delta_from": None,
+            "interactive": False,
+            "auto_accept": True
+        }
+
+        processor = BundleProcessor(config)
+        changeset = ChangeSet()
+        change = FileChange("test.py", "created", "print('test')")
+        change.status = "accepted"
+        changeset.add_change(change)
+
+        # Mock apply_changes to return False
+        with patch.object(processor, 'apply_changes', return_value=False):
+            with patch('sys.stdout', new=Mock()):
+                result = processor.run_with_verification(changeset, "echo test")
+
+        self.assertFalse(result)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

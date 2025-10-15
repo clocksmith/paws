@@ -909,6 +909,251 @@ class TestSessionCLIDisplay(unittest.TestCase):
                 cli.show_session(session.session_id)
 
 
+class TestSessionCLICommands(unittest.TestCase):
+    """Test CLI command handlers"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="session_cli_"))
+        self.original_cwd = Path.cwd()
+        os.chdir(self.test_dir)
+
+        # Initialize git
+        subprocess.run(["git", "init"], check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "Test"], check=True, capture_output=True)
+
+        # Create initial commit
+        (self.test_dir / "README.md").write_text("# Test")
+        subprocess.run(["git", "add", "README.md"], check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "init"], check=True, capture_output=True)
+
+        self.manager = SessionManager(self.test_dir)
+
+    def tearDown(self):
+        os.chdir(self.original_cwd)
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_main_rewind_command(self):
+        """Test main() with rewind command (lines 565-566)"""
+        # Create a session and add turns
+        session = self.manager.create_session("Test Session")
+        self.manager.add_turn(session.session_id, "turn 1")
+        self.manager.add_turn(session.session_id, "turn 2")
+
+        test_args = [
+            'paws_session.py',
+            'rewind',
+            session.session_id,
+            '--to-turn', '1'
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('sys.stdout', new=MagicMock()):
+                result = paws_session.main()
+
+        self.assertEqual(result, 0)
+
+    def test_main_merge_command(self):
+        """Test main() with merge command (lines 567-568)"""
+        # Create a session
+        session = self.manager.create_session("Test Session")
+
+        test_args = [
+            'paws_session.py',
+            'merge',
+            session.session_id,
+            '--into', 'main'
+        ]
+
+        # Mock the confirmation to proceed
+        with patch('sys.argv', test_args):
+            with patch('paws_session.RICH_AVAILABLE', False):
+                with patch('builtins.input', return_value='y'):
+                    with patch('sys.stdout', new=MagicMock()):
+                        result = paws_session.main()
+
+        self.assertEqual(result, 0)
+
+    def test_main_archive_command(self):
+        """Test main() with archive command (lines 569-570)"""
+        # Create a session
+        session = self.manager.create_session("Test Session")
+
+        test_args = [
+            'paws_session.py',
+            'archive',
+            session.session_id
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('sys.stdout', new=MagicMock()):
+                result = paws_session.main()
+
+        self.assertEqual(result, 0)
+
+    def test_main_delete_command(self):
+        """Test main() with delete command (lines 571-572)"""
+        # Create a session
+        session = self.manager.create_session("Test Session")
+
+        test_args = [
+            'paws_session.py',
+            'delete',
+            session.session_id
+        ]
+
+        # Mock the confirmation to proceed
+        with patch('sys.argv', test_args):
+            with patch('paws_session.RICH_AVAILABLE', False):
+                with patch('builtins.input', return_value='y'):
+                    with patch('sys.stdout', new=MagicMock()):
+                        result = paws_session.main()
+
+        self.assertEqual(result, 0)
+
+    def test_merge_session_no_rich_declined(self):
+        """Test merge_session without Rich when declined (lines 482-488)"""
+        cli = paws_session.SessionCLI()
+        session = self.manager.create_session("Test Session")
+
+        with patch('paws_session.RICH_AVAILABLE', False):
+            with patch('builtins.input', return_value='n'):
+                with patch('sys.stdout', new=MagicMock()):
+                    cli.merge_session(session.session_id, 'main')
+
+        # Session should still exist (not merged)
+        retrieved = self.manager.get_session(session.session_id)
+        self.assertIsNotNone(retrieved)
+
+    def test_merge_session_no_rich_accepted(self):
+        """Test merge_session without Rich when accepted (lines 482-491)"""
+        cli = paws_session.SessionCLI()
+        session = self.manager.create_session("Test Session")
+
+        with patch('paws_session.RICH_AVAILABLE', False):
+            with patch('builtins.input', return_value='y'):
+                with patch('sys.stdout', new=MagicMock()):
+                    cli.merge_session(session.session_id, 'main')
+
+        # Session should be merged
+        retrieved = self.manager.get_session(session.session_id)
+        self.assertEqual(retrieved.status.value, "merged")
+
+    def test_archive_session_success(self):
+        """Test archive_session (lines 495-496)"""
+        cli = paws_session.SessionCLI()
+        session = self.manager.create_session("Test Session")
+
+        with patch('sys.stdout', new=MagicMock()):
+            cli.archive_session(session.session_id)
+
+        # Session should be archived
+        retrieved = self.manager.get_session(session.session_id)
+        self.assertEqual(retrieved.status.value, "archived")
+
+    def test_delete_session_no_rich_declined(self):
+        """Test delete_session without Rich when declined (lines 500-506)"""
+        cli = paws_session.SessionCLI()
+        session = self.manager.create_session("Test Session")
+
+        with patch('paws_session.RICH_AVAILABLE', False):
+            with patch('builtins.input', return_value='n'):
+                with patch('sys.stdout', new=MagicMock()):
+                    cli.delete_session(session.session_id)
+
+        # Session should still exist
+        retrieved = self.manager.get_session(session.session_id)
+        self.assertIsNotNone(retrieved)
+
+    def test_delete_session_no_rich_accepted(self):
+        """Test delete_session without Rich when accepted (lines 500-509)"""
+        cli = paws_session.SessionCLI()
+        session = self.manager.create_session("Test Session")
+
+        with patch('paws_session.RICH_AVAILABLE', False):
+            with patch('builtins.input', return_value='y'):
+                with patch('sys.stdout', new=MagicMock()):
+                    cli.delete_session(session.session_id)
+
+        # Session should be deleted
+        retrieved = self.manager.get_session(session.session_id)
+        self.assertIsNone(retrieved)
+
+    def test_rewind_session_cli(self):
+        """Test rewind_session CLI method (lines 477-478)"""
+        cli = paws_session.SessionCLI()
+        session = self.manager.create_session("Test Session")
+
+        # Mock the cli's manager's rewind_session to return True
+        with patch.object(cli.manager, 'rewind_session', return_value=True):
+            with patch('sys.stdout', new=MagicMock()):
+                cli.rewind_session(session.session_id, 1)
+
+    def test_merge_session_with_rich_declined(self):
+        """Test merge_session with Rich when declined (lines 483-484)"""
+        cli = paws_session.SessionCLI()
+        session = self.manager.create_session("Test Session")
+
+        # Mock Rich as available and Confirm.ask to return False
+        with patch('paws_session.RICH_AVAILABLE', True):
+            with patch('paws_session.Confirm.ask', return_value=False):
+                with patch('sys.stdout', new=MagicMock()):
+                    cli.merge_session(session.session_id, 'main')
+
+        # Session should still exist (not merged)
+        retrieved = self.manager.get_session(session.session_id)
+        self.assertEqual(retrieved.status.value, "active")
+
+    def test_delete_session_with_rich_declined(self):
+        """Test delete_session with Rich when declined (lines 501-502)"""
+        cli = paws_session.SessionCLI()
+        session = self.manager.create_session("Test Session")
+
+        # Mock Rich as available and Confirm.ask to return False
+        with patch('paws_session.RICH_AVAILABLE', True):
+            with patch('paws_session.Confirm.ask', return_value=False):
+                with patch('sys.stdout', new=MagicMock()):
+                    cli.delete_session(session.session_id)
+
+        # Session should still exist
+        retrieved = self.manager.get_session(session.session_id)
+        self.assertIsNotNone(retrieved)
+
+
+class TestSessionWorktreeErrors(unittest.TestCase):
+    """Test session worktree error handling"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="worktree_errors_"))
+        self.original_cwd = Path.cwd()
+        os.chdir(self.test_dir)
+
+        # Initialize git
+        subprocess.run(["git", "init"], check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "Test"], check=True, capture_output=True)
+
+        # Create initial commit
+        (self.test_dir / "README.md").write_text("# Test")
+        subprocess.run(["git", "add", "README.md"], check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "init"], check=True, capture_output=True)
+
+    def tearDown(self):
+        os.chdir(self.original_cwd)
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_create_session_worktree_failure(self):
+        """Test create_session with worktree failure (lines 180-181)"""
+        manager = SessionManager(self.test_dir)
+
+        # Mock git.worktree to raise an exception
+        with patch.object(manager.repo.git, 'worktree', side_effect=Exception("Worktree error")):
+            with self.assertRaises(RuntimeError) as cm:
+                manager.create_session("Test Session")
+
+            self.assertIn("Failed to create worktree", str(cm.exception))
+
+
 if __name__ == "__main__":
     # Run with verbose output
     unittest.main(verbosity=2)

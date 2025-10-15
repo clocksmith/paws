@@ -312,5 +312,59 @@ class TestGitVerificationHandler(unittest.TestCase):
             self.skipTest("Git not available")
 
 
+class TestMainAutoReject(unittest.TestCase):
+    """Test main() with auto-reject flag"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="auto_reject_"))
+        self.bundle_file = self.test_dir / "bundle.md"
+
+        # Create a test bundle
+        bundle_content = """
+🐕 --- DOGS_START_FILE: test.py ---
+def hello():
+    print("Hello, World!")
+🐕 --- DOGS_END_FILE: test.py ---
+"""
+        self.bundle_file.write_text(bundle_content)
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_main_auto_reject(self):
+        """Test main() with --no flag (lines 813-815)"""
+        test_args = [
+            'dogs.py',
+            str(self.bundle_file),
+            str(self.test_dir),
+            '--no'
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('sys.stdout', new=Mock()):
+                result = dogs.main()
+
+        # Should succeed but not create files (all rejected)
+        self.assertEqual(result, 0)
+        self.assertFalse((self.test_dir / "test.py").exists())
+
+    def test_main_default_accept(self):
+        """Test main() with default accept (lines 818-819)"""
+        test_args = [
+            'dogs.py',
+            str(self.bundle_file),
+            str(self.test_dir),
+            '--yes'
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('sys.stdout', new=Mock()):
+                result = dogs.main()
+
+        # Should succeed and create files (default accept)
+        self.assertEqual(result, 0)
+        self.assertTrue((self.test_dir / "test.py").exists())
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

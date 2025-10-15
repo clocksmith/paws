@@ -741,5 +741,480 @@ class TestPaxosEdgeCases(unittest.TestCase):
         self.assertEqual(result.token_count, 0)
 
 
+class TestPaxosProviderInference(unittest.TestCase):
+    """Test provider inference and prompt building"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="paxos_provider_"))
+
+        # Create test context file
+        self.context_file = self.test_dir / "context.md"
+        self.context_file.write_text("# Test Context")
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_load_competitors_infer_gemini_provider(self):
+        """Test provider inference for gemini models (lines 182-184)"""
+        config_file = self.test_dir / "config.json"
+        config_data = {
+            "competitors": [
+                {
+                    "name": "Gemini Agent",
+                    "model_id": "gemini-pro-1.5"
+                }
+            ]
+        }
+        config_file.write_text(json.dumps(config_data))
+
+        orchestrator = PaxosOrchestrator(
+            task="Test",
+            context_bundle=str(self.context_file),
+            verify_cmd=None,
+            output_dir=str(self.test_dir / "out")
+        )
+
+        competitors = orchestrator.load_competitors(str(config_file))
+        self.assertEqual(len(competitors), 1)
+        self.assertEqual(competitors[0].provider, "gemini")
+
+    def test_load_competitors_infer_claude_provider(self):
+        """Test provider inference for claude models (lines 185-186)"""
+        config_file = self.test_dir / "config.json"
+        config_data = {
+            "competitors": [
+                {
+                    "name": "Claude Agent",
+                    "model_id": "claude-3-opus"
+                }
+            ]
+        }
+        config_file.write_text(json.dumps(config_data))
+
+        orchestrator = PaxosOrchestrator(
+            task="Test",
+            context_bundle=str(self.context_file),
+            verify_cmd=None,
+            output_dir=str(self.test_dir / "out")
+        )
+
+        competitors = orchestrator.load_competitors(str(config_file))
+        self.assertEqual(len(competitors), 1)
+        self.assertEqual(competitors[0].provider, "claude")
+
+    def test_load_competitors_infer_openai_gpt_provider(self):
+        """Test provider inference for gpt models (lines 187-188)"""
+        config_file = self.test_dir / "config.json"
+        config_data = {
+            "competitors": [
+                {
+                    "name": "OpenAI Agent",
+                    "model_id": "gpt-4-turbo"
+                }
+            ]
+        }
+        config_file.write_text(json.dumps(config_data))
+
+        orchestrator = PaxosOrchestrator(
+            task="Test",
+            context_bundle=str(self.context_file),
+            verify_cmd=None,
+            output_dir=str(self.test_dir / "out")
+        )
+
+        competitors = orchestrator.load_competitors(str(config_file))
+        self.assertEqual(len(competitors), 1)
+        self.assertEqual(competitors[0].provider, "openai")
+
+    def test_load_competitors_infer_openai_davinci_provider(self):
+        """Test provider inference for davinci models (lines 187-188)"""
+        config_file = self.test_dir / "config.json"
+        config_data = {
+            "competitors": [
+                {
+                    "name": "Davinci Agent",
+                    "model_id": "text-davinci-003"
+                }
+            ]
+        }
+        config_file.write_text(json.dumps(config_data))
+
+        orchestrator = PaxosOrchestrator(
+            task="Test",
+            context_bundle=str(self.context_file),
+            verify_cmd=None,
+            output_dir=str(self.test_dir / "out")
+        )
+
+        competitors = orchestrator.load_competitors(str(config_file))
+        self.assertEqual(len(competitors), 1)
+        self.assertEqual(competitors[0].provider, "openai")
+
+    def test_load_competitors_default_provider(self):
+        """Test default provider fallback (lines 189-190)"""
+        config_file = self.test_dir / "config.json"
+        config_data = {
+            "competitors": [
+                {
+                    "name": "Unknown Agent",
+                    "model_id": "some-unknown-model"
+                }
+            ]
+        }
+        config_file.write_text(json.dumps(config_data))
+
+        orchestrator = PaxosOrchestrator(
+            task="Test",
+            context_bundle=str(self.context_file),
+            verify_cmd=None,
+            output_dir=str(self.test_dir / "out")
+        )
+
+        competitors = orchestrator.load_competitors(str(config_file))
+        self.assertEqual(len(competitors), 1)
+        self.assertEqual(competitors[0].provider, "gemini")  # default
+
+    def test_build_prompt_with_persona(self):
+        """Test build_prompt with persona file (lines 208-211)"""
+        # Create persona file
+        persona_file = self.test_dir / "persona.md"
+        persona_file.write_text("You are a helpful assistant.")
+
+        orchestrator = PaxosOrchestrator(
+            task="Write a function",
+            context_bundle=str(self.context_file),
+            verify_cmd=None,
+            output_dir=str(self.test_dir / "out")
+        )
+
+        competitor = CompetitorConfig(
+            name="Test",
+            model_id="gemini-pro",
+            persona_file=str(persona_file)
+        )
+
+        prompt = orchestrator.build_prompt(competitor)
+
+        # Should include persona
+        self.assertIn("You are a helpful assistant.", prompt)
+        # Should include task
+        self.assertIn("Write a function", prompt)
+        # Should include context
+        self.assertIn("Test Context", prompt)
+
+
+class TestPaxosLLMProviders(unittest.TestCase):
+    """Test LLM provider-specific generation methods"""
+
+    def test_generate_claude(self):
+        """Test _generate_claude method (lines 132-141)"""
+        from unittest.mock import Mock, patch
+        import paws_paxos
+
+        config = CompetitorConfig(
+            name="Claude",
+            model_id="claude-3-sonnet",
+            provider="claude",
+            api_key="test_key"
+        )
+
+        # Mock CLAUDE_AVAILABLE and anthropic
+        with patch.object(paws_paxos, 'CLAUDE_AVAILABLE', True):
+            with patch('paws_paxos.anthropic') as mock_anthropic:
+                mock_anthropic.Anthropic.return_value = Mock()
+
+                llm = LLMClient(config)
+
+                # Create a mock response
+                mock_response = Mock()
+                mock_response.content = [Mock(text="Claude response")]
+                mock_response.usage = Mock(input_tokens=50, output_tokens=100)
+                llm.client.messages.create.return_value = mock_response
+
+                # Call the generation method
+                text, tokens = llm._generate_claude("test prompt")
+
+                self.assertEqual(text, "Claude response")
+                self.assertEqual(tokens, 150)
+
+    def test_generate_openai(self):
+        """Test _generate_openai method (lines 145-154)"""
+        from unittest.mock import Mock, patch
+        import paws_paxos
+
+        config = CompetitorConfig(
+            name="OpenAI",
+            model_id="gpt-4",
+            provider="openai",
+            api_key="test_key"
+        )
+
+        # Mock OPENAI_AVAILABLE and OpenAI
+        with patch.object(paws_paxos, 'OPENAI_AVAILABLE', True):
+            with patch('paws_paxos.OpenAI') as mock_openai:
+                mock_openai.return_value = Mock()
+
+                llm = LLMClient(config)
+
+                # Create a mock response
+                mock_response = Mock()
+                mock_response.choices = [Mock(message=Mock(content="OpenAI response"))]
+                mock_response.usage = Mock(total_tokens=200)
+                llm.client.chat.completions.create.return_value = mock_response
+
+                # Call the generation method
+                text, tokens = llm._generate_openai("test prompt")
+
+                self.assertEqual(text, "OpenAI response")
+                self.assertEqual(tokens, 200)
+
+    def test_generate_routes_to_claude(self):
+        """Test generate() routes to _generate_claude (lines 111-112)"""
+        from unittest.mock import Mock, patch
+        import paws_paxos
+
+        config = CompetitorConfig(
+            name="Claude",
+            model_id="claude-3-sonnet",
+            provider="claude",
+            api_key="test_key"
+        )
+
+        with patch.object(paws_paxos, 'CLAUDE_AVAILABLE', True):
+            with patch('paws_paxos.anthropic') as mock_anthropic:
+                mock_anthropic.Anthropic.return_value = Mock()
+
+                llm = LLMClient(config)
+
+                with patch.object(llm, '_generate_claude', return_value=("response", 100)) as mock_gen:
+                    text, tokens = llm.generate("test")
+
+                mock_gen.assert_called_once_with("test")
+                self.assertEqual(text, "response")
+
+    def test_generate_routes_to_openai(self):
+        """Test generate() routes to _generate_openai (lines 113-114)"""
+        from unittest.mock import Mock, patch
+        import paws_paxos
+
+        config = CompetitorConfig(
+            name="OpenAI",
+            model_id="gpt-4",
+            provider="openai",
+            api_key="test_key"
+        )
+
+        with patch.object(paws_paxos, 'OPENAI_AVAILABLE', True):
+            with patch('paws_paxos.OpenAI') as mock_openai:
+                mock_openai.return_value = Mock()
+
+                llm = LLMClient(config)
+
+                with patch.object(llm, '_generate_openai', return_value=("response", 100)) as mock_gen:
+                    text, tokens = llm.generate("test")
+
+                mock_gen.assert_called_once_with("test")
+                self.assertEqual(text, "response")
+
+
+class TestPaxosMain(unittest.TestCase):
+    """Test main() CLI function"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="paxos_main_"))
+
+        # Create test context file
+        self.context_file = self.test_dir / "context.md"
+        self.context_file.write_text("# Test Context\nSample context for testing")
+
+        # Create test config file
+        self.config_file = self.test_dir / "test_config.json"
+        config_data = {
+            "competitors": [
+                {
+                    "name": "Agent1",
+                    "model_id": "gemini-pro",
+                    "provider": "gemini",
+                    "persona": None,
+                    "temperature": 0.7,
+                    "max_tokens": 4000
+                },
+                {
+                    "name": "Agent2",
+                    "model_id": "gemini-flash",
+                    "provider": "gemini",
+                    "persona": None
+                }
+            ]
+        }
+        self.config_file.write_text(json.dumps(config_data))
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_main_with_all_arguments(self):
+        """Test main() with all command-line arguments (lines 484-507)"""
+        test_args = [
+            'paws_paxos.py',
+            'Test task description',
+            str(self.context_file),
+            '--verify-cmd', 'pytest',
+            '--config', str(self.config_file),
+            '--output-dir', str(self.test_dir / "output"),
+            '--sequential'
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch.object(PaxosOrchestrator, 'run_competition', return_value=[]):
+                with patch.object(PaxosOrchestrator, 'generate_report', return_value=0):
+                    with patch('sys.stdout', new=MagicMock()):
+                        result = paws_paxos.main()
+
+        self.assertEqual(result, 0)
+
+    def test_main_with_interactive_task_prompt(self):
+        """Test main() with interactive task prompt (lines 487-489)"""
+        test_args = [
+            'paws_paxos.py',
+            '--config', str(self.config_file)
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('builtins.input') as mock_input:
+                mock_input.side_effect = [
+                    "Interactive task description",
+                    str(self.context_file),
+                    "pytest"
+                ]
+                with patch.object(PaxosOrchestrator, 'run_competition', return_value=[]):
+                    with patch.object(PaxosOrchestrator, 'generate_report', return_value=0):
+                        with patch('sys.stdout', new=MagicMock()):
+                            result = paws_paxos.main()
+
+        self.assertEqual(result, 0)
+        # Should have prompted for task, context, and verify command
+        self.assertEqual(mock_input.call_count, 3)
+
+    def test_main_with_interactive_context_prompt(self):
+        """Test main() with interactive context prompt (lines 491-493)"""
+        test_args = [
+            'paws_paxos.py',
+            'Test task',
+            '--config', str(self.config_file)
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('builtins.input') as mock_input:
+                mock_input.side_effect = [
+                    str(self.context_file),
+                    "pytest"
+                ]
+                with patch.object(PaxosOrchestrator, 'run_competition', return_value=[]):
+                    with patch.object(PaxosOrchestrator, 'generate_report', return_value=0):
+                        with patch('sys.stdout', new=MagicMock()):
+                            result = paws_paxos.main()
+
+        self.assertEqual(result, 0)
+        # Should have prompted for context and verify command
+        self.assertEqual(mock_input.call_count, 2)
+
+    def test_main_with_empty_verify_command(self):
+        """Test main() with empty verify command (lines 495-499)"""
+        test_args = [
+            'paws_paxos.py',
+            'Test task',
+            str(self.context_file),
+            '--config', str(self.config_file)
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('builtins.input') as mock_input:
+                # Return empty string for verify command
+                mock_input.return_value = "   "
+                with patch.object(PaxosOrchestrator, 'run_competition', return_value=[]):
+                    with patch.object(PaxosOrchestrator, 'generate_report', return_value=0):
+                        with patch('sys.stdout', new=MagicMock()):
+                            result = paws_paxos.main()
+
+        self.assertEqual(result, 0)
+
+    def test_main_config_file_not_found(self):
+        """Test main() with missing config file (lines 512-531)"""
+        test_args = [
+            'paws_paxos.py',
+            'Test task',
+            str(self.context_file),
+            '--config', str(self.test_dir / "nonexistent.json")
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('builtins.input', return_value=""):
+                with patch('sys.stdout', new=MagicMock()):
+                    result = paws_paxos.main()
+
+        # Should return error code
+        self.assertEqual(result, 1)
+
+    def test_main_runs_competition_parallel(self):
+        """Test main() runs competition in parallel (lines 533-542)"""
+        test_args = [
+            'paws_paxos.py',
+            'Test task',
+            str(self.context_file),
+            '--config', str(self.config_file)
+        ]
+
+        mock_results = [
+            CompetitionResult(
+                name="Agent1",
+                model_id="gemini-pro",
+                solution_path="/path1",
+                status="PASS"
+            ),
+            CompetitionResult(
+                name="Agent2",
+                model_id="gemini-flash",
+                solution_path="/path2",
+                status="PASS"
+            )
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('builtins.input', return_value=""):
+                with patch.object(PaxosOrchestrator, 'run_competition', return_value=mock_results) as mock_run:
+                    with patch.object(PaxosOrchestrator, 'generate_report', return_value=0):
+                        with patch('sys.stdout', new=MagicMock()):
+                            result = paws_paxos.main()
+
+        # Should have called run_competition with parallel=True (default)
+        self.assertTrue(mock_run.called)
+        call_args = mock_run.call_args
+        self.assertTrue(call_args.kwargs.get('parallel', True))
+        self.assertEqual(result, 0)
+
+    def test_main_runs_competition_sequential(self):
+        """Test main() runs competition sequentially (lines 538-542)"""
+        test_args = [
+            'paws_paxos.py',
+            'Test task',
+            str(self.context_file),
+            '--config', str(self.config_file),
+            '--sequential'
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('builtins.input', return_value=""):
+                with patch.object(PaxosOrchestrator, 'run_competition', return_value=[]) as mock_run:
+                    with patch.object(PaxosOrchestrator, 'generate_report', return_value=0):
+                        with patch('sys.stdout', new=MagicMock()):
+                            result = paws_paxos.main()
+
+        # Should have called run_competition with parallel=False
+        self.assertTrue(mock_run.called)
+        call_args = mock_run.call_args
+        self.assertFalse(call_args.kwargs.get('parallel', True))
+        self.assertEqual(result, 0)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

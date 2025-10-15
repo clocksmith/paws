@@ -10,6 +10,7 @@ import os
 import sys
 import tempfile
 import shutil
+import json
 from pathlib import Path
 from unittest.mock import patch, Mock, MagicMock
 
@@ -724,6 +725,273 @@ class TestSwarmEdgeCases(unittest.TestCase):
         # Should have all 3 architects
         architects = orchestrator.get_agents_by_role(AgentRole.ARCHITECT)
         self.assertEqual(len(architects), 3)
+
+
+class TestSwarmRunSwarm(unittest.TestCase):
+    """Test run_swarm orchestration method"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="swarm_run_"))
+
+        # Create test context bundle
+        self.context_file = self.test_dir / "context.md"
+        self.context_file.write_text("# Test Context\nSample context for testing")
+
+        self.config1 = CompetitorConfig(
+            name="Architect",
+            model_id="gemini-pro",
+            provider="gemini",
+            api_key="test_key"
+        )
+
+        self.config2 = CompetitorConfig(
+            name="Implementer",
+            model_id="gemini-pro",
+            provider="gemini",
+            api_key="test_key"
+        )
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_run_swarm_no_subtasks(self):
+        """Test run_swarm with no subtasks (lines 385-392)"""
+        orchestrator = SwarmOrchestrator(
+            task="Simple task",
+            context_bundle=str(self.context_file),
+            output_dir=str(self.test_dir / "output")
+        )
+
+        # Add implementer agent
+        implementer = SwarmAgent(
+            name="implementer1",
+            role=AgentRole.IMPLEMENTER,
+            config=self.config2
+        )
+        orchestrator.add_agent(implementer)
+
+        # Mock decompose_task to return no subtasks
+        mock_task_tree = TaskDecomposition(
+            task_id="root",
+            description="Simple task",
+            subtasks=[]
+        )
+
+        # Mock the methods
+        with patch.object(orchestrator, 'decompose_task', return_value=mock_task_tree):
+            with patch.object(orchestrator, '_generate_initial_solution', return_value="Single solution"):
+                with patch.object(orchestrator, 'merge_solutions', return_value="Final solution"):
+                    with patch('sys.stdout', new=MagicMock()):
+                        output_path = orchestrator.run_swarm()
+
+        # Check output path exists
+        self.assertTrue(Path(output_path).exists())
+
+        # Check solution was saved
+        with open(output_path, 'r') as f:
+            content = f.read()
+        self.assertEqual(content, "Final solution")
+
+    def test_run_swarm_with_subtasks(self):
+        """Test run_swarm with multiple subtasks (lines 393-397)"""
+        orchestrator = SwarmOrchestrator(
+            task="Complex task",
+            context_bundle=str(self.context_file),
+            output_dir=str(self.test_dir / "output")
+        )
+
+        # Add agents
+        implementer = SwarmAgent(
+            name="implementer1",
+            role=AgentRole.IMPLEMENTER,
+            config=self.config2
+        )
+        orchestrator.add_agent(implementer)
+
+        # Mock decompose_task to return multiple subtasks
+        subtask1 = TaskDecomposition(task_id="sub1", description="Subtask 1")
+        subtask2 = TaskDecomposition(task_id="sub2", description="Subtask 2")
+        mock_task_tree = TaskDecomposition(
+            task_id="root",
+            description="Complex task",
+            subtasks=[subtask1, subtask2]
+        )
+
+        # Mock the methods
+        with patch.object(orchestrator, 'decompose_task', return_value=mock_task_tree):
+            with patch.object(orchestrator, 'solve_subtask_collaboratively') as mock_solve:
+                mock_solve.side_effect = ["Solution 1", "Solution 2"]
+                with patch.object(orchestrator, 'merge_solutions', return_value="Merged solution"):
+                    with patch('sys.stdout', new=MagicMock()):
+                        output_path = orchestrator.run_swarm()
+
+        # Check solve_subtask_collaboratively was called for each subtask
+        self.assertEqual(mock_solve.call_count, 2)
+
+        # Check output path exists
+        self.assertTrue(Path(output_path).exists())
+
+        # Check solution was saved
+        with open(output_path, 'r') as f:
+            content = f.read()
+        self.assertEqual(content, "Merged solution")
+
+    def test_run_swarm_output_file_created(self):
+        """Test run_swarm creates output file (lines 402-410)"""
+        orchestrator = SwarmOrchestrator(
+            task="Test task",
+            context_bundle=str(self.context_file),
+            output_dir=str(self.test_dir / "output")
+        )
+
+        # Add implementer
+        implementer = SwarmAgent(
+            name="implementer1",
+            role=AgentRole.IMPLEMENTER,
+            config=self.config2
+        )
+        orchestrator.add_agent(implementer)
+
+        # Mock methods
+        mock_task_tree = TaskDecomposition(task_id="root", description="Test", subtasks=[])
+
+        with patch.object(orchestrator, 'decompose_task', return_value=mock_task_tree):
+            with patch.object(orchestrator, '_generate_initial_solution', return_value="Test solution"):
+                with patch.object(orchestrator, 'merge_solutions', return_value="Final output"):
+                    with patch('sys.stdout', new=MagicMock()):
+                        output_path = orchestrator.run_swarm()
+
+        # Check the file path format
+        self.assertTrue(output_path.endswith("swarm_solution.dogs.md"))
+
+        # Check file exists and contains correct content
+        self.assertTrue(Path(output_path).exists())
+        with open(output_path, 'r') as f:
+            content = f.read()
+        self.assertEqual(content, "Final output")
+
+
+class TestSwarmMain(unittest.TestCase):
+    """Test main() CLI function"""
+
+    def setUp(self):
+        self.test_dir = Path(tempfile.mkdtemp(prefix="swarm_main_"))
+
+        # Create test context file
+        self.context_file = self.test_dir / "context.md"
+        self.context_file.write_text("# Test Context")
+
+        # Create test config file
+        self.config_file = self.test_dir / "test_config.json"
+        config_data = {
+            "competitors": [
+                {
+                    "name": "Agent1",
+                    "model_id": "gemini-pro",
+                    "provider": "gemini",
+                    "persona": None,
+                    "temperature": 0.7,
+                    "max_tokens": 4000
+                },
+                {
+                    "name": "Agent2",
+                    "model_id": "gemini-flash",
+                    "provider": "gemini",
+                    "persona": None
+                },
+                {
+                    "name": "Agent3",
+                    "model_id": "gemini-pro",
+                    "provider": "gemini"
+                }
+            ]
+        }
+        self.config_file.write_text(json.dumps(config_data))
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+
+    def test_main_with_arguments(self):
+        """Test main() with command-line arguments (lines 424-431)"""
+        test_args = [
+            'paws_swarm.py',
+            'Test task description',
+            str(self.context_file),
+            '--config', str(self.config_file),
+            '--output-dir', str(self.test_dir / "output"),
+            '--rounds', '5'
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch.object(SwarmOrchestrator, 'run_swarm', return_value=str(self.test_dir / "output.md")):
+                with patch('sys.stdout', new=MagicMock()):
+                    result = paws_swarm.main()
+
+        self.assertEqual(result, 0)
+
+    def test_main_with_interactive_prompts(self):
+        """Test main() with interactive prompts (lines 427-428)"""
+        test_args = [
+            'paws_swarm.py',
+            '--config', str(self.config_file),
+            '--output-dir', str(self.test_dir / "output")
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('builtins.input') as mock_input:
+                mock_input.side_effect = [
+                    "Interactive task description",
+                    str(self.context_file)
+                ]
+                with patch.object(SwarmOrchestrator, 'run_swarm', return_value=str(self.test_dir / "output.md")):
+                    with patch('sys.stdout', new=MagicMock()):
+                        result = paws_swarm.main()
+
+        self.assertEqual(result, 0)
+        # Check input was called twice
+        self.assertEqual(mock_input.call_count, 2)
+
+    def test_main_loads_config_and_assigns_roles(self):
+        """Test main() loads config and assigns roles (lines 434-467)"""
+        test_args = [
+            'paws_swarm.py',
+            'Test task',
+            str(self.context_file),
+            '--config', str(self.config_file)
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch.object(SwarmOrchestrator, 'run_swarm', return_value=str(self.test_dir / "output.md")):
+                with patch.object(SwarmOrchestrator, 'add_agent') as mock_add_agent:
+                    with patch('sys.stdout', new=MagicMock()):
+                        result = paws_swarm.main()
+
+        # Should have added 3 agents
+        self.assertEqual(mock_add_agent.call_count, 3)
+
+        # Check roles were assigned: first is architect, rest alternate
+        calls = mock_add_agent.call_args_list
+        self.assertEqual(calls[0][0][0].role, AgentRole.ARCHITECT)  # Agent 0
+        self.assertEqual(calls[1][0][0].role, AgentRole.IMPLEMENTER)  # Agent 1 (odd)
+        self.assertEqual(calls[2][0][0].role, AgentRole.REVIEWER)  # Agent 2 (even)
+
+        self.assertEqual(result, 0)
+
+    def test_main_config_file_not_found(self):
+        """Test main() with missing config file (lines 468-470)"""
+        test_args = [
+            'paws_swarm.py',
+            'Test task',
+            str(self.context_file),
+            '--config', str(self.test_dir / "nonexistent.json")
+        ]
+
+        with patch('sys.argv', test_args):
+            with patch('sys.stdout', new=MagicMock()):
+                result = paws_swarm.main()
+
+        # Should return error code
+        self.assertEqual(result, 1)
 
 
 if __name__ == "__main__":
