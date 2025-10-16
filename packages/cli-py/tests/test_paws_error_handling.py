@@ -17,8 +17,8 @@ import io
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import cats
-import dogs
+from paws import cats
+from paws import dogs
 
 
 class TestCatsErrorHandling(unittest.TestCase):

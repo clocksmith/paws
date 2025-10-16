@@ -17,8 +17,8 @@ import subprocess
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import cats
-from cats import CatsBundler, BundleConfig
+from paws import cats
+from paws.cats import CatsBundler, BundleConfig
 
 
 class TestCLIArgumentCombinations(unittest.TestCase):

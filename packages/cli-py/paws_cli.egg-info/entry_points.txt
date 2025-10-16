@@ -1,0 +1,5 @@
+[console_scripts]
+paws-cats = paws.cats:main
+paws-dogs = paws.dogs:main
+paws-paxos = paws.paxos:main
+paws-session = paws.session:main

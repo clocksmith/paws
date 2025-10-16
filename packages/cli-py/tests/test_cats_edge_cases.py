@@ -15,8 +15,8 @@ from unittest.mock import patch, Mock
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import cats
-from cats import ProjectAnalyzer, FileTreeNode
+from paws import cats
+from paws.cats import ProjectAnalyzer, FileTreeNode
 
 
 class TestGitignoreEdgeCases(unittest.TestCase):

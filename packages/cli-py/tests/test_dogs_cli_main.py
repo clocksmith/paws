@@ -16,7 +16,7 @@ import subprocess
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import dogs
+from paws import dogs
 
 
 class TestDogsMainCLI(unittest.TestCase):

@@ -18,7 +18,7 @@ import sys
 
 # Path setup
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-import cats
+from paws import cats
 
 
 class TestCatsBundler(unittest.TestCase):

@@ -15,7 +15,7 @@ from unittest.mock import patch, Mock
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import dogs
+from paws import dogs
 
 
 class TestAIContextRequests(unittest.TestCase):

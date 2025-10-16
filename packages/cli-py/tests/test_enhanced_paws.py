@@ -16,8 +16,8 @@ import os
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from dogs import FileChange, ChangeSet, FileOperation, BundleProcessor, GIT_AVAILABLE
-from cats import ProjectAnalyzer, FileTreeNode
+from paws.dogs import FileChange, ChangeSet, FileOperation, BundleProcessor, GIT_AVAILABLE
+from paws.cats import ProjectAnalyzer, FileTreeNode
 from paws_session import Session, SessionStatus, SessionManager, SessionTurn
 
 
