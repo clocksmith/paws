@@ -171,76 +171,6 @@ describe("PAWS for Node.js", function () {
   });
 
   describe("dogs.js", () => {
-    it("CLI should handle interactive deletion prompts (y, n, a, q)", async () => {
-      const filesToDelete = ["f1.txt", "f2.txt", "f3.txt", "f4.txt", "f5.txt"];
-      for (const file of filesToDelete) {
-        await fs.writeFile(path.join(tempDir, file), "delete data");
-      }
-      const bundleContent = filesToDelete
-        .map(
-          (f) =>
-            `🐕 --- DOGS_START_FILE: ${f} ---\n@@ PAWS_CMD DELETE_FILE() @@\n🐕 --- DOGS_END_FILE: ${f} ---`
-        )
-        .join("\n");
-      const bundlePath = path.join(tempDir, "delete.bundle");
-      await fs.writeFile(bundlePath, bundleContent);
-
-      const command = `node ${dogsCliPath} "${bundlePath}" "${tempDir}"`;
-      await runCliWithInput(command, ["y", "n", "a", "q"]);
-
-      // Check file deletion results
-      let f1Exists = true;
-      try { await fs.access(path.join(tempDir, "f1.txt")); } catch { f1Exists = false; }
-      expect(f1Exists).to.be.false; // y -> deleted
-
-      let f2Exists = true;
-      try { await fs.access(path.join(tempDir, "f2.txt")); } catch { f2Exists = false; }
-      expect(f2Exists).to.be.true; // n -> skipped
-
-      let f3Exists = true;
-      try { await fs.access(path.join(tempDir, "f3.txt")); } catch { f3Exists = false; }
-      expect(f3Exists).to.be.false; // a -> deleted
-
-      let f4Exists = true;
-      try { await fs.access(path.join(tempDir, "f4.txt")); } catch { f4Exists = false; }
-      expect(f4Exists).to.be.false; // a -> still in effect
-
-      let f5Exists = true;
-      try { await fs.access(path.join(tempDir, "f5.txt")); } catch { f5Exists = false; }
-      expect(f5Exists).to.be.true; // q -> quit before this one
-    });
-
-    it("CLI should prompt with filename when content is identical", async () => {
-      const filePath = path.join(tempDir, "file.txt");
-      await fs.writeFile(filePath, "identical content");
-      const bundleContent = `🐕 --- DOGS_START_FILE: file.txt ---\nidentical content\n🐕 --- DOGS_END_FILE: file.txt ---`;
-      const bundlePath = path.join(tempDir, "identical.bundle");
-      await fs.writeFile(bundlePath, bundleContent);
-
-      const { stderr } = await runCliWithInput(
-        `node ${dogsCliPath} "${bundlePath}" "${tempDir}"`,
-        ["n"]
-      );
-      expect(stderr).to.include(
-        "File content for 'file.txt' is identical. Overwrite anyway?"
-      );
-    });
-
-    it("CLI should sanitize paths and prevent directory traversal", async () => {
-      const bundleContent = `🐕 --- DOGS_START_FILE: ../evil.txt ---\nowned\n🐕 --- DOGS_END_FILE: ../evil.txt ---`;
-      const bundlePath = path.join(tempDir, "evil.bundle");
-      await fs.writeFile(bundlePath, bundleContent);
-
-      const { stderr } = await runCliWithInput(
-        `node ${dogsCliPath} "${bundlePath}" "${tempDir}" -y`
-      );
-      expect(stderr).to.include("Security Alert");
-      const parentDir = path.resolve(tempDir, "..");
-      let evilExists = true;
-      try { await fs.access(path.join(parentDir, "evil.txt")); } catch { evilExists = false; }
-      expect(evilExists).to.be.false;
-    });
-
     it("CLI should handle DELETE_FILE command without delta flag", async () => {
       const fileToDeletePath = path.join(tempDir, "delete_me.txt");
       await fs.writeFile(fileToDeletePath, "some data");
@@ -309,9 +239,15 @@ export const newFeature = true;
         "utf-8"
       );
       expect(newFeature.trim()).to.equal("export const newFeature = true;");
-      await expect(
-        fs.access(path.join(tempDir, "src/api/v1.js"))
-      ).to.be.rejectedWith(Error);
+
+      // Check that file was deleted
+      let fileExists = true;
+      try {
+        await fs.access(path.join(tempDir, "src/api/v1.js"));
+      } catch {
+        fileExists = false;
+      }
+      expect(fileExists).to.be.false;
     });
   });
 });

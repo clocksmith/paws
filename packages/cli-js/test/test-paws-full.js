@@ -16,15 +16,14 @@ const {
   ChangeSet,
   InteractiveReviewer,
   GitVerificationHandler,
-  EnhancedBundleProcessor,
+  BundleProcessor,
   FileOperation
 } = require('../src/dogs');
 
 const {
   FileTreeNode,
   ProjectAnalyzer,
-  AICurator,
-  EnhancedCatsBundler
+  createBundle
 } = require('../src/cats');
 
 const {
@@ -125,15 +124,15 @@ describe('ChangeSet', () => {
 });
 
 /**
- * Test EnhancedBundleProcessor
+ * Test BundleProcessor
  */
-describe('EnhancedBundleProcessor', () => {
+describe('BundleProcessor', () => {
   let tempDir;
   let processor;
 
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'paws-test-'));
-    processor = new EnhancedBundleProcessor({
+    processor = new BundleProcessor({
       outputDir: tempDir,
       interactive: false,
       autoAccept: true
@@ -501,7 +500,7 @@ function helper() {
 `;
 
     // 2. Process the bundle
-    const processor = new EnhancedBundleProcessor({
+    const processor = new BundleProcessor({
       outputDir: tempDir,
       interactive: false,
       autoAccept: true
@@ -525,18 +524,15 @@ function helper() {
   });
 
   it('should handle cats bundling', async () => {
-    // Create test files
-    await fs.writeFile(path.join(tempDir, 'test1.js'), 'console.log("test1");');
-    await fs.writeFile(path.join(tempDir, 'test2.js'), 'console.log("test2");');
-    
-    // Create bundler
-    const bundler = new EnhancedCatsBundler({
-      root: tempDir
-    });
-    
+    // Create virtual files
+    const virtualFS = [
+      { path: 'test1.js', content: 'console.log("test1");' },
+      { path: 'test2.js', content: 'console.log("test2");' }
+    ];
+
     // Create bundle
-    const bundle = await bundler.createBundle(['test1.js', 'test2.js']);
-    
+    const bundle = await createBundle({ virtualFS });
+
     expect(bundle).to.include('CATS_START_FILE: test1.js');
     expect(bundle).to.include('console.log("test1");');
     expect(bundle).to.include('CATS_END_FILE: test1.js');

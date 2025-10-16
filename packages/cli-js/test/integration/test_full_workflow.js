@@ -64,8 +64,13 @@ export const newFeature = true;
     );
     expect(newFeature.trim()).to.equal("export const newFeature = true;");
 
-    await expect(
-      fs.access(path.join(tempDir, "src/api/v1.js"))
-    ).to.be.rejectedWith(Error);
+    // Check that file was deleted
+    let fileExists = true;
+    try {
+      await fs.access(path.join(tempDir, "src/api/v1.js"));
+    } catch {
+      fileExists = false;
+    }
+    expect(fileExists).to.be.false;
   });
 });

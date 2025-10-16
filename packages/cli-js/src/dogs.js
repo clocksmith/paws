@@ -29,6 +29,8 @@ try {
 const DOGS_MARKER_REGEX = /^\s*🐕\s*-{3,}\s*DOGS_(START|END)_FILE\s*:\s*(.+?)(\s*\(Content:Base64\))?\s*-{3,}\s*$/i;
 const CATS_MARKER_REGEX = /^\s*🐈\s*-{3,}\s*CATS_(START|END)_FILE\s*:\s*(.+?)(\s*\(Content:Base64\))?\s*-{3,}\s*$/i;
 const MARKDOWN_FENCE_REGEX = /^\s*```[\w-]*\s*$/;
+const PAWS_CMD_REGEX = /^\s*@@\s*PAWS_CMD\s+(.+?)\s*@@\s*$/;
+const DELETE_FILE_REGEX = /DELETE_FILE\(\s*\)/i;
 
 // File operation types
 const FileOperation = {
@@ -523,7 +525,31 @@ class BundleProcessor {
   async processFile(filePath, contentLines, isBinary) {
     // Clean up content
     contentLines = this.cleanContent(contentLines);
-    
+
+    // Check for DELETE_FILE command
+    const contentStr = contentLines.join('\n');
+    if (PAWS_CMD_REGEX.test(contentStr)) {
+      const match = contentStr.match(PAWS_CMD_REGEX);
+      if (match && DELETE_FILE_REGEX.test(match[1])) {
+        // This is a DELETE_FILE command
+        const change = new FileChange(
+          filePath,
+          FileOperation.DELETE,
+          null,
+          null,
+          isBinary
+        );
+        this.changeSet.addChange(change);
+        this.emitProgress({
+          event: 'parse:file',
+          path: filePath,
+          operation: FileOperation.DELETE,
+          binary: isBinary
+        });
+        return;
+      }
+    }
+
     // Determine operation
     const absPath = path.join(this.config.outputDir || '.', filePath);
     let operation;
@@ -770,6 +796,12 @@ async function main() {
       bundleContent = await fs.readFile(bundleFile, 'utf-8');
     }
 
+    // Read reference bundle for delta application if provided
+    let originalBundleContent = '';
+    if (config.applyDelta) {
+      originalBundleContent = await fs.readFile(config.applyDelta, 'utf-8');
+    }
+
     // Process bundle
     processor = new BundleProcessor(config);
     processor.emitProgress({
@@ -777,7 +809,31 @@ async function main() {
       bundle: bundleFile,
       outputDir
     });
+
+    // Parse original bundle to get baseline if delta mode
+    const originalFiles = {};
+    if (originalBundleContent) {
+      const tempProcessor = new BundleProcessor({
+        outputDir: config.outputDir,
+        quiet: true
+      });
+      const originalChangeSet = await tempProcessor.parseBundle(originalBundleContent);
+      for (const change of originalChangeSet.changes) {
+        originalFiles[change.filePath] = change.newContent || '';
+      }
+    }
+
     const changeSet = await processor.parseBundle(bundleContent);
+
+    // Apply delta commands if present
+    if (originalBundleContent) {
+      for (const change of changeSet.changes) {
+        if (change.newContent && change.newContent.includes('@@ PAWS_CMD')) {
+          const originalContent = originalFiles[change.filePath] || '';
+          change.newContent = applyDeltaCommands(originalContent, change.newContent);
+        }
+      }
+    }
 
     if (!changeSet.changes.length) {
       console.log('No changes found in bundle.');

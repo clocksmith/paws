@@ -254,6 +254,7 @@ const ApiClientMulti = {
     const callApiWithRetry = async (history, apiKey, funcDecls = [], options = {}) => {
       const maxRetries = options.maxRetries || 3;
       const baseDelay = options.baseDelay || 1000; // 1 second
+      let firstMeaningfulError = null;
 
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
@@ -262,8 +263,14 @@ const ApiClientMulti = {
           const isLastAttempt = attempt === maxRetries;
           const isRetriable = isRetriableError(error);
 
+          // Preserve the first error with meaningful status/code for better error reporting
+          if (!firstMeaningfulError && error instanceof ApiError && error.statusCode) {
+            firstMeaningfulError = error;
+          }
+
           if (isLastAttempt || !isRetriable) {
-            throw error;
+            // Throw the first meaningful error if we have one, otherwise throw current error
+            throw firstMeaningfulError || error;
           }
 
           // Exponential backoff: 1s, 2s, 4s

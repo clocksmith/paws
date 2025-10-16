@@ -199,17 +199,20 @@ const ApiClient = {
           throw offlineError;
         }
 
-        if (error.status === 401 || error.status === 403) {
+        // Use statusCode for compatibility with both real and mocked ApiError
+        const status = error.statusCode || error.status;
+
+        if (status === 401 || status === 403) {
           const authError = new ApiError(
             "Authentication failed. Please check your API key in settings or .env file.",
-            error.status,
+            status,
             "AUTH_FAILED"
           );
           logger.error("API Call Failed - Authentication", error);
           throw authError;
         }
 
-        if (error.status === 429) {
+        if (status === 429) {
           const rateLimitError = new ApiError(
             "Rate limit exceeded. Please wait a moment before trying again.",
             429,
@@ -219,10 +222,10 @@ const ApiClient = {
           throw rateLimitError;
         }
 
-        if (error.status >= 500) {
+        if (status >= 500) {
           const serverError = new ApiError(
-            `The AI service is temporarily unavailable (${error.status}). Please try again in a few moments.`,
-            error.status,
+            `The AI service is temporarily unavailable (${status}). Please try again in a few moments.`,
+            status,
             "SERVER_ERROR"
           );
           logger.error("API Call Failed - Server Error", error);
