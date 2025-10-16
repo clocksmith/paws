@@ -466,7 +466,7 @@ exportAsMarkdown('performance.md', report);
 
 ## 📖 Further Reading
 
-- **Architecture Blueprints:** `blueprints/` directory - 26 design specifications
+- **Architecture Blueprints:** `blueprints/` directory - 62 design specifications
 - **Module Source Code:** `upgrades/` directory - Fully documented with JSDoc
 - **Quick Start Guide:** `docs/QUICK-START.md` - Interactive tutorial
 - **Troubleshooting:** `docs/TROUBLESHOOTING.md` - Common issues and solutions

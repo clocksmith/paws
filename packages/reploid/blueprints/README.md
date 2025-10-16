@@ -66,6 +66,77 @@ Every blueprint artifact MUST contain the following sections, in this precise or
 
 ## Catalog of Active Blueprints
 
+### Blueprint-to-Upgrade Map (Current)
+
+The table below provides a machine-auditable cross-reference between blueprint artifacts and the upgrades/modules they govern.
+
+| Blueprint | File | Upgrade | Module Path |
+| --- | --- | --- | --- |
+| `0x000001` | `0x000001-system-prompt-architecture.md` | `PRMT` | `prompt-system.md` |
+| `0x000002` | `0x000002-application-orchestration.md` | `APPL` | `app-logic.js` |
+| `0x000003` | `0x000003-core-utilities-and-error-handling.md` | `UTIL` | `utils.js` |
+| `0x000004` | `0x000004-default-storage-backend-localstorage.md` | `LSTR` | `storage-localstorage.js` |
+| `0x000005` | `0x000005-state-management-architecture.md` | `STMT` | `state-manager.js` |
+| `0x000006` | `0x000006-pure-state-helpers.md` | `STHP` | `state-helpers-pure.js` |
+| `0x000007` | `0x000007-api-client-and-communication.md` | `APIC` | `api-client.js` |
+| `0x000008` | `0x000008-agent-cognitive-cycle.md` | `CYCL` | `agent-cycle.js` |
+| `0x000009` | `0x000009-pure-agent-logic-helpers.md` | `AGLP` | `agent-logic-pure.js` |
+| `0x00000A` | `0x00000A-tool-runner-engine.md` | `TRUN` | `tool-runner.js` |
+| `0x00000B` | `0x00000B-pure-tool-logic-helpers.md` | `TRHP` | `tool-runner-pure-helpers.js` |
+| `0x00000C` | `0x00000C-sandboxed-tool-worker.md` | `WRKR` | `tool-worker.js` |
+| `0x00000D` | `0x00000D-ui-manager.md` | `UIMN` | `ui-manager.js` |
+| `0x00000E` | `0x00000E-ui-styling-css.md` | `STYL` | `ui-style.css` |
+| `0x00000F` | `0x00000F-ui-body-template-html.md` | `BODY` | `ui-body-template.html` |
+| `0x000010` | `0x000010-static-tool-manifest.md` | `TLRD` | `tools-read.json` |
+| `0x000011` | `0x000011-advanced-storage-backend-indexeddb.md` | `IDXB` | `storage-indexeddb.js` |
+| `0x000012` | `0x000012-structured-self-evaluation.md` | `EVAL` | `tool-evaluator.js` |
+| `0x000013` | `0x000013-system-configuration-structure.md` | `SCFG` | `system-config.json` |
+| `0x000014` | `0x000014-working-memory-scratchpad.md` | `SCRT` | `system-scratchpad.md` |
+| `0x000015` | `0x000015-dynamic-tool-creation.md` | `STLD` | `system-tools-dynamic.json` |
+| `0x000016` | `0x000016-meta-tool-creation-patterns.md` | `MTCP` | `meta-tool-creator.js` |
+| `0x000017` | `0x000017-goal-modification-safety.md` | `GMOD` | `goal-modifier.js` |
+| `0x000018` | `0x000018-blueprint-creation-meta.md` | `BLPR` | `blueprint-creator.js` |
+| `0x000019` | `0x000019-visual-self-improvement.md` | `VRSI` | `visual-self-improvement.js` |
+| `0x00001A` | `0x00001A-rfc-authoring.md` | `RFCA` | `rfc-author.js` |
+| `0x00001B` | `0x00001B-code-introspection-self-analysis.md` | `INTR` | `introspector.js` |
+| `0x000022` | `0x000022-write-tools-manifest.md` | `TLWR` | `tools-write.json` |
+| `0x000023` | `0x000023-autonomous-orchestrator-curator-mode.md` | `AUOR` | `autonomous-orchestrator.js` |
+| `0x000024` | `0x000024-penteract-analytics-and-visualization.md` | `PAXA` | `penteract-analytics.js` |
+| `0x000025` | `0x000025-universal-module-loader.md` | `MLDR` | `boot-module-loader.js` |
+| `0x000026` | `0x000026-module-manifest-governance.md` | `MMNF` | `module-manifest.json` |
+| `0x000027` | `0x000027-multi-provider-api-gateway.md` | `APMC` | `api-client-multi.js` |
+| `0x000028` | `0x000028-confirmation-modal-safety.md` | `CFMD` | `confirmation-modal.js` |
+| `0x000029` | `0x000029-vfs-explorer-interaction.md` | `VFSX` | `vfs-explorer.js` |
+| `0x00002A` | `0x00002A-canvas-visualization-engine.md` | `CNVS` | `canvas-visualizer.js` |
+| `0x00002B` | `0x00002B-visualization-data-adapter.md` | `VDAT` | `viz-data-adapter.js` |
+| `0x00002C` | `0x00002C-performance-monitoring-stack.md` | `PMON` | `performance-monitor.js` |
+| `0x00002D` | `0x00002D-metrics-dashboard-visuals.md` | `MDSH` | `metrics-dashboard.js` |
+| `0x00002E` | `0x00002E-agent-fsm-visualizer.md` | `AVIS` | `agent-visualizer.js` |
+| `0x00002F` | `0x00002F-ast-visualization-framework.md` | `ASTV` | `ast-visualizer.js` |
+| `0x000030` | `0x000030-module-graph-visualizer.md` | `MGRV` | `module-graph-visualizer.js` |
+| `0x000031` | `0x000031-toast-notification-system.md` | `TSTN` | `toast-notifications.js` |
+| `0x000032` | `0x000032-rate-limiting-strategies.md` | `RATE` | `rate-limiter.js` |
+| `0x000033` | `0x000033-module-integrity-verification.md` | `MINT` | `module-integrity.js` |
+| `0x000034` | `0x000034-audit-logging-policy.md` | `AUDT` | `audit-logger.js` |
+| `0x000035` | `0x000035-interactive-tutorial-system.md` | `TUTR` | `tutorial-system.js` |
+| `0x000036` | `0x000036-pyodide-runtime-orchestration.md` | `PYOD` | `pyodide-runtime.js` |
+| `0x000037` | `0x000037-python-tool-interface.md` | `PYTH` | `python-tool.js` |
+| `0x000038` | `0x000038-local-llm-runtime.md` | `LLMR` | `local-llm.js` |
+| `0x000039` | `0x000039-hybrid-llm-orchestration.md` | `HYBR` | `hybrid-llm-provider.js` |
+| `0x00003A` | `0x00003A-swarm-orchestration.md` | `SWRM` | `swarm-orchestrator.js` |
+| `0x00003B` | `0x00003B-reflection-store-architecture.md` | `REFL` | `reflection-store.js` |
+| `0x00003C` | `0x00003C-reflection-analysis-engine.md` | `REAN` | `reflection-analyzer.js` |
+| `0x00003D` | `0x00003D-reflection-semantic-search.md` | `RESRCH` | `reflection-search.js` |
+| `0x00003E` | `0x00003E-tool-usage-analytics.md` | `TOAN` | `tool-analytics.js` |
+| `0x00003F` | `0x00003F-api-cost-tracker.md` | `COST` | `cost-tracker.js` |
+| `0x000040` | `0x000040-tab-coordination.md` | `TABC` | `tab-coordinator.js` |
+| `0x000041` | `0x000041-tool-documentation-generator.md` | `TDOC` | `tool-doc-generator.js` |
+| `0x000042` | `0x000042-self-testing-framework.md` | `TEST` | `self-tester.js` |
+| `0x000043` | `0x000043-browser-api-integration.md` | `BAPI` | `browser-apis.js` |
+| `0x000044` | `0x000044-webrtc-swarm-transport.md` | `WRTC` | `webrtc-swarm.js` |
+
+> _Knowledge-only_ entries provide conceptual guidance that personas may study without a direct upgrade binding. They remain part of the knowledge base and are referenced by curricula/personas.
+
 This catalog provides a comprehensive index of the agent's potential evolutionary pathways, mapping directly to its composable `upgrades`.
 
 ### Core Architecture Blueprints

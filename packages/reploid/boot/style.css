@@ -85,10 +85,10 @@ body {
 /* Status Bar */
 .status-bar {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  gap: 30px;
-  padding: 15px;
+  gap: 20px;
+  padding: 15px 20px;
   background: rgba(0, 255, 255, 0.05);
   border: 1px solid var(--color-border);
   border-radius: 4px;
@@ -98,19 +98,26 @@ body {
 
 .status-item {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 4px;
   font-size: 0.9em;
+  flex: 1;
+  min-width: 150px;
 }
 
 .status-label {
   color: var(--color-text-primary);
-  opacity: 0.7;
+  opacity: 0.6;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .status-value {
   color: var(--color-primary);
   font-weight: bold;
+  font-size: 1em;
+  line-height: 1.4;
 }
 
 .status-value.success {
@@ -125,20 +132,31 @@ body {
   color: #fa0;
 }
 
+.status-value-detail {
+  font-size: 0.8em;
+  color: var(--color-text-primary);
+  opacity: 0.7;
+  font-weight: normal;
+  margin-top: 2px;
+}
+
 .btn-config {
   background: rgba(0, 255, 255, 0.1);
-  border: 1px solid var(--color-primary);
+  border: 2px solid var(--color-primary);
   color: var(--color-primary);
-  padding: 6px 10px;
+  padding: 8px 16px;
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: 4px;
   font-size: 0.9em;
+  font-weight: bold;
   transition: all 0.2s;
+  font-family: var(--font-family);
 }
 
 .btn-config:hover {
-  background: rgba(0, 255, 255, 0.2);
-  box-shadow: 0 0 6px rgba(0, 255, 255, 0.4);
+  background: rgba(0, 255, 255, 0.25);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  transform: translateY(-1px);
 }
 
 /* Error Message */
@@ -188,22 +206,45 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .modal-content {
   background: var(--color-bg-primary);
-  border: 1px solid var(--color-primary);
-  border-radius: 4px;
-  max-width: 600px;
-  width: 90%;
-  max-height: 80vh;
+  border: 2px solid var(--color-primary);
+  border-radius: 6px;
+  max-width: 650px;
+  width: 100%;
+  max-height: 85vh;
   overflow-y: auto;
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+  box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+  position: relative;
+  margin: 0 auto;
+}
+
+/* Smooth scrollbar for modal content */
+.modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background: var(--color-primary);
+  border-radius: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-secondary);
 }
 
 .modal-header {
@@ -248,6 +289,66 @@ body {
   margin: 0 0 20px 0;
   font-size: 0.9em;
   opacity: 0.8;
+}
+
+/* Modal Tabs */
+.modal-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--color-border);
+}
+
+.modal-tab {
+  flex: 1;
+  padding: 12px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--color-text-primary);
+  font-family: var(--font-family);
+  font-size: 0.95em;
+  cursor: pointer;
+  transition: all 0.3s;
+  opacity: 0.6;
+  margin-bottom: -2px;
+}
+
+.modal-tab:hover {
+  opacity: 0.9;
+  background: rgba(0, 255, 255, 0.05);
+}
+
+.modal-tab.active {
+  opacity: 1;
+  border-bottom-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: bold;
+}
+
+.modal-tab-content {
+  display: none;
+}
+
+.modal-tab-content.active {
+  display: block;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-tab-description {
+  margin: 0 0 20px 0;
+  font-size: 0.9em;
+  opacity: 0.8;
+  color: var(--color-text-primary);
 }
 
 .api-key-input {
@@ -295,9 +396,167 @@ body {
   text-decoration: underline;
 }
 
+/* Model Selection Styles */
+.model-selection-group {
+  margin-bottom: 20px;
+}
+
+.model-select-label {
+  display: block;
+  color: var(--color-secondary);
+  margin-bottom: 10px;
+  font-weight: bold;
+  font-size: 1em;
+}
+
+.model-select-dropdown {
+  width: 100%;
+  padding: 12px;
+  background: #111;
+  border: 2px solid var(--color-border);
+  color: var(--color-text-primary);
+  font-family: var(--font-family);
+  font-size: 0.95em;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.model-select-dropdown:hover {
+  border-color: var(--color-primary);
+}
+
+.model-select-dropdown:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+}
+
+.model-select-dropdown optgroup {
+  background: #0a0a14;
+  color: var(--color-secondary);
+  font-weight: bold;
+  font-size: 0.9em;
+  padding: 8px 0;
+}
+
+.model-select-dropdown option {
+  background: #111;
+  color: var(--color-text-primary);
+  padding: 8px;
+  font-size: 0.95em;
+}
+
+.model-description {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.85em;
+  color: var(--color-primary);
+  opacity: 0.8;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* Configuration Sections */
+.api-key-section,
+.local-config-section,
+.custom-proxy-section {
+  margin-top: 20px;
+  padding: 15px;
+  background: rgba(0, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  transition: opacity 0.2s ease-out;
+}
+
+.api-key-section:not(.hidden),
+.local-config-section:not(.hidden),
+.custom-proxy-section:not(.hidden) {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.paxos-notice {
+  margin-top: 20px;
+  padding: 12px 15px;
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 4px;
+  color: var(--color-secondary);
+  font-size: 0.9em;
+  line-height: 1.5;
+}
+
+.paxos-notice p {
+  margin: 0;
+}
+
 #save-keys-btn {
   width: 100%;
-  margin-top: 10px;
+  margin-top: 20px;
+}
+
+/* Advanced Settings Styles */
+.settings-section {
+  margin-bottom: 25px;
+  padding: 15px;
+  background: rgba(0, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+.settings-section-title {
+  color: var(--color-secondary);
+  font-size: 1em;
+  font-weight: bold;
+  margin: 0 0 15px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.setting-item {
+  margin-bottom: 15px;
+}
+
+.setting-item:last-child {
+  margin-bottom: 0;
+}
+
+.setting-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  margin-bottom: 8px;
+}
+
+.setting-checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+.setting-checkbox-text {
+  color: var(--color-text-primary);
+  font-size: 0.95em;
+  font-weight: 500;
+}
+
+.setting-description {
+  margin: 0;
+  padding-left: 32px;
+  font-size: 0.85em;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.5;
+  text-align: left;
+}
+
+.setting-placeholder {
+  margin: 0;
+  font-size: 0.9em;
+  color: rgba(255, 255, 255, 0.5);
+  font-style: italic;
 }
 
 /* Goal Input at Top */
@@ -322,17 +581,23 @@ body {
   flex: 1;
   padding: 12px 16px;
   font-family: var(--font-family);
-  background: #111;
-  border: 1px solid var(--color-border);
-  color: var(--color-text-primary);
+  background: #111 !important;
+  border: 2px solid var(--color-border);
+  color: #f0f0f0 !important;
   font-size: 1em;
-  transition: border-color 0.3s;
+  transition: all 0.3s;
 }
 
 .goal-input-group #goal-input:focus {
   outline: none;
+  background: #111 !important;
   border-color: var(--color-primary);
-  box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+  border-width: 2px;
+  box-shadow: 0 0 12px rgba(0, 255, 255, 0.5);
+}
+
+.goal-input-group #goal-input::placeholder {
+  color: rgba(224, 224, 224, 0.5);
 }
 
 .goal-input-group .btn {
@@ -661,10 +926,21 @@ body {
   flex-grow: 1;
   padding: 10px;
   font-family: var(--font-family);
-  background: #111;
-  border: 1px solid var(--color-border);
-  color: var(--color-text-primary);
+  background: #111 !important;
+  border: 2px solid var(--color-border);
+  color: #f0f0f0 !important;
   font-size: 1em;
+}
+
+#goal-input:focus {
+  outline: none;
+  background: #111 !important;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 12px rgba(0, 255, 255, 0.5);
+}
+
+#goal-input::placeholder {
+  color: rgba(224, 224, 224, 0.5);
 }
 
 #goal-input:disabled {
@@ -763,10 +1039,7 @@ body {
 
 .module-item input[type="checkbox"],
 .blueprint-item input[type="checkbox"] {
-  margin-top: 2px;
-  cursor: pointer;
-  width: 16px;
-  height: 16px;
+  display: none;
 }
 
 .module-label,
@@ -810,6 +1083,21 @@ body {
   .boot-header p {
     font-size: 1.1em;
     margin-bottom: 25px;
+  }
+
+  .status-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+    padding: 15px;
+  }
+
+  .status-item {
+    min-width: 100%;
+  }
+
+  .btn-config {
+    width: 100%;
   }
 
   #persona-selection-container {
@@ -1031,7 +1319,7 @@ body {
   background: rgba(0, 255, 255, 0.05);
   border: 2px solid var(--color-border);
   border-radius: 8px;
-  padding: 20px;
+  padding: 20px 50px 20px 20px;
   cursor: pointer;
   transition: all 0.3s ease;
   text-align: left;
@@ -1053,7 +1341,7 @@ body {
   box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
 }
 
-.boot-mode-btn.selected::before {
+.boot-mode-btn.selected::after {
   content: '✓';
   position: absolute;
   top: 15px;
@@ -1063,16 +1351,12 @@ body {
   font-weight: bold;
 }
 
-.boot-mode-icon {
-  font-size: 2em;
-  margin-bottom: 10px;
-}
-
 .boot-mode-label {
   font-size: 1.2em;
   color: var(--color-secondary);
   margin-bottom: 8px;
   font-weight: bold;
+  text-align: left;
 }
 
 .boot-mode-desc {
@@ -1094,99 +1378,107 @@ body {
 /* Responsive adjustments for boot mode buttons */
 @media (max-width: 768px) {
   .boot-mode-btn {
-    padding: 15px;
-  }
-
-  .boot-mode-icon {
-    font-size: 1.5em;
+    padding: 15px 35px 15px 15px;
   }
 
   .boot-mode-label {
-    font-size: 1.1em;
+    font-size: 1.05em;
   }
 
   .boot-mode-desc {
-    font-size: 0.9em;
+    font-size: 0.88em;
+  }
+
+  .boot-mode-btn.selected::after {
+    top: 12px;
+    right: 15px;
+    font-size: 1.3em;
   }
 }
 
-/* Security Settings */
-.security-settings {
-  margin-bottom: 20px;
-}
+/* Old security settings styles removed - now in modal Advanced tab */
 
-.security-section {
-  background: rgba(0, 255, 255, 0.03);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  padding: 15px 20px;
-}
-
-.security-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.security-icon {
-  font-size: 1.2em;
-  color: var(--color-secondary);
-}
-
-.security-title {
-  font-weight: bold;
-  color: var(--color-text-primary);
-  font-size: 1.1em;
-}
-
-.security-option {
-  margin: 10px 0;
-}
-
-.security-warning {
-  width: 100%;
-  margin-bottom: 10px;
-}
-
-.security-warning small {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.85em;
-  line-height: 1.4;
-  display: block;
-}
-
-.security-checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.security-checkbox-label input[type="checkbox"] {
+/* Custom Checkbox Styles */
+.custom-checkbox {
+  position: relative;
+  display: inline-block;
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: var(--color-primary);
-  border: 1px solid var(--color-border);
+  flex-shrink: 0;
 }
 
-.security-checkbox-text {
-  color: var(--color-text-primary);
-  font-size: 0.95em;
+.custom-checkbox input[type="checkbox"] {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
 }
 
-@media (max-width: 768px) {
-  .security-section {
-    padding: 12px 15px;
-  }
+.custom-checkbox-box {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 18px;
+  height: 18px;
+  background: transparent;
+  border: 2px solid var(--color-border);
+  border-radius: 3px;
+  transition: all 0.1s ease;
+}
 
-  .security-warning small {
-    font-size: 0.8em;
-  }
+.custom-checkbox:hover .custom-checkbox-box {
+  border-color: var(--color-primary);
+  background: rgba(0, 255, 255, 0.05);
+}
 
-  .security-checkbox-text {
-    font-size: 0.9em;
+.custom-checkbox input[type="checkbox"]:checked ~ .custom-checkbox-box {
+  background: transparent;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 6px rgba(0, 255, 255, 0.3);
+}
+
+.custom-checkbox input[type="checkbox"]:checked ~ .custom-checkbox-box::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1);
+  color: var(--color-primary);
+  font-size: 16px;
+  font-weight: bold;
+  text-shadow: 0 0 4px var(--color-primary);
+  animation: checkPop 0.1s ease-out;
+}
+
+@keyframes checkPop {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
   }
+  50% {
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.custom-checkbox input[type="checkbox"]:focus ~ .custom-checkbox-box {
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+/* Update existing checkbox styles to use custom checkboxes */
+.setting-checkbox-label input[type="checkbox"] {
+  display: none;
+}
+
+.setting-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+  margin-bottom: 8px;
 }

@@ -7,6 +7,7 @@
         selectedPersonaId: null,
         isAdvancedMode: false,
         bootMode: 'minimal', // New: 'minimal', 'all-blueprints', 'all-upgrades', 'persona'
+        savedApiKeys: {}, // Store API keys for different providers
     };
 
     const elements = {
@@ -15,32 +16,55 @@
         awakenBtn: document.getElementById('awaken-btn'),
         advancedContainer: document.getElementById('advanced-options'),
         apiStatus: document.getElementById('api-status'),
+        apiStatusDetail: document.getElementById('api-status-detail'),
         providerStatus: document.getElementById('provider-status'),
+        providerStatusDetail: document.getElementById('provider-status-detail'),
         configBtn: document.getElementById('config-btn'),
         configModal: document.getElementById('config-modal'),
         closeModal: document.getElementById('close-modal'),
         saveKeysBtn: document.getElementById('save-keys-btn'),
         apiErrorMessage: document.getElementById('api-error-message'),
-        providerSelect: document.getElementById('provider-select'),
-        geminiKeyInput: document.getElementById('gemini-key'),
-        openaiKeyInput: document.getElementById('openai-key'),
-        anthropicKeyInput: document.getElementById('anthropic-key'),
+        modelSelect: document.getElementById('model-select'),
+        modelDescription: document.getElementById('model-description'),
+        apiKeySection: document.getElementById('api-key-section'),
+        apiKeyInput: document.getElementById('api-key-input'),
+        apiKeyLabel: document.getElementById('api-key-label'),
+        apiKeyHelp: document.getElementById('api-key-help'),
+        localConfigSection: document.getElementById('local-config-section'),
         localEndpointInput: document.getElementById('local-endpoint'),
         localModelInput: document.getElementById('local-model'),
+        customModelNameContainer: document.getElementById('custom-model-name-container'),
+        customProxySection: document.getElementById('custom-proxy-section'),
         customProxyUrlInput: document.getElementById('custom-proxy-url'),
         customApiKeyInput: document.getElementById('custom-api-key'),
+        paxosNotice: document.getElementById('paxos-notice'),
         tabDescriptionText: document.getElementById('tab-description-text'),
-        enableWebRTCCheckbox: document.getElementById('enable-webrtc'),
+        enableWebRTCCheckbox: document.getElementById('enable-webrtc-modal'),
     };
 
     async function checkAPIStatus() {
         try {
             // Try to determine the correct API URL based on current origin
             let apiUrl = 'http://localhost:8000/api/health';
+            let serverAddress = 'localhost:8000';
 
-            // If we're on a deployed domain, try the same origin
+            // If we're on a deployed domain, try localhost first, then same origin as fallback
             if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-                apiUrl = `${window.location.origin}/api/health`;
+                // First try localhost (user might have local server running)
+                try {
+                    const localResponse = await fetch('http://localhost:8000/api/health', {
+                        mode: 'cors',
+                        credentials: 'omit'
+                    });
+                    if (localResponse.ok) {
+                        apiUrl = 'http://localhost:8000/api/health';
+                        serverAddress = 'localhost:8000 (local)';
+                    }
+                } catch {
+                    // If localhost fails, try same origin
+                    apiUrl = `${window.location.origin}/api/health`;
+                    serverAddress = window.location.host;
+                }
             }
 
             const response = await fetch(apiUrl, {
@@ -50,18 +74,18 @@
 
             if (response.ok) {
                 const data = await response.json();
-                elements.apiStatus.textContent = '♯ Connected';
-                elements.apiStatus.classList.remove('error');
+                elements.apiStatus.textContent = '✓ Online';
+                elements.apiStatus.classList.remove('error', 'warning');
                 elements.apiStatus.classList.add('success');
 
-                // Display primary provider
-                const providerNames = {
-                    'gemini': 'Google Gemini',
-                    'openai': 'OpenAI',
-                    'anthropic': 'Anthropic',
-                    'local': 'Local (Ollama)'
-                };
-                elements.providerStatus.textContent = providerNames[data.primaryProvider] || data.primaryProvider;
+                // Show server address as detail
+                elements.apiStatusDetail.textContent = serverAddress;
+
+                // Display model information with more detail
+                const modelInfo = getModelDisplayInfo(data);
+                elements.providerStatus.textContent = modelInfo.name;
+                elements.providerStatusDetail.textContent = modelInfo.detail;
+
                 elements.apiErrorMessage.classList.add('hidden');
             } else {
                 throw new Error('API not responding');
@@ -70,10 +94,21 @@
             // Don't show error if we're on a deployed version (server might not be needed)
             const isDeployed = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
 
-            elements.apiStatus.textContent = isDeployed ? '○ Browser Only' : '☡ Offline';
+            elements.apiStatus.textContent = isDeployed ? '○ Browser Only' : '✗ Offline';
             elements.apiStatus.classList.remove('success');
             elements.apiStatus.classList.add(isDeployed ? 'warning' : 'error');
-            elements.providerStatus.textContent = isDeployed ? 'Client-side' : 'None';
+            elements.apiStatusDetail.textContent = '';
+
+            // Show configured model from localStorage
+            const savedModel = localStorage.getItem('SELECTED_MODEL');
+            if (savedModel) {
+                const modelInfo = getModelDisplayInfo({ model: savedModel });
+                elements.providerStatus.textContent = modelInfo.name;
+                elements.providerStatusDetail.textContent = modelInfo.detail || 'Configured locally';
+            } else {
+                elements.providerStatus.textContent = isDeployed ? 'Not Configured' : 'None';
+                elements.providerStatusDetail.textContent = '';
+            }
 
             if (!isDeployed) {
                 elements.apiErrorMessage.classList.remove('hidden');
@@ -83,27 +118,119 @@
         }
     }
 
-    function loadStoredKeys() {
-        const provider = localStorage.getItem('AI_PROVIDER') || 'gemini';
-        const geminiKey = localStorage.getItem('GEMINI_API_KEY');
-        const openaiKey = localStorage.getItem('OPENAI_API_KEY');
-        const anthropicKey = localStorage.getItem('ANTHROPIC_API_KEY');
-        const localEndpoint = localStorage.getItem('LOCAL_ENDPOINT') || 'http://localhost:11434';
-        const localModel = localStorage.getItem('LOCAL_MODEL') || 'llama2';
-        const customProxyUrl = localStorage.getItem('CUSTOM_PROXY_URL');
-        const customApiKey = localStorage.getItem('CUSTOM_API_KEY');
+    function getModelDisplayInfo(data) {
+        // Extract model info from server response or localStorage
+        const model = data.model || data.primaryModel || localStorage.getItem('SELECTED_MODEL');
+        const provider = data.primaryProvider || data.provider;
+        const actualModelName = data.actualModel || data.modelName;
+        const models = data.models; // Array of models for multi-model configs
 
-        // Set provider dropdown
-        elements.providerSelect.value = provider;
+        if (!model && !provider) {
+            return { name: 'Not Configured', detail: '' };
+        }
+
+        // Handle multi-model configurations (Paxos, etc.)
+        if (models && Array.isArray(models) && models.length > 1) {
+            return {
+                name: 'Multi-Model',
+                detail: models.join(', ')
+            };
+        }
+
+        // Map model IDs to display names and providers
+        const modelInfo = {
+            'gemini-2.0-flash': { name: 'Gemini 2.0 Flash', provider: 'Google' },
+            'gemini-1.5-pro': { name: 'Gemini 1.5 Pro', provider: 'Google' },
+            'gpt-4o': { name: 'GPT-4o', provider: 'OpenAI' },
+            'gpt-4-turbo': { name: 'GPT-4 Turbo', provider: 'OpenAI' },
+            'gpt-3.5-turbo': { name: 'GPT-3.5 Turbo', provider: 'OpenAI' },
+            'claude-3-5-sonnet': { name: 'Claude 3.5 Sonnet', provider: 'Anthropic' },
+            'claude-3-opus': { name: 'Claude 3 Opus', provider: 'Anthropic' },
+            'paxos': { name: 'Paxos', provider: 'Distributed' },
+            'web-llm': { name: 'Web LLM', provider: 'Browser-based' },
+        };
+
+        // Check if it's a known model
+        if (modelInfo[model]) {
+            return {
+                name: modelInfo[model].name,
+                detail: modelInfo[model].provider
+            };
+        }
+
+        // Handle Ollama models - show actual model name
+        if (model && model.startsWith('ollama-') || provider === 'local') {
+            const localModelName = actualModelName || localStorage.getItem('LOCAL_MODEL');
+
+            if (model === 'ollama-custom' || !model.startsWith('ollama-')) {
+                // Custom Ollama model
+                return {
+                    name: localModelName || 'Ollama',
+                    detail: 'Local via Ollama'
+                };
+            } else {
+                // Pre-defined Ollama model
+                const modelName = model.replace('ollama-', '');
+                return {
+                    name: modelName.charAt(0).toUpperCase() + modelName.slice(1),
+                    detail: 'Local via Ollama'
+                };
+            }
+        }
+
+        // Fallback to provider name
+        const providerNames = {
+            'gemini': 'Google Gemini',
+            'openai': 'OpenAI',
+            'anthropic': 'Anthropic',
+            'paxos': 'Paxos',
+        };
+
+        const displayName = providerNames[provider] || actualModelName || model || provider || 'Unknown';
+        return {
+            name: displayName,
+            detail: provider ? `via ${provider}` : ''
+        };
+    }
+
+    // Keep old function for backward compatibility where needed
+    function getModelDisplayName(data) {
+        const info = getModelDisplayInfo(data);
+        return info.detail ? `${info.name} (${info.detail})` : info.name;
+    }
+
+    function loadStoredKeys() {
+        // Load selected model
+        const selectedModel = localStorage.getItem('SELECTED_MODEL') || 'gemini-2.0-flash';
 
         // Load all saved values
-        if (geminiKey) elements.geminiKeyInput.value = geminiKey;
-        if (openaiKey) elements.openaiKeyInput.value = openaiKey;
-        if (anthropicKey) elements.anthropicKeyInput.value = anthropicKey;
+        const localEndpoint = localStorage.getItem('LOCAL_ENDPOINT') || 'http://localhost:11434';
+        const localModel = localStorage.getItem('LOCAL_MODEL') || '';
+        const customProxyUrl = localStorage.getItem('CUSTOM_PROXY_URL') || '';
+        const customApiKey = localStorage.getItem('CUSTOM_API_KEY') || '';
+
+        // Set model dropdown
+        if (elements.modelSelect) {
+            elements.modelSelect.value = selectedModel;
+        }
+
+        // Load endpoint/model values
         if (elements.localEndpointInput) elements.localEndpointInput.value = localEndpoint;
         if (elements.localModelInput) elements.localModelInput.value = localModel;
-        if (customProxyUrl && elements.customProxyUrlInput) elements.customProxyUrlInput.value = customProxyUrl;
-        if (customApiKey && elements.customApiKeyInput) elements.customApiKeyInput.value = customApiKey;
+        if (elements.customProxyUrlInput) elements.customProxyUrlInput.value = customProxyUrl;
+        if (elements.customApiKeyInput) elements.customApiKeyInput.value = customApiKey;
+
+        // Load stored API keys (will be shown based on selected model)
+        const geminiKey = localStorage.getItem('GEMINI_API_KEY') || '';
+        const openaiKey = localStorage.getItem('OPENAI_API_KEY') || '';
+        const anthropicKey = localStorage.getItem('ANTHROPIC_API_KEY') || '';
+
+        // Store keys for later use
+        state.savedApiKeys = {
+            gemini: geminiKey,
+            openai: openaiKey,
+            anthropic: anthropicKey,
+        };
 
         // Load WebRTC preference (disabled by default for security)
         const webrtcEnabled = localStorage.getItem('ENABLE_WEBRTC') === 'true';
@@ -111,8 +238,8 @@
             elements.enableWebRTCCheckbox.checked = webrtcEnabled;
         }
 
-        // Show correct provider config
-        updateProviderUI(provider);
+        // Show correct model config UI
+        updateModelUI(selectedModel);
     }
 
     function saveWebRTCPreference() {
@@ -121,63 +248,217 @@
         console.log(`WebRTC Swarm: ${enabled ? 'Enabled' : 'Disabled'}`);
     }
 
-    function updateProviderUI(provider) {
-        // Hide all provider configs
-        document.querySelectorAll('.provider-config').forEach(el => {
-            el.classList.add('hidden');
-        });
+    function updateModelUI(modelValue) {
+        if (!elements.modelSelect) return;
 
-        // Show selected provider config
-        const selectedConfig = document.querySelector(`.provider-config[data-provider="${provider}"]`);
-        if (selectedConfig) {
-            selectedConfig.classList.remove('hidden');
+        // Get the selected option
+        const selectedOption = elements.modelSelect.querySelector(`option[value="${modelValue}"]`);
+        if (!selectedOption) return;
+
+        const provider = selectedOption.getAttribute('data-provider');
+
+        // Hide all sections first
+        elements.apiKeySection.classList.add('hidden');
+        elements.localConfigSection.classList.add('hidden');
+        elements.customProxySection.classList.add('hidden');
+        elements.paxosNotice.classList.add('hidden');
+
+        // Update model description
+        const descriptions = {
+            'gemini-2.0-flash': 'Fast and efficient model from Google, great for quick responses',
+            'gemini-1.5-pro': 'Advanced reasoning capabilities with large context window',
+            'gpt-4o': 'OpenAI\'s multimodal model with vision capabilities',
+            'gpt-4-turbo': 'Advanced GPT-4 model with improved performance',
+            'gpt-3.5-turbo': 'Fast and cost-effective model for general tasks',
+            'claude-3-5-sonnet': 'Anthropic\'s top-performing model with excellent coding ability',
+            'claude-3-opus': 'Most capable Claude model for complex tasks',
+            'ollama-llama3': 'Meta\'s Llama 3 running locally via Ollama',
+            'ollama-mistral': 'Mistral AI\'s model running locally',
+            'ollama-codellama': 'Specialized code generation model running locally',
+            'ollama-custom': 'Use any custom Ollama model installed on your system',
+            'web-llm': 'Run LLM directly in your browser (experimental)',
+            'paxos': 'Distributed consensus-based model (requires PAXS upgrade)',
+            'custom-proxy': 'Connect to your own API endpoint or proxy',
+        };
+
+        elements.modelDescription.textContent = descriptions[modelValue] || 'Select a model to see its description';
+
+        // Show appropriate configuration section
+        if (provider === 'gemini' || provider === 'openai' || provider === 'anthropic') {
+            // Cloud model - show API key section
+            elements.apiKeySection.classList.remove('hidden');
+
+            // Update labels and help text
+            const providerInfo = {
+                'gemini': {
+                    label: 'Google Gemini API Key',
+                    help: 'Get your key from Google AI Studio',
+                    link: 'https://aistudio.google.com/app/apikey',
+                    placeholder: 'AIza...'
+                },
+                'openai': {
+                    label: 'OpenAI API Key',
+                    help: 'Get your key from OpenAI Platform',
+                    link: 'https://platform.openai.com/api-keys',
+                    placeholder: 'sk-...'
+                },
+                'anthropic': {
+                    label: 'Anthropic API Key',
+                    help: 'Get your key from Anthropic Console',
+                    link: 'https://console.anthropic.com/',
+                    placeholder: 'sk-ant-...'
+                }
+            };
+
+            const info = providerInfo[provider];
+            elements.apiKeyLabel.textContent = info.label;
+            elements.apiKeyInput.placeholder = info.placeholder;
+            elements.apiKeyHelp.innerHTML = `${info.help}: <a href="${info.link}" target="_blank">Get API Key</a>`;
+
+            // Load saved key for this provider
+            if (state.savedApiKeys && state.savedApiKeys[provider]) {
+                elements.apiKeyInput.value = state.savedApiKeys[provider];
+            } else {
+                elements.apiKeyInput.value = '';
+            }
+
+        } else if (provider === 'local') {
+            // Ollama - show local config section
+            elements.localConfigSection.classList.remove('hidden');
+
+            // Show/hide custom model name based on model selection
+            if (modelValue === 'ollama-custom') {
+                elements.customModelNameContainer.style.display = 'block';
+            } else {
+                elements.customModelNameContainer.style.display = 'none';
+                // Pre-fill model name for known models
+                const modelNames = {
+                    'ollama-llama3': 'llama3',
+                    'ollama-mistral': 'mistral',
+                    'ollama-codellama': 'codellama',
+                };
+                if (elements.localModelInput && modelNames[modelValue]) {
+                    elements.localModelInput.value = modelNames[modelValue];
+                }
+            }
+
+        } else if (provider === 'paxos') {
+            // Paxos - show notice
+            elements.paxosNotice.classList.remove('hidden');
+
+        } else if (provider === 'custom') {
+            // Custom proxy - show custom section
+            elements.customProxySection.classList.remove('hidden');
+
+        } else if (provider === 'web') {
+            // Web LLM - no configuration needed
+            elements.modelDescription.textContent = 'Web LLM runs entirely in your browser. No setup required!';
         }
     }
 
     function saveAPIKeys() {
-        const provider = elements.providerSelect.value;
+        const selectedModel = elements.modelSelect.value;
+        const selectedOption = elements.modelSelect.querySelector(`option[value="${selectedModel}"]`);
+        const provider = selectedOption ? selectedOption.getAttribute('data-provider') : null;
 
-        // Save provider selection
-        localStorage.setItem('AI_PROVIDER', provider);
+        if (!provider) {
+            showBootMessage('Please select a valid model', 'warning');
+            return;
+        }
 
-        // Save all configs (even if not currently selected - for later use)
-        const geminiKey = elements.geminiKeyInput.value.trim();
-        const openaiKey = elements.openaiKeyInput.value.trim();
-        const anthropicKey = elements.anthropicKeyInput.value.trim();
+        // Save selected model
+        localStorage.setItem('SELECTED_MODEL', selectedModel);
 
-        if (geminiKey) localStorage.setItem('GEMINI_API_KEY', geminiKey);
-        if (openaiKey) localStorage.setItem('OPENAI_API_KEY', openaiKey);
-        if (anthropicKey) localStorage.setItem('ANTHROPIC_API_KEY', anthropicKey);
+        // Save API key if this is a cloud provider
+        if (provider === 'gemini' || provider === 'openai' || provider === 'anthropic') {
+            const apiKey = elements.apiKeyInput.value.trim();
 
-        if (elements.localEndpointInput) {
+            if (!apiKey) {
+                showBootMessage('Please enter an API key for this model', 'warning');
+                return;
+            }
+
+            // Save to the appropriate key
+            const keyMap = {
+                'gemini': 'GEMINI_API_KEY',
+                'openai': 'OPENAI_API_KEY',
+                'anthropic': 'ANTHROPIC_API_KEY',
+            };
+
+            localStorage.setItem(keyMap[provider], apiKey);
+
+            // Also save as primary provider for backward compatibility
+            localStorage.setItem('AI_PROVIDER', provider);
+        }
+
+        // Save local Ollama configuration
+        if (provider === 'local') {
             const localEndpoint = elements.localEndpointInput.value.trim() || 'http://localhost:11434';
-            const localModel = elements.localModelInput.value.trim() || 'llama2';
+            const localModel = elements.localModelInput.value.trim();
+
             localStorage.setItem('LOCAL_ENDPOINT', localEndpoint);
-            localStorage.setItem('LOCAL_MODEL', localModel);
+
+            if (localModel) {
+                localStorage.setItem('LOCAL_MODEL', localModel);
+            } else if (selectedModel !== 'ollama-custom') {
+                // For pre-defined models, extract the model name
+                const modelNames = {
+                    'ollama-llama3': 'llama3',
+                    'ollama-mistral': 'mistral',
+                    'ollama-codellama': 'codellama',
+                };
+                if (modelNames[selectedModel]) {
+                    localStorage.setItem('LOCAL_MODEL', modelNames[selectedModel]);
+                }
+            }
+
+            localStorage.setItem('AI_PROVIDER', 'local');
         }
 
-        if (elements.customProxyUrlInput) {
+        // Save custom proxy configuration
+        if (provider === 'custom') {
             const customProxyUrl = elements.customProxyUrlInput.value.trim();
+
+            if (!customProxyUrl) {
+                showBootMessage('Please enter a proxy URL', 'warning');
+                return;
+            }
+
+            localStorage.setItem('CUSTOM_PROXY_URL', customProxyUrl);
+
             const customApiKey = elements.customApiKeyInput.value.trim();
-            if (customProxyUrl) localStorage.setItem('CUSTOM_PROXY_URL', customProxyUrl);
-            if (customApiKey) localStorage.setItem('CUSTOM_API_KEY', customApiKey);
+            if (customApiKey) {
+                localStorage.setItem('CUSTOM_API_KEY', customApiKey);
+            }
+
+            localStorage.setItem('AI_PROVIDER', 'custom');
         }
+
+        // For paxos and web-llm, just save the selection
+        if (provider === 'paxos') {
+            localStorage.setItem('AI_PROVIDER', 'paxos');
+        } else if (provider === 'web') {
+            localStorage.setItem('AI_PROVIDER', 'web');
+        }
+
+        // Save Advanced settings (from Advanced tab)
+        saveWebRTCPreference();
 
         elements.configModal.classList.add('hidden');
 
-        // Update status message based on provider
-        const providerNames = {
-            'gemini': 'Google Gemini',
-            'openai': 'OpenAI',
-            'anthropic': 'Anthropic',
-            'local': `Local Ollama (${localStorage.getItem('LOCAL_MODEL') || 'llama2'})`,
-            'custom': 'Custom Proxy'
-        };
+        // Update status display
+        const modelInfo = getModelDisplayInfo({ model: selectedModel });
+        showBootMessage(`Configuration saved: ${modelInfo.name}`, 'info');
 
-        showBootMessage(`Configuration saved: ${providerNames[provider]}`, 'info');
+        // Update provider status in the UI
+        elements.providerStatus.textContent = modelInfo.name;
+        elements.providerStatusDetail.textContent = modelInfo.detail || 'Configured locally';
 
-        // Update provider status
-        elements.providerStatus.textContent = providerNames[provider];
+        // Refresh API status
+        checkAPIStatus();
+
+        // Reset modal to first tab for next time
+        switchModalTab('model');
     }
 
     function openConfigModal() {
@@ -187,6 +468,23 @@
 
     function closeConfigModal() {
         elements.configModal.classList.add('hidden');
+    }
+
+    function switchModalTab(tabName) {
+        // Update modal tab buttons
+        document.querySelectorAll('.modal-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.modalTab === tabName);
+        });
+
+        // Update modal tab content
+        document.querySelectorAll('.modal-tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+
+        const targetTab = document.getElementById(`modal-${tabName}-tab`);
+        if (targetTab) {
+            targetTab.classList.add('active');
+        }
     }
 
     async function fetchJSON(url) {
@@ -351,8 +649,8 @@
 
         // Update description and state
         const descriptions = {
-            'simple': 'Start with the minimal RSI core - fastest way to self-evolving agent',
-            'templates': 'Choose from pre-configured module sets optimized for specific tasks',
+            'simple': 'Choose your starting configuration - from minimal core to full power',
+            'templates': 'Pre-configured personas optimized for specific tasks and workflows',
             'hunter': 'Manually select individual modules and blueprints for complete control'
         };
         elements.tabDescriptionText.textContent = descriptions[tabName];
@@ -388,7 +686,10 @@
             mods.forEach(mod => {
                 html += `
                     <label class="module-item">
-                        <input type="checkbox" name="upgrade" value="${mod.id}" />
+                        <span class="custom-checkbox">
+                            <input type="checkbox" name="upgrade" value="${mod.id}" />
+                            <span class="custom-checkbox-box"></span>
+                        </span>
                         <span class="module-label">
                             <strong>${mod.id}</strong>
                             <small>${mod.description}</small>
@@ -406,7 +707,10 @@
         blueprints.forEach(bp => {
             html += `
                 <label class="blueprint-item">
-                    <input type="checkbox" name="blueprint" value="${bp.id}" />
+                    <span class="custom-checkbox">
+                        <input type="checkbox" name="blueprint" value="${bp.id}" />
+                        <span class="custom-checkbox-box"></span>
+                    </span>
                     <span class="blueprint-label">
                         <strong>${bp.id}</strong>
                         <small>${bp.description}</small>
@@ -483,7 +787,11 @@
                 blueprints = state.config.blueprints.map(bp => bp.id) || [];
             } else if (state.bootMode === 'all-upgrades') {
                 console.log('Using all upgrades + all blueprints');
-                upgrades = state.config.upgrades.map(u => u.id) || [];
+                const upgradeSet = new Set((state.config.upgrades || []).map(u => u.id));
+                if (upgradeSet.has('IDXB') && upgradeSet.has('LSTR')) {
+                    upgradeSet.delete('LSTR');
+                }
+                upgrades = Array.from(upgradeSet);
                 blueprints = state.config.blueprints.map(bp => bp.id) || [];
             } else {
                 // Fallback to defaultCore for backwards compatibility
@@ -535,6 +843,11 @@
             renderPersonas();
             checkAPIStatus();
 
+            // Poll server status every 5 seconds when offline
+            setInterval(() => {
+                checkAPIStatus();
+            }, 5000);
+
             // Setup event listeners
             elements.awakenBtn.addEventListener('click', awakenAgent);
             elements.goalInput.addEventListener('keydown', (e) => {
@@ -556,12 +869,17 @@
             elements.closeModal.addEventListener('click', closeConfigModal);
             elements.saveKeysBtn.addEventListener('click', saveAPIKeys);
 
-            // Provider dropdown change
-            if (elements.providerSelect) {
-                elements.providerSelect.addEventListener('change', (e) => {
-                    updateProviderUI(e.target.value);
+            // Model dropdown change
+            if (elements.modelSelect) {
+                elements.modelSelect.addEventListener('change', (e) => {
+                    updateModelUI(e.target.value);
                 });
             }
+
+            // Modal tab switching
+            document.querySelectorAll('.modal-tab').forEach(tab => {
+                tab.addEventListener('click', () => switchModalTab(tab.dataset.modalTab));
+            });
 
             // WebRTC toggle
             if (elements.enableWebRTCCheckbox) {

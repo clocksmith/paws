@@ -53,89 +53,142 @@
         <!-- Status and Config at Top -->
         <div class="status-bar">
             <div class="status-item">
-                <span class="status-label">Server Status:</span>
-                <span id="api-status" class="status-value">⚙ Checking...</span>
+                <span class="status-label">Server</span>
+                <div>
+                    <span id="api-status" class="status-value">⚙ Checking...</span>
+                    <div id="api-status-detail" class="status-value-detail"></div>
+                </div>
             </div>
             <div class="status-item">
-                <span class="status-label">AI Provider:</span>
-                <span id="provider-status" class="status-value">-</span>
+                <span class="status-label">AI Model</span>
+                <div>
+                    <span id="provider-status" class="status-value">-</span>
+                    <div id="provider-status-detail" class="status-value-detail"></div>
+                </div>
             </div>
-            <button id="config-btn" class="btn-config" title="Configure API Keys">⛭</button>
+            <button id="config-btn" class="btn-config" title="Configure Settings">⚙ Settings</button>
         </div>
 
         <div id="api-error-message" class="error-message hidden">
-            <strong>☡ Server Offline</strong>
+            <strong>⚠ Server Offline</strong>
             <p>The REPLOID server at <code>localhost:8000</code> is not responding.</p>
-            <p><strong>To fix this:</strong></p>
-            <ol>
-                <li>Make sure the server is running: <code>npm start</code></li>
-                <li>Check your API key is in <code>.env</code> file</li>
-                <li>Or click the ⛭ button above to paste your API key directly</li>
-            </ol>
+            <p>Start the server: <code>npm start</code></p>
         </div>
 
-        <!-- API Key Configuration Modal -->
+        <!-- Settings Modal -->
         <div id="config-modal" class="modal hidden">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3>API Configuration</h3>
+                    <h3>Settings</h3>
                     <button id="close-modal" class="close-btn">×</button>
                 </div>
                 <div class="modal-body">
-                    <p>Configure your AI provider API keys. These will be stored locally in your browser.</p>
+                    <!-- Modal Tabs -->
+                    <div class="modal-tabs">
+                        <button class="modal-tab active" data-modal-tab="model">Model & API</button>
+                        <button class="modal-tab" data-modal-tab="advanced">Advanced</button>
+                    </div>
 
-                    <!-- Provider Selection -->
-                    <div class="api-key-input">
-                        <label for="provider-select">AI Provider</label>
-                        <select id="provider-select">
-                            <option value="gemini">Google Gemini (Cloud)</option>
-                            <option value="openai">OpenAI (Cloud)</option>
-                            <option value="anthropic">Anthropic (Cloud)</option>
-                            <option value="local">Local Ollama (No API Key)</option>
-                            <option value="custom">Custom Proxy URL</option>
+                    <!-- Model & API Tab Content -->
+                    <div class="modal-tab-content active" id="modal-model-tab">
+                        <p class="modal-tab-description">Select an AI model to power your agent. API keys are stored locally in your browser.</p>
+
+                    <!-- Model Selection -->
+                    <div class="model-selection-group">
+                        <label for="model-select" class="model-select-label">Select AI Model</label>
+                        <select id="model-select" class="model-select-dropdown">
+                            <optgroup label="Cloud Models (Require API Key)">
+                                <option value="gemini-2.0-flash" data-provider="gemini">Gemini 2.0 Flash (Fast & Efficient)</option>
+                                <option value="gemini-1.5-pro" data-provider="gemini">Gemini 1.5 Pro (Advanced Reasoning)</option>
+                                <option value="gpt-4o" data-provider="openai">GPT-4o (Multimodal)</option>
+                                <option value="gpt-4-turbo" data-provider="openai">GPT-4 Turbo (Advanced)</option>
+                                <option value="gpt-3.5-turbo" data-provider="openai">GPT-3.5 Turbo (Fast)</option>
+                                <option value="claude-3-5-sonnet" data-provider="anthropic">Claude 3.5 Sonnet (Top Performance)</option>
+                                <option value="claude-3-opus" data-provider="anthropic">Claude 3 Opus (Most Capable)</option>
+                            </optgroup>
+                            <optgroup label="Local Models (No API Key)">
+                                <option value="ollama-llama3" data-provider="local">Llama 3 (via Ollama)</option>
+                                <option value="ollama-mistral" data-provider="local">Mistral (via Ollama)</option>
+                                <option value="ollama-codellama" data-provider="local">CodeLlama (via Ollama)</option>
+                                <option value="ollama-custom" data-provider="local">Custom Ollama Model</option>
+                                <option value="web-llm" data-provider="web">Web LLM (Browser-based)</option>
+                                <option value="paxos" data-provider="paxos">Paxos (Requires Upgrade)</option>
+                            </optgroup>
+                            <optgroup label="Advanced">
+                                <option value="custom-proxy" data-provider="custom">Custom Proxy/Endpoint</option>
+                            </optgroup>
                         </select>
+                        <small id="model-description" class="model-description">Choose a model from the list above</small>
                     </div>
 
-                    <!-- Gemini Key -->
-                    <div class="api-key-input provider-config" data-provider="gemini">
-                        <label for="gemini-key">Google Gemini API Key</label>
-                        <input type="password" id="gemini-key" placeholder="AIza..." />
-                        <small>Get your key from <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></small>
+                    <!-- API Key Section (shown conditionally) -->
+                    <div id="api-key-section" class="api-key-section hidden">
+                        <div class="api-key-input">
+                            <label for="api-key-input" id="api-key-label">API Key</label>
+                            <input type="password" id="api-key-input" placeholder="Enter your API key" />
+                            <small id="api-key-help">Your API key will be stored securely in your browser</small>
+                        </div>
                     </div>
 
-                    <!-- OpenAI Key -->
-                    <div class="api-key-input provider-config hidden" data-provider="openai">
-                        <label for="openai-key">OpenAI API Key</label>
-                        <input type="password" id="openai-key" placeholder="sk-..." />
-                        <small>Get your key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a></small>
+                    <!-- Local Model Configuration (shown for Ollama) -->
+                    <div id="local-config-section" class="local-config-section hidden">
+                        <div class="api-key-input">
+                            <label for="local-endpoint">Ollama Endpoint</label>
+                            <input type="text" id="local-endpoint" placeholder="http://localhost:11434" value="http://localhost:11434" />
+                            <small>Make sure Ollama is running: <code>ollama serve</code></small>
+                        </div>
+                        <div class="api-key-input" id="custom-model-name-container" style="margin-top: 10px;">
+                            <label for="local-model">Model Name</label>
+                            <input type="text" id="local-model" placeholder="e.g., llama3, mistral, codellama" />
+                            <small>Enter the exact model name from <code>ollama list</code></small>
+                        </div>
                     </div>
 
-                    <!-- Anthropic Key -->
-                    <div class="api-key-input provider-config hidden" data-provider="anthropic">
-                        <label for="anthropic-key">Anthropic API Key</label>
-                        <input type="password" id="anthropic-key" placeholder="sk-ant-..." />
-                        <small>Get your key from <a href="https://console.anthropic.com/" target="_blank">Anthropic Console</a></small>
+                    <!-- Custom Proxy Configuration -->
+                    <div id="custom-proxy-section" class="custom-proxy-section hidden">
+                        <div class="api-key-input">
+                            <label for="custom-proxy-url">Custom Proxy URL</label>
+                            <input type="text" id="custom-proxy-url" placeholder="http://localhost:8000/api" />
+                            <small>Enter the full URL to your custom endpoint</small>
+                        </div>
+                        <div class="api-key-input" style="margin-top: 10px;">
+                            <label for="custom-api-key">API Key (Optional)</label>
+                            <input type="password" id="custom-api-key" placeholder="If your proxy requires authentication" />
+                        </div>
                     </div>
 
-                    <!-- Local Ollama -->
-                    <div class="api-key-input provider-config hidden" data-provider="local">
-                        <label for="local-endpoint">Local Ollama Endpoint</label>
-                        <input type="text" id="local-endpoint" placeholder="http://localhost:11434" />
-                        <small>Make sure Ollama is running: <code>ollama serve</code></small>
-
-                        <label for="local-model" style="margin-top: 10px;">Model Name</label>
-                        <input type="text" id="local-model" placeholder="llama2" />
-                        <small>Available models: llama2, mistral, codellama, etc.</small>
+                    <!-- Paxos Notice -->
+                    <div id="paxos-notice" class="paxos-notice hidden">
+                        <p>⚠ Paxos requires the PAXS upgrade to be loaded. Make sure to include it in your boot configuration.</p>
+                    </div>
                     </div>
 
-                    <!-- Custom Proxy -->
-                    <div class="api-key-input provider-config hidden" data-provider="custom">
-                        <label for="custom-proxy-url">Custom Proxy URL</label>
-                        <input type="text" id="custom-proxy-url" placeholder="http://localhost:8000/api" />
-                        <small>Enter the full URL to your custom proxy endpoint (e.g., Node.js server)</small>
+                    <!-- Advanced Tab Content -->
+                    <div class="modal-tab-content" id="modal-advanced-tab">
+                        <p class="modal-tab-description">Configure advanced features and network settings.</p>
 
-                        <label for="custom-api-key" style="margin-top: 10px;">API Key (if required)</label>
-                        <input type="password" id="custom-api-key" placeholder="Optional" />
+                        <!-- Network & P2P Settings -->
+                        <div class="settings-section">
+                            <h4 class="settings-section-title">Network & P2P</h4>
+                            <div class="setting-item">
+                                <label class="setting-checkbox-label">
+                                    <span class="custom-checkbox">
+                                        <input type="checkbox" id="enable-webrtc-modal" />
+                                        <span class="custom-checkbox-box"></span>
+                                    </span>
+                                    <span class="setting-checkbox-text">Enable WebRTC Swarm (P2P Connections)</span>
+                                </label>
+                                <p class="setting-description">⚠ Allows peer-to-peer connections with other Reploid instances. Disabled by default for security.</p>
+                            </div>
+                        </div>
+
+                        <!-- Future settings sections can go here -->
+                        <div class="settings-section">
+                            <h4 class="settings-section-title">Developer Options</h4>
+                            <div class="setting-item">
+                                <p class="setting-placeholder">Additional developer settings will appear here in future updates.</p>
+                            </div>
+                        </div>
                     </div>
 
                     <button id="save-keys-btn" class="btn primary">Save Configuration</button>
@@ -151,41 +204,22 @@
             </div>
         </div>
 
-        <!-- Security & Network Settings -->
-        <div class="security-settings">
-            <div class="security-section">
-                <div class="security-header">
-                    <span class="security-icon">⚿</span>
-                    <span class="security-title">Network & Security</span>
-                </div>
-                <div class="security-option">
-                    <div class="security-warning">
-                        <small>⚠ Allows peer-to-peer connections with other Reploid instances. Disabled by default for security.</small>
-                    </div>
-                    <label class="security-checkbox-label">
-                        <input type="checkbox" id="enable-webrtc" />
-                        <span class="security-checkbox-text">Enable WebRTC Swarm (P2P Connections)</span>
-                    </label>
-                </div>
-            </div>
-        </div>
-
         <!-- Configuration Tabs -->
         <div class="config-section">
             <div class="config-tabs">
                 <button class="config-tab active" data-tab="simple">
-                    <span class="tab-text">☇ Simple Mode</span>
+                    <span class="tab-text">▸ Quick Start</span>
                 </button>
                 <button class="config-tab" data-tab="templates">
-                    <span class="tab-text">☐ Templates</span>
+                    <span class="tab-text">▦ Presets</span>
                 </button>
                 <button class="config-tab" data-tab="hunter">
-                    <span class="tab-text">⚐ Hunter Protocol</span>
+                    <span class="tab-text">◎ Custom</span>
                 </button>
             </div>
 
             <div class="tab-description">
-                <p id="tab-description-text">Start with the minimal RSI core - fastest way to self-evolving agent</p>
+                <p id="tab-description-text">Choose your starting configuration - from minimal core to full power</p>
             </div>
 
             <!-- Simple Mode Tab Content (NEW) -->
@@ -196,23 +230,20 @@
 
                     <div class="boot-mode-options">
                         <button class="boot-mode-btn selected" data-mode="minimal" onclick="selectBootMode('minimal')">
-                            <div class="boot-mode-icon">☇</div>
-                            <div class="boot-mode-label">Minimal RSI Core</div>
-                            <div class="boot-mode-desc">8 essential modules only - fastest startup, agent can self-evolve</div>
-                            <div class="boot-mode-modules">APPL, UTIL, STMT, IDXB, APIC, CYCL, TLRD, TLWR</div>
+                            <div class="boot-mode-label">▸ Minimal RSI Core</div>
+                            <div class="boot-mode-desc">10 essential modules only - fastest startup, agent can self-evolve</div>
+                            <div class="boot-mode-modules">APPL, UTIL, STMT, LSTR, APIC, CYCL, TLRD, TLWR, LLMR, HYBR</div>
                         </button>
 
                         <button class="boot-mode-btn" data-mode="all-blueprints" onclick="selectBootMode('all-blueprints')">
-                            <div class="boot-mode-icon">☐</div>
-                            <div class="boot-mode-label">Core + All Blueprints</div>
-                            <div class="boot-mode-desc">8 core modules + 26 blueprints for maximum knowledge</div>
+                            <div class="boot-mode-label">▦ Core + All Blueprints</div>
+                            <div class="boot-mode-desc">10 core modules + 62 blueprints for maximum knowledge</div>
                             <div class="boot-mode-modules">Minimal + all .md knowledge documents</div>
                         </button>
 
                         <button class="boot-mode-btn" data-mode="all-upgrades" onclick="selectBootMode('all-upgrades')">
-                            <div class="boot-mode-icon">⛿</div>
-                            <div class="boot-mode-label">All Upgrades + Blueprints</div>
-                            <div class="boot-mode-desc">40 modules + 26 blueprints - full power from the start</div>
+                            <div class="boot-mode-label">⬢ All Upgrades + Blueprints</div>
+                            <div class="boot-mode-desc">62 upgrades + 62 blueprints - full power from the start</div>
                             <div class="boot-mode-modules">Every available capability enabled</div>
                         </button>
                     </div>

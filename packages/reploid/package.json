@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "REPLOID - Browser-native visual interface for PAWS with multi-agent workflows",
   "main": "boot.js",
-  "type": "commonjs",
+  "type": "module",
   "bin": {
     "reploid": "./bin/reploid-cli.js",
     "reploid-config": "./bin/reploid-config"

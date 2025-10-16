@@ -5,6 +5,10 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     include: ['tests/**/*.test.js', 'tests/**/*.spec.js'],
+    deps: {
+      inline: true
+    },
+    threads: false,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

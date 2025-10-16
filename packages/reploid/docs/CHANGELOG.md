@@ -245,7 +245,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 │   ├── dogs                # Change bundle applier
 │   ├── reploid-cli.js      # Agent management CLI
 │   └── reploid-config      # Configuration manager
-├── blueprints/             # Core architecture specs (26 blueprints)
+├── blueprints/             # Core architecture specs (62 blueprints)
 ├── docs/                   # Documentation
 │   ├── rfcs/               # RFC proposals
 │   ├── ROADMAP.md          # Development roadmap

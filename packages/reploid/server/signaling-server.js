@@ -14,8 +14,8 @@
  * - CORS-aware for cross-origin support
  */
 
-const WebSocket = require('ws');
-const { EventEmitter } = require('events');
+import { WebSocketServer, WebSocket } from 'ws';
+import { EventEmitter } from 'events';
 
 class SignalingServer extends EventEmitter {
   constructor(server, options = {}) {
@@ -29,7 +29,7 @@ class SignalingServer extends EventEmitter {
     };
 
     // WebSocket server
-    this.wss = new WebSocket.Server({
+    this.wss = new WebSocketServer({
       server,
       path: this.options.path
     });
@@ -383,4 +383,4 @@ class SignalingServer extends EventEmitter {
   }
 }
 
-module.exports = SignalingServer;
+export default SignalingServer;

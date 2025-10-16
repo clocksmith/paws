@@ -1,11 +1,16 @@
 #!/usr/bin/env node
 
-const express = require('express');
-const http = require('http');
-const path = require('path');
-const fs = require('fs');
-const dotenv = require('dotenv');
-const SignalingServer = require('./signaling-server.js');
+import express from 'express';
+import http from 'http';
+import path from 'path';
+import fs from 'fs';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import SignalingServer from './signaling-server.js';
+
+// ESM equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load environment variables
 dotenv.config();
@@ -13,7 +18,7 @@ dotenv.config();
 // Load unified configuration
 let appConfig = null;
 try {
-  const { getConfig } = require('../utils/config-loader.js');
+  const { getConfig } = await import('../utils/config-loader.js');
   const configLoader = getConfig();
   configLoader.load();
   appConfig = configLoader.getAll();
@@ -81,8 +86,8 @@ app.get('/api/health', (req, res) => {
 // Proxy endpoint for Gemini API
 app.post('/api/gemini/*', async (req, res) => {
   if (!GEMINI_API_KEY) {
-    return res.status(500).json({ 
-      error: 'Server is not configured with Gemini API key' 
+    return res.status(500).json({
+      error: 'Server is not configured with Gemini API key'
     });
   }
 
@@ -103,10 +108,10 @@ app.post('/api/gemini/*', async (req, res) => {
 
     // Get response as text first to handle non-JSON responses
     const responseText = await response.text();
-    
+
     try {
       const data = JSON.parse(responseText);
-      
+
       if (!response.ok) {
         console.error('Gemini API error:', data);
         return res.status(response.status).json(data);
@@ -115,7 +120,7 @@ app.post('/api/gemini/*', async (req, res) => {
       res.json(data);
     } catch (parseError) {
       console.error('Failed to parse response:', responseText);
-      res.status(response.status || 500).json({ 
+      res.status(response.status || 500).json({
         error: 'Invalid response from Gemini API',
         status: response.status,
         statusText: response.statusText,
@@ -124,9 +129,9 @@ app.post('/api/gemini/*', async (req, res) => {
     }
   } catch (error) {
     console.error('Proxy error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to proxy request to Gemini API',
-      details: error.message 
+      details: error.message
     });
   }
 });
@@ -147,10 +152,10 @@ app.post('/api/local/*', async (req, res) => {
     });
 
     const responseText = await response.text();
-    
+
     try {
       const data = JSON.parse(responseText);
-      
+
       if (!response.ok) {
         console.error('Local model error:', data);
         return res.status(response.status).json(data);
@@ -159,7 +164,7 @@ app.post('/api/local/*', async (req, res) => {
       res.json(data);
     } catch (parseError) {
       console.error('Failed to parse response:', responseText);
-      res.status(response.status || 500).json({ 
+      res.status(response.status || 500).json({
         error: 'Invalid response from local model',
         status: response.status,
         statusText: response.statusText,
@@ -168,7 +173,7 @@ app.post('/api/local/*', async (req, res) => {
     }
   } catch (error) {
     console.error('Local model proxy error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to proxy request to local model',
       details: error.message,
       endpoint: localUrl
@@ -179,8 +184,8 @@ app.post('/api/local/*', async (req, res) => {
 // Proxy endpoint for OpenAI API
 app.post('/api/openai/*', async (req, res) => {
   if (!OPENAI_API_KEY) {
-    return res.status(500).json({ 
-      error: 'Server is not configured with OpenAI API key' 
+    return res.status(500).json({
+      error: 'Server is not configured with OpenAI API key'
     });
   }
 
@@ -199,10 +204,10 @@ app.post('/api/openai/*', async (req, res) => {
     });
 
     const responseText = await response.text();
-    
+
     try {
       const data = JSON.parse(responseText);
-      
+
       if (!response.ok) {
         console.error('OpenAI API error:', data);
         return res.status(response.status).json(data);
@@ -211,7 +216,7 @@ app.post('/api/openai/*', async (req, res) => {
       res.json(data);
     } catch (parseError) {
       console.error('Failed to parse response:', responseText);
-      res.status(response.status || 500).json({ 
+      res.status(response.status || 500).json({
         error: 'Invalid response from OpenAI API',
         status: response.status,
         statusText: response.statusText,
@@ -220,9 +225,9 @@ app.post('/api/openai/*', async (req, res) => {
     }
   } catch (error) {
     console.error('OpenAI proxy error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to proxy request to OpenAI API',
-      details: error.message 
+      details: error.message
     });
   }
 });
@@ -230,8 +235,8 @@ app.post('/api/openai/*', async (req, res) => {
 // Proxy endpoint for Anthropic API
 app.post('/api/anthropic/*', async (req, res) => {
   if (!ANTHROPIC_API_KEY) {
-    return res.status(500).json({ 
-      error: 'Server is not configured with Anthropic API key' 
+    return res.status(500).json({
+      error: 'Server is not configured with Anthropic API key'
     });
   }
 
@@ -251,10 +256,10 @@ app.post('/api/anthropic/*', async (req, res) => {
     });
 
     const responseText = await response.text();
-    
+
     try {
       const data = JSON.parse(responseText);
-      
+
       if (!response.ok) {
         console.error('Anthropic API error:', data);
         return res.status(response.status).json(data);
@@ -263,7 +268,7 @@ app.post('/api/anthropic/*', async (req, res) => {
       res.json(data);
     } catch (parseError) {
       console.error('Failed to parse response:', responseText);
-      res.status(response.status || 500).json({ 
+      res.status(response.status || 500).json({
         error: 'Invalid response from Anthropic API',
         status: response.status,
         statusText: response.statusText,
@@ -272,16 +277,16 @@ app.post('/api/anthropic/*', async (req, res) => {
     }
   } catch (error) {
     console.error('Anthropic proxy error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to proxy request to Anthropic API',
-      details: error.message 
+      details: error.message
     });
   }
 });
 
 // Endpoint to check if proxy is available (for client detection)
 app.get('/api/proxy-status', (req, res) => {
-  res.json({ 
+  res.json({
     proxyAvailable: true,
     providers: {
       gemini: !!GEMINI_API_KEY,

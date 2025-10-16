@@ -81,4 +81,6 @@ const DIContainer = {
   }
 };
 
-export default DIContainer;
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = DIContainer;
+}

@@ -5,13 +5,13 @@ const PenteractVisualizer = {
     id: 'PenteractVisualizer',
     version: '0.1.0',
     description: 'Visual scaffold for Penteract (H5) deliberation analytics',
-    dependencies: ['EventBus', 'Utils'],
+    dependencies: ['EventBus', 'Utils', 'PenteractAnalytics'],
     async: false,
     type: 'visualizer'
   },
 
   factory: (deps) => {
-    const { EventBus, Utils } = deps;
+    const { EventBus, Utils, PenteractAnalytics } = deps;
     const { logger } = Utils;
 
     let container = null;
@@ -134,6 +134,17 @@ const PenteractVisualizer = {
       render();
     };
 
+    const refreshFromStore = () => {
+      if (!PenteractAnalytics || typeof PenteractAnalytics.getLatest !== 'function') {
+        return;
+      }
+      const snapshot = PenteractAnalytics.getLatest();
+      if (snapshot) {
+        latestSnapshot = snapshot;
+        render();
+      }
+    };
+
     const init = (containerId = 'penteract-visualizer') => {
       container = document.getElementById(containerId);
       if (!container) {
@@ -141,13 +152,16 @@ const PenteractVisualizer = {
         return;
       }
       ensureStyles();
+      refreshFromStore();
       render();
     };
 
-    EventBus.on('paxos:analytics', handleAnalytics);
+    const unsubscribeProcessed = EventBus.on('paxos:analytics:processed', handleAnalytics, 'PenteractVisualizer');
+    const unsubscribeRaw = EventBus.on('paxos:analytics', () => refreshFromStore(), 'PenteractVisualizer');
 
     const dispose = () => {
-      EventBus.off('paxos:analytics', handleAnalytics);
+      unsubscribeProcessed?.();
+      unsubscribeRaw?.();
     };
 
     return {

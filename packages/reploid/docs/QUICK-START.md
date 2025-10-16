@@ -37,17 +37,17 @@ Navigate to **http://localhost:8000** in your browser.
 You'll see the **Simple Mode** tab by default with 3 clear options:
 
 #### ⚡ Minimal RSI Core (Recommended - Selected by Default)
-- **8 essential modules** only
+- **10 essential modules** only
 - Fastest startup, agent can self-evolve by loading more modules as needed
 - Perfect for learning and experimentation
 
 #### 📚 Core + All Blueprints
-- 8 core modules + 26 knowledge documents
+- 10 core modules + 62 knowledge documents
 - Agent has maximum knowledge from the start
 - Great for complex tasks requiring deep understanding
 
 #### 🚀 All Upgrades + Blueprints
-- 40 modules + 26 blueprints
+- 62 upgrades + 62 blueprints
 - Full power from the start
 - Best for production use or advanced workflows
 
