@@ -164,11 +164,26 @@ describe("PAWS for Node.js", function () {
       const command = `node ${dogsCliPath} "${bundlePath}" "${tempDir}"`;
       await runCliWithInput(command, ["y", "n", "a", "q"]);
 
-      await expect(fs.access(path.join(tempDir, "f1.txt"))).to.be.rejected; // y -> deleted
-      await expect(fs.access(path.join(tempDir, "f2.txt"))).to.not.be.rejected; // n -> skipped
-      await expect(fs.access(path.join(tempDir, "f3.txt"))).to.be.rejected; // a -> deleted
-      await expect(fs.access(path.join(tempDir, "f4.txt"))).to.be.rejected; // a -> still in effect
-      await expect(fs.access(path.join(tempDir, "f5.txt"))).to.not.be.rejected; // q -> quit before this one
+      // Check file deletion results
+      let f1Exists = true;
+      try { await fs.access(path.join(tempDir, "f1.txt")); } catch { f1Exists = false; }
+      expect(f1Exists).to.be.false; // y -> deleted
+
+      let f2Exists = true;
+      try { await fs.access(path.join(tempDir, "f2.txt")); } catch { f2Exists = false; }
+      expect(f2Exists).to.be.true; // n -> skipped
+
+      let f3Exists = true;
+      try { await fs.access(path.join(tempDir, "f3.txt")); } catch { f3Exists = false; }
+      expect(f3Exists).to.be.false; // a -> deleted
+
+      let f4Exists = true;
+      try { await fs.access(path.join(tempDir, "f4.txt")); } catch { f4Exists = false; }
+      expect(f4Exists).to.be.false; // a -> still in effect
+
+      let f5Exists = true;
+      try { await fs.access(path.join(tempDir, "f5.txt")); } catch { f5Exists = false; }
+      expect(f5Exists).to.be.true; // q -> quit before this one
     });
 
     it("CLI should prompt with filename when content is identical", async () => {
@@ -197,7 +212,9 @@ describe("PAWS for Node.js", function () {
       );
       expect(stderr).to.include("Security Alert");
       const parentDir = path.resolve(tempDir, "..");
-      await expect(fs.access(path.join(parentDir, "evil.txt"))).to.be.rejected;
+      let evilExists = true;
+      try { await fs.access(path.join(parentDir, "evil.txt")); } catch { evilExists = false; }
+      expect(evilExists).to.be.false;
     });
 
     it("CLI should handle DELETE_FILE command without delta flag", async () => {
@@ -211,7 +228,9 @@ describe("PAWS for Node.js", function () {
       const command = `node ${dogsCliPath} "${bundlePath}" "${tempDir}" -y -q`;
       await runCliWithInput(command);
 
-      await expect(fs.access(fileToDeletePath)).to.be.rejectedWith(Error);
+      let fileExists = true;
+      try { await fs.access(fileToDeletePath); } catch { fileExists = false; }
+      expect(fileExists).to.be.false;
     });
 
     it("API should correctly apply complex delta changes", async () => {

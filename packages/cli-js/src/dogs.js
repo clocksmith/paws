@@ -839,10 +839,16 @@ async function extractBundle(options) {
   const bundleContent = options.bundleContent || '';
   const originalBundleContent = options.originalBundleContent || '';
 
-  // Extract files from bundle
-  const files = await processor.parseBundle(bundleContent, originalBundleContent);
+  // Parse the bundle to get a ChangeSet
+  const changeSet = await processor.parseBundle(bundleContent);
 
-  return files;
+  // Convert ChangeSet changes to the expected format
+  return changeSet.changes.map(change => ({
+    filePath: change.filePath,
+    operation: change.operation,
+    contentBytes: Buffer.from(change.newContent || '', 'utf-8'),
+    isBinary: change.isBinary
+  }));
 }
 
 // Export for use as module
