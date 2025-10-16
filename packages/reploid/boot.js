@@ -827,6 +827,17 @@
                 bestFor: 'Demos, educational use, when no backend is available'
             }
         },
+        'web-llm': {
+            title: '🕸️ Web LLM Configuration',
+            icon: '🕸️',
+            help: {
+                title: 'Web LLM (WebGPU) Mode',
+                requirements: ['Modern browser with WebGPU support', 'GPU with 4GB+ VRAM', 'Initial model download (3-4GB)'],
+                pros: ['Runs entirely in browser', 'No API keys required', 'Keeps data on device'],
+                cons: ['Large first-time download', 'Higher GPU usage', 'Limited to smaller models'],
+                bestFor: 'When you have a capable browser GPU but no server or API access'
+            }
+        },
         hybrid: {
             title: '🔄 Hybrid Mode Configuration',
             icon: '🔄',
@@ -859,6 +870,17 @@
                 cons: ['Advanced setup required', 'Must implement compatible API', 'Self-managed'],
                 bestFor: 'Enterprise deployments, custom infrastructure, self-hosted solutions'
             }
+        },
+        offline: {
+            title: '🛡️ Fully Offline Configuration',
+            icon: '🛡️',
+            help: {
+                title: 'Fully Offline Mode',
+                requirements: ['Ollama installed with models pre-pulled', 'Node.js proxy server', 'No external network dependencies'],
+                pros: ['Zero external network traffic', 'Maximum privacy & compliance', 'Unlimited usage'],
+                cons: ['No cloud failover', 'Manual updates only', 'Requires ample local storage and hardware'],
+                bestFor: 'Airgapped environments, security-sensitive workflows, travel without internet'
+            }
         }
     };
 
@@ -869,7 +891,9 @@
             ollamaModels: [],
             hasGeminiKey: false,
             hasOpenAIKey: false,
-            hasAnthropicKey: false
+            hasAnthropicKey: false,
+            isOffline: typeof navigator !== 'undefined' ? navigator.onLine === false : false,
+            hasWebGPU: typeof navigator !== 'undefined' && 'gpu' in navigator
         };
 
         // Check server
@@ -903,6 +927,13 @@
     }
 
     function getRecommendedMode(env) {
+        if (env.hasOllama && env.isOffline) {
+            return {
+                mode: 'offline',
+                reason: 'Offline environment detected. You can run entirely locally with Ollama and no external dependencies.'
+            };
+        }
+
         if (env.hasOllama && env.ollamaModels.length > 0) {
             return {
                 mode: 'local',
@@ -922,6 +953,12 @@
         }
 
         if (!env.hasServer) {
+            if (env.hasWebGPU) {
+                return {
+                    mode: 'web-llm',
+                    reason: 'No server detected, but WebGPU is available. Web LLM lets you run models directly in the browser.'
+                };
+            }
             return {
                 mode: 'browser',
                 reason: 'No server detected. Browser-only mode is your best option for getting started quickly.'
@@ -962,11 +999,13 @@
             'gemini': 'cloud',
             'openai': 'cloud',
             'anthropic': 'cloud',
-            'web': 'browser',
+            'web': 'web-llm',
+            'browser': 'browser',
             'hybrid': 'hybrid',
             'paxos': 'multi',
             'distributed': 'multi',
-            'custom': 'custom'
+            'custom': 'custom',
+            'offline': 'offline'
         };
 
         return providerModeMap[provider] || null;
@@ -985,13 +1024,19 @@
         const storedMode = getStoredDeploymentMode();
         setModeCardSelection(storedMode);
 
-        if (storedMode !== 'cloud') {
-            state.selectedProvider = null;
-        } else {
+        if (storedMode === 'cloud') {
             const provider = localStorage.getItem('AI_PROVIDER');
             if (provider && ['gemini', 'openai', 'anthropic'].includes(provider)) {
                 state.selectedProvider = provider;
+            } else {
+                state.selectedProvider = null;
             }
+        } else if (storedMode === 'web-llm') {
+            state.selectedProvider = 'web';
+        } else if (storedMode === 'offline' || storedMode === 'local') {
+            state.selectedProvider = 'local';
+        } else {
+            state.selectedProvider = null;
         }
     }
 
@@ -1056,12 +1101,16 @@
                 return renderCloudConfig(env);
             case 'browser':
                 return renderBrowserConfig(env);
+            case 'web-llm':
+                return renderWebLLMConfig(env);
             case 'hybrid':
                 return renderHybridConfig(env);
             case 'multi':
                 return renderMultiConfig(env);
             case 'custom':
                 return renderCustomConfig(env);
+            case 'offline':
+                return renderOfflineConfig(env);
             default:
                 return '<p>Configuration not available</p>';
         }
@@ -1246,6 +1295,108 @@
         return html;
     }
 
+    function renderOfflineConfig(env) {
+        const hasKeys = env.hasGeminiKey || env.hasOpenAIKey || env.hasAnthropicKey;
+        const autoStart = localStorage.getItem('AUTO_START_OLLAMA') === 'true';
+        const webrtcEnabled = localStorage.getItem('ENABLE_WEBRTC') === 'true';
+
+        let html = `
+            <div class="mode-info">
+                <span class="mode-info-text">🛡️ Fully offline mode keeps all prompts, code, and models on this device. Perfect for secure or airgapped environments.</span>
+            </div>
+        `;
+
+        if (!env.hasServer) {
+            html += `
+                <div class="mode-warning">
+                    <span class="mode-warning-icon">⚠️</span>
+                    <span class="mode-warning-text">Local proxy server not detected. Run <code>npm start</code> to enable VFS persistence while offline.</span>
+                </div>
+            `;
+        }
+
+        if (!env.hasOllama) {
+            html += `
+                <div class="mode-warning">
+                    <span class="mode-warning-icon">⚠️</span>
+                    <span class="mode-warning-text">Ollama runtime not detected. Install and run <code>ollama serve</code> before going offline.</span>
+                </div>
+            `;
+        } else if (Array.isArray(env.ollamaModels) && env.ollamaModels.length > 0) {
+            html += `
+                <div class="mode-status">
+                    <span class="mode-status-icon">✅</span>
+                    <div class="mode-status-text">
+                        <div class="mode-status-label">Local Models</div>
+                        <div class="mode-status-value">${env.ollamaModels.length} available</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (hasKeys) {
+            html += `
+                <div class="mode-warning">
+                    <span class="mode-warning-icon">⚠️</span>
+                    <span class="mode-warning-text">Cloud API keys detected. They can be removed automatically when you save this configuration.</span>
+                </div>
+            `;
+        } else {
+            html += `
+                <div class="mode-status">
+                    <span class="mode-status-icon">✅</span>
+                    <div class="mode-status-text">
+                        <div class="mode-status-label">Cloud Keys</div>
+                        <div class="mode-status-value">None detected</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        html += `
+            <div class="setting-item">
+                <label class="setting-checkbox-label">
+                    <span class="custom-checkbox">
+                        <input type="checkbox" id="mode-offline-auto-start" ${autoStart ? 'checked' : ''} />
+                        <span class="custom-checkbox-box"></span>
+                    </span>
+                    <span class="setting-checkbox-text">Auto-start Ollama with the proxy server</span>
+                </label>
+                <p class="setting-description">Ensures <code>ollama serve</code> runs whenever you launch Reploid locally.</p>
+            </div>
+
+            <div class="setting-item">
+                <label class="setting-checkbox-label">
+                    <span class="custom-checkbox">
+                        <input type="checkbox" id="mode-offline-disable-webrtc" ${!webrtcEnabled ? 'checked' : ''} />
+                        <span class="custom-checkbox-box"></span>
+                    </span>
+                    <span class="setting-checkbox-text">Disable WebRTC Swarm (recommended offline)</span>
+                </label>
+                <p class="setting-description">Prevents peer-to-peer networking attempts while you are disconnected.</p>
+            </div>
+        `;
+
+        html += `
+            <div class="setting-item">
+                <label class="setting-checkbox-label">
+                    <span class="custom-checkbox">
+                        <input type="checkbox" id="mode-offline-clear-keys" ${hasKeys ? 'checked' : ''} ${hasKeys ? '' : 'disabled'} />
+                        <span class="custom-checkbox-box"></span>
+                    </span>
+                    <span class="setting-checkbox-text">Remove saved cloud API keys on save</span>
+                </label>
+                <p class="setting-description">Clears Gemini/OpenAI/Anthropic keys so nothing leaves your machine. (${hasKeys ? 'Recommended' : 'No keys stored'})</p>
+            </div>
+
+            <div class="mode-info" style="margin-top: 16px;">
+                <span class="mode-info-text">Tip: Pre-pull models with <code>ollama pull &lt;model&gt;</code> while online, then disconnect to run fully offline.</span>
+            </div>
+        `;
+
+        return html;
+    }
+
     function renderCloudConfig(env) {
         let html = `
             <div class="mode-warning">
@@ -1340,16 +1491,76 @@
     function renderBrowserConfig(env) {
         return `
             <div class="mode-info">
-                <span class="mode-info-text">🌐 Web LLM runs entirely in your browser using WebGPU. The model will be downloaded on first use (~4GB).</span>
+                <span class="mode-info-text">🌐 Browser-only mode serves Reploid as static files—perfect for GitHub Pages, Netlify, or quick demos without a backend.</span>
             </div>
             <div class="mode-warning">
                 <span class="mode-warning-icon">⚠️</span>
-                <span class="mode-warning-text">Browser mode has limited features. VFS persistence and WebRTC are not available.</span>
+                <span class="mode-warning-text">No proxy means no VFS persistence, Ollama discovery, or WebRTC signaling. Cloud APIs must allow browser CORS.</span>
             </div>
             <p style="color: #b9bad6; font-size: 14px; margin: 16px 0;">
-                Browser mode is best for demos and quick tests. For full functionality, use Local or Cloud mode with the Node.js server.
+                Pair this mode with Web LLM or bring-your-own API keys to keep things lightweight while still running real models.
             </p>
         `;
+    }
+
+    function renderWebLLMConfig(env) {
+        const hasWebGPU = env.hasWebGPU;
+        const profile = localStorage.getItem('WEB_LLM_PROFILE') || 'balanced';
+        const cacheEnabled = localStorage.getItem('WEB_LLM_CACHE') !== 'false';
+
+        let html = `
+            <div class="mode-info">
+                <span class="mode-info-text">🕸️ Web LLM streams the model into your browser and executes it with WebGPU. Ideal when you have a strong GPU but no backend.</span>
+            </div>
+        `;
+
+        if (!hasWebGPU) {
+            html += `
+                <div class="mode-warning">
+                    <span class="mode-warning-icon">⚠️</span>
+                    <span class="mode-warning-text">WebGPU not detected. Enable it in your browser (Chrome/Edge 113+) or switch to Browser-Only mode.</span>
+                </div>
+            `;
+        } else {
+            html += `
+                <div class="mode-status">
+                    <span class="mode-status-icon">✅</span>
+                    <div class="mode-status-text">
+                        <div class="mode-status-label">WebGPU</div>
+                        <div class="mode-status-value">Ready for Web LLM</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        html += `
+            <div class="setting-item">
+                <label for="mode-web-llm-profile" class="model-select-label">Performance profile</label>
+                <select id="mode-web-llm-profile" class="model-select-dropdown">
+                    <option value="balanced" ${profile === 'balanced' ? 'selected' : ''}>Balanced (3-4B models)</option>
+                    <option value="light" ${profile === 'light' ? 'selected' : ''}>Lightweight (ideal for 4GB GPUs)</option>
+                    <option value="quality" ${profile === 'quality' ? 'selected' : ''}>Quality (bigger WebGPU models)</option>
+                </select>
+                <small class="setting-description" style="display:block; margin-top:6px;">Choose the model size Web LLM should prioritise. Smaller profiles use less VRAM and download faster.</small>
+            </div>
+
+            <div class="setting-item">
+                <label class="setting-checkbox-label">
+                    <span class="custom-checkbox">
+                        <input type="checkbox" id="mode-web-llm-cache" ${cacheEnabled ? 'checked' : ''} />
+                        <span class="custom-checkbox-box"></span>
+                    </span>
+                    <span class="setting-checkbox-text">Cache Web LLM models for offline reuse</span>
+                </label>
+                <p class="setting-description">Keeps model shards in IndexedDB so you can reopen Reploid without re-downloading.</p>
+            </div>
+
+            <div class="mode-info" style="margin-top: 16px;">
+                <span class="mode-info-text">Reminder: Close other GPU-intensive apps (games, 3D tools) for best performance.</span>
+            </div>
+        `;
+
+        return html;
     }
 
     function renderHybridConfig(env) {
@@ -1461,6 +1672,9 @@
             case 'browser':
                 saveResult = saveBrowserMode();
                 break;
+            case 'web-llm':
+                saveResult = saveWebLLMMode();
+                break;
             case 'hybrid':
                 saveResult = saveHybridMode();
                 break;
@@ -1469,6 +1683,9 @@
                 break;
             case 'custom':
                 saveResult = saveCustomMode();
+                break;
+            case 'offline':
+                saveResult = saveOfflineMode();
                 break;
         }
 
@@ -1578,6 +1795,7 @@
         localStorage.setItem('AI_PROVIDER', primaryProvider);
         localStorage.setItem('SELECTED_MODEL', selectedModel);
         localStorage.setItem('DEPLOYMENT_MODE', 'cloud');
+        localStorage.removeItem('OFFLINE_MODE');
         return true;
     }
 
@@ -1585,12 +1803,92 @@
         localStorage.setItem('AI_PROVIDER', 'web');
         localStorage.setItem('SELECTED_MODEL', 'web-llm');
         localStorage.setItem('DEPLOYMENT_MODE', 'browser');
+        localStorage.removeItem('ENABLE_PAXOS');
+        localStorage.removeItem('OFFLINE_MODE');
+        if (elements.multiModelToggle) {
+            elements.multiModelToggle.checked = false;
+            syncMultiModelControls(false);
+        }
+        return true;
+    }
+
+    function saveWebLLMMode() {
+        const profileSelect = document.getElementById('mode-web-llm-profile');
+        const cacheCheckbox = document.getElementById('mode-web-llm-cache');
+
+        if (profileSelect) {
+            localStorage.setItem('WEB_LLM_PROFILE', profileSelect.value);
+        }
+        if (cacheCheckbox) {
+            localStorage.setItem('WEB_LLM_CACHE', cacheCheckbox.checked ? 'true' : 'false');
+        }
+
+        // Web LLM runs entirely in-browser
+        localStorage.setItem('AI_PROVIDER', 'web');
+        localStorage.setItem('SELECTED_MODEL', 'web-llm');
+        localStorage.setItem('DEPLOYMENT_MODE', 'web-llm');
+        localStorage.removeItem('OFFLINE_MODE');
+
+        // Multi-model doesn’t apply here
+        localStorage.removeItem('ENABLE_PAXOS');
+        if (elements.multiModelToggle) {
+            elements.multiModelToggle.checked = false;
+            syncMultiModelControls(false);
+        }
+        state.selectedProvider = 'web';
+        return true;
+    }
+
+    function saveOfflineMode() {
+        const autoStartCheckbox = document.getElementById('mode-offline-auto-start');
+        const disableWebRTCCheckbox = document.getElementById('mode-offline-disable-webrtc');
+        const clearKeysCheckbox = document.getElementById('mode-offline-clear-keys');
+
+        if (autoStartCheckbox) {
+            localStorage.setItem('AUTO_START_OLLAMA', autoStartCheckbox.checked ? 'true' : 'false');
+        }
+
+        if (disableWebRTCCheckbox) {
+            const disable = disableWebRTCCheckbox.checked;
+            localStorage.setItem('ENABLE_WEBRTC', disable ? 'false' : 'true');
+            if (elements.enableWebRTCCheckbox) {
+                elements.enableWebRTCCheckbox.checked = !disable;
+            }
+        }
+
+        if (!clearKeysCheckbox || clearKeysCheckbox.checked) {
+            ['GEMINI_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY'].forEach(key => localStorage.removeItem(key));
+            state.savedApiKeys = {
+                gemini: '',
+                openai: '',
+                anthropic: ''
+            };
+        }
+
+        ['ENABLE_PAXOS', 'PAXOS_PRIMARY', 'PAXOS_FALLBACK', 'PAXOS_CONSENSUS', 'PAXOS_STRATEGY'].forEach(key => {
+            localStorage.removeItem(key);
+        });
+        if (elements.multiModelToggle) {
+            elements.multiModelToggle.checked = false;
+            syncMultiModelControls(false);
+        }
+
+        const localModel = localStorage.getItem('LOCAL_MODEL');
+        if (localModel) {
+            localStorage.setItem('SELECTED_MODEL', `ollama-${localModel}`);
+        }
+
+        localStorage.setItem('OFFLINE_MODE', 'true');
+        localStorage.setItem('AI_PROVIDER', 'local');
+        localStorage.setItem('DEPLOYMENT_MODE', 'offline');
+        state.selectedProvider = 'local';
         return true;
     }
 
     function saveHybridMode() {
         localStorage.setItem('AI_PROVIDER', 'hybrid');
         localStorage.setItem('DEPLOYMENT_MODE', 'hybrid');
+        localStorage.removeItem('OFFLINE_MODE');
 
         // Hybrid mode uses HYBR module
         // Configuration will be handled by the hybrid module at runtime
@@ -1610,6 +1908,7 @@
         localStorage.setItem('AI_PROVIDER', 'paxos');
         localStorage.setItem('SELECTED_MODEL', 'paxos');
         localStorage.setItem('DEPLOYMENT_MODE', 'multi');
+        localStorage.removeItem('OFFLINE_MODE');
         return true;
     }
 
@@ -1628,6 +1927,7 @@
         localStorage.setItem('AI_PROVIDER', 'custom');
         localStorage.setItem('SELECTED_MODEL', 'custom-proxy');
         localStorage.setItem('DEPLOYMENT_MODE', 'custom');
+        localStorage.removeItem('OFFLINE_MODE');
         return true;
     }
 

@@ -122,6 +122,20 @@
                                 <button type="button" class="btn-select-mode" data-mode="local">Select</button>
                             </div>
 
+                            <div class="mode-card" data-mode="offline">
+                                <div class="mode-card-header">
+                                    <span class="mode-icon">🛡️</span>
+                                    <h4 class="mode-title">Fully Offline</h4>
+                                    <button type="button" class="mode-help-btn" data-help-mode="offline" aria-label="Learn more about Offline mode">ⓘ</button>
+                                </div>
+                                <ul class="mode-features">
+                                    <li class="feature-pro">✅ Zero network traffic</li>
+                                    <li class="feature-pro">✅ Maximum privacy</li>
+                                    <li class="feature-con">📦 Preload models & assets</li>
+                                </ul>
+                                <button type="button" class="btn-select-mode" data-mode="offline">Select</button>
+                            </div>
+
                             <div class="mode-card" data-mode="cloud">
                                 <div class="mode-card-header">
                                     <span class="mode-icon">☁️</span>
@@ -134,6 +148,20 @@
                                     <li class="feature-con">💳 API costs apply</li>
                                 </ul>
                                 <button type="button" class="btn-select-mode" data-mode="cloud">Select</button>
+                            </div>
+
+                            <div class="mode-card" data-mode="web-llm">
+                                <div class="mode-card-header">
+                                    <span class="mode-icon">🕸️</span>
+                                    <h4 class="mode-title">Web LLM (WebGPU)</h4>
+                                    <button type="button" class="mode-help-btn" data-help-mode="web-llm" aria-label="Learn more about Web LLM mode">ⓘ</button>
+                                </div>
+                                <ul class="mode-features">
+                                    <li class="feature-pro">✅ Runs in browser</li>
+                                    <li class="feature-pro">✅ No API key</li>
+                                    <li class="feature-con">⚠️ Needs WebGPU GPU</li>
+                                </ul>
+                                <button type="button" class="btn-select-mode" data-mode="web-llm">Select</button>
                             </div>
 
                             <div class="mode-card" data-mode="browser">
