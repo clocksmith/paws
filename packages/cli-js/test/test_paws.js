@@ -84,22 +84,22 @@ describe("PAWS for Node.js", function () {
         `node ${catsCliPath} "${path.join(
           tempDir,
           "src/**/*.js"
-        )}" -x "${path.join(tempDir, "src/api/**")}" -o - -q`
+        )}" -x "${path.join(tempDir, "src/api/**")}" -o - -q --no-sys-prompt`
       );
-      expect(stdout).to.include("--- CATS_START_FILE: src/main.js ---");
+      expect(stdout).to.include("🐈 --- CATS_START_FILE: src/main.js ---");
       expect(stdout).to.not.include("src/api/v1.js");
     });
 
     it("CLI should respect default excludes and the -N flag", async () => {
       let { stdout } = await runCliWithInput(
-        `node ${catsCliPath} "${path.join(tempDir, ".*")}" -o - -q`
+        `node ${catsCliPath} "${path.join(tempDir, ".*")}" -o - -q --no-sys-prompt`
       );
       expect(stdout).to.not.include(".gitignore");
 
       ({ stdout } = await runCliWithInput(
-        `node ${catsCliPath} "${path.join(tempDir, ".gitignore")}" -N -o - -q`
+        `node ${catsCliPath} "${path.join(tempDir, ".gitignore")}" -N -o - -q --no-sys-prompt`
       ));
-      expect(stdout).to.include("--- CATS_START_FILE: .gitignore ---");
+      expect(stdout).to.include("🐈 --- CATS_START_FILE: .gitignore ---");
     });
 
     it("CLI should prepend persona and sysprompt files in the correct order", async () => {

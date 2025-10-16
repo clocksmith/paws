@@ -1094,11 +1094,55 @@ if (require.main === module) {
   main().then(code => process.exit(code));
 }
 
+// Convenience function for API usage
+async function createBundle(options) {
+  const config = {
+    outputFile: options.outputFile || 'cats.md',
+    sysPrompt: options.sysPrompt || null,
+    personas: options.personas || [],
+    excludes: options.excludes || [],
+    noDefaultExcludes: options.noDefaultExcludes || false,
+    includeGitignore: options.includeGitignore || false,
+    deltaMode: options.deltaMode || false,
+    strictCatscan: options.strictCatscan || false,
+    quiet: options.quiet !== false,
+    rootDir: options.rootDir || process.cwd(),
+    virtualFS: options.virtualFS
+  };
+
+  const bundler = new CatsBundler(config);
+
+  // If virtualFS is provided, handle it directly
+  if (config.virtualFS && Array.isArray(config.virtualFS)) {
+    let bundle = '';
+
+    for (const file of config.virtualFS) {
+      const isBinary = Buffer.isBuffer(file.content);
+
+      if (isBinary) {
+        bundle += `--- CATS_START_FILE: ${file.path} (Content:Base64) ---\n`;
+        bundle += file.content.toString('base64') + '\n';
+        bundle += `--- CATS_END_FILE: ${file.path} ---\n\n`;
+      } else {
+        bundle += `--- CATS_START_FILE: ${file.path} ---\n`;
+        bundle += file.content + '\n';
+        bundle += `--- CATS_END_FILE: ${file.path} ---\n\n`;
+      }
+    }
+
+    return bundle;
+  }
+
+  // Otherwise use the normal file-based bundling
+  return await bundler.createBundle(options.files || [], false);
+}
+
 // Export for use as module
 module.exports = {
   FileTreeNode,
   ProjectAnalyzer,
   AICurator,
   CatsBundler,
+  createBundle,
   main
 };

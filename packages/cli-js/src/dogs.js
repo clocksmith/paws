@@ -825,6 +825,26 @@ if (require.main === module) {
   main().then(code => process.exit(code));
 }
 
+// Convenience function for API usage
+async function extractBundle(options) {
+  const processor = new BundleProcessor({
+    outputDir: options.outputDir || process.cwd(),
+    verify: options.verify || null,
+    revertOnFail: options.revertOnFail !== false,
+    quiet: options.quiet !== false,
+    autoAccept: options.autoAccept || false
+  });
+
+  // Parse the bundle content
+  const bundleContent = options.bundleContent || '';
+  const originalBundleContent = options.originalBundleContent || '';
+
+  // Extract files from bundle
+  const files = await processor.parseBundle(bundleContent, originalBundleContent);
+
+  return files;
+}
+
 // Export for use as module
 module.exports = {
   FileChange,
@@ -833,5 +853,6 @@ module.exports = {
   GitVerificationHandler,
   BundleProcessor,
   FileOperation,
+  extractBundle,
   main
 };
