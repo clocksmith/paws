@@ -15,14 +15,14 @@ import os
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from paws_swarm import (
+from paws.swarm import (
     AgentRole,
     SwarmAgent,
     SwarmMessage,
     TaskDecomposition,
     SwarmOrchestrator
 )
-from paws_paxos import CompetitorConfig
+from paws.paxos import CompetitorConfig
 
 
 class TestAgentRole(unittest.TestCase):

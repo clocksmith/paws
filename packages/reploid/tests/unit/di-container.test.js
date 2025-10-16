@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import DIContainerModule from '../../upgrades/di-container.js';
 
 describe('DIContainer Module', () => {
   let DIContainer;
@@ -17,66 +18,7 @@ describe('DIContainer Module', () => {
       }
     };
 
-    DIContainer = {
-      metadata: {
-        id: 'DIContainer',
-        version: '1.0.0',
-        dependencies: ['Utils'],
-        async: false,
-        type: 'service'
-      },
-      factory: (deps) => {
-        const { Utils } = deps;
-        const { logger } = Utils;
-        const _services = new Map();
-        const _singletons = new Map();
-
-        const register = (module) => {
-          if (!module || !module.metadata || !module.metadata.id) {
-            logger.error('[DIContainer] Invalid module registration attempt.');
-            return;
-          }
-          logger.info(`[DIContainer] Registered module: ${module.metadata.id}`);
-          _services.set(module.metadata.id, module);
-        };
-
-        const resolve = async (id) => {
-          if (_singletons.has(id)) {
-            return _singletons.get(id);
-          }
-
-          const module = _services.get(id);
-          if (!module) {
-            const available = Array.from(_services.keys()).join(', ');
-            throw new Error(`[DIContainer] Service not found: ${id}\nAvailable services: ${available || 'none'}`);
-          }
-
-          const dependencies = {};
-          if (module.metadata.dependencies) {
-            for (const depId of module.metadata.dependencies) {
-              try {
-                dependencies[depId] = await resolve(depId);
-              } catch (err) {
-                throw new Error(`[DIContainer] Failed to resolve dependency '${depId}' for module '${id}'.`);
-              }
-            }
-          }
-
-          logger.debug(`[DIContainer] Creating instance of: ${id}`);
-          const instance = module.factory(dependencies);
-
-          if (module.metadata.async && typeof instance.init === 'function') {
-            await instance.init();
-          }
-
-          const publicApi = (module.metadata.type === 'pure') ? instance : instance.api;
-          _singletons.set(id, publicApi);
-          return publicApi;
-        };
-
-        return { register, resolve };
-      }
-    };
+    DIContainer = DIContainerModule;
   });
 
   afterEach(() => {

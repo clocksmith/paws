@@ -9,7 +9,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from paws_context_optimizer import CodeModule, ContextWindow, DependencyAnalyzer, ContextOptimizer
+from paws.context_optimizer import CodeModule, ContextWindow, DependencyAnalyzer, ContextOptimizer
 
 
 class TestCodeModule(unittest.TestCase):

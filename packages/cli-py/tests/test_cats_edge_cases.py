@@ -193,7 +193,7 @@ class TestDogsEdgeCases(unittest.TestCase):
 
     def test_file_change_get_diff_empty_return(self):
         """Test FileChange.get_diff() with no content (line 120 in dogs.py)"""
-        import dogs
+        from paws import dogs
 
         # Create MODIFY change with None content
         change = dogs.FileChange(

@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from paws.dogs import FileChange, ChangeSet, FileOperation, BundleProcessor, GIT_AVAILABLE
 from paws.cats import ProjectAnalyzer, FileTreeNode
-from paws_session import Session, SessionStatus, SessionManager, SessionTurn
+from paws.session import Session, SessionStatus, SessionManager, SessionTurn
 
 
 class TestFileChange(unittest.TestCase):

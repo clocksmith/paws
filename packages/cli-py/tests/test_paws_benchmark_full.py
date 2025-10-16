@@ -17,11 +17,11 @@ from dataclasses import asdict
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import paws_benchmark
-from paws_benchmark import (
+import paws.benchmark
+from paws.benchmark import (
     BenchmarkMetrics, BenchmarkSuite, PerformanceBenchmark
 )
-from paws_paxos import CompetitorConfig, CompetitionResult
+from paws.paxos import CompetitorConfig, CompetitionResult
 
 
 class TestBenchmarkMetrics(unittest.TestCase):
@@ -164,7 +164,7 @@ class TestPerformanceBenchmark(unittest.TestCase):
         )
 
         # Mock PaxosOrchestrator
-        with patch('paws_benchmark.PaxosOrchestrator') as mock_paxos:
+        with patch('paws.benchmark.PaxosOrchestrator') as mock_paxos:
             # Mock competition results
             mock_result = CompetitionResult(
                 name="Test Agent",
@@ -209,7 +209,7 @@ class TestPerformanceBenchmark(unittest.TestCase):
             api_key="test_key"
         )
 
-        with patch('paws_benchmark.PaxosOrchestrator') as mock_paxos:
+        with patch('paws.benchmark.PaxosOrchestrator') as mock_paxos:
             mock_result = CompetitionResult(
                 name="Test Agent",
                 model_id="gemini-pro",
@@ -248,7 +248,7 @@ class TestPerformanceBenchmark(unittest.TestCase):
             api_key="test_key"
         )
 
-        with patch('paws_benchmark.PaxosOrchestrator') as mock_paxos:
+        with patch('paws.benchmark.PaxosOrchestrator') as mock_paxos:
             mock_result = CompetitionResult(
                 name="Test Agent",
                 model_id="gemini-pro",
@@ -308,7 +308,7 @@ class TestPerformanceBenchmark(unittest.TestCase):
             api_key="test_key"
         )
 
-        with patch('paws_benchmark.PaxosOrchestrator') as mock_paxos:
+        with patch('paws.benchmark.PaxosOrchestrator') as mock_paxos:
             mock_result = CompetitionResult(
                 name="Test Agent",
                 model_id="gemini-pro",
@@ -602,7 +602,7 @@ class TestBenchmarkMain(unittest.TestCase):
         }))
 
         # Mock PaxosOrchestrator
-        with patch('paws_benchmark.PaxosOrchestrator') as mock_paxos:
+        with patch('paws.benchmark.PaxosOrchestrator') as mock_paxos:
             mock_result = CompetitionResult(
                 name="Test Agent",
                 model_id="gemini-pro",
@@ -627,7 +627,7 @@ class TestBenchmarkMain(unittest.TestCase):
 
             with patch('sys.argv', test_args):
                 with patch('sys.stdout', new=MagicMock()):
-                    result = paws_benchmark.main()
+                    result = paws.benchmark.main()
 
             # Should succeed
             self.assertEqual(result, 0)
@@ -655,7 +655,7 @@ class TestBenchmarkMain(unittest.TestCase):
         context_file.write_text("# Test context")
 
         # Mock PaxosOrchestrator
-        with patch('paws_benchmark.PaxosOrchestrator') as mock_paxos:
+        with patch('paws.benchmark.PaxosOrchestrator') as mock_paxos:
             mock_result = CompetitionResult(
                 name="Test Agent",
                 model_id="gemini-pro",
@@ -681,7 +681,7 @@ class TestBenchmarkMain(unittest.TestCase):
 
             with patch('sys.argv', test_args):
                 with patch('sys.stdout', new=MagicMock()):
-                    result = paws_benchmark.main()
+                    result = paws.benchmark.main()
 
             # Should succeed
             self.assertEqual(result, 0)

@@ -81,4 +81,4 @@ const DIContainer = {
   }
 };
 
-DIContainer;
+export default DIContainer;

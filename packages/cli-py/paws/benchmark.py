@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 from dataclasses import dataclass, asdict
 from typing import List, Dict, Any
-from paws_paxos import PaxosOrchestrator, CompetitorConfig
+from paws.paxos import PaxosOrchestrator, CompetitorConfig
 
 
 @dataclass
@@ -319,7 +319,7 @@ def main():
     with open(args.config, 'r') as f:
         config_data = json.load(f)
 
-    from paws_paxos import CompetitorConfig
+    from paws.paxos import CompetitorConfig
     competitors = []
     for comp in config_data.get("competitors", []):
         provider = comp.get("provider", "gemini")

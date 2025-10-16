@@ -16,8 +16,8 @@ from unittest.mock import patch, Mock, MagicMock
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import paws_paxos
-from paws_paxos import (
+import paws.paxos
+from paws.paxos import (
     CompetitorConfig, CompetitionResult, LLMClient, PaxosOrchestrator
 )
 

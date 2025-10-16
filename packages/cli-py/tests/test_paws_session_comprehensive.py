@@ -27,8 +27,8 @@ except ImportError:
     GIT_AVAILABLE = False
 
 if sys.version_info >= (3, 7):
-    import paws_session
-    from paws_session import (
+    import paws.session
+    from paws.session import (
         Session, SessionStatus, SessionTurn, SessionManager, SessionCLI
     )
 

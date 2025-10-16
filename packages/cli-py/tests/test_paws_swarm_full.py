@@ -16,11 +16,11 @@ from unittest.mock import patch, Mock, MagicMock
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import paws_swarm
-from paws_swarm import (
+import paws.swarm
+from paws.swarm import (
     AgentRole, SwarmAgent, SwarmMessage, TaskDecomposition, SwarmOrchestrator
 )
-from paws_paxos import CompetitorConfig
+from paws.paxos import CompetitorConfig
 
 
 class TestAgentRole(unittest.TestCase):

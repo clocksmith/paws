@@ -549,7 +549,7 @@ class TestAICuratorExceptionHandling(unittest.TestCase):
 
     def test_curate_with_gemini_exception(self):
         """Test _curate_with_gemini exception handling (lines 413-418)"""
-        from cats import AICurator
+        from paws.cats import AICurator
         from unittest.mock import patch, Mock
 
         curator = AICurator(api_key="test_key", provider="gemini")
@@ -567,7 +567,7 @@ class TestAICuratorExceptionHandling(unittest.TestCase):
 
     def test_curate_with_claude_exception(self):
         """Test _curate_with_claude exception handling (lines 422-431)"""
-        from cats import AICurator
+        from paws.cats import AICurator
         from unittest.mock import Mock
 
         # Create curator with gemini (which is available in tests)
@@ -586,7 +586,7 @@ class TestAICuratorExceptionHandling(unittest.TestCase):
 
     def test_curate_with_openai_exception(self):
         """Test _curate_with_openai exception handling (lines 435-444)"""
-        from cats import AICurator
+        from paws.cats import AICurator
         from unittest.mock import patch, Mock
         import sys
 
@@ -611,7 +611,7 @@ class TestProjectAnalyzerGit(unittest.TestCase):
         """Test _build_tree_with_git method (lines 271-281)"""
         import tempfile
         import subprocess
-        from cats import ProjectAnalyzer
+        from paws.cats import ProjectAnalyzer
 
         test_dir = Path(tempfile.mkdtemp(prefix="git_tree_"))
 
@@ -648,7 +648,7 @@ class TestProjectAnalyzerIgnorePatterns(unittest.TestCase):
     def test_build_tree_with_walk_ignores_dirs(self):
         """Test _build_tree_with_walk ignoring directories (line 296)"""
         import tempfile
-        from cats import ProjectAnalyzer
+        from paws.cats import ProjectAnalyzer
 
         test_dir = Path(tempfile.mkdtemp(prefix="walk_ignore_"))
 

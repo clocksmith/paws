@@ -735,12 +735,19 @@ class CatsBundler {
    * Create a CATS bundle with optional AI curation
    */
   async createBundle(files, aiCurate, aiProvider = 'gemini', aiKey) {
+    // Debug logging
+    if (process.env.DEBUG_CATS) {
+      console.error('[DEBUG] createBundle called with files:', files);
+      console.error('[DEBUG] aiCurate:', aiCurate);
+      console.error('[DEBUG] config:', this.config);
+    }
+
     // Get files to bundle
     if (aiCurate) {
       const spinner = ora('AI is analyzing your codebase...').start();
       files = await this.getAICuratedFiles(aiCurate, aiProvider, aiKey);
       spinner.stop();
-      
+
       if (!files || files.length === 0) {
         console.log(chalk.red('AI curation failed or returned no files.'));
         return '';
@@ -757,6 +764,96 @@ class CatsBundler {
         }
         return '';
       }
+    }
+
+    // Expand glob patterns to actual file paths
+    const expandedFiles = [];
+    let baseDir = this.rootPath; // Track base directory for relative path display
+    const defaultIgnores = [
+      '**/node_modules/**',
+      '**/.git/**',
+      '**/.gitignore',
+      '**/.env',
+      '**/.env.*',
+      '**/*.log',
+      '**/dist/**',
+      '**/build/**',
+      '**/.paws_cache/**'
+    ];
+
+    for (const pattern of files) {
+      try {
+        // Check if pattern contains glob characters
+        const hasGlob = /[*?{}\[\]]/.test(pattern);
+
+        if (!hasGlob) {
+          // No glob pattern, treat as literal file
+          expandedFiles.push(pattern);
+          // Update baseDir if this is an absolute path
+          if (path.isAbsolute(pattern)) {
+            baseDir = path.dirname(pattern);
+          }
+          continue;
+        }
+
+        // Pattern has glob characters
+        const isAbsolute = path.isAbsolute(pattern);
+
+        const globOptions = {
+          nodir: true,
+          dot: this.config.noDefaultExcludes,
+          ignore: this.config.noDefaultExcludes ? this.config.exclude : [
+            ...this.config.exclude,
+            ...defaultIgnores
+          ]
+        };
+
+        if (isAbsolute) {
+          // For absolute glob patterns like /tmp/foo/**/*.js
+          // Find the non-glob prefix and use it as cwd
+          let basePath = pattern;
+          let relativePattern = '**/*';
+
+          // Find where glob patterns start
+          const globStart = pattern.search(/[*?{}\[\]]/);
+          if (globStart > 0) {
+            // Get the directory containing the first glob character
+            const beforeGlob = pattern.substring(0, globStart);
+            const lastSlash = beforeGlob.lastIndexOf(path.sep);
+            if (lastSlash > 0) {
+              basePath = beforeGlob.substring(0, lastSlash);
+              relativePattern = pattern.substring(lastSlash + 1);
+            }
+          }
+
+          // Update baseDir to the common base of absolute patterns
+          baseDir = basePath;
+
+          globOptions.cwd = basePath;
+          globOptions.absolute = false;
+          const matches = await glob(relativePattern, globOptions);
+          // Convert back to absolute paths
+          expandedFiles.push(...matches.map(m => path.join(basePath, m)));
+        } else {
+          // Relative pattern
+          globOptions.cwd = this.rootPath;
+          globOptions.absolute = false;
+          const matches = await glob(pattern, globOptions);
+          expandedFiles.push(...matches);
+        }
+      } catch (error) {
+        // If glob fails, treat as literal file path
+        expandedFiles.push(pattern);
+      }
+    }
+
+    files = expandedFiles;
+
+    if (files.length === 0) {
+      if (!this.config.quiet) {
+        console.log(chalk.red('No files matched the specified patterns.'));
+      }
+      return '';
     }
 
     await this.cache.load();
@@ -817,16 +914,21 @@ class CatsBundler {
     bundleLines.push('');
 
     for (const filePath of files) {
-      const fullPath = path.isAbsolute(filePath) 
-        ? filePath 
+      const fullPath = path.isAbsolute(filePath)
+        ? filePath
         : path.join(this.rootPath, filePath);
+
+      // Compute relative path for display in bundle
+      const displayPath = path.isAbsolute(filePath)
+        ? path.relative(baseDir, filePath)
+        : filePath;
 
       let stats;
       try {
         stats = await fs.stat(fullPath);
       } catch {
         if (!this.config.quiet) {
-          console.log(chalk.yellow(`Warning: File not found: ${filePath}`));
+          console.log(chalk.yellow(`Warning: File not found: ${displayPath}`));
         }
         continue;
       }
@@ -877,10 +979,10 @@ class CatsBundler {
         }
 
         if (isBinary) {
-          bundleLines.push(`🐈 --- CATS_START_FILE: ${filePath} (Content:Base64) ---`);
+          bundleLines.push(`🐈 --- CATS_START_FILE: ${displayPath} (Content:Base64) ---`);
         } else {
-          bundleLines.push(`🐈 --- CATS_START_FILE: ${filePath} ---`);
-          
+          bundleLines.push(`🐈 --- CATS_START_FILE: ${displayPath} ---`);
+
           // Add language hint
           const ext = path.extname(fullPath).slice(1);
           if (ext) {
@@ -897,18 +999,18 @@ class CatsBundler {
           }
         }
 
-        bundleLines.push(`🐈 --- CATS_END_FILE: ${filePath} ---`);
+        bundleLines.push(`🐈 --- CATS_END_FILE: ${displayPath} ---`);
         bundleLines.push('');
 
         if (!this.config.quiet) {
           const cacheNote = fromCache ? chalk.gray(' (cache)') : '';
-          console.log(chalk.green(`✓ Added: ${filePath}`) + cacheNote);
+          console.log(chalk.green(`✓ Added: ${displayPath}`) + cacheNote);
         }
 
         processedCount += 1;
         this.emitProgress({
           event: 'bundle:file',
-          path: filePath,
+          path: displayPath,
           cache: fromCache,
           binary: isBinary,
           size: stats.size
@@ -916,11 +1018,11 @@ class CatsBundler {
 
       } catch (error) {
         if (!this.config.quiet) {
-          console.log(chalk.red(`✗ Failed to add ${filePath}: ${error.message}`));
+          console.log(chalk.red(`✗ Failed to add ${displayPath}: ${error.message}`));
         }
         this.emitProgress({
           event: 'bundle:error',
-          path: filePath,
+          path: displayPath,
           message: error.message
         });
       }
@@ -1029,6 +1131,12 @@ async function main() {
 
   const options = program.opts();
   const files = program.args;
+
+  // Debug
+  if (process.env.DEBUG_CATS) {
+    console.error('[DEBUG main] files from args:', files);
+    console.error('[DEBUG main] options:', options);
+  }
 
   // Build config
   const config = {

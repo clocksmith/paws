@@ -62,6 +62,11 @@ const ToolRunnerPureHelpers = {
     // Public API
     return {
       convertToGeminiFunctionDeclarationPure,
+      // Expose internal functions for testing
+      _test: {
+        mapMcpTypeToGeminiPure,
+        convertMcpPropertiesToGeminiPure,
+      }
     };
   }
 };

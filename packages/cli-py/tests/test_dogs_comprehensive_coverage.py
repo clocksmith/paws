@@ -530,7 +530,7 @@ class TestGitHandlerErrors(unittest.TestCase):
 
     def test_rollback_exception(self):
         """Test rollback() exception handling (lines 326-328)"""
-        from dogs import GitVerificationHandler
+        from paws.dogs import GitVerificationHandler
         from unittest.mock import patch, Mock
 
         handler = GitVerificationHandler()
@@ -549,7 +549,7 @@ class TestGitHandlerErrors(unittest.TestCase):
 
     def test_finalize_exception(self):
         """Test finalize() exception handling (lines 339-341)"""
-        from dogs import GitVerificationHandler
+        from paws.dogs import GitVerificationHandler
         from unittest.mock import patch, Mock
 
         handler = GitVerificationHandler()
@@ -569,7 +569,7 @@ class TestGitHandlerErrors(unittest.TestCase):
 
     def test_finalize_without_repo(self):
         """Test finalize() with no repo (lines 332-333)"""
-        from dogs import GitVerificationHandler
+        from paws.dogs import GitVerificationHandler
 
         handler = GitVerificationHandler()
         handler.repo = None
@@ -608,7 +608,7 @@ class TestGitVerificationTimeout(unittest.TestCase):
 
     def test_run_verification_timeout(self):
         """Test run_verification with timeout (line 356)"""
-        from dogs import GitVerificationHandler
+        from paws.dogs import GitVerificationHandler
         from unittest.mock import patch, Mock
 
         handler = GitVerificationHandler()
@@ -634,7 +634,7 @@ class TestBundleProcessorDeltaErrors(unittest.TestCase):
 
     def test_load_original_bundle_no_delta(self):
         """Test _load_original_bundle with no delta path (line 377)"""
-        from dogs import BundleProcessor
+        from paws.dogs import BundleProcessor
 
         config = {
             "apply_delta_from": None
@@ -648,7 +648,7 @@ class TestBundleProcessorDeltaErrors(unittest.TestCase):
 
     def test_load_original_bundle_file_not_found(self):
         """Test _load_original_bundle with missing file (lines 394-395)"""
-        from dogs import BundleProcessor
+        from paws.dogs import BundleProcessor
 
         config = {
             "apply_delta_from": str(self.test_dir / "nonexistent.md")
@@ -689,7 +689,7 @@ class TestBundleProcessorVerifyAndApply(unittest.TestCase):
 
     def test_run_with_verification_checkpoint_failure(self):
         """Test run_with_verification with checkpoint failure (lines 704-705)"""
-        from dogs import BundleProcessor, ChangeSet, FileChange
+        from paws.dogs import BundleProcessor, ChangeSet, FileChange
         from unittest.mock import patch, Mock
 
         config = {
@@ -715,7 +715,7 @@ class TestBundleProcessorVerifyAndApply(unittest.TestCase):
 
     def test_run_with_verification_apply_changes_failure(self):
         """Test run_with_verification with apply_changes failure (lines 710-712)"""
-        from dogs import BundleProcessor, ChangeSet, FileChange
+        from paws.dogs import BundleProcessor, ChangeSet, FileChange
         from unittest.mock import patch, Mock
 
         config = {

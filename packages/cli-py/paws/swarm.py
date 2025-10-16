@@ -20,8 +20,8 @@ from typing import List, Optional, Dict, Any
 from enum import Enum
 
 
-# Import from paws_paxos
-from paws_paxos import LLMClient, CompetitorConfig
+# Import from paws.paxos
+from paws.paxos import LLMClient, CompetitorConfig
 
 
 class AgentRole(Enum):

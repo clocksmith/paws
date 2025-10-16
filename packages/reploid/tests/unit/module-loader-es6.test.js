@@ -53,35 +53,65 @@ class DIContainer {
   constructor() {
     this.services = new Map();
     this.factories = new Map();
+    this.resolving = new Set();
   }
 
-  register(name, factory, dependencies = []) {
-    this.factories.set(name, { factory, dependencies });
+  register(name, factory, dependencies = [], options = {}) {
+    // Support both array and object format for dependencies parameter
+    const deps = Array.isArray(dependencies) ? dependencies : [];
+    const opts = typeof dependencies === 'object' && !Array.isArray(dependencies) ? dependencies : options;
+    this.factories.set(name, { factory, dependencies: deps, options: opts });
   }
 
   async resolve(name) {
-    if (this.services.has(name)) {
-      return this.services.get(name);
-    }
-
     const factoryInfo = this.factories.get(name);
     if (!factoryInfo) {
       throw new Error(`Service not found: ${name}`);
     }
 
-    const deps = {};
-    for (const dep of factoryInfo.dependencies) {
-      deps[dep] = await this.resolve(dep);
+    // Check for circular dependencies
+    if (this.resolving.has(name)) {
+      throw new Error(`Circular dependency detected: ${name}`);
     }
 
-    const service = await factoryInfo.factory(deps);
-    this.services.set(name, service);
-    return service;
+    // Check if transient lifecycle
+    if (factoryInfo.options?.lifecycle === 'transient') {
+      this.resolving.add(name);
+      try {
+        const deps = {};
+        for (const dep of factoryInfo.dependencies) {
+          deps[dep] = await this.resolve(dep);
+        }
+        return await factoryInfo.factory(deps);
+      } finally {
+        this.resolving.delete(name);
+      }
+    }
+
+    // Singleton pattern
+    if (this.services.has(name)) {
+      return this.services.get(name);
+    }
+
+    this.resolving.add(name);
+    try {
+      const deps = {};
+      for (const dep of factoryInfo.dependencies) {
+        deps[dep] = await this.resolve(dep);
+      }
+
+      const service = await factoryInfo.factory(deps);
+      this.services.set(name, service);
+      return service;
+    } finally {
+      this.resolving.delete(name);
+    }
   }
 
   clear() {
     this.services.clear();
     this.factories.clear();
+    this.resolving.clear();
   }
 }
 
@@ -238,153 +268,153 @@ describe('DIContainer', () => {
   });
 
   describe('Error Handling', () => {
-    it('should throw on circular dependencies', () => {
-      container.register('A', () => ({ dep: container.resolve('B') }));
-      container.register('B', () => ({ dep: container.resolve('A') }));
+    it('should throw on circular dependencies', async () => {
+      container.register('A', async (deps) => ({ dep: deps.B }), ['B']);
+      container.register('B', async (deps) => ({ dep: deps.A }), ['A']);
 
-      expect(() => container.resolve('A')).toThrow();
+      await expect(container.resolve('A')).rejects.toThrow();
     });
 
-    it('should handle factory errors gracefully', () => {
+    it('should handle factory errors gracefully', async () => {
       container.register('error-service', () => {
         throw new Error('Factory failed');
       });
 
-      expect(() => container.resolve('error-service')).toThrow('Factory failed');
+      await expect(container.resolve('error-service')).rejects.toThrow('Factory failed');
     });
 
-    it('should handle missing dependencies', () => {
-      expect(() => container.resolve('nonexistent')).toThrow();
+    it('should handle missing dependencies', async () => {
+      await expect(container.resolve('nonexistent')).rejects.toThrow();
     });
   });
 
   describe('Lifecycle Management', () => {
-    it('should support singleton pattern', () => {
+    it('should support singleton pattern', async () => {
       let callCount = 0;
       container.register('singleton', () => {
         callCount++;
         return { id: callCount };
       });
 
-      const instance1 = container.resolve('singleton');
-      const instance2 = container.resolve('singleton');
+      const instance1 = await container.resolve('singleton');
+      const instance2 = await container.resolve('singleton');
 
       expect(instance1).toBe(instance2);
       expect(callCount).toBe(1);
     });
 
-    it('should support transient pattern', () => {
+    it('should support transient pattern', async () => {
       let callCount = 0;
       container.register('transient', () => {
         callCount++;
         return { id: callCount };
       }, { lifecycle: 'transient' });
 
-      const instance1 = container.resolve('transient');
-      const instance2 = container.resolve('transient');
+      const instance1 = await container.resolve('transient');
+      const instance2 = await container.resolve('transient');
 
       expect(instance1).not.toBe(instance2);
       expect(callCount).toBe(2);
     });
 
-    it('should clear all registrations', () => {
+    it('should clear all registrations', async () => {
       container.register('A', () => ({ value: 'A' }));
       container.register('B', () => ({ value: 'B' }));
 
       container.clear();
 
-      expect(() => container.resolve('A')).toThrow();
-      expect(() => container.resolve('B')).toThrow();
+      await expect(container.resolve('A')).rejects.toThrow();
+      await expect(container.resolve('B')).rejects.toThrow();
     });
   });
 
   describe('Dependency Injection Patterns', () => {
-    it('should inject dependencies into factories', () => {
+    it('should inject dependencies into factories', async () => {
       container.register('config', () => ({ port: 3000 }));
       container.register('server', (deps) => ({
         config: deps.config,
         start: () => 'started'
-      }));
+      }), ['config']);
 
-      const server = container.resolve('server');
+      const server = await container.resolve('server');
       expect(server.config.port).toBe(3000);
     });
 
-    it('should handle optional dependencies', () => {
+    it('should handle optional dependencies', async () => {
       container.register('service', (deps) => ({
         optional: deps.optional || { default: true }
       }));
 
-      const service = container.resolve('service');
+      const service = await container.resolve('service');
       expect(service.optional.default).toBe(true);
     });
 
-    it('should support dependency overrides', () => {
+    it('should support dependency overrides', async () => {
       container.register('logger', () => ({ log: () => 'real' }));
-      container.register('app', (deps) => ({ logger: deps.logger }));
+      container.register('app', (deps) => ({ logger: deps.logger }), ['logger']);
 
       const mockLogger = { log: () => 'mock' };
       container.register('logger', () => mockLogger);
 
-      const app = container.resolve('app');
+      const app = await container.resolve('app');
       expect(app.logger.log()).toBe('mock');
     });
   });
 
   describe('Module Loading Performance', () => {
-    it('should handle large dependency graphs', () => {
+    it('should handle large dependency graphs', async () => {
       for (let i = 0; i < 100; i++) {
         container.register(`service${i}`, () => ({ id: i }));
       }
 
-      const service50 = container.resolve('service50');
+      const service50 = await container.resolve('service50');
       expect(service50.id).toBe(50);
     });
 
-    it('should cache resolved instances', () => {
+    it('should cache resolved instances', async () => {
       let callCount = 0;
       container.register('cached', () => {
         callCount++;
         return { value: 'cached' };
       });
 
-      container.resolve('cached');
-      container.resolve('cached');
-      container.resolve('cached');
+      await container.resolve('cached');
+      await container.resolve('cached');
+      await container.resolve('cached');
 
       expect(callCount).toBe(1);
     });
   });
 
   describe('ES6 Module Features', () => {
-    it('should support named exports', () => {
+    it('should support named exports', async () => {
       container.register('exports', () => ({
         namedExport1: 'value1',
         namedExport2: 'value2'
       }));
 
-      const exports = container.resolve('exports');
+      const exports = await container.resolve('exports');
       expect(exports.namedExport1).toBe('value1');
       expect(exports.namedExport2).toBe('value2');
     });
 
-    it('should support default exports', () => {
+    it('should support default exports', async () => {
       container.register('default', () => ({
         default: { main: 'export' }
       }));
 
-      const module = container.resolve('default');
+      const module = await container.resolve('default');
       expect(module.default.main).toBe('export');
     });
 
-    it('should handle re-exports', () => {
+    it('should handle re-exports', async () => {
       container.register('base', () => ({ feature: 'original' }));
       container.register('reexport', (deps) => ({
         ...deps.base,
         additional: 'extended'
-      }));
+      }), ['base']);
 
-      const reexport = container.resolve('reexport');
+      const reexport = await container.resolve('reexport');
       expect(reexport.feature).toBe('original');
       expect(reexport.additional).toBe('extended');
     });

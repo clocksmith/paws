@@ -15,8 +15,8 @@ from unittest.mock import patch, Mock, MagicMock
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import paws_context_optimizer
-from paws_context_optimizer import (
+import paws.context_optimizer
+from paws.context_optimizer import (
     CodeModule, ContextWindow, DependencyAnalyzer, ContextOptimizer
 )
 
