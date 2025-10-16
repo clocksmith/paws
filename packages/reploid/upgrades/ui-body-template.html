@@ -1,0 +1,62 @@
+<body>
+  <h1>REPLOID</h1>
+  <fieldset id="controls-fieldset">
+    <legend>Controls</legend>
+    <div class="content-wrapper">
+      <label for="goal-input">Goal:</label>
+      <textarea id="goal-input" placeholder="Enter goal..."></textarea>
+      <button id="run-cycle-button">Run Cycle</button>
+
+      <!-- Curator Mode Toggle -->
+      <div class="curator-mode-section" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <label style="margin: 0; display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="curator-mode-toggle" />
+            <span>⛮ Curator Mode (Autonomous)</span>
+          </label>
+          <button id="view-curator-reports" class="btn-secondary" style="padding: 4px 12px; font-size: 12px;">🖹 View Reports</button>
+        </div>
+        <div id="curator-mode-config" class="hidden" style="margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 4px;">
+          <label style="font-size: 12px; display: block; margin-bottom: 5px;">
+            Max proposals per goal: <input type="number" id="curator-max-proposals" value="7" min="1" max="20" style="width: 60px; margin-left: 5px;" />
+          </label>
+          <label style="font-size: 12px; display: block; margin-bottom: 5px;">
+            Delay (ms): <input type="number" id="curator-delay" value="5000" min="1000" max="30000" style="width: 80px; margin-left: 5px;" />
+          </label>
+          <div id="curator-status" style="font-size: 12px; color: #4fc3f7; margin-top: 8px;">
+            <span id="curator-status-text">Idle</span> • <span id="curator-proposals-count">0 proposals</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </fieldset>
+  <fieldset id="status-fieldset">
+    <legend>Status</legend>
+    <div class="content-wrapper">
+        <div id="status-indicator">Idle</div>
+        <div id="metrics-display"></div>
+    </div>
+  </fieldset>
+  <fieldset id="cycle-details-fieldset">
+    <legend>Cycle Details</legend>
+    <div class="content-wrapper" id="current-cycle-content">
+      <p>Waiting for cycle...</p>
+    </div>
+  </fieldset>
+  <fieldset id="timeline-fieldset">
+    <legend>Execution Timeline</legend>
+    <div class="content-wrapper">
+      <ul id="timeline-log"></ul>
+    </div>
+  </fieldset>
+  <div id="human-intervention-section" class="hidden">
+    <fieldset>
+        <legend id="human-intervention-title">Human Intervention</legend>
+        <div class="content-wrapper">
+            <p id="human-intervention-reason"></p>
+            <textarea id="human-critique-input"></textarea>
+            <button id="submit-critique-button">Submit Feedback</button>
+        </div>
+    </fieldset>
+  </div>
+</body>

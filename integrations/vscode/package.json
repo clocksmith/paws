@@ -33,6 +33,9 @@
     "watch": "tsc -w -p ./",
     "package": "vsce package || echo \"Install 'vsce' to package the extension\""
   },
+  "dependencies": {
+    "@paws/cli-js": "workspace:*"
+  },
   "devDependencies": {
     "@types/node": "^20.11.19",
     "@types/vscode": "^1.82.0",

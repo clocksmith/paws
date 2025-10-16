@@ -1,0 +1,51 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - heading "REPLOID" [level=1] [ref=e4]
+    - paragraph [ref=e5]:
+      - link "[Experimental] Recursive Self-Improvement Ecosystem" [ref=e6] [cursor=pointer]:
+        - /url: about.html
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]: "Server Status:"
+      - generic [ref=e10]: ♯ Connected
+    - generic [ref=e11]:
+      - generic [ref=e12]: "AI Provider:"
+      - generic [ref=e13]: Google Gemini
+    - button "⛭" [ref=e14] [cursor=pointer]
+  - generic [ref=e16]:
+    - textbox "What is your goal?" [ref=e17]
+    - button "Awaken Agent" [ref=e18] [cursor=pointer]
+  - generic [ref=e19]:
+    - generic [ref=e20]:
+      - button "☇ Simple Mode" [ref=e21] [cursor=pointer]:
+        - generic [ref=e22] [cursor=pointer]: ☇ Simple Mode
+      - button "☐ Templates" [ref=e23] [cursor=pointer]:
+        - generic [ref=e24] [cursor=pointer]: ☐ Templates
+      - button "⚐ Hunter Protocol" [ref=e25] [cursor=pointer]:
+        - generic [ref=e26] [cursor=pointer]: ⚐ Hunter Protocol
+    - paragraph [ref=e28]: Start with the minimal RSI core - fastest way to self-evolving agent
+    - generic [ref=e30]:
+      - heading "Choose Your Starting Configuration" [level=3] [ref=e31]
+      - paragraph [ref=e32]: These options control which modules and blueprints load at startup
+      - generic [ref=e33]:
+        - button "✓ ☇ Minimal RSI Core 8 essential modules only - fastest startup, agent can self-evolve APPL, UTIL, STMT, IDXB, APIC, CYCL, TLRD, TLWR" [ref=e34] [cursor=pointer]:
+          - text: ✓
+          - generic [ref=e35] [cursor=pointer]: ☇
+          - generic [ref=e36] [cursor=pointer]: Minimal RSI Core
+          - generic [ref=e37] [cursor=pointer]: 8 essential modules only - fastest startup, agent can self-evolve
+          - generic [ref=e38] [cursor=pointer]: APPL, UTIL, STMT, IDXB, APIC, CYCL, TLRD, TLWR
+        - button "☐ Core + All Blueprints 8 core modules + 26 blueprints for maximum knowledge Minimal + all .md knowledge documents" [ref=e39] [cursor=pointer]:
+          - generic [ref=e40] [cursor=pointer]: ☐
+          - generic [ref=e41] [cursor=pointer]: Core + All Blueprints
+          - generic [ref=e42] [cursor=pointer]: 8 core modules + 26 blueprints for maximum knowledge
+          - generic [ref=e43] [cursor=pointer]: Minimal + all .md knowledge documents
+        - button "⛿ All Upgrades + Blueprints 40 modules + 26 blueprints - full power from the start Every available capability enabled" [ref=e44] [cursor=pointer]:
+          - generic [ref=e45] [cursor=pointer]: ⛿
+          - generic [ref=e46] [cursor=pointer]: All Upgrades + Blueprints
+          - generic [ref=e47] [cursor=pointer]: 40 modules + 26 blueprints - full power from the start
+          - generic [ref=e48] [cursor=pointer]: Every available capability enabled
+    - text: "Experimental: Guided learning & research Production: Build & deploy Production: Build & deploy Experimental: Guided learning & research Experimental: Guided learning & research Production: Build & deploy"
+```

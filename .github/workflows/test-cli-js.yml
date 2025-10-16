@@ -1,0 +1,44 @@
+name: Test JavaScript CLI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'packages/cli-js/**'
+      - 'packages/core/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'packages/cli-js/**'
+      - 'packages/core/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [16.x, 18.x, 20.x]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run tests
+        run: pnpm --filter @paws/cli-js test
+
+      - name: Run linter
+        run: pnpm --filter @paws/cli-js lint

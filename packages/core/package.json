@@ -1,0 +1,27 @@
+{
+  "name": "@paws/core",
+  "version": "1.0.0",
+  "description": "Shared resources for PAWS - personas, system prompts, and configs",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./personas/*": "./personas/*",
+    "./sys/*": "./sys/*",
+    "./configs/*": "./configs/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "personas",
+    "sys",
+    "configs",
+    "index.js"
+  ],
+  "keywords": [
+    "paws",
+    "personas",
+    "system-prompts",
+    "config"
+  ],
+  "author": "",
+  "license": "MIT"
+}

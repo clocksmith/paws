@@ -15,13 +15,13 @@ const repoRoot = path.resolve(__dirname, '..');
 
 const pairs = [
   {
-    canonical: 'js/cats.js',
-    vendored: 'reploid/bin/cats',
+    canonical: 'packages/cli-js/src/cats.js',
+    vendored: 'packages/reploid/bin/cats',
     label: 'cats',
   },
   {
-    canonical: 'js/dogs.js',
-    vendored: 'reploid/bin/dogs',
+    canonical: 'packages/cli-js/src/dogs.js',
+    vendored: 'packages/reploid/bin/dogs',
     label: 'dogs',
   },
 ];

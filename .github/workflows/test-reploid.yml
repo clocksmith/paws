@@ -1,0 +1,76 @@
+name: Test REPLOID
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'packages/reploid/**'
+      - 'packages/cli-js/**'
+      - 'packages/core/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'packages/reploid/**'
+      - 'packages/cli-js/**'
+      - 'packages/core/**'
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run unit tests
+        run: pnpm --filter @paws/reploid test
+
+      - name: Run coverage
+        run: pnpm --filter @paws/reploid test:coverage
+
+  e2e-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install Playwright
+        run: pnpm --filter @paws/reploid exec playwright install --with-deps
+
+      - name: Run E2E tests
+        run: pnpm --filter @paws/reploid test:e2e
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-report
+          path: packages/reploid/playwright-report/
+          retention-days: 30

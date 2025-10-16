@@ -1,0 +1,19 @@
+#!/usr/bin/env node
+
+/**
+ * PAWS cats CLI wrapper for REPLOID.
+ * Delegates to the canonical cats implementation in @paws/cli-js so REPLOID
+ * stays feature-parity with the CLI (incremental bundling, AI caching, progress streaming).
+ */
+// @sync-checksum: 551a5f232e39d76d9a311b1e8914c35e460de00b0f579e4314bc7f1f950f1522
+
+(async () => {
+  try {
+    const { main } = require('@paws/cli-js/src/cats');
+    const code = await main();
+    process.exit(code);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
+})();

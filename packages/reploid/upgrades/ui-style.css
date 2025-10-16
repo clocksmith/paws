@@ -1,0 +1,57 @@
+body, html { box-sizing: border-box; }
+*, *:before, *:after { box-sizing: inherit; }
+body {
+  font-family: monospace;
+  background-color: #0d0d0d;
+  color: #e0e0e0;
+  margin: 1em;
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+}
+h1 { text-align: center; color: #0ff; }
+fieldset {
+  border: 1px solid #444;
+  padding: 1em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+legend { font-weight: bold; color: #0ff; padding: 0 0.5em; }
+label { display: block; margin-bottom: 0.5em; }
+textarea, input, button {
+  font-family: inherit;
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+  border: 1px solid #555;
+  padding: 0.5em;
+}
+textarea { width: 100%; min-height: 80px; resize: vertical; }
+button { cursor: pointer; background-color: #222; }
+button:hover:not(:disabled) { background-color: #333; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+#timeline-log {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #333;
+    padding: 0.5em;
+}
+#timeline-log li {
+    padding: 0.2em 0;
+    border-bottom: 1px dotted #2a2a2a;
+}
+#current-cycle-content {
+    border: 1px solid #333;
+    padding: 1em;
+    min-height: 100px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+#current-cycle-content h4 { margin-top: 0; color: #0ff; }
+#current-cycle-content pre { white-space: pre-wrap; word-break: break-all; }
+.hidden { display: none; }
+#human-intervention-section fieldset { border-color: #0ff; }
+#human-intervention-section legend { color: #0ff; }

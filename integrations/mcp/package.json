@@ -8,6 +8,6 @@
     "start": "node src/server.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/server": "^0.1.0"
+    "@paws/cli-js": "workspace:*"
   }
 }

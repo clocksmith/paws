@@ -1,0 +1,6 @@
+{
+  "coreModel": "gemini-2.5-flash-lite",
+  "critiqueModel": "gemini-2.5-flash-lite",
+  "humanReviewProb": 10,
+  "maxToolCalls": 5
+}

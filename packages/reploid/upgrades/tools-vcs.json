@@ -1,0 +1,56 @@
+[
+  {
+    "name": "vfs_log",
+    "description": "Returns the commit history for a file in the Virtual File System.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "The full path to the artifact."
+        }
+      },
+      "required": ["path"]
+    }
+  },
+  {
+    "name": "vfs_diff",
+    "description": "Returns the diff between two versions of a file.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "The full path to the artifact."
+        },
+        "refA": {
+          "type": "string",
+          "description": "The commit SHA or ref for the first version."
+        },
+        "refB": {
+          "type": "string",
+          "description": "The commit SHA or ref for the second version. Defaults to HEAD."
+        }
+      },
+      "required": ["path", "refA"]
+    }
+  },
+  {
+    "name": "vfs_revert",
+    "description": "Reverts a file to a previous state. This is a destructive operation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "The full path to the artifact to revert."
+        },
+        "commit_sha": {
+          "type": "string",
+          "description": "The commit SHA to revert the file to."
+        }
+      },
+      "required": ["path", "commit_sha"]
+    }
+  }
+]
