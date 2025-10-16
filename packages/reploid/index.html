@@ -19,7 +19,8 @@
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-markdown.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
-    <script src="https://esm.run/@mlc-ai/web-llm"></script>
+    <!-- Web LLM library loaded via esm.run CDN - loaded dynamically when needed by local-llm.js module -->
+    <!-- <script type="module" src="https://esm.run/@mlc-ai/web-llm"></script> -->
 
     <!-- Firebase Analytics -->
     <script type="module">
@@ -158,13 +159,12 @@
                     <span class="security-title">Network & Security</span>
                 </div>
                 <div class="security-option">
-                    <label class="toggle-label">
+                    <div class="security-warning">
+                        <small>⚠ Allows peer-to-peer connections with other Reploid instances. Disabled by default for security.</small>
+                    </div>
+                    <label class="security-checkbox-label">
                         <input type="checkbox" id="enable-webrtc" />
-                        <span class="toggle-slider"></span>
-                        <span class="toggle-text">
-                            <strong>Enable WebRTC Swarm (P2P Connections)</strong>
-                            <small>⚠ Allows peer-to-peer connections with other Reploid instances. Disabled by default for security.</small>
-                        </span>
+                        <span class="security-checkbox-text">Enable WebRTC Swarm (P2P Connections)</span>
                     </label>
                 </div>
             </div>

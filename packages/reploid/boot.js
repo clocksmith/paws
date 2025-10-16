@@ -35,7 +35,19 @@
 
     async function checkAPIStatus() {
         try {
-            const response = await fetch('http://localhost:8000/api/health');
+            // Try to determine the correct API URL based on current origin
+            let apiUrl = 'http://localhost:8000/api/health';
+
+            // If we're on a deployed domain, try the same origin
+            if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                apiUrl = `${window.location.origin}/api/health`;
+            }
+
+            const response = await fetch(apiUrl, {
+                mode: 'cors',
+                credentials: 'omit'
+            });
+
             if (response.ok) {
                 const data = await response.json();
                 elements.apiStatus.textContent = '♯ Connected';
@@ -55,12 +67,19 @@
                 throw new Error('API not responding');
             }
         } catch (error) {
-            elements.apiStatus.textContent = '☡ Offline';
+            // Don't show error if we're on a deployed version (server might not be needed)
+            const isDeployed = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+
+            elements.apiStatus.textContent = isDeployed ? '○ Browser Only' : '☡ Offline';
             elements.apiStatus.classList.remove('success');
-            elements.apiStatus.classList.add('error');
-            elements.providerStatus.textContent = 'None';
-            elements.apiErrorMessage.classList.remove('hidden');
-            console.warn('API health check failed:', error);
+            elements.apiStatus.classList.add(isDeployed ? 'warning' : 'error');
+            elements.providerStatus.textContent = isDeployed ? 'Client-side' : 'None';
+
+            if (!isDeployed) {
+                elements.apiErrorMessage.classList.remove('hidden');
+            }
+
+            console.warn('API health check failed:', error.message);
         }
     }
 

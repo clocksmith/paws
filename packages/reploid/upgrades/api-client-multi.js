@@ -396,8 +396,32 @@ const ApiClientMulti = {
         if (error.name === 'AbortError') {
           throw new AbortError("API call aborted.");
         }
+
+        // Enhance error with better messages and codes before logging or fallback
+        if (error instanceof ApiError && error.statusCode) {
+          if (error.statusCode === 401 || error.statusCode === 403) {
+            error.code = 'AUTH_FAILED';
+            error.message = "Authentication failed. Please check your API key in settings or .env file.";
+          } else if (error.statusCode === 429) {
+            error.code = 'RATE_LIMIT';
+            error.message = "Rate limit exceeded. Please wait a moment before trying again.";
+          } else if (error.statusCode >= 500) {
+            error.code = 'SERVER_ERROR';
+            error.message = `The AI service is temporarily unavailable (${error.statusCode}). Please try again in a few moments.`;
+          }
+        }
+
+        // Check for offline status
+        if (!navigator.onLine) {
+          throw new ApiError(
+            "No internet connection detected. Please check your network and try again.",
+            0,
+            "NETWORK_OFFLINE"
+          );
+        }
+
         logger.error(`${provider} API Call Failed`, error);
-        
+
         // Try fallback providers if configured
         if (options.allowFallback && config.fallbackProviders) {
           for (const fallbackProvider of config.fallbackProviders) {

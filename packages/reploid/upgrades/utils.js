@@ -55,6 +55,7 @@ const Utils = {
         super(message, details);
         if (status !== undefined) {
           this.status = status;
+          this.statusCode = status; // Alias for compatibility
         }
         if (code !== undefined) {
           this.code = code;
