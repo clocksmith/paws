@@ -12,6 +12,9 @@
         directoryCategory: 'modules',
         directoryFilter: 'all',
         activePopover: null,
+        selectedMode: null,
+        detectedEnv: null,
+        selectedProvider: null,
     };
 
     const elements = {
@@ -66,6 +69,14 @@
         paxosFallback: document.getElementById('paxos-fallback'),
         paxosConsensus: document.getElementById('paxos-consensus'),
         paxosStrategy: document.getElementById('paxos-strategy'),
+        modeCards: document.querySelector('.mode-cards'),
+        modeRecommendation: document.getElementById('mode-recommendation'),
+        recommendationText: document.getElementById('recommendation-text'),
+        useRecommendedBtn: document.getElementById('use-recommended'),
+        modeConfigSection: document.getElementById('mode-config-section'),
+        modeConfigTitle: document.getElementById('mode-config-title'),
+        modeConfigContent: document.getElementById('mode-config-content'),
+        backToModesBtn: document.getElementById('back-to-modes'),
     };
 
     const POPOVER_COPY = {
@@ -128,7 +139,7 @@
     function usesOllamaModel(data = {}) {
         const models = [];
         const pushModel = (value) => {
-            if (!value) return;
+            if (!value || value === 'null' || value === 'undefined') return;
             models.push(String(value));
         };
 
@@ -146,7 +157,8 @@
             return true;
         }
 
-        return models.some(modelId => modelId.startsWith('ollama-'));
+        // Filter out any null/undefined that might have slipped through
+        return models.filter(m => m).some(modelId => modelId.startsWith('ollama-'));
     }
 
     function getOllamaRuntimeStatus(data = {}) {
@@ -156,6 +168,55 @@
             ''
         ).toLowerCase();
         return status;
+    }
+
+    async function populateOllamaModels() {
+        if (!elements.modelSelect) return;
+
+        try {
+            const response = await fetch('http://localhost:8000/api/ollama/models');
+            if (!response.ok) {
+                console.warn('Failed to fetch Ollama models:', response.status);
+                return;
+            }
+
+            const data = await response.json();
+            const models = data.models || [];
+
+            // Find the "Local Models" optgroup
+            const localOptgroup = Array.from(elements.modelSelect.querySelectorAll('optgroup'))
+                .find(og => og.label === 'Local Models (No API Key)');
+
+            if (!localOptgroup || models.length === 0) return;
+
+            // Clear existing local model options (except web-llm and paxos)
+            Array.from(localOptgroup.querySelectorAll('option')).forEach(opt => {
+                if (opt.value.startsWith('ollama-')) {
+                    opt.remove();
+                }
+            });
+
+            // Add actual Ollama models from the system
+            models.forEach((model, index) => {
+                const option = document.createElement('option');
+                option.value = `ollama-${model.name}`;
+                option.setAttribute('data-provider', 'local');
+                option.setAttribute('data-model-name', model.name);
+                option.textContent = `${model.name} (Local)`;
+
+                // Insert before web-llm option
+                const webLlmOption = localOptgroup.querySelector('option[value="web-llm"]');
+                if (webLlmOption) {
+                    localOptgroup.insertBefore(option, webLlmOption);
+                } else {
+                    localOptgroup.appendChild(option);
+                }
+            });
+
+            console.log(`Loaded ${models.length} Ollama models`);
+        } catch (error) {
+            console.warn('Could not fetch Ollama models:', error.message);
+        }
     }
 
     async function checkAPIStatus() {
@@ -342,7 +403,7 @@
 
         if ((model && model.startsWith('ollama-')) || provider === 'local') {
             const localModelName = actualModelName || localStorage.getItem('LOCAL_MODEL');
-            if (model === 'ollama-custom' || !model.startsWith('ollama-')) {
+            if (model === 'ollama-custom' || !model || !model.startsWith('ollama-')) {
                 return {
                     name: localModelName || 'Ollama',
                     detail: 'Local via Ollama',
@@ -504,16 +565,19 @@
             'gpt-3.5-turbo': 'Fast and cost-effective model for general tasks',
             'claude-3-5-sonnet': 'Anthropic\'s top-performing model with excellent coding ability',
             'claude-3-opus': 'Most capable Claude model for complex tasks',
-            'ollama-llama3': 'Meta\'s Llama 3 running locally via Ollama',
-            'ollama-mistral': 'Mistral AI\'s model running locally',
-            'ollama-codellama': 'Specialized code generation model running locally',
-            'ollama-custom': 'Use any custom Ollama model installed on your system',
             'web-llm': 'Run LLM directly in your browser (experimental)',
             'paxos': 'Distributed consensus-based model (requires PAXS upgrade)',
             'custom-proxy': 'Connect to your own API endpoint or proxy',
         };
 
-        elements.modelDescription.textContent = descriptions[modelValue] || 'Select a model to see its description';
+        // For dynamic Ollama models, show a generic description
+        let description = descriptions[modelValue];
+        if (!description && modelValue.startsWith('ollama-')) {
+            const modelName = selectedOption.getAttribute('data-model-name') || modelValue.replace('ollama-', '');
+            description = `${modelName} running locally via Ollama (no API key required)`;
+        }
+
+        elements.modelDescription.textContent = description || 'Select a model to see its description';
 
         // Show appropriate configuration section
         if (provider === 'gemini' || provider === 'openai' || provider === 'anthropic') {
@@ -558,20 +622,14 @@
             // Ollama - show local config section
             elements.localConfigSection.classList.remove('hidden');
 
-            // Show/hide custom model name based on model selection
-            if (modelValue === 'ollama-custom') {
-                elements.customModelNameContainer.style.display = 'block';
-            } else {
+            // For dynamically loaded models, hide the custom model name input and pre-fill
+            const modelName = selectedOption.getAttribute('data-model-name');
+            if (modelName && elements.localModelInput) {
                 elements.customModelNameContainer.style.display = 'none';
-                // Pre-fill model name for known models
-                const modelNames = {
-                    'ollama-llama3': 'llama3',
-                    'ollama-mistral': 'mistral',
-                    'ollama-codellama': 'codellama',
-                };
-                if (elements.localModelInput && modelNames[modelValue]) {
-                    elements.localModelInput.value = modelNames[modelValue];
-                }
+                elements.localModelInput.value = modelName;
+            } else {
+                // Show input for manual entry if no model name available
+                elements.customModelNameContainer.style.display = 'block';
             }
 
         } else if (provider === 'paxos') {
@@ -632,15 +690,15 @@
 
             if (localModel) {
                 localStorage.setItem('LOCAL_MODEL', localModel);
-            } else if (selectedModel !== 'ollama-custom') {
-                // For pre-defined models, extract the model name
-                const modelNames = {
-                    'ollama-llama3': 'llama3',
-                    'ollama-mistral': 'mistral',
-                    'ollama-codellama': 'codellama',
-                };
-                if (modelNames[selectedModel]) {
-                    localStorage.setItem('LOCAL_MODEL', modelNames[selectedModel]);
+            } else {
+                // Extract model name from data-model-name attribute (for dynamically loaded models)
+                const modelName = selectedOption.getAttribute('data-model-name');
+                if (modelName) {
+                    localStorage.setItem('LOCAL_MODEL', modelName);
+                } else if (selectedModel.startsWith('ollama-')) {
+                    // Fallback: extract from value by removing ollama- prefix
+                    const extractedName = selectedModel.replace('ollama-', '');
+                    localStorage.setItem('LOCAL_MODEL', extractedName);
                 }
             }
 
@@ -694,14 +752,24 @@
         switchModalTab('model');
     }
 
-    function openConfigModal() {
+    async function openConfigModal() {
         loadStoredKeys();
+        await populateOllamaModels(); // Refresh available models when opening settings
         closeHelpPopover();
-        elements.configModal.classList.remove('hidden');
+        if (elements.configModal) {
+            elements.configModal.classList.remove('hidden');
+        }
+        await showModeRecommendation();
+        state.selectedMode = null;
+        state.selectedProvider = null;
+        highlightStoredMode();
     }
 
     function closeConfigModal() {
-        elements.configModal.classList.add('hidden');
+        if (elements.configModal) {
+            elements.configModal.classList.add('hidden');
+        }
+        backToModes();
     }
 
     function switchModalTab(tabName) {
@@ -719,6 +787,848 @@
         if (targetTab) {
             targetTab.classList.add('active');
         }
+    }
+
+    // ============================================
+    // MODE SELECTOR - New mode-first UI logic
+    // ============================================
+
+    const MODE_INFO = {
+        local: {
+            title: '🖥️ Local (Ollama) Configuration',
+            icon: '🖥️',
+            help: {
+                title: 'Local Mode (Ollama)',
+                requirements: ['Ollama installed and running', 'At least one model pulled', 'Node.js proxy server (npm start)'],
+                pros: ['Completely free (unlimited usage)', 'Maximum privacy (no data sent externally)', 'Fast inference with good hardware', 'Works offline'],
+                cons: ['Requires powerful hardware (GPU recommended)', 'Limited to model capabilities', 'Takes disk space (models are large)'],
+                bestFor: 'Development and testing, privacy-sensitive work, budget-conscious users'
+            }
+        },
+        cloud: {
+            title: '☁️ Cloud Provider Configuration',
+            icon: '☁️',
+            help: {
+                title: 'Cloud Provider Mode',
+                requirements: ['API key from provider', 'Internet connection', 'Node.js proxy server (optional)'],
+                pros: ['Fast and powerful models', 'Advanced capabilities (vision, large context)', 'No local hardware requirements', 'Always up-to-date models'],
+                cons: ['API costs apply (~$0.01-0.10 per 1K requests)', 'Data sent to third-party servers', 'Requires internet connection', 'Usage limits may apply'],
+                bestFor: 'Production use, advanced model capabilities, when local hardware is limited'
+            }
+        },
+        browser: {
+            title: '🌐 Browser-Only Configuration',
+            icon: '🌐',
+            help: {
+                title: 'Browser-Only Mode',
+                requirements: ['Modern browser with WebGPU support', 'GPU with sufficient VRAM (4GB+)'],
+                pros: ['No server needed', 'No API costs', 'Works anywhere', 'Privacy-preserving'],
+                cons: ['Limited to smaller models (3B-7B)', 'Slower than native inference', 'Large initial download', 'Limited features (no VFS persistence)'],
+                bestFor: 'Demos, educational use, when no backend is available'
+            }
+        },
+        hybrid: {
+            title: '🔄 Hybrid Mode Configuration',
+            icon: '🔄',
+            help: {
+                title: 'Hybrid (Auto-Switching) Mode',
+                requirements: ['Ollama installed', 'At least one cloud API key', 'Node.js proxy server'],
+                pros: ['Cost optimized', 'Automatic failover', 'Best of both worlds', 'Smart load balancing'],
+                cons: ['More complex setup', 'Still incurs some API costs', 'Requires both local and cloud setup'],
+                bestFor: 'Power users, production with budget constraints, high availability needs'
+            }
+        },
+        multi: {
+            title: '🏢 High Availability Configuration',
+            icon: '🏢',
+            help: {
+                title: 'High Availability (Multi-Model) Mode',
+                requirements: ['API keys for 2-3 different providers', 'Node.js proxy server', 'PAXA module enabled'],
+                pros: ['Never fails (automatic failover)', 'Best quality (consensus voting)', 'Fault tolerant', 'Production ready'],
+                cons: ['3x cost (multiple simultaneous calls)', 'More complex configuration', 'Slower responses'],
+                bestFor: 'Production systems requiring high availability, quality-critical applications'
+            }
+        },
+        custom: {
+            title: '🔧 Custom Endpoint Configuration',
+            icon: '🔧',
+            help: {
+                title: 'Custom Endpoint Mode',
+                requirements: ['Your own API endpoint', 'Compatible API format'],
+                pros: ['Use your own infrastructure', 'Custom models', 'Enterprise-ready (Azure, AWS, etc.)', 'Full control'],
+                cons: ['Advanced setup required', 'Must implement compatible API', 'Self-managed'],
+                bestFor: 'Enterprise deployments, custom infrastructure, self-hosted solutions'
+            }
+        }
+    };
+
+    async function detectEnvironment() {
+        const env = {
+            hasServer: false,
+            hasOllama: false,
+            ollamaModels: [],
+            hasGeminiKey: false,
+            hasOpenAIKey: false,
+            hasAnthropicKey: false
+        };
+
+        // Check server
+        try {
+            const response = await fetch('http://localhost:8000/api/health');
+            env.hasServer = response.ok;
+        } catch {}
+
+        // Check Ollama
+        if (env.hasServer) {
+            try {
+                const response = await fetch('http://localhost:8000/api/ollama/models');
+                if (response.ok) {
+                    const data = await response.json();
+                    env.hasOllama = true;
+                    env.ollamaModels = data.models || [];
+                }
+            } catch {}
+        }
+
+        // Check API keys
+        env.hasGeminiKey = !!localStorage.getItem('GEMINI_API_KEY');
+        env.hasOpenAIKey = !!localStorage.getItem('OPENAI_API_KEY');
+        env.hasAnthropicKey = !!localStorage.getItem('ANTHROPIC_API_KEY');
+
+        if (!Array.isArray(env.ollamaModels)) {
+            env.ollamaModels = [];
+        }
+
+        return env;
+    }
+
+    function getRecommendedMode(env) {
+        if (env.hasOllama && env.ollamaModels.length > 0) {
+            return {
+                mode: 'local',
+                reason: `We detected Ollama with ${env.ollamaModels.length} model(s). You have everything needed to run completely free and private.`
+            };
+        }
+
+        if (env.hasGeminiKey || env.hasOpenAIKey || env.hasAnthropicKey) {
+            const providers = [];
+            if (env.hasGeminiKey) providers.push('Gemini');
+            if (env.hasOpenAIKey) providers.push('OpenAI');
+            if (env.hasAnthropicKey) providers.push('Anthropic');
+            return {
+                mode: 'cloud',
+                reason: `We detected API keys for ${providers.join(', ')}. You can use cloud providers for fast and powerful inference.`
+            };
+        }
+
+        if (!env.hasServer) {
+            return {
+                mode: 'browser',
+                reason: 'No server detected. Browser-only mode is your best option for getting started quickly.'
+            };
+        }
+
+        return {
+            mode: 'local',
+            reason: 'Local mode with Ollama is recommended for free, private usage. Install Ollama to get started.'
+        };
+    }
+
+    async function showModeRecommendation() {
+        const env = await detectEnvironment();
+        state.detectedEnv = env;
+        const recommendation = getRecommendedMode(env);
+
+        if (elements.recommendationText && elements.modeRecommendation) {
+            elements.recommendationText.textContent = recommendation.reason;
+            elements.modeRecommendation.classList.remove('hidden');
+        }
+
+        if (elements.useRecommendedBtn) {
+            elements.useRecommendedBtn.onclick = () => selectMode(recommendation.mode, env);
+        }
+
+        return env;
+    }
+
+    function getStoredDeploymentMode() {
+        const storedMode = localStorage.getItem('DEPLOYMENT_MODE');
+        if (storedMode) return storedMode;
+
+        const provider = (localStorage.getItem('AI_PROVIDER') || '').toLowerCase();
+        const providerModeMap = {
+            'local': 'local',
+            'ollama': 'local',
+            'gemini': 'cloud',
+            'openai': 'cloud',
+            'anthropic': 'cloud',
+            'web': 'browser',
+            'hybrid': 'hybrid',
+            'paxos': 'multi',
+            'distributed': 'multi',
+            'custom': 'custom'
+        };
+
+        return providerModeMap[provider] || null;
+    }
+
+    function setModeCardSelection(modeName) {
+        const cards = document.querySelectorAll('.mode-card');
+        if (!cards.length) return;
+
+        cards.forEach(card => {
+            card.classList.toggle('selected', modeName ? card.dataset.mode === modeName : false);
+        });
+    }
+
+    function highlightStoredMode() {
+        const storedMode = getStoredDeploymentMode();
+        setModeCardSelection(storedMode);
+
+        if (storedMode !== 'cloud') {
+            state.selectedProvider = null;
+        } else {
+            const provider = localStorage.getItem('AI_PROVIDER');
+            if (provider && ['gemini', 'openai', 'anthropic'].includes(provider)) {
+                state.selectedProvider = provider;
+            }
+        }
+    }
+
+    function selectMode(modeName, env) {
+        const environment = env || state.detectedEnv || {};
+        if (!Array.isArray(environment.ollamaModels)) {
+            environment.ollamaModels = [];
+        }
+
+        closeHelpPopover();
+
+        // Update mode card UI
+        setModeCardSelection(modeName);
+
+        // Show mode configuration section
+        if (elements.modeCards && elements.modeConfigSection) {
+            elements.modeCards.style.display = 'none';
+            if (elements.modeRecommendation) {
+                elements.modeRecommendation.style.display = 'none';
+            }
+            elements.modeConfigSection.classList.remove('hidden');
+
+            if (elements.modeConfigTitle && MODE_INFO[modeName]) {
+                elements.modeConfigTitle.textContent = MODE_INFO[modeName].title;
+            }
+
+            if (elements.modeConfigContent) {
+                elements.modeConfigContent.innerHTML = renderModeConfig(modeName, environment);
+                setupModeConfigInteractions(modeName);
+            }
+
+            // Store selected mode temporarily
+            state.selectedMode = modeName;
+
+            if (modeName !== 'cloud') {
+                state.selectedProvider = null;
+            }
+        }
+    }
+
+    function backToModes() {
+        if (elements.modeConfigSection) {
+            elements.modeConfigSection.classList.add('hidden');
+        }
+        if (elements.modeCards) {
+            elements.modeCards.style.display = 'grid';
+        }
+        if (elements.modeRecommendation) {
+            elements.modeRecommendation.style.display = 'block';
+        }
+
+        state.selectedMode = null;
+        highlightStoredMode();
+        closeHelpPopover();
+    }
+
+    function renderModeConfig(modeName, env) {
+        switch (modeName) {
+            case 'local':
+                return renderLocalConfig(env);
+            case 'cloud':
+                return renderCloudConfig(env);
+            case 'browser':
+                return renderBrowserConfig(env);
+            case 'hybrid':
+                return renderHybridConfig(env);
+            case 'multi':
+                return renderMultiConfig(env);
+            case 'custom':
+                return renderCustomConfig(env);
+            default:
+                return '<p>Configuration not available</p>';
+        }
+    }
+
+    function setupModeConfigInteractions(modeName) {
+        if (!elements.modeConfigContent) return;
+
+        if (modeName === 'local') {
+            const listItems = elements.modeConfigContent.querySelectorAll('.model-list-item');
+            if (listItems.length) {
+                const activateItem = (item) => {
+                    listItems.forEach(li => li.classList.toggle('selected', li === item));
+                    const radio = item.querySelector('input[type="radio"]');
+                    if (radio) radio.checked = true;
+                };
+
+                listItems.forEach(item => {
+                    item.addEventListener('click', (event) => {
+                        if (event.target instanceof HTMLInputElement) return;
+                        activateItem(item);
+                    });
+                    const radio = item.querySelector('input[type="radio"]');
+                    if (radio) {
+                        radio.addEventListener('change', () => activateItem(item));
+                    }
+                });
+            }
+        }
+
+        if (modeName === 'cloud') {
+            const cards = Array.from(elements.modeConfigContent.querySelectorAll('.provider-card'));
+            if (cards.length) {
+                const selectProvider = (provider) => {
+                    cards.forEach(card => {
+                        card.classList.toggle('selected', card.dataset.provider === provider);
+                    });
+                    state.selectedProvider = provider;
+                };
+
+                let initialCard = cards.find(card => card.classList.contains('selected'));
+                if (!initialCard) {
+                    const storedProvider = (localStorage.getItem('AI_PROVIDER') || '').toLowerCase();
+                    initialCard = cards.find(card => card.dataset.provider === storedProvider) ||
+                        cards.find(card => card.classList.contains('configured')) ||
+                        cards[0];
+                }
+                if (initialCard) {
+                    selectProvider(initialCard.dataset.provider);
+                }
+
+                cards.forEach(card => {
+                    card.addEventListener('click', () => {
+                        selectProvider(card.dataset.provider);
+                    });
+                });
+            }
+
+            const keyInputs = elements.modeConfigContent.querySelectorAll('.provider-api-key');
+            keyInputs.forEach(input => {
+                input.addEventListener('focus', () => {
+                    if (input.value && input.value.startsWith('●')) {
+                        input.value = '';
+                    }
+                });
+            });
+        }
+    }
+
+    function showModeHelp(modeName, anchorEl) {
+        const modeInfo = MODE_INFO[modeName];
+        if (!modeInfo || !modeInfo.help) return;
+
+        const { help } = modeInfo;
+        const sections = [];
+
+        if (help.requirements && help.requirements.length) {
+            sections.push(`
+                <div class="help-section">
+                    <strong>Requirements</strong>
+                    <ul>${help.requirements.map(item => `<li>${item}</li>`).join('')}</ul>
+                </div>
+            `);
+        }
+
+        if (help.pros && help.pros.length) {
+            sections.push(`
+                <div class="help-section">
+                    <strong>Pros</strong>
+                    <ul>${help.pros.map(item => `<li>${item}</li>`).join('')}</ul>
+                </div>
+            `);
+        }
+
+        if (help.cons && help.cons.length) {
+            sections.push(`
+                <div class="help-section">
+                    <strong>Cons</strong>
+                    <ul>${help.cons.map(item => `<li>${item}</li>`).join('')}</ul>
+                </div>
+            `);
+        }
+
+        if (help.bestFor) {
+            sections.push(`
+                <div class="help-section">
+                    <strong>Best For</strong>
+                    <p>${help.bestFor}</p>
+                </div>
+            `);
+        }
+
+        const body = sections.join('');
+        openHelpPopover(`mode-${modeName}`, anchorEl, {
+            title: help.title || modeInfo.title || 'Mode Details',
+            body
+        });
+    }
+
+    function renderLocalConfig(env) {
+        let html = '';
+        const models = Array.isArray(env?.ollamaModels) ? env.ollamaModels : [];
+
+        // Status
+        if (env.hasOllama && models.length > 0) {
+            html += `
+                <div class="mode-status">
+                    <span class="mode-status-icon">✅</span>
+                    <div class="mode-status-text">
+                        <div class="mode-status-label">Status</div>
+                        <div class="mode-status-value">Ollama detected with ${models.length} model(s)</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            html += `
+                <div class="mode-warning">
+                    <span class="mode-warning-icon">⚠️</span>
+                    <span class="mode-warning-text">Ollama not detected. Install Ollama and run <code>ollama serve</code> to use local models.</span>
+                </div>
+            `;
+        }
+
+        // Model list
+        if (models.length > 0) {
+            html += '<h5 style="margin: 16px 0 8px 0; color: #f4f4ff;">Available Models:</h5>';
+            html += '<ul class="model-list">';
+
+            const selectedModel = localStorage.getItem('LOCAL_MODEL');
+            models.forEach((model, idx) => {
+                const sizeGB = Math.round(model.size / 1024 / 1024 / 1024);
+                const isSelected = selectedModel === model.name;
+                html += `
+                    <li class="model-list-item ${isSelected ? 'selected' : ''}" data-model="${model.name}">
+                        <div class="model-info">
+                            <div class="model-name">${model.name}</div>
+                            <div class="model-size">${sizeGB}GB</div>
+                        </div>
+                        <input type="radio" name="local-model-select" value="${model.name}" ${isSelected ? 'checked' : ''} class="model-select-radio" />
+                    </li>
+                `;
+            });
+            html += '</ul>';
+        }
+
+        // Endpoint config
+        const endpoint = localStorage.getItem('LOCAL_ENDPOINT') || 'http://localhost:11434';
+        html += `
+            <div style="margin-top: 16px;">
+                <label style="display: block; margin-bottom: 6px; color: #b9bad6; font-size: 13px;">Ollama Endpoint:</label>
+                <input type="text" id="mode-local-endpoint" value="${endpoint}" style="width: 100%; padding: 8px; background: #0d0d14; border: 1px solid #252532; border-radius: 6px; color: #f4f4ff;" />
+            </div>
+        `;
+
+        // Info
+        html += `
+            <div class="mode-info">
+                <span class="mode-info-text">💡 Local mode is completely free and private. Your code never leaves your machine.</span>
+            </div>
+        `;
+
+        return html;
+    }
+
+    function renderCloudConfig(env) {
+        let html = `
+            <div class="mode-warning">
+                <span class="mode-warning-icon">⚠️</span>
+                <span class="mode-warning-text">Using cloud providers will send your code and prompts to third-party servers. API costs apply.</span>
+            </div>
+        `;
+
+        html += '<div class="provider-list">';
+
+        const selectedModel = localStorage.getItem('SELECTED_MODEL') || '';
+        const storedProviderRaw = (localStorage.getItem('AI_PROVIDER') || '').toLowerCase();
+        const defaultProvider = ['gemini', 'openai', 'anthropic'].includes(state.selectedProvider) ? state.selectedProvider
+            : (['gemini', 'openai', 'anthropic'].includes(storedProviderRaw) ? storedProviderRaw : '');
+
+        if (!state.selectedProvider && defaultProvider) {
+            state.selectedProvider = defaultProvider;
+        }
+
+        // Gemini
+        const geminiKey = localStorage.getItem('GEMINI_API_KEY') || '';
+        const geminiConfigured = !!geminiKey;
+        const geminiStoredModel = localStorage.getItem('GEMINI_SELECTED_MODEL') ||
+            (selectedModel.startsWith('gemini-') ? selectedModel : 'gemini-2.0-flash');
+        html += `
+            <div class="provider-card ${geminiConfigured ? 'configured' : ''} ${state.selectedProvider === 'gemini' ? 'selected' : ''}" data-provider="gemini">
+                <div class="provider-header">
+                    <span class="provider-name">Google Gemini</span>
+                    <span class="provider-status-badge ${geminiConfigured ? 'configured' : 'not-configured'}">
+                        ${geminiConfigured ? 'Configured' : 'Not Configured'}
+                    </span>
+                </div>
+                <p class="provider-description">Fast and cost-effective • 1,500 free requests/day • Best for rapid iteration</p>
+                <select class="provider-model-select" data-provider="gemini">
+                    <option value="gemini-2.0-flash" ${geminiStoredModel === 'gemini-2.0-flash' ? 'selected' : ''}>Gemini 2.0 Flash (~$0.01/1K)</option>
+                    <option value="gemini-1.5-pro" ${geminiStoredModel === 'gemini-1.5-pro' ? 'selected' : ''}>Gemini 1.5 Pro (~$0.05/1K)</option>
+                </select>
+                <input type="password" class="provider-api-key ${geminiConfigured ? 'configured' : ''}" data-provider="gemini" placeholder="AIza..." value="${geminiKey ? '●●●●●●●●' + geminiKey.slice(-4) : ''}" />
+            </div>
+        `;
+
+        // OpenAI
+        const openaiKey = localStorage.getItem('OPENAI_API_KEY') || '';
+        const openaiConfigured = !!openaiKey;
+        const openaiStoredModel = localStorage.getItem('OPENAI_SELECTED_MODEL') ||
+            (selectedModel.startsWith('gpt-') ? selectedModel : 'gpt-4o');
+        html += `
+            <div class="provider-card ${openaiConfigured ? 'configured' : ''} ${state.selectedProvider === 'openai' ? 'selected' : ''}" data-provider="openai">
+                <div class="provider-header">
+                    <span class="provider-name">OpenAI</span>
+                    <span class="provider-status-badge ${openaiConfigured ? 'configured' : 'not-configured'}">
+                        ${openaiConfigured ? 'Configured' : 'Not Configured'}
+                    </span>
+                </div>
+                <p class="provider-description">Most popular • Vision and multimodal support • Best for production</p>
+                <select class="provider-model-select" data-provider="openai">
+                    <option value="gpt-4o" ${openaiStoredModel === 'gpt-4o' ? 'selected' : ''}>GPT-4o (~$0.10/1K)</option>
+                    <option value="gpt-4-turbo" ${openaiStoredModel === 'gpt-4-turbo' ? 'selected' : ''}>GPT-4 Turbo (~$0.08/1K)</option>
+                    <option value="gpt-3.5-turbo" ${openaiStoredModel === 'gpt-3.5-turbo' ? 'selected' : ''}>GPT-3.5 Turbo (~$0.02/1K)</option>
+                </select>
+                <input type="password" class="provider-api-key ${openaiConfigured ? 'configured' : ''}" data-provider="openai" placeholder="sk-..." value="${openaiKey ? '●●●●●●●●' + openaiKey.slice(-4) : ''}" />
+            </div>
+        `;
+
+        // Anthropic
+        const anthropicKey = localStorage.getItem('ANTHROPIC_API_KEY') || '';
+        const anthropicConfigured = !!anthropicKey;
+        const anthropicStoredModel = localStorage.getItem('ANTHROPIC_SELECTED_MODEL') ||
+            (selectedModel.startsWith('claude-') ? selectedModel : 'claude-3-5-sonnet');
+        html += `
+            <div class="provider-card ${anthropicConfigured ? 'configured' : ''} ${state.selectedProvider === 'anthropic' ? 'selected' : ''}" data-provider="anthropic">
+                <div class="provider-header">
+                    <span class="provider-name">Anthropic Claude</span>
+                    <span class="provider-status-badge ${anthropicConfigured ? 'configured' : 'not-configured'}">
+                        ${anthropicConfigured ? 'Configured' : 'Not Configured'}
+                    </span>
+                </div>
+                <p class="provider-description">Excellent for coding • Best safety features • Best for complex reasoning</p>
+                <select class="provider-model-select" data-provider="anthropic">
+                    <option value="claude-3-5-sonnet" ${anthropicStoredModel === 'claude-3-5-sonnet' ? 'selected' : ''}>Claude 3.5 Sonnet (~$0.06/1K)</option>
+                    <option value="claude-3-opus" ${anthropicStoredModel === 'claude-3-opus' ? 'selected' : ''}>Claude 3 Opus (~$0.12/1K)</option>
+                </select>
+                <input type="password" class="provider-api-key ${anthropicConfigured ? 'configured' : ''}" data-provider="anthropic" placeholder="sk-ant-..." value="${anthropicKey ? '●●●●●●●●' + anthropicKey.slice(-4) : ''}" />
+            </div>
+        `;
+
+        html += '</div>';
+
+        return html;
+    }
+
+    function renderBrowserConfig(env) {
+        return `
+            <div class="mode-info">
+                <span class="mode-info-text">🌐 Web LLM runs entirely in your browser using WebGPU. The model will be downloaded on first use (~4GB).</span>
+            </div>
+            <div class="mode-warning">
+                <span class="mode-warning-icon">⚠️</span>
+                <span class="mode-warning-text">Browser mode has limited features. VFS persistence and WebRTC are not available.</span>
+            </div>
+            <p style="color: #b9bad6; font-size: 14px; margin: 16px 0;">
+                Browser mode is best for demos and quick tests. For full functionality, use Local or Cloud mode with the Node.js server.
+            </p>
+        `;
+    }
+
+    function renderHybridConfig(env) {
+        let html = '';
+
+        if (!env.hasOllama) {
+            html += `
+                <div class="mode-warning">
+                    <span class="mode-warning-icon">⚠️</span>
+                    <span class="mode-warning-text">Ollama not detected. Hybrid mode requires Ollama for local inference.</span>
+                </div>
+            `;
+        }
+
+        if (!env.hasGeminiKey && !env.hasOpenAIKey && !env.hasAnthropicKey) {
+            html += `
+                <div class="mode-warning">
+                    <span class="mode-warning-icon">⚠️</span>
+                    <span class="mode-warning-text">No cloud API keys detected. Hybrid mode requires at least one cloud provider API key.</span>
+                </div>
+            `;
+        }
+
+        html += `
+            <div class="mode-info">
+                <span class="mode-info-text">🔄 Hybrid mode automatically switches between local and cloud based on availability, cost, and complexity.</span>
+            </div>
+            <p style="color: #b9bad6; font-size: 14px; margin: 16px 0;">
+                Configure both local (Ollama) and cloud providers. The system will intelligently choose the best option for each request.
+            </p>
+            <p style="color: #8e8ea6; font-size: 13px;">
+                💡 Tip: Use local models for simple tasks and cloud models for complex reasoning to optimize costs.
+            </p>
+        `;
+
+        return html;
+    }
+
+    function renderMultiConfig(env) {
+        const paxosEnabled = localStorage.getItem('ENABLE_PAXOS') === 'true';
+        const paxosPrimary = localStorage.getItem('PAXOS_PRIMARY') || '';
+        const paxosFallback = localStorage.getItem('PAXOS_FALLBACK') || '';
+        const paxosConsensus = localStorage.getItem('PAXOS_CONSENSUS') || '';
+
+        let html = `
+            <div class="mode-warning">
+                <span class="mode-warning-icon">⚠️</span>
+                <span class="mode-warning-text">Multi-model mode will make multiple API calls simultaneously. This provides fault tolerance but increases costs ~3x.</span>
+            </div>
+        `;
+
+        html += `
+            <div style="margin: 16px 0;">
+                <label style="display: block; margin-bottom: 6px; color: #b9bad6; font-size: 13px;">Primary Model (Fast, cheap):</label>
+                <input type="text" id="mode-paxos-primary" value="${paxosPrimary}" placeholder="e.g., gemini-2.0-flash" style="width: 100%; padding: 8px; background: #0d0d14; border: 1px solid #252532; border-radius: 6px; color: #f4f4ff;" />
+            </div>
+            <div style="margin: 16px 0;">
+                <label style="display: block; margin-bottom: 6px; color: #b9bad6; font-size: 13px;">Fallback Model (Reliable backup):</label>
+                <input type="text" id="mode-paxos-fallback" value="${paxosFallback}" placeholder="e.g., gpt-4o" style="width: 100%; padding: 8px; background: #0d0d14; border: 1px solid #252532; border-radius: 6px; color: #f4f4ff;" />
+            </div>
+            <div style="margin: 16px 0;">
+                <label style="display: block; margin-bottom: 6px; color: #b9bad6; font-size: 13px;">Consensus Model (Quality tiebreaker):</label>
+                <input type="text" id="mode-paxos-consensus" value="${paxosConsensus}" placeholder="e.g., claude-3-5-sonnet" style="width: 100%; padding: 8px; background: #0d0d14; border: 1px solid #252532; border-radius: 6px; color: #f4f4ff;" />
+            </div>
+        `;
+
+        html += `
+            <div class="cost-estimate">
+                <div class="cost-estimate-label">Estimated Cost</div>
+                <div class="cost-estimate-value">~$0.08 per 1000 requests</div>
+                <div class="cost-estimate-detail">Compared to $0.02 for single provider</div>
+            </div>
+        `;
+
+        return html;
+    }
+
+    function renderCustomConfig(env) {
+        const customUrl = localStorage.getItem('CUSTOM_PROXY_URL') || '';
+        const customKey = localStorage.getItem('CUSTOM_API_KEY') || '';
+
+        return `
+            <div class="mode-info">
+                <span class="mode-info-text">🔧 Custom mode allows you to connect to your own API endpoint (Azure, AWS, vLLM, etc.).</span>
+            </div>
+            <div style="margin: 16px 0;">
+                <label style="display: block; margin-bottom: 6px; color: #b9bad6; font-size: 13px;">Custom Endpoint URL:</label>
+                <input type="text" id="mode-custom-url" value="${customUrl}" placeholder="http://localhost:8000/api" style="width: 100%; padding: 8px; background: #0d0d14; border: 1px solid #252532; border-radius: 6px; color: #f4f4ff;" />
+            </div>
+            <div style="margin: 16px 0;">
+                <label style="display: block; margin-bottom: 6px; color: #b9bad6; font-size: 13px;">API Key (Optional):</label>
+                <input type="password" id="mode-custom-key" value="${customKey}" placeholder="If your endpoint requires authentication" style="width: 100%; padding: 8px; background: #0d0d14; border: 1px solid #252532; border-radius: 6px; color: #f4f4ff;" />
+            </div>
+        `;
+    }
+
+    function saveModeConfiguration() {
+        const modeName = state.selectedMode;
+        if (!modeName) return;
+
+        let saveResult;
+        switch (modeName) {
+            case 'local':
+                saveResult = saveLocalMode();
+                break;
+            case 'cloud':
+                saveResult = saveCloudMode();
+                break;
+            case 'browser':
+                saveResult = saveBrowserMode();
+                break;
+            case 'hybrid':
+                saveResult = saveHybridMode();
+                break;
+            case 'multi':
+                saveResult = saveMultiMode();
+                break;
+            case 'custom':
+                saveResult = saveCustomMode();
+                break;
+        }
+
+        if (saveResult === false) {
+            return;
+        }
+
+        // Close modal and update status
+        closeConfigModal();
+        showBootMessage('Configuration saved successfully', 'info');
+        checkAPIStatus();
+    }
+
+    function saveLocalMode() {
+        const selectedRadio = document.querySelector('input[name="local-model-select"]:checked');
+        const endpoint = document.getElementById('mode-local-endpoint')?.value || 'http://localhost:11434';
+
+        if (selectedRadio) {
+            const modelName = selectedRadio.value;
+            localStorage.setItem('LOCAL_MODEL', modelName);
+            localStorage.setItem('SELECTED_MODEL', `ollama-${modelName}`);
+        }
+
+        localStorage.setItem('LOCAL_ENDPOINT', endpoint);
+        localStorage.setItem('AI_PROVIDER', 'local');
+        localStorage.setItem('DEPLOYMENT_MODE', 'local');
+        return true;
+    }
+
+    function saveCloudMode() {
+        const keyMap = {
+            'gemini': 'GEMINI_API_KEY',
+            'openai': 'OPENAI_API_KEY',
+            'anthropic': 'ANTHROPIC_API_KEY'
+        };
+        const modelKeyMap = {
+            'gemini': 'GEMINI_SELECTED_MODEL',
+            'openai': 'OPENAI_SELECTED_MODEL',
+            'anthropic': 'ANTHROPIC_SELECTED_MODEL'
+        };
+        const container = elements.modeConfigContent || document;
+        const providerCards = Array.from(container.querySelectorAll('.provider-card'));
+
+        if (!providerCards.length) {
+            showBootMessage('Cloud configuration UI is unavailable.', 'error');
+            return false;
+        }
+
+        providerCards.forEach(card => {
+            const provider = card.dataset.provider;
+            if (!provider || !keyMap[provider]) return;
+
+            const keyInput = card.querySelector('.provider-api-key');
+            if (keyInput) {
+                const value = keyInput.value.trim();
+                if (!value && !keyInput.value.startsWith('●')) {
+                    localStorage.removeItem(keyMap[provider]);
+                } else if (value && !value.startsWith('●')) {
+                    localStorage.setItem(keyMap[provider], value);
+                }
+            }
+
+            const modelSelect = card.querySelector('.provider-model-select');
+            if (modelSelect && modelKeyMap[provider]) {
+                localStorage.setItem(modelKeyMap[provider], modelSelect.value);
+            }
+        });
+
+        const storedKeys = {
+            gemini: localStorage.getItem('GEMINI_API_KEY'),
+            openai: localStorage.getItem('OPENAI_API_KEY'),
+            anthropic: localStorage.getItem('ANTHROPIC_API_KEY')
+        };
+
+        let primaryProvider = state.selectedProvider;
+        if (!primaryProvider || !storedKeys[primaryProvider]) {
+            const selectedCard = providerCards.find(card => {
+                const provider = card.dataset.provider;
+                return card.classList.contains('selected') && storedKeys[provider];
+            });
+            primaryProvider = selectedCard ? selectedCard.dataset.provider : null;
+        }
+        if (!primaryProvider) {
+            primaryProvider = ['gemini', 'openai', 'anthropic'].find(provider => storedKeys[provider]);
+        }
+
+        if (!primaryProvider) {
+            showBootMessage('Configure at least one cloud provider with an API key before saving.', 'warning');
+            return false;
+        }
+
+        const primaryModelKey = modelKeyMap[primaryProvider];
+        const primaryCard = providerCards.find(card => card.dataset.provider === primaryProvider);
+        const modelSelect = primaryCard?.querySelector('.provider-model-select');
+        let selectedModel = modelSelect?.value || localStorage.getItem(primaryModelKey);
+
+        if (!selectedModel) {
+            selectedModel = primaryProvider === 'gemini'
+                ? 'gemini-2.0-flash'
+                : primaryProvider === 'openai'
+                    ? 'gpt-4o'
+                    : 'claude-3-5-sonnet';
+            localStorage.setItem(primaryModelKey, selectedModel);
+        }
+
+        state.selectedProvider = primaryProvider;
+        localStorage.setItem('AI_PROVIDER', primaryProvider);
+        localStorage.setItem('SELECTED_MODEL', selectedModel);
+        localStorage.setItem('DEPLOYMENT_MODE', 'cloud');
+        return true;
+    }
+
+    function saveBrowserMode() {
+        localStorage.setItem('AI_PROVIDER', 'web');
+        localStorage.setItem('SELECTED_MODEL', 'web-llm');
+        localStorage.setItem('DEPLOYMENT_MODE', 'browser');
+        return true;
+    }
+
+    function saveHybridMode() {
+        localStorage.setItem('AI_PROVIDER', 'hybrid');
+        localStorage.setItem('DEPLOYMENT_MODE', 'hybrid');
+
+        // Hybrid mode uses HYBR module
+        // Configuration will be handled by the hybrid module at runtime
+        return true;
+    }
+
+    function saveMultiMode() {
+        const primary = document.getElementById('mode-paxos-primary')?.value.trim();
+        const fallback = document.getElementById('mode-paxos-fallback')?.value.trim();
+        const consensus = document.getElementById('mode-paxos-consensus')?.value.trim();
+
+        if (primary) localStorage.setItem('PAXOS_PRIMARY', primary);
+        if (fallback) localStorage.setItem('PAXOS_FALLBACK', fallback);
+        if (consensus) localStorage.setItem('PAXOS_CONSENSUS', consensus);
+
+        localStorage.setItem('ENABLE_PAXOS', 'true');
+        localStorage.setItem('AI_PROVIDER', 'paxos');
+        localStorage.setItem('SELECTED_MODEL', 'paxos');
+        localStorage.setItem('DEPLOYMENT_MODE', 'multi');
+        return true;
+    }
+
+    function saveCustomMode() {
+        const url = document.getElementById('mode-custom-url')?.value.trim();
+        const key = document.getElementById('mode-custom-key')?.value.trim();
+
+        if (!url) {
+            showBootMessage('Please enter a custom endpoint URL before saving.', 'warning');
+            return false;
+        }
+
+        if (url) localStorage.setItem('CUSTOM_PROXY_URL', url);
+        if (key) localStorage.setItem('CUSTOM_API_KEY', key);
+
+        localStorage.setItem('AI_PROVIDER', 'custom');
+        localStorage.setItem('SELECTED_MODEL', 'custom-proxy');
+        localStorage.setItem('DEPLOYMENT_MODE', 'custom');
+        return true;
     }
 
     async function fetchJSON(url) {
@@ -768,8 +1678,8 @@
         }
     }
 
-    function openHelpPopover(type, anchorEl) {
-        const copy = POPOVER_COPY[type];
+    function openHelpPopover(type, anchorEl, overrideCopy = null) {
+        const copy = overrideCopy || POPOVER_COPY[type];
         if (!copy || !elements.helpPopover || !anchorEl) return;
 
         state.activePopover = { type, anchorEl };
@@ -1382,6 +2292,8 @@
             );
 
             renderPersonas();
+            populateOllamaModels();
+            highlightStoredMode();
             checkAPIStatus();
 
             // Poll server status every 5 seconds when offline
@@ -1406,9 +2318,56 @@
             });
 
             // Config modal listeners
-            elements.configBtn.addEventListener('click', openConfigModal);
-            elements.closeModal.addEventListener('click', closeConfigModal);
-            elements.saveKeysBtn.addEventListener('click', saveAPIKeys);
+            if (elements.configBtn) {
+                elements.configBtn.addEventListener('click', openConfigModal);
+            }
+            if (elements.closeModal) {
+                elements.closeModal.addEventListener('click', closeConfigModal);
+            }
+            if (elements.saveKeysBtn) {
+                elements.saveKeysBtn.addEventListener('click', () => {
+                    if (state.selectedMode) {
+                        saveModeConfiguration();
+                    } else {
+                        saveAPIKeys();
+                    }
+                });
+            }
+
+            document.querySelectorAll('.btn-select-mode').forEach(btn => {
+                btn.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (btn.dataset.mode) {
+                        selectMode(btn.dataset.mode);
+                    }
+                });
+            });
+
+            document.querySelectorAll('.mode-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    if (card.dataset.mode) {
+                        selectMode(card.dataset.mode);
+                    }
+                });
+            });
+
+            document.querySelectorAll('.mode-help-btn').forEach(btn => {
+                btn.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (btn.dataset.helpMode) {
+                        showModeHelp(btn.dataset.helpMode, btn);
+                    }
+                });
+            });
+
+            if (elements.backToModesBtn) {
+                elements.backToModesBtn.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    backToModes();
+                });
+            }
 
             // Model dropdown change
             if (elements.modelSelect) {

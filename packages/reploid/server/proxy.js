@@ -6,7 +6,11 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
+import { spawn, exec } from 'child_process';
+import { promisify } from 'util';
 import SignalingServer from './signaling-server.js';
+
+const execPromise = promisify(exec);
 
 // ESM equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -34,6 +38,7 @@ const LOCAL_MODEL_ENDPOINT = appConfig?.api?.localEndpoint || process.env.LOCAL_
 const OPENAI_API_KEY = appConfig?.api?.openaiKey || process.env.OPENAI_API_KEY;
 const ANTHROPIC_API_KEY = appConfig?.api?.anthropicKey || process.env.ANTHROPIC_API_KEY;
 const CORS_ORIGINS = appConfig?.server?.corsOrigins || ['http://localhost:8080'];
+const AUTO_START_OLLAMA = appConfig?.ollama?.autoStart || process.env.AUTO_START_OLLAMA === 'true';
 
 if (!GEMINI_API_KEY) {
   console.error('⚠️  WARNING: GEMINI_API_KEY not found in .env file');
@@ -45,6 +50,95 @@ if (GEMINI_API_KEY) console.log('   ✅ Google Gemini');
 if (OPENAI_API_KEY) console.log('   ✅ OpenAI');
 if (ANTHROPIC_API_KEY) console.log('   ✅ Anthropic');
 console.log(`   🖥️  Local models at: ${LOCAL_MODEL_ENDPOINT}`);
+
+// Ollama process management
+let ollamaProcess = null;
+let ollamaStatus = 'unknown';
+
+async function checkOllamaRunning() {
+  try {
+    const fetch = (await import('node-fetch')).default;
+    const response = await fetch(`${LOCAL_MODEL_ENDPOINT}/api/tags`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(2000)
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function updateOllamaStatus() {
+  const isRunning = await checkOllamaRunning();
+  ollamaStatus = isRunning ? 'running' : 'offline';
+}
+
+// Check if Ollama is installed
+async function checkOllamaInstalled() {
+  try {
+    await execPromise('which ollama');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Start Ollama server
+async function startOllama() {
+  if (ollamaProcess) {
+    console.log('[Ollama] Process already running');
+    return;
+  }
+
+  const isInstalled = await checkOllamaInstalled();
+  if (!isInstalled) {
+    console.log('[Ollama] Not installed, skipping auto-start');
+    return;
+  }
+
+  console.log('[Ollama] Starting Ollama server...');
+  ollamaProcess = spawn('ollama', ['serve'], {
+    stdio: 'inherit',
+    detached: false
+  });
+
+  ollamaProcess.on('error', (error) => {
+    console.error('[Ollama] Failed to start:', error.message);
+    ollamaProcess = null;
+  });
+
+  ollamaProcess.on('exit', (code) => {
+    console.log(`[Ollama] Process exited with code ${code}`);
+    ollamaProcess = null;
+    updateOllamaStatus();
+  });
+
+  // Give Ollama a few seconds to start
+  await new Promise(resolve => setTimeout(resolve, 3000));
+  await updateOllamaStatus();
+
+  if (ollamaStatus === 'running') {
+    console.log('[Ollama] Successfully started and running');
+  }
+}
+
+// Initialize Ollama (auto-start if configured)
+async function initializeOllama() {
+  await updateOllamaStatus();
+
+  if (AUTO_START_OLLAMA && ollamaStatus !== 'running') {
+    console.log('[Ollama] Auto-start is enabled, attempting to start Ollama...');
+    await startOllama();
+  } else if (AUTO_START_OLLAMA) {
+    console.log('[Ollama] Auto-start enabled, but Ollama is already running');
+  } else {
+    console.log('[Ollama] Auto-start disabled, status:', ollamaStatus);
+  }
+}
+
+// Initialize Ollama and check status periodically
+initializeOllama();
+setInterval(updateOllamaStatus, 10000); // Check every 10 seconds
 
 // Middleware to parse JSON bodies
 app.use(express.json({ limit: '10mb' }));
@@ -79,6 +173,11 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     providers: providers,
     primaryProvider: providers.includes('gemini') ? 'gemini' : providers[0],
+    ollama: {
+      status: ollamaStatus,
+      endpoint: LOCAL_MODEL_ENDPOINT
+    },
+    ollamaStatus: ollamaStatus,
     timestamp: new Date().toISOString()
   });
 });
@@ -298,6 +397,40 @@ app.get('/api/proxy-status', (req, res) => {
   });
 });
 
+// Endpoint to get available Ollama models
+app.get('/api/ollama/models', async (req, res) => {
+  try {
+    const fetch = (await import('node-fetch')).default;
+    const response = await fetch(`${LOCAL_MODEL_ENDPOINT}/api/tags`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(5000)
+    });
+
+    if (!response.ok) {
+      return res.status(503).json({
+        error: 'Ollama not available',
+        models: []
+      });
+    }
+
+    const data = await response.json();
+    const models = data.models.map(model => ({
+      name: model.name,
+      size: model.size,
+      modified: model.modified_at,
+      digest: model.digest
+    }));
+
+    res.json({ models });
+  } catch (error) {
+    console.error('Failed to fetch Ollama models:', error.message);
+    res.status(503).json({
+      error: 'Failed to connect to Ollama',
+      models: []
+    });
+  }
+});
+
 // --- VFS Persistence Endpoints ---
 const VFS_BACKUP_PATH = path.join(__dirname, '..', 'vfs_backup.json');
 
@@ -411,9 +544,34 @@ server.listen(PORT, () => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully...');
+
+  if (ollamaProcess) {
+    console.log('[Ollama] Stopping managed Ollama process...');
+    ollamaProcess.kill();
+  }
+
   if (signalingServer) {
     signalingServer.close();
   }
+
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('\nSIGINT received, shutting down gracefully...');
+
+  if (ollamaProcess) {
+    console.log('[Ollama] Stopping managed Ollama process...');
+    ollamaProcess.kill();
+  }
+
+  if (signalingServer) {
+    signalingServer.close();
+  }
+
   server.close(() => {
     console.log('Server closed');
     process.exit(0);
