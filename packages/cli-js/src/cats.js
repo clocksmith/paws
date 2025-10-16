@@ -867,23 +867,8 @@ class CatsBundler {
       incremental: this.cache.enabled,
       aiCache: this.aiCache.enabled
     });
-    
-    // Add system prompt if configured
-    if (this.config.sysPromptFile) {
-      try {
-        const sysPromptPath = path.resolve(this.config.sysPromptFile);
-        const sysPromptContent = await fs.readFile(sysPromptPath, 'utf-8');
-        bundleLines.push(sysPromptContent);
-        bundleLines.push('\n--- END PREPENDED INSTRUCTIONS ---\n');
-        bundleLines.push('');
-      } catch (error) {
-        if (this.config.requireSysPrompt) {
-          throw new Error(`System prompt file not found: ${this.config.sysPromptFile}`);
-        }
-      }
-    }
-    
-    // Add persona files
+
+    // Add persona files first
     if (this.config.persona && this.config.persona.length > 0) {
       for (const personaFile of this.config.persona) {
         try {
@@ -897,6 +882,21 @@ class CatsBundler {
           if (!this.config.quiet) {
             console.log(chalk.yellow(`Warning: Persona file not found: ${personaFile}`));
           }
+        }
+      }
+    }
+
+    // Add system prompt after persona
+    if (this.config.sysPromptFile) {
+      try {
+        const sysPromptPath = path.resolve(this.config.sysPromptFile);
+        const sysPromptContent = await fs.readFile(sysPromptPath, 'utf-8');
+        bundleLines.push(sysPromptContent);
+        bundleLines.push('\n--- END PREPENDED INSTRUCTIONS ---\n');
+        bundleLines.push('');
+      } catch (error) {
+        if (this.config.requireSysPrompt) {
+          throw new Error(`System prompt file not found: ${this.config.sysPromptFile}`);
         }
       }
     }

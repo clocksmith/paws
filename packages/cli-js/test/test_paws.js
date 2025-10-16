@@ -19,9 +19,33 @@ const dogsCliPath = path.resolve(__dirname, "..", "bin", "dogs.js");
  * @returns {Promise<{stdout: string, stderr: string, code: number}>}
  */
 function runCliWithInput(command, inputs = []) {
-  const [cmd, ...args] = command.split(" ");
+  // Parse command string properly, handling quoted arguments
+  const args = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < command.length; i++) {
+    const char = command[i];
+
+    if (char === '"' || char === "'") {
+      inQuotes = !inQuotes;
+    } else if (char === ' ' && !inQuotes) {
+      if (current) {
+        args.push(current);
+        current = '';
+      }
+    } else {
+      current += char;
+    }
+  }
+
+  if (current) {
+    args.push(current);
+  }
+
+  const [cmd, ...cmdArgs] = args;
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn(cmd, cmdArgs, { stdio: ["pipe", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
 

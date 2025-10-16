@@ -34,15 +34,33 @@ const Utils = {
      * });
      */
     class ApplicationError extends Error {
-      constructor(message, details = {}) {
+      constructor(message, details) {
         super(message);
         this.name = this.constructor.name;
-        this.details = details;
+        if (details !== undefined) {
+          this.details = details;
+        }
       }
     }
 
-    /** @class ApiError - LLM API communication errors */
-    class ApiError extends ApplicationError {}
+    /**
+     * @class ApiError - LLM API communication errors
+     * @param {string} message - Error message
+     * @param {number} [status] - HTTP status code
+     * @param {string} [code] - Error code
+     * @param {Object} [details] - Additional error context
+     */
+    class ApiError extends ApplicationError {
+      constructor(message, status, code, details) {
+        super(message, details);
+        if (status !== undefined) {
+          this.status = status;
+        }
+        if (code !== undefined) {
+          this.code = code;
+        }
+      }
+    }
 
     /** @class ToolError - Tool execution errors */
     class ToolError extends ApplicationError {}
@@ -120,7 +138,12 @@ const Utils = {
      * @example
      * kabobToCamel('background-color') // => 'backgroundColor'
      */
-    const kabobToCamel = (s) => s.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+    const kabobToCamel = (s) => {
+      // Remove leading/trailing hyphens and convert to camelCase
+      return s
+        .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
+        .replace(/-([a-z0-9])/gi, (g) => g[1].toUpperCase()); // Convert after hyphens to uppercase
+    };
 
     /**
      * Truncate string to specified length with ellipsis.
@@ -132,8 +155,14 @@ const Utils = {
      * @example
      * trunc('Hello World', 8) // => 'Hello...'
      */
-    const trunc = (str, len) =>
-      (str.length > len ? str.substring(0, len - 3) + "..." : str);
+    const trunc = (str, len) => {
+      if (str === undefined || str === null) return str;
+      if (str.length <= len) return str;
+
+      // Handle unicode/emoji properly by using Array.from when truncating
+      const chars = Array.from(str);
+      return chars.slice(0, len - 3).join('') + "...";
+    };
 
     /**
      * Escape HTML special characters for safe display.
@@ -256,7 +285,7 @@ const Utils = {
      * tracker.unsubscribeAll('MyModule'); // Cleans up all subscriptions
      */
     const createSubscriptionTracker = () => {
-      const subscriptions = new Map(); // moduleId -> Set of unsubscribe functions
+      const subscriptions = new Map(); // moduleId -> Array of unsubscribe functions
 
       return {
         /**
@@ -266,9 +295,9 @@ const Utils = {
          */
         track: (moduleId, unsubscribeFn) => {
           if (!subscriptions.has(moduleId)) {
-            subscriptions.set(moduleId, new Set());
+            subscriptions.set(moduleId, []);
           }
-          subscriptions.get(moduleId).add(unsubscribeFn);
+          subscriptions.get(moduleId).push(unsubscribeFn);
         },
 
         /**
@@ -278,7 +307,11 @@ const Utils = {
         unsubscribeAll: (moduleId) => {
           const moduleSubs = subscriptions.get(moduleId);
           if (moduleSubs) {
-            moduleSubs.forEach(unsub => unsub());
+            moduleSubs.forEach(unsub => {
+              if (typeof unsub === 'function') {
+                unsub();
+              }
+            });
             subscriptions.delete(moduleId);
             logger.debug(`[SubscriptionTracker] Unsubscribed all listeners for ${moduleId}`);
           }
@@ -290,7 +323,7 @@ const Utils = {
          * @returns {number} Number of active subscriptions
          */
         getActiveCount: (moduleId) => {
-          return subscriptions.get(moduleId)?.size || 0;
+          return subscriptions.get(moduleId)?.length || 0;
         },
 
         /**
@@ -300,7 +333,7 @@ const Utils = {
         getAllActive: () => {
           const report = {};
           subscriptions.forEach((subs, moduleId) => {
-            report[moduleId] = subs.size;
+            report[moduleId] = subs.length;
           });
           return report;
         }

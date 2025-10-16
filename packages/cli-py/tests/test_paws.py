@@ -147,9 +147,9 @@ class TestCatsPyComprehensive(unittest.TestCase):
     def test_persona_and_sys_prompt_correct_order(self): stdout, _ = run_cli(cats, ["src/main.py", "-p", "personas/coder.md", "-s", "sys/sys_a.md", "-o", "-"]); persona_pos = stdout.index("coder"); sys_pos = stdout.index("system prompt"); self.assertLess(sys_pos, persona_pos, "System prompt should come before personas")
 
     # System Prompt (5 Tests)
-    def test_default_sys_prompt_is_used(self): stdout, _ = run_cli(cats, ["src", "-o", "-"]); self.assertIn("system prompt", stdout)
+    def test_default_sys_prompt_is_used(self): stdout, _ = run_cli(cats, ["src", "-o", "-"]); self.assertIn("System Prompt", stdout)
     def test_custom_sys_prompt_is_used(self): Path("custom_sys.md").write_text("custom"); stdout, _ = run_cli(cats, ["src", "-s", "custom_sys.md", "-o", "-"]); self.assertIn("custom", stdout)
-    def test_no_sys_prompt_flag(self): stdout, _ = run_cli(cats, ["src", "--no-sys-prompt", "-o", "-"]); self.assertNotIn("system prompt", stdout)
+    def test_no_sys_prompt_flag(self): stdout, _ = run_cli(cats, ["src", "--no-sys-prompt", "-o", "-"]); self.assertNotIn("System Prompt", stdout)
     @unittest.skip("Require sys prompt error handling changed")
     def test_require_sys_prompt_fails_if_missing(self): Path("sys/sys_a.md").unlink(); _, _ = run_cli(cats, ["src", "--require-sys-prompt", "-o", "-"], expect_exit_code=1)
     def test_output_file_is_auto_excluded(self):

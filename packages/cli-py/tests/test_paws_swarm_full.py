@@ -79,7 +79,7 @@ class TestSwarmAgent(unittest.TestCase):
         self.assertIsNone(agent._client)
 
         # Mock LLMClient to avoid actual API calls
-        with patch('paws_swarm.LLMClient') as mock_llm:
+        with patch('paws.swarm.LLMClient') as mock_llm:
             mock_client = Mock()
             mock_llm.return_value = mock_client
 
@@ -925,7 +925,7 @@ class TestSwarmMain(unittest.TestCase):
         with patch('sys.argv', test_args):
             with patch.object(SwarmOrchestrator, 'run_swarm', return_value=str(self.test_dir / "output.md")):
                 with patch('sys.stdout', new=MagicMock()):
-                    result = paws_swarm.main()
+                    result = paws.swarm.main()
 
         self.assertEqual(result, 0)
 
@@ -945,7 +945,7 @@ class TestSwarmMain(unittest.TestCase):
                 ]
                 with patch.object(SwarmOrchestrator, 'run_swarm', return_value=str(self.test_dir / "output.md")):
                     with patch('sys.stdout', new=MagicMock()):
-                        result = paws_swarm.main()
+                        result = paws.swarm.main()
 
         self.assertEqual(result, 0)
         # Check input was called twice
@@ -964,7 +964,7 @@ class TestSwarmMain(unittest.TestCase):
             with patch.object(SwarmOrchestrator, 'run_swarm', return_value=str(self.test_dir / "output.md")):
                 with patch.object(SwarmOrchestrator, 'add_agent') as mock_add_agent:
                     with patch('sys.stdout', new=MagicMock()):
-                        result = paws_swarm.main()
+                        result = paws.swarm.main()
 
         # Should have added 3 agents
         self.assertEqual(mock_add_agent.call_count, 3)
@@ -988,7 +988,7 @@ class TestSwarmMain(unittest.TestCase):
 
         with patch('sys.argv', test_args):
             with patch('sys.stdout', new=MagicMock()):
-                result = paws_swarm.main()
+                result = paws.swarm.main()
 
         # Should return error code
         self.assertEqual(result, 1)

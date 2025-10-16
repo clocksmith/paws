@@ -187,8 +187,8 @@ class TestRichInteractiveMode(unittest.TestCase):
         reviewer = dogs.InteractiveReviewer(changeset)
 
         # Mock Rich prompts
-        with patch('dogs.Prompt.ask', return_value='a'):
-            with patch('dogs.Confirm.ask', return_value=True):
+        with patch('paws.dogs.Prompt.ask', return_value='a'):
+            with patch('paws.dogs.Confirm.ask', return_value=True):
                 try:
                     result = reviewer._rich_interactive_review()
                     self.assertEqual(result.changes[0].status, "accepted")
@@ -205,8 +205,8 @@ class TestRichInteractiveMode(unittest.TestCase):
 
         reviewer = dogs.InteractiveReviewer(changeset)
 
-        with patch('dogs.Prompt.ask', return_value='r'):
-            with patch('dogs.Confirm.ask', return_value=True):
+        with patch('paws.dogs.Prompt.ask', return_value='r'):
+            with patch('paws.dogs.Confirm.ask', return_value=True):
                 try:
                     result = reviewer._rich_interactive_review()
                     self.assertEqual(result.changes[0].status, "rejected")
@@ -224,8 +224,8 @@ class TestRichInteractiveMode(unittest.TestCase):
         reviewer = dogs.InteractiveReviewer(changeset)
 
         # Test navigation: next, previous, quit
-        with patch('dogs.Prompt.ask', side_effect=['n', 'p', 'q']):
-            with patch('dogs.Confirm.ask', return_value=True):
+        with patch('paws.dogs.Prompt.ask', side_effect=['n', 'p', 'q']):
+            with patch('paws.dogs.Confirm.ask', return_value=True):
                 try:
                     result = reviewer._rich_interactive_review()
                     self.assertIsNotNone(result)
@@ -241,8 +241,8 @@ class TestRichInteractiveMode(unittest.TestCase):
 
         reviewer = dogs.InteractiveReviewer(changeset)
 
-        with patch('dogs.Prompt.ask', side_effect=['s', 'q']):
-            with patch('dogs.Confirm.ask', return_value=True):
+        with patch('paws.dogs.Prompt.ask', side_effect=['s', 'q']):
+            with patch('paws.dogs.Confirm.ask', return_value=True):
                 try:
                     result = reviewer._rich_interactive_review()
                     self.assertEqual(result.changes[0].status, "pending")
@@ -407,9 +407,9 @@ print('test')
         test_dir = tempfile.mkdtemp(prefix="dogs_main_")
 
         try:
-            # Run dogs.py as a script
+            # Run dogs.py as a module in monorepo structure
             result = subprocess.run(
-                ['python3', 'dogs.py', bundle_file, test_dir, '-y', '-q'],
+                ['python3', '-m', 'paws.dogs', bundle_file, test_dir, '-y', '-q'],
                 cwd=str(Path(__file__).parent.parent),
                 capture_output=True,
                 timeout=10

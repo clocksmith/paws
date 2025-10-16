@@ -85,7 +85,7 @@ class TestInteractiveReviewer(unittest.TestCase):
         self.assertTrue(hasattr(reviewer, '_basic_review'))
         self.assertTrue(callable(reviewer._basic_review))
 
-    @patch('dogs.RICH_AVAILABLE', False)
+    @patch('paws.dogs.RICH_AVAILABLE', False)
     def test_reviewer_falls_back_without_rich(self):
         """Test that reviewer falls back to basic mode without rich"""
         changeset = self._create_test_changeset()
@@ -99,7 +99,7 @@ class TestInteractiveReviewer(unittest.TestCase):
         self.assertEqual(result.changes[1].status, "rejected")
         self.assertEqual(result.changes[2].status, "pending")
 
-    @patch('dogs.RICH_AVAILABLE', False)
+    @patch('paws.dogs.RICH_AVAILABLE', False)
     def test_reviewer_basic_mode_quit(self):
         """Test that reviewer quits when user chooses quit"""
         changeset = self._create_test_changeset()
@@ -112,7 +112,7 @@ class TestInteractiveReviewer(unittest.TestCase):
         # First change should still be pending since we quit
         self.assertEqual(result.changes[0].status, "pending")
 
-    @patch('dogs.RICH_AVAILABLE', False)
+    @patch('paws.dogs.RICH_AVAILABLE', False)
     def test_reviewer_basic_mode_invalid_choice(self):
         """Test that reviewer handles invalid choices"""
         changeset = self._create_test_changeset()
@@ -225,9 +225,9 @@ class TestInteractiveReviewer(unittest.TestCase):
         self.assertEqual(len(changeset.changes), 1)
         self.assertEqual(changeset.changes[0], change)
 
-    @patch('dogs.RICH_AVAILABLE', True)
-    @patch('dogs.Console')
-    @patch('dogs.Prompt')
+    @patch('paws.dogs.RICH_AVAILABLE', True)
+    @patch('paws.dogs.Console')
+    @patch('paws.dogs.Prompt')
     def test_reviewer_rich_mode_navigation(self, mock_prompt, mock_console):
         """Test rich mode navigation"""
         changeset = self._create_test_changeset()
@@ -285,8 +285,8 @@ class TestGitVerificationHandler(unittest.TestCase):
 
         self.assertFalse(handler.is_git_repo())
 
-    @patch('dogs.GIT_AVAILABLE', True)
-    @patch('dogs.git.Repo')
+    @patch('paws.dogs.GIT_AVAILABLE', True)
+    @patch('paws.dogs.git.Repo')
     def test_handler_detects_git_repo(self, mock_repo):
         """Test that handler detects git repo"""
         mock_repo.return_value = Mock()
@@ -295,7 +295,7 @@ class TestGitVerificationHandler(unittest.TestCase):
 
         self.assertTrue(handler.is_git_repo())
 
-    @patch('dogs.GIT_AVAILABLE', False)
+    @patch('paws.dogs.GIT_AVAILABLE', False)
     def test_handler_without_gitpython(self):
         """Test that handler works without GitPython"""
         handler = dogs.GitVerificationHandler(self.test_dir)
@@ -303,8 +303,8 @@ class TestGitVerificationHandler(unittest.TestCase):
         self.assertFalse(handler.is_git_repo())
         self.assertFalse(handler.create_checkpoint())
 
-    @patch('dogs.GIT_AVAILABLE', True)
-    @patch('dogs.git.Repo')
+    @patch('paws.dogs.GIT_AVAILABLE', True)
+    @patch('paws.dogs.git.Repo')
     def test_handler_create_checkpoint_clean_repo(self, mock_repo_class):
         """Test creating checkpoint in clean repo"""
         mock_repo = Mock()
@@ -317,8 +317,8 @@ class TestGitVerificationHandler(unittest.TestCase):
         # Clean repo should return True
         self.assertTrue(result)
 
-    @patch('dogs.GIT_AVAILABLE', True)
-    @patch('dogs.git.Repo')
+    @patch('paws.dogs.GIT_AVAILABLE', True)
+    @patch('paws.dogs.git.Repo')
     def test_handler_create_checkpoint_dirty_repo(self, mock_repo_class):
         """Test creating checkpoint in dirty repo"""
         mock_git = Mock()
@@ -335,8 +335,8 @@ class TestGitVerificationHandler(unittest.TestCase):
         self.assertTrue(result)
         mock_git.stash.assert_called_once()
 
-    @patch('dogs.GIT_AVAILABLE', True)
-    @patch('dogs.git.Repo')
+    @patch('paws.dogs.GIT_AVAILABLE', True)
+    @patch('paws.dogs.git.Repo')
     def test_handler_create_checkpoint_error(self, mock_repo_class):
         """Test checkpoint creation handles errors"""
         mock_repo = Mock()
@@ -348,8 +348,8 @@ class TestGitVerificationHandler(unittest.TestCase):
 
         self.assertFalse(result)
 
-    @patch('dogs.GIT_AVAILABLE', True)
-    @patch('dogs.git.Repo')
+    @patch('paws.dogs.GIT_AVAILABLE', True)
+    @patch('paws.dogs.git.Repo')
     def test_handler_rollback(self, mock_repo_class):
         """Test rollback functionality"""
         mock_git = Mock()
@@ -367,8 +367,8 @@ class TestGitVerificationHandler(unittest.TestCase):
         self.assertTrue(result)
         mock_git.stash.assert_called_with('pop')
 
-    @patch('dogs.GIT_AVAILABLE', True)
-    @patch('dogs.git.Repo')
+    @patch('paws.dogs.GIT_AVAILABLE', True)
+    @patch('paws.dogs.git.Repo')
     def test_handler_rollback_without_stash(self, mock_repo_class):
         """Test rollback without stash returns False"""
         mock_repo = Mock()
@@ -381,8 +381,8 @@ class TestGitVerificationHandler(unittest.TestCase):
 
         self.assertFalse(result)
 
-    @patch('dogs.GIT_AVAILABLE', True)
-    @patch('dogs.git.Repo')
+    @patch('paws.dogs.GIT_AVAILABLE', True)
+    @patch('paws.dogs.git.Repo')
     def test_handler_finalize(self, mock_repo_class):
         """Test finalize drops stash"""
         mock_git = Mock()
@@ -399,8 +399,8 @@ class TestGitVerificationHandler(unittest.TestCase):
         self.assertTrue(result)
         mock_git.stash.assert_called_with('drop')
 
-    @patch('dogs.GIT_AVAILABLE', True)
-    @patch('dogs.git.Repo')
+    @patch('paws.dogs.GIT_AVAILABLE', True)
+    @patch('paws.dogs.git.Repo')
     def test_handler_finalize_without_stash(self, mock_repo_class):
         """Test finalize without stash returns True"""
         mock_repo = Mock()
@@ -718,7 +718,7 @@ content
         # Should return False due to error
         self.assertFalse(result)
 
-    @patch('dogs.GitVerificationHandler')
+    @patch('paws.dogs.GitVerificationHandler')
     def test_processor_run_with_verification_success(self, mock_handler_class):
         """Test run_with_verification on success"""
         mock_handler = Mock()
@@ -738,7 +738,7 @@ content
         mock_handler.run_verification.assert_called_once()
         mock_handler.finalize.assert_called_once()
 
-    @patch('dogs.GitVerificationHandler')
+    @patch('paws.dogs.GitVerificationHandler')
     def test_processor_run_with_verification_failure(self, mock_handler_class):
         """Test run_with_verification on failure"""
         mock_handler = Mock()

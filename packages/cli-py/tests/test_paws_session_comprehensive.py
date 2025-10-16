@@ -592,7 +592,7 @@ class TestSessionManagerErrors(unittest.TestCase):
         # Create non-git directory
         os.chdir(self.test_dir)
 
-        with patch('paws_session.GIT_AVAILABLE', False):
+        with patch('paws.session.GIT_AVAILABLE', False):
             with self.assertRaises(RuntimeError) as cm:
                 SessionManager(self.test_dir)
             self.assertIn("Git support is required", str(cm.exception))
@@ -769,7 +769,7 @@ class TestSessionCLIMain(unittest.TestCase):
 
         with patch('sys.argv', test_args):
             with patch('sys.stdout', new=MagicMock()):
-                result = paws_session.main()
+                result = paws.session.main()
 
         # Should return error code
         self.assertEqual(result, 1)
@@ -785,7 +785,7 @@ class TestSessionCLIMain(unittest.TestCase):
 
         with patch('sys.argv', test_args):
             with patch('sys.stdout', new=MagicMock()):
-                result = paws_session.main()
+                result = paws.session.main()
 
         # Should succeed
         self.assertEqual(result, 0)
@@ -803,7 +803,7 @@ class TestSessionCLIMain(unittest.TestCase):
 
         with patch('sys.argv', test_args):
             with patch('sys.stdout', new=MagicMock()):
-                result = paws_session.main()
+                result = paws.session.main()
 
         # Should succeed
         self.assertEqual(result, 0)
@@ -818,7 +818,7 @@ class TestSessionCLIMain(unittest.TestCase):
 
         with patch('sys.argv', test_args):
             with patch('sys.stdout', new=MagicMock()):
-                result = paws_session.main()
+                result = paws.session.main()
 
         # Should succeed
         self.assertEqual(result, 0)
@@ -837,7 +837,7 @@ class TestSessionCLIMain(unittest.TestCase):
 
         with patch('sys.argv', test_args):
             with patch('sys.stdout', new=MagicMock()):
-                result = paws_session.main()
+                result = paws.session.main()
 
         # Should succeed
         self.assertEqual(result, 0)
@@ -854,7 +854,7 @@ class TestSessionCLIMain(unittest.TestCase):
         with patch('sys.argv', test_args):
             with patch('sys.stdout', new=MagicMock()):
                 # Will raise exception when trying to show nonexistent session
-                result = paws_session.main()
+                result = paws.session.main()
 
         # Should handle exception and return 0 (show_session just prints error)
         self.assertEqual(result, 0)
@@ -886,25 +886,25 @@ class TestSessionCLIDisplay(unittest.TestCase):
 
     def test_show_list_no_rich(self):
         """Test show_list fallback without Rich (lines 428-435)"""
-        cli = paws_session.SessionCLI()
+        cli = paws.session.SessionCLI()
 
         # Create a session
         self.manager.create_session("Test Session")
 
         # Mock Rich as unavailable
-        with patch('paws_session.RICH_AVAILABLE', False):
+        with patch('paws.session.RICH_AVAILABLE', False):
             with patch('sys.stdout', new=MagicMock()):
                 cli.list_sessions(show_archived=False)
 
     def test_show_session_no_rich(self):
         """Test show_session fallback without Rich (lines 468-473)"""
-        cli = paws_session.SessionCLI()
+        cli = paws.session.SessionCLI()
 
         # Create a session
         session = self.manager.create_session("Test Session")
 
         # Mock Rich as unavailable
-        with patch('paws_session.RICH_AVAILABLE', False):
+        with patch('paws.session.RICH_AVAILABLE', False):
             with patch('sys.stdout', new=MagicMock()):
                 cli.show_session(session.session_id)
 
@@ -949,7 +949,7 @@ class TestSessionCLICommands(unittest.TestCase):
 
         with patch('sys.argv', test_args):
             with patch('sys.stdout', new=MagicMock()):
-                result = paws_session.main()
+                result = paws.session.main()
 
         self.assertEqual(result, 0)
 
@@ -967,10 +967,10 @@ class TestSessionCLICommands(unittest.TestCase):
 
         # Mock the confirmation to proceed
         with patch('sys.argv', test_args):
-            with patch('paws_session.RICH_AVAILABLE', False):
+            with patch('paws.session.RICH_AVAILABLE', False):
                 with patch('builtins.input', return_value='y'):
                     with patch('sys.stdout', new=MagicMock()):
-                        result = paws_session.main()
+                        result = paws.session.main()
 
         self.assertEqual(result, 0)
 
@@ -987,7 +987,7 @@ class TestSessionCLICommands(unittest.TestCase):
 
         with patch('sys.argv', test_args):
             with patch('sys.stdout', new=MagicMock()):
-                result = paws_session.main()
+                result = paws.session.main()
 
         self.assertEqual(result, 0)
 
@@ -1004,19 +1004,19 @@ class TestSessionCLICommands(unittest.TestCase):
 
         # Mock the confirmation to proceed
         with patch('sys.argv', test_args):
-            with patch('paws_session.RICH_AVAILABLE', False):
+            with patch('paws.session.RICH_AVAILABLE', False):
                 with patch('builtins.input', return_value='y'):
                     with patch('sys.stdout', new=MagicMock()):
-                        result = paws_session.main()
+                        result = paws.session.main()
 
         self.assertEqual(result, 0)
 
     def test_merge_session_no_rich_declined(self):
         """Test merge_session without Rich when declined (lines 482-488)"""
-        cli = paws_session.SessionCLI()
+        cli = paws.session.SessionCLI()
         session = self.manager.create_session("Test Session")
 
-        with patch('paws_session.RICH_AVAILABLE', False):
+        with patch('paws.session.RICH_AVAILABLE', False):
             with patch('builtins.input', return_value='n'):
                 with patch('sys.stdout', new=MagicMock()):
                     cli.merge_session(session.session_id, 'main')
@@ -1027,10 +1027,10 @@ class TestSessionCLICommands(unittest.TestCase):
 
     def test_merge_session_no_rich_accepted(self):
         """Test merge_session without Rich when accepted (lines 482-491)"""
-        cli = paws_session.SessionCLI()
+        cli = paws.session.SessionCLI()
         session = self.manager.create_session("Test Session")
 
-        with patch('paws_session.RICH_AVAILABLE', False):
+        with patch('paws.session.RICH_AVAILABLE', False):
             with patch('builtins.input', return_value='y'):
                 with patch('sys.stdout', new=MagicMock()):
                     cli.merge_session(session.session_id, 'main')
@@ -1041,7 +1041,7 @@ class TestSessionCLICommands(unittest.TestCase):
 
     def test_archive_session_success(self):
         """Test archive_session (lines 495-496)"""
-        cli = paws_session.SessionCLI()
+        cli = paws.session.SessionCLI()
         session = self.manager.create_session("Test Session")
 
         with patch('sys.stdout', new=MagicMock()):
@@ -1053,10 +1053,10 @@ class TestSessionCLICommands(unittest.TestCase):
 
     def test_delete_session_no_rich_declined(self):
         """Test delete_session without Rich when declined (lines 500-506)"""
-        cli = paws_session.SessionCLI()
+        cli = paws.session.SessionCLI()
         session = self.manager.create_session("Test Session")
 
-        with patch('paws_session.RICH_AVAILABLE', False):
+        with patch('paws.session.RICH_AVAILABLE', False):
             with patch('builtins.input', return_value='n'):
                 with patch('sys.stdout', new=MagicMock()):
                     cli.delete_session(session.session_id)
@@ -1067,10 +1067,10 @@ class TestSessionCLICommands(unittest.TestCase):
 
     def test_delete_session_no_rich_accepted(self):
         """Test delete_session without Rich when accepted (lines 500-509)"""
-        cli = paws_session.SessionCLI()
+        cli = paws.session.SessionCLI()
         session = self.manager.create_session("Test Session")
 
-        with patch('paws_session.RICH_AVAILABLE', False):
+        with patch('paws.session.RICH_AVAILABLE', False):
             with patch('builtins.input', return_value='y'):
                 with patch('sys.stdout', new=MagicMock()):
                     cli.delete_session(session.session_id)
@@ -1081,7 +1081,7 @@ class TestSessionCLICommands(unittest.TestCase):
 
     def test_rewind_session_cli(self):
         """Test rewind_session CLI method (lines 477-478)"""
-        cli = paws_session.SessionCLI()
+        cli = paws.session.SessionCLI()
         session = self.manager.create_session("Test Session")
 
         # Mock the cli's manager's rewind_session to return True
@@ -1091,12 +1091,12 @@ class TestSessionCLICommands(unittest.TestCase):
 
     def test_merge_session_with_rich_declined(self):
         """Test merge_session with Rich when declined (lines 483-484)"""
-        cli = paws_session.SessionCLI()
+        cli = paws.session.SessionCLI()
         session = self.manager.create_session("Test Session")
 
         # Mock Rich as available and Confirm.ask to return False
-        with patch('paws_session.RICH_AVAILABLE', True):
-            with patch('paws_session.Confirm.ask', return_value=False):
+        with patch('paws.session.RICH_AVAILABLE', True):
+            with patch('paws.session.Confirm.ask', return_value=False):
                 with patch('sys.stdout', new=MagicMock()):
                     cli.merge_session(session.session_id, 'main')
 
@@ -1106,12 +1106,12 @@ class TestSessionCLICommands(unittest.TestCase):
 
     def test_delete_session_with_rich_declined(self):
         """Test delete_session with Rich when declined (lines 501-502)"""
-        cli = paws_session.SessionCLI()
+        cli = paws.session.SessionCLI()
         session = self.manager.create_session("Test Session")
 
         # Mock Rich as available and Confirm.ask to return False
-        with patch('paws_session.RICH_AVAILABLE', True):
-            with patch('paws_session.Confirm.ask', return_value=False):
+        with patch('paws.session.RICH_AVAILABLE', True):
+            with patch('paws.session.Confirm.ask', return_value=False):
                 with patch('sys.stdout', new=MagicMock()):
                     cli.delete_session(session.session_id)
 

@@ -27,6 +27,7 @@ try {
 
 // Bundle parsing regexes
 const DOGS_MARKER_REGEX = /^\s*🐕\s*-{3,}\s*DOGS_(START|END)_FILE\s*:\s*(.+?)(\s*\(Content:Base64\))?\s*-{3,}\s*$/i;
+const CATS_MARKER_REGEX = /^\s*🐈\s*-{3,}\s*CATS_(START|END)_FILE\s*:\s*(.+?)(\s*\(Content:Base64\))?\s*-{3,}\s*$/i;
 const MARKDOWN_FENCE_REGEX = /^\s*```[\w-]*\s*$/;
 
 // File operation types
@@ -489,8 +490,12 @@ class BundleProcessor {
     this.emitProgress({ event: 'parse:start', totalLines: lines.length });
 
     for (const line of lines) {
-      const match = DOGS_MARKER_REGEX.exec(line);
-      
+      // Try DOGS marker first, then CATS marker
+      let match = DOGS_MARKER_REGEX.exec(line);
+      if (!match) {
+        match = CATS_MARKER_REGEX.exec(line);
+      }
+
       if (match) {
         if (match[1].toUpperCase() === 'START') {
           inFile = true;
@@ -839,8 +844,30 @@ async function extractBundle(options) {
   const bundleContent = options.bundleContent || '';
   const originalBundleContent = options.originalBundleContent || '';
 
-  // Parse the bundle to get a ChangeSet
+  // Parse original bundle to get baseline content
+  const originalFiles = {};
+  if (originalBundleContent) {
+    // Create a temporary processor to avoid mixing changes
+    const tempProcessor = new BundleProcessor({
+      outputDir: options.outputDir || process.cwd(),
+      quiet: true
+    });
+    const originalChangeSet = await tempProcessor.parseBundle(originalBundleContent);
+    for (const change of originalChangeSet.changes) {
+      originalFiles[change.filePath] = change.newContent || '';
+    }
+  }
+
+  // Parse the delta bundle to get a ChangeSet
   const changeSet = await processor.parseBundle(bundleContent);
+
+  // Apply delta commands if present
+  for (const change of changeSet.changes) {
+    if (change.newContent && change.newContent.includes('@@ PAWS_CMD')) {
+      const originalContent = originalFiles[change.filePath] || '';
+      change.newContent = applyDeltaCommands(originalContent, change.newContent);
+    }
+  }
 
   // Convert ChangeSet changes to the expected format
   return changeSet.changes.map(change => ({
@@ -849,6 +876,87 @@ async function extractBundle(options) {
     contentBytes: Buffer.from(change.newContent || '', 'utf-8'),
     isBinary: change.isBinary
   }));
+}
+
+/**
+ * Apply delta commands to original content
+ */
+function applyDeltaCommands(originalContent, deltaContent) {
+  const originalLines = originalContent.split('\n');
+  const commands = [];
+
+  // Parse all commands from delta content
+  const deltaLines = deltaContent.split('\n');
+  for (let i = 0; i < deltaLines.length; i++) {
+    const line = deltaLines[i].trim();
+
+    // INSERT_AFTER_LINE(n)
+    let match = line.match(/@@\s*PAWS_CMD\s+INSERT_AFTER_LINE\((\d+)\)\s*@@/);
+    if (match) {
+      const afterLine = parseInt(match[1]);
+      const newContent = [];
+      for (let j = i + 1; j < deltaLines.length; j++) {
+        if (deltaLines[j].trim().startsWith('@@')) break;
+        newContent.push(deltaLines[j]);
+      }
+      commands.push({ type: 'INSERT_AFTER', line: afterLine, content: newContent });
+      continue;
+    }
+
+    // REPLACE_LINES(start, end)
+    match = line.match(/@@\s*PAWS_CMD\s+REPLACE_LINES\((\d+),\s*(\d+)\)\s*@@/);
+    if (match) {
+      const startLine = parseInt(match[1]);
+      const endLine = parseInt(match[2]);
+      const newContent = [];
+      for (let j = i + 1; j < deltaLines.length; j++) {
+        if (deltaLines[j].trim().startsWith('@@')) break;
+        newContent.push(deltaLines[j]);
+      }
+      commands.push({ type: 'REPLACE', start: startLine, end: endLine, content: newContent });
+      continue;
+    }
+
+    // DELETE_LINES(start, end)
+    match = line.match(/@@\s*PAWS_CMD\s+DELETE_LINES\((\d+),\s*(\d+)\)\s*@@/);
+    if (match) {
+      const startLine = parseInt(match[1]);
+      const endLine = parseInt(match[2]);
+      commands.push({ type: 'DELETE', start: startLine, end: endLine });
+      continue;
+    }
+  }
+
+  // Sort commands by line number (descending) so we apply bottom-up
+  // This way, changes to later lines don't affect line numbers of earlier lines
+  commands.sort((a, b) => {
+    const lineA = a.line || a.start || 0;
+    const lineB = b.line || b.start || 0;
+    return lineB - lineA;
+  });
+
+  // Apply commands from bottom to top
+  let result = [...originalLines];
+
+  for (const cmd of commands) {
+    if (cmd.type === 'INSERT_AFTER') {
+      // Insert after line N (1-indexed)
+      // splice(N, 0, ...content) inserts AFTER position N-1 (which is line N)
+      result.splice(cmd.line, 0, ...cmd.content);
+    } else if (cmd.type === 'REPLACE') {
+      // Replace lines start to end (1-indexed)
+      const startIdx = cmd.start - 1;
+      const count = cmd.end - cmd.start + 1;
+      result.splice(startIdx, count, ...cmd.content);
+    } else if (cmd.type === 'DELETE') {
+      // Delete lines start to end (1-indexed)
+      const startIdx = cmd.start - 1;
+      const count = cmd.end - cmd.start + 1;
+      result.splice(startIdx, count);
+    }
+  }
+
+  return result.join('\n');
 }
 
 // Export for use as module

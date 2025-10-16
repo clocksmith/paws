@@ -477,6 +477,13 @@
 "description": "Curator Mode - Autonomous overnight proposal generation with visual reports",
 "category": "service",
 "blueprint": "0x000023"
+},
+{
+"id": "WRTC",
+"path": "webrtc-swarm.js",
+"description": "WebRTC peer-to-peer swarm communication (disabled by default for security)",
+"category": "service",
+"requiresExplicitEnable": true
 }
 ],
 "blueprints": [

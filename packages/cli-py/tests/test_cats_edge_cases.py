@@ -105,7 +105,7 @@ class TestFileTreeBuilding(unittest.TestCase):
         (self.test_dir / "README.md").write_text("# README")
 
         # Mock git to be unavailable
-        with patch('cats.GIT_AVAILABLE', False):
+        with patch('paws.cats.GIT_AVAILABLE', False):
             analyzer = ProjectAnalyzer(self.test_dir)
             tree = analyzer.build_file_tree()
 

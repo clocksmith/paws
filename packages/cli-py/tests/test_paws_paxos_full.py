@@ -136,7 +136,7 @@ class TestLLMClient(unittest.TestCase):
             api_key="test_key"
         )
 
-        with patch('paws_paxos.GEMINI_AVAILABLE', False):
+        with patch('paws.paxos.GEMINI_AVAILABLE', False):
             with self.assertRaises(ImportError) as cm:
                 client = LLMClient(config)
 
@@ -151,7 +151,7 @@ class TestLLMClient(unittest.TestCase):
             api_key="test_key"
         )
 
-        with patch('paws_paxos.CLAUDE_AVAILABLE', False):
+        with patch('paws.paxos.CLAUDE_AVAILABLE', False):
             with self.assertRaises(ImportError) as cm:
                 client = LLMClient(config)
 
@@ -166,7 +166,7 @@ class TestLLMClient(unittest.TestCase):
             api_key="test_key"
         )
 
-        with patch('paws_paxos.OPENAI_AVAILABLE', False):
+        with patch('paws.paxos.OPENAI_AVAILABLE', False):
             with self.assertRaises(ImportError) as cm:
                 client = LLMClient(config)
 
@@ -181,8 +181,8 @@ class TestLLMClient(unittest.TestCase):
         )
 
         with patch.dict('os.environ', {'GEMINI_API_KEY': 'env_key'}):
-            with patch('paws_paxos.GEMINI_AVAILABLE', True):
-                with patch('paws_paxos.genai') as mock_genai:
+            with patch('paws.paxos.GEMINI_AVAILABLE', True):
+                with patch('paws.paxos.genai') as mock_genai:
                     mock_genai.GenerativeModel.return_value = Mock()
 
                     client = LLMClient(config)
@@ -199,8 +199,8 @@ class TestLLMClient(unittest.TestCase):
             api_key="test_key"
         )
 
-        with patch('paws_paxos.GEMINI_AVAILABLE', True):
-            with patch('paws_paxos.genai') as mock_genai:
+        with patch('paws.paxos.GEMINI_AVAILABLE', True):
+            with patch('paws.paxos.genai') as mock_genai:
                 # Mock Gemini response
                 mock_response = Mock()
                 mock_response.text = "Test response from Gemini"
@@ -338,7 +338,7 @@ class TestPaxosRunCompetitor(unittest.TestCase):
         )
 
         # Mock LLMClient
-        with patch('paws_paxos.LLMClient') as mock_llm:
+        with patch('paws.paxos.LLMClient') as mock_llm:
             mock_client = Mock()
             mock_client.generate.return_value = ("Solution code", 100)
             mock_llm.return_value = mock_client
@@ -371,7 +371,7 @@ class TestPaxosRunCompetitor(unittest.TestCase):
         )
 
         # Mock LLMClient
-        with patch('paws_paxos.LLMClient') as mock_llm:
+        with patch('paws.paxos.LLMClient') as mock_llm:
             mock_client = Mock()
             mock_client.generate.return_value = ("Solution code", 100)
             mock_llm.return_value = mock_client
@@ -401,7 +401,7 @@ class TestPaxosRunCompetitor(unittest.TestCase):
         )
 
         # Mock LLMClient
-        with patch('paws_paxos.LLMClient') as mock_llm:
+        with patch('paws.paxos.LLMClient') as mock_llm:
             mock_client = Mock()
             mock_client.generate.return_value = ("Solution code", 100)
             mock_llm.return_value = mock_client
@@ -430,7 +430,7 @@ class TestPaxosRunCompetitor(unittest.TestCase):
         )
 
         # Mock LLMClient to raise exception
-        with patch('paws_paxos.LLMClient') as mock_llm:
+        with patch('paws.paxos.LLMClient') as mock_llm:
             mock_llm.side_effect = Exception("API error")
 
             with patch('sys.stdout', new=MagicMock()):
@@ -954,7 +954,7 @@ class TestPaxosMain(unittest.TestCase):
             with patch.object(PaxosOrchestrator, 'run_competition', return_value=[]):
                 with patch.object(PaxosOrchestrator, 'generate_report', return_value=0):
                     with patch('sys.stdout', new=MagicMock()):
-                        result = paws_paxos.main()
+                        result = paws.paxos.main()
 
         self.assertEqual(result, 0)
 
@@ -975,7 +975,7 @@ class TestPaxosMain(unittest.TestCase):
                 with patch.object(PaxosOrchestrator, 'run_competition', return_value=[]):
                     with patch.object(PaxosOrchestrator, 'generate_report', return_value=0):
                         with patch('sys.stdout', new=MagicMock()):
-                            result = paws_paxos.main()
+                            result = paws.paxos.main()
 
         self.assertEqual(result, 0)
         # Should have prompted for task, context, and verify command
@@ -998,7 +998,7 @@ class TestPaxosMain(unittest.TestCase):
                 with patch.object(PaxosOrchestrator, 'run_competition', return_value=[]):
                     with patch.object(PaxosOrchestrator, 'generate_report', return_value=0):
                         with patch('sys.stdout', new=MagicMock()):
-                            result = paws_paxos.main()
+                            result = paws.paxos.main()
 
         self.assertEqual(result, 0)
         # Should have prompted for context and verify command
@@ -1020,7 +1020,7 @@ class TestPaxosMain(unittest.TestCase):
                 with patch.object(PaxosOrchestrator, 'run_competition', return_value=[]):
                     with patch.object(PaxosOrchestrator, 'generate_report', return_value=0):
                         with patch('sys.stdout', new=MagicMock()):
-                            result = paws_paxos.main()
+                            result = paws.paxos.main()
 
         self.assertEqual(result, 0)
 
@@ -1036,7 +1036,7 @@ class TestPaxosMain(unittest.TestCase):
         with patch('sys.argv', test_args):
             with patch('builtins.input', return_value=""):
                 with patch('sys.stdout', new=MagicMock()):
-                    result = paws_paxos.main()
+                    result = paws.paxos.main()
 
         # Should return error code
         self.assertEqual(result, 1)
@@ -1070,7 +1070,7 @@ class TestPaxosMain(unittest.TestCase):
                 with patch.object(PaxosOrchestrator, 'run_competition', return_value=mock_results) as mock_run:
                     with patch.object(PaxosOrchestrator, 'generate_report', return_value=0):
                         with patch('sys.stdout', new=MagicMock()):
-                            result = paws_paxos.main()
+                            result = paws.paxos.main()
 
         # Should have called run_competition with parallel=True (default)
         self.assertTrue(mock_run.called)
@@ -1093,7 +1093,7 @@ class TestPaxosMain(unittest.TestCase):
                 with patch.object(PaxosOrchestrator, 'run_competition', return_value=[]) as mock_run:
                     with patch.object(PaxosOrchestrator, 'generate_report', return_value=0):
                         with patch('sys.stdout', new=MagicMock()):
-                            result = paws_paxos.main()
+                            result = paws.paxos.main()
 
         # Should have called run_competition with parallel=False
         self.assertTrue(mock_run.called)

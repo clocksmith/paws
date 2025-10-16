@@ -30,6 +30,7 @@
         customProxyUrlInput: document.getElementById('custom-proxy-url'),
         customApiKeyInput: document.getElementById('custom-api-key'),
         tabDescriptionText: document.getElementById('tab-description-text'),
+        enableWebRTCCheckbox: document.getElementById('enable-webrtc'),
     };
 
     async function checkAPIStatus() {
@@ -85,8 +86,20 @@
         if (customProxyUrl && elements.customProxyUrlInput) elements.customProxyUrlInput.value = customProxyUrl;
         if (customApiKey && elements.customApiKeyInput) elements.customApiKeyInput.value = customApiKey;
 
+        // Load WebRTC preference (disabled by default for security)
+        const webrtcEnabled = localStorage.getItem('ENABLE_WEBRTC') === 'true';
+        if (elements.enableWebRTCCheckbox) {
+            elements.enableWebRTCCheckbox.checked = webrtcEnabled;
+        }
+
         // Show correct provider config
         updateProviderUI(provider);
+    }
+
+    function saveWebRTCPreference() {
+        const enabled = elements.enableWebRTCCheckbox.checked;
+        localStorage.setItem('ENABLE_WEBRTC', enabled.toString());
+        console.log(`WebRTC Swarm: ${enabled ? 'Enabled' : 'Disabled'}`);
     }
 
     function updateProviderUI(provider) {
@@ -467,7 +480,17 @@
                 blueprints: blueprints,
             };
         }
-        
+
+        // Filter out WebRTC (WRTC) if disabled by user
+        const webrtcEnabled = localStorage.getItem('ENABLE_WEBRTC') === 'true';
+        if (!webrtcEnabled && bootConfig.upgrades) {
+            bootConfig.upgrades = bootConfig.upgrades.filter(id => id !== 'WRTC');
+            console.log('WebRTC Swarm disabled - WRTC module excluded from boot');
+        } else if (!webrtcEnabled && bootConfig.persona && bootConfig.persona.upgrades) {
+            bootConfig.persona.upgrades = bootConfig.persona.upgrades.filter(id => id !== 'WRTC');
+            console.log('WebRTC Swarm disabled - WRTC module excluded from persona');
+        }
+
         // Store boot config for the main app to access
         window.REPLOID_BOOT_CONFIG = bootConfig;
 
@@ -519,6 +542,11 @@
                 elements.providerSelect.addEventListener('change', (e) => {
                     updateProviderUI(e.target.value);
                 });
+            }
+
+            // WebRTC toggle
+            if (elements.enableWebRTCCheckbox) {
+                elements.enableWebRTCCheckbox.addEventListener('change', saveWebRTCPreference);
             }
 
             // Close modal on background click

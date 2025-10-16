@@ -113,8 +113,8 @@ class TestLLMClient(unittest.TestCase):
             provider="gemini",
             api_key="test-key"
         )
-        with patch('paws_paxos.genai.configure'):
-            with patch('paws_paxos.genai.GenerativeModel') as mock_model:
+        with patch('paws.paxos.genai.configure'):
+            with patch('paws.paxos.genai.GenerativeModel') as mock_model:
                 client = LLMClient(config)
                 mock_model.assert_called_once_with("gemini-pro")
 
@@ -139,8 +139,8 @@ class TestLLMClient(unittest.TestCase):
             api_key="test-key"
         )
 
-        with patch('paws_paxos.genai.configure'):
-            with patch('paws_paxos.genai.GenerativeModel') as mock_model_class:
+        with patch('paws.paxos.genai.configure'):
+            with patch('paws.paxos.genai.GenerativeModel') as mock_model_class:
                 mock_client = MagicMock()
                 mock_response = MagicMock()
                 mock_response.text = "Generated solution"

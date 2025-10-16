@@ -431,7 +431,7 @@ class TestCatsBundler(unittest.TestCase):
         self.assertNotIn("System instructions", bundle)
 
     # AI curation tests (6)
-    @patch('cats.AICurator')
+    @patch('paws.cats.AICurator')
     def test_bundler_ai_curate_calls_curator(self, mock_curator_class):
         """Test that AI curation calls AICurator"""
         mock_curator = Mock()
@@ -465,8 +465,8 @@ class TestCatsBundler(unittest.TestCase):
         mock_curator_class.assert_called_once()
         mock_curator.curate_files.assert_called_once()
 
-    @patch('cats.ProjectAnalyzer')
-    @patch('cats.AICurator')
+    @patch('paws.cats.ProjectAnalyzer')
+    @patch('paws.cats.AICurator')
     def test_bundler_ai_curate_uses_file_tree(self, mock_curator_class, mock_analyzer_class):
         """Test that AI curation uses project file tree"""
         mock_tree = Mock()
@@ -507,7 +507,7 @@ class TestCatsBundler(unittest.TestCase):
         mock_analyzer.build_file_tree.assert_called_once()
         mock_tree.to_string.assert_called_once()
 
-    @patch('cats.AICurator')
+    @patch('paws.cats.AICurator')
     def test_bundler_ai_curate_handles_empty_result(self, mock_curator_class):
         """Test that AI curation handles empty results gracefully"""
         mock_curator = Mock()
@@ -540,7 +540,7 @@ class TestCatsBundler(unittest.TestCase):
 
         self.assertEqual(bundle, "")
 
-    @patch('cats.AICurator')
+    @patch('paws.cats.AICurator')
     def test_bundler_ai_curate_handles_exception(self, mock_curator_class):
         """Test that AI curation handles exceptions gracefully"""
         mock_curator = Mock()
@@ -573,7 +573,7 @@ class TestCatsBundler(unittest.TestCase):
 
         self.assertEqual(bundle, "")
 
-    @patch('cats.AICurator')
+    @patch('paws.cats.AICurator')
     def test_bundler_ai_curate_respects_max_files(self, mock_curator_class):
         """Test that AI curation respects max_files limit"""
         mock_curator = Mock()
@@ -608,7 +608,7 @@ class TestCatsBundler(unittest.TestCase):
         call_args = mock_curator.curate_files.call_args
         self.assertEqual(call_args[0][2], 10)  # Third argument is max_files
 
-    @patch('cats.AICurator')
+    @patch('paws.cats.AICurator')
     def test_bundler_ai_curate_with_different_provider(self, mock_curator_class):
         """Test AI curation with different providers"""
         mock_curator = Mock()
@@ -678,8 +678,8 @@ class TestAICurator(unittest.TestCase):
             # Try to initialize - should fail
             curator._initialize_client()
 
-    @patch('cats.GEMINI_AVAILABLE', True)
-    @patch('cats.genai')
+    @patch('paws.cats.GEMINI_AVAILABLE', True)
+    @patch('paws.cats.genai')
     def test_curator_gemini_initialization(self, mock_genai):
         """Test Gemini initialization"""
         mock_genai.GenerativeModel.return_value = Mock()
@@ -689,18 +689,18 @@ class TestAICurator(unittest.TestCase):
         mock_genai.configure.assert_called_with(api_key="test")
         mock_genai.GenerativeModel.assert_called_once()
 
+    @patch('paws.cats.CLAUDE_AVAILABLE', False)
     def test_curator_claude_initialization(self):
         """Test Claude initialization with unavailable library"""
         # When Claude library isn't available, initialization should fail
         with self.assertRaises(ValueError):
-            # This will fail because anthropic library likely isn't installed
             curator = cats.AICurator(api_key="test", provider="claude")
 
+    @patch('paws.cats.OPENAI_AVAILABLE', False)
     def test_curator_openai_initialization(self):
         """Test OpenAI initialization with unavailable library"""
         # When OpenAI library isn't available, initialization should fail
         with self.assertRaises(ValueError):
-            # This will fail because openai library likely isn't installed
             curator = cats.AICurator(api_key="test", provider="openai")
 
     def test_curator_builds_prompt_correctly(self):
@@ -758,8 +758,8 @@ class TestAICurator(unittest.TestCase):
 
         self.assertEqual(files, [])
 
-    @patch('cats.GEMINI_AVAILABLE', True)
-    @patch('cats.genai')
+    @patch('paws.cats.GEMINI_AVAILABLE', True)
+    @patch('paws.cats.genai')
     def test_curator_gemini_curation(self, mock_genai):
         """Test Gemini file curation"""
         mock_response = Mock()
@@ -774,8 +774,8 @@ class TestAICurator(unittest.TestCase):
 
         self.assertEqual(files, ["src/main.py"])
 
-    @patch('cats.GEMINI_AVAILABLE', True)
-    @patch('cats.genai')
+    @patch('paws.cats.GEMINI_AVAILABLE', True)
+    @patch('paws.cats.genai')
     def test_curator_handles_api_error(self, mock_genai):
         """Test curator handles API errors gracefully"""
         mock_model = Mock()

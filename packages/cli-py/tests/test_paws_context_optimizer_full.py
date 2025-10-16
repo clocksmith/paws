@@ -495,7 +495,7 @@ class TestContextOptimizerMain(unittest.TestCase):
 
         with patch('sys.argv', test_args):
             with patch('sys.stdout', new=MagicMock()):
-                result = paws_context_optimizer.main()
+                result = paws.context_optimizer.main()
 
         # Should succeed
         self.assertEqual(result, 0)
@@ -522,7 +522,7 @@ class TestContextOptimizerMain(unittest.TestCase):
 
         with patch('sys.argv', test_args):
             with patch('sys.stdout', new=MagicMock()):
-                result = paws_context_optimizer.main()
+                result = paws.context_optimizer.main()
 
         # Should succeed
         self.assertEqual(result, 0)
@@ -539,7 +539,7 @@ class TestContextOptimizerMain(unittest.TestCase):
 
         with patch('sys.argv', test_args):
             with patch('sys.stdout', new=MagicMock()):
-                result = paws_context_optimizer.main()
+                result = paws.context_optimizer.main()
 
         # Should return error code
         self.assertEqual(result, 1)
@@ -563,7 +563,7 @@ class TestContextOptimizerMain(unittest.TestCase):
         with patch('sys.argv', test_args):
             with patch('builtins.input', return_value="Interactive task"):
                 with patch('sys.stdout', new=MagicMock()):
-                    result = paws_context_optimizer.main()
+                    result = paws.context_optimizer.main()
 
         # Should succeed
         self.assertEqual(result, 0)

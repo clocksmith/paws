@@ -703,7 +703,7 @@ class TestBenchmarkMain(unittest.TestCase):
 
         with patch('sys.argv', test_args):
             with patch('sys.stdout', new=MagicMock()):
-                result = paws_benchmark.main()
+                result = paws.benchmark.main()
 
         # Should return error code
         self.assertEqual(result, 1)
