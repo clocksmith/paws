@@ -70,11 +70,6 @@ const StateHelpersPure = {
   }
 };
 
-// Legacy compatibility wrapper
-const StateHelpersPureModule = (() => {
-  return StateHelpersPure.factory({});
-})();
-
-// Export both formats
-StateHelpersPure;
-export default StateHelpersPureModule;
+// Export module definition for DI container
+export default StateHelpersPure;
+export const StateHelpersPureModule = StateHelpersPure;

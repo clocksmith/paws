@@ -27,7 +27,21 @@ const DiffGenerator = {
     }
 };
 
+const DiffGeneratorModule = {
+    metadata: {
+        id: 'DiffGenerator',
+        version: '1.0.0',
+        dependencies: [],
+        async: false,
+        type: 'utility'
+    },
+    factory: () => ({ api: DiffGenerator })
+};
+
 // Expose as global for the UI manager to use
 if (typeof window !== 'undefined') {
     window.DiffGenerator = DiffGenerator;
 }
+
+export default DiffGeneratorModule;
+export { DiffGenerator };

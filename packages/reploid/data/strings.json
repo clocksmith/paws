@@ -3,7 +3,7 @@
   "onboarding_subtitle": "Select a Persona that best fits your task.",
   "advanced_mode_label": "Hunter Protocol Mode",
   "goal_tagline": "Reploid is a self-modifying agent with live browser access and extensive tooling to build, refactor, and evolve your codebase.",
-  "goal_examples": "Try goals like "Build a real-time dashboard", "Add multi-provider AI routing", or "Refactor this module with new patterns".",
+  "goal_examples": "Try goals like \"Build a real-time dashboard\", \"Add multi-provider AI routing\", or \"Refactor this module with new patterns\".",
   "goal_input_placeholder": "Describe your goal...",
   "awaken_button": "Launch Agent",
   "dashboard_goal_title": "Current Goal",

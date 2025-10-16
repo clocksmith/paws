@@ -375,4 +375,4 @@ const AuditLogger = {
 };
 
 // Export standardized module
-AuditLogger;
+export default AuditLogger;

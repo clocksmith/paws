@@ -71,11 +71,5 @@ const ToolRunnerPureHelpers = {
   }
 };
 
-// Legacy compatibility wrapper
-const ToolRunnerPureHelpersModule = (() => {
-  return ToolRunnerPureHelpers.factory({});
-})();
-
-// Export both formats
-ToolRunnerPureHelpers;
-export default ToolRunnerPureHelpersModule;
+export default ToolRunnerPureHelpers;
+export const ToolRunnerPureHelpersModule = ToolRunnerPureHelpers;

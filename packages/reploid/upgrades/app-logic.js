@@ -47,38 +47,22 @@ const CoreLogicModule = async (initialConfig, vfs) => {
 
 
     // Define all modules to be loaded
-    const moduleFiles = [
-      "/upgrades/utils.js",
-      "/upgrades/event-bus.js",
-      "/upgrades/di-container.js",
-      "/upgrades/state-helpers-pure.js",
-      "/upgrades/tool-runner-pure-helpers.js",
-      "/upgrades/agent-logic-pure.js",
-      "/upgrades/storage-indexeddb.js",
-      "/upgrades/state-manager.js",
-      "/upgrades/api-client.js",
-      "/upgrades/tool-runner.js",
-      "/upgrades/diff-generator.js",
-      "/upgrades/ui-manager.js",
-      "/upgrades/agent-cycle.js",
-      // Sentinel modules
-      "/upgrades/git-vfs.js",
-      "/upgrades/sentinel-tools.js",
-      "/upgrades/diff-viewer-ui.js",
-      "/upgrades/sentinel-fsm.js"
-    ];
+    const transpileESMForEval = (code) => {
+      const cleaned = code
+        .replace(/import[^;]+;\s*/g, '')
+        .replace(/import\s+\{[\s\S]*?\}\s+from\s+['"][^'"]+['"];?/g, '')
+        .replace(/export\s+\{[\s\S]*?\};?/g, '');
 
-    // Load and register all modules
-    logger.info("[CoreLogic] Loading and registering all application modules...");
-    const moduleContents = await Promise.all(moduleFiles.map(path => vfs.read(path)));
-    
-    for (let i = 0; i < moduleContents.length; i++) {
-      const content = moduleContents[i];
-      const filePath = moduleFiles[i];
+      let transformed = cleaned.replace(/export\s+default\s+/g, 'return ');
+      transformed = transformed.replace(/export\s+const\s+/g, 'const ');
+      transformed = transformed.replace(/export\s+class\s+/g, 'class ');
+      transformed = transformed.replace(/export\s+function\s+/g, 'function ');
+      return transformed;
+    };
 
-      // DANGER: This uses Function constructor. Assumes VFS content is trusted.
-      // Extended to handle Sentinel modules
-      const module = new Function(content + `
+    const evaluateLegacyModule = (code, path = '') => {
+      const wrapped = `/* module: ${path} */
+${code}
         return (typeof CycleLogic !== 'undefined') ? CycleLogic :
                (typeof StateManager !== 'undefined') ? StateManager :
                (typeof ApiClient !== 'undefined') ? ApiClient :
@@ -96,11 +80,97 @@ const CoreLogicModule = async (initialConfig, vfs) => {
                (typeof DiffViewerUI !== 'undefined') ? DiffViewerUI :
                (typeof SentinelFSM !== 'undefined') ? SentinelFSM :
                (typeof EventBus !== 'undefined') ? EventBus :
-               undefined;`)();
+               undefined;`;
+
+      try {
+        return new Function(wrapped)();
+      } catch (err) {
+        console.error(`[CoreLogic] Legacy evaluation failed for ${path}:`, err);
+        throw err;
+      }
+    };
+
+    const importESModule = async (code, path) => {
+      const blob = new Blob([code], { type: 'text/javascript' });
+      const url = URL.createObjectURL(blob);
+
+      try {
+        const importedModule = await import(/* webpackIgnore: true */ url);
+        const candidate =
+          importedModule?.default ||
+          Object.values(importedModule).find(value => value && typeof value === 'object' && value.metadata) ||
+          importedModule;
+
+        if (!candidate || !candidate.metadata) {
+          console.warn(`[CoreLogic] ESM module at ${path} did not expose metadata; registration may fail.`);
+        }
+
+        return candidate;
+      } catch (err) {
+        console.warn(`[CoreLogic] Failed to import ESM module at ${path}; falling back to legacy evaluator.`, err);
+        return evaluateLegacyModule(transpileESMForEval(code), path);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    };
+
+    const loadModuleFromContent = async (code, path) => {
+      const isESModule = /^\s*export\s+/m.test(code) || /^\s*import\s+/m.test(code);
+      if (isESModule) {
+        const imported = await importESModule(code, path);
+        if (imported && imported.metadata) {
+          return imported;
+        }
+        console.warn(`[CoreLogic] ESM module at ${path} did not expose metadata; attempting legacy evaluation fallback.`);
+        return evaluateLegacyModule(transpileESMForEval(code), path);
+      }
+      return evaluateLegacyModule(code);
+    };
+
+    const moduleFiles = [
+      "/upgrades/utils.js",
+      "/upgrades/event-bus.js",
+      "/upgrades/di-container.js",
+      "/upgrades/state-helpers-pure.js",
+      "/upgrades/tool-runner-pure-helpers.js",
+      "/upgrades/agent-logic-pure.js",
+      "/upgrades/storage-indexeddb.js",
+      "/upgrades/audit-logger.js",
+      "/upgrades/rate-limiter.js",
+      "/upgrades/hybrid-llm-provider.js",
+      "/upgrades/state-manager.js",
+      "/upgrades/api-client.js",
+      "/upgrades/tool-runner.js",
+      "/utils/diff-generator.js",
+      "/upgrades/ui-manager.js",
+      "/upgrades/agent-cycle.js",
+      // Sentinel modules
+      "/upgrades/git-vfs.js",
+      "/upgrades/sentinel-tools.js",
+      "/upgrades/diff-viewer-ui.js",
+      "/upgrades/sentinel-fsm.js"
+    ];
+
+    // Load and register all modules
+    logger.info("[CoreLogic] Loading and registering all application modules...");
+    const moduleContents = await Promise.all(moduleFiles.map(path => vfs.read(path)));
+    
+    for (let i = 0; i < moduleContents.length; i++) {
+      const content = moduleContents[i];
+      const filePath = moduleFiles[i];
+
+      if (!content) {
+        logger.warn(`[CoreLogic] No content returned for ${filePath}; skipping module registration.`);
+        continue;
+      }
+
+      const module = await loadModuleFromContent(content, filePath);
 
       if (module && module.metadata && module.metadata.id !== 'config') {
         container.register(module);
         logger.debug(`[CoreLogic] Registered module: ${module.metadata.id} from ${filePath}`);
+      } else {
+        logger.warn(`[CoreLogic] Module at ${filePath} missing metadata; registration skipped.`);
       }
     }
 

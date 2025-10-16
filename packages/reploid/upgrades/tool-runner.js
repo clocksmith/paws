@@ -86,7 +86,70 @@ const ToolRunner = {
             return await StateManager.getArtifactDiff(toolArgs.path, toolArgs.refA, toolArgs.refB);
         }
 
-        case \"create_cats_bundle\": {\n            const { file_paths, reason, turn_path } = toolArgs;\n            let bundleContent = `## PAWS Context Bundle (cats.md)\\n\\n**Reason:** ${reason}\\n\\n---\\n\\n`;\n            for (const path of file_paths) {\n                const content = await StateManager.getArtifactContent(path);\n                bundleContent += `\`\`\`vfs-file\npath: ${path}\n\`\`\`\\n\`\`\`\n${content}\n\`\`\`\\n\\n`;\n            }\n            await StateManager.createArtifact(turn_path, \'markdown\', bundleContent, `Context bundle for turn`);\n            return { success: true, path: turn_path };\n        }\n\n        case \"create_dogs_bundle\": {\n            const { changes, turn_path } = toolArgs;\n            let bundleContent = `## PAWS Change Proposal (dogs.md)\\n\\n`;\n            for (const change of changes) {\n                bundleContent += `\`\`\`paws-change\noperation: ${change.operation}\nfile_path: ${change.file_path}\n\`\`\`\\n`;\n                if (change.operation !== \'DELETE\') {\n                    bundleContent += `\`\`\`\n${change.new_content}\n\`\`\`\\n\\n`;\n                }\n            }\n            await StateManager.createArtifact(turn_path, \'markdown\', bundleContent, `Change proposal for turn`);\n            return { success: true, path: turn_path };\n        }\n\n        case \"apply_dogs_bundle\": {\n            const { dogs_path, verify_command } = toolArgs;\n            // In a real implementation, this would use the Git VFS to checkpoint.\n            logger.warn(\"[ToolRunner] apply_dogs_bundle is a stub. It does not currently support verification or rollback.\");\n            \n            const dogsContent = await StateManager.getArtifactContent(dogs_path);\n            // Basic parsing logic\n            const changes = []; // This would be parsed from dogsContent\n\n            for (const change of changes) {\n                if (change.operation === \'MODIFY\' || change.operation === \'CREATE\') {\n                    await StateManager.updateArtifact(change.file_path, change.new_content);\n                } else if (change.operation === \'DELETE\') {\n                    await StateManager.deleteArtifact(change.file_path);\n                }\n            }\n            return { success: true, message: \"Changes applied (stubbed).\" };\n        }\n\n        case \"vfs_revert\": {
+        case "create_cats_bundle": {
+            const { file_paths = [], reason = "Context bundle", turn_path } = toolArgs;
+            if (!turn_path) {
+                throw new ToolError("create_cats_bundle requires 'turn_path'");
+            }
+
+            let bundleContent = `## PAWS Context Bundle (cats.md)\n\n**Reason:** ${reason}\n\n---\n\n`;
+            for (const filePath of file_paths) {
+                const content = await StateManager.getArtifactContent(filePath);
+                const safeContent = content == null ? '' : content;
+                bundleContent += [
+                    '```vfs-file',
+                    `path: ${filePath}`,
+                    '```',
+                    '```',
+                    safeContent,
+                    '```',
+                    ''
+                ].join('\n');
+            }
+
+            await StateManager.createArtifact(turn_path, 'markdown', bundleContent, 'Context bundle for turn');
+            return { success: true, path: turn_path };
+        }
+
+        case "create_dogs_bundle": {
+            const { changes = [], turn_path } = toolArgs;
+            if (!turn_path) {
+                throw new ToolError("create_dogs_bundle requires 'turn_path'");
+            }
+
+            let bundleContent = `## PAWS Change Proposal (dogs.md)\n\n`;
+            for (const change of changes) {
+                bundleContent += [
+                    '```paws-change',
+                    `operation: ${change.operation}`,
+                    `file_path: ${change.file_path}`,
+                    '```',
+                    ''
+                ].join('\n');
+                if (change.operation !== 'DELETE') {
+                    const safeContent = change.new_content == null ? '' : change.new_content;
+                    bundleContent += ['```', safeContent, '```', ''].join('\n');
+                }
+            }
+
+            await StateManager.createArtifact(turn_path, 'markdown', bundleContent, 'Change proposal for turn');
+            return { success: true, path: turn_path };
+        }
+
+        case "apply_dogs_bundle": {
+            const { dogs_path } = toolArgs;
+            logger.warn('[ToolRunner] apply_dogs_bundle is a stub. Verification and rollback are not yet implemented.');
+
+            const dogsContent = await StateManager.getArtifactContent(dogs_path);
+            if (!dogsContent) {
+                throw new ArtifactError(`dogs bundle not found at ${dogs_path}`);
+            }
+
+            // TODO: parse dogsContent into actionable changes.
+            return { success: true, message: 'Changes applied (stubbed).' };
+        }
+
+        case "vfs_revert": {
             const { path, commit_sha } = toolArgs;
             const oldContent = await StateManager.getArtifactContent(path, commit_sha);
             if (oldContent === null) {
@@ -177,7 +240,8 @@ const ToolRunner = {
             const artifactToDelete = await StateManager.getArtifactMetadata(deletePath);
             if (!artifactToDelete) {
                 const allMeta = await StateManager.getAllArtifactMetadata();
-                const similar = Object.keys(allMeta).filter(p => p.includes(path.basename(deletePath))).slice(0, 3);
+                const baseName = deletePath.split('/').pop() || deletePath;
+                const similar = Object.keys(allMeta).filter(p => baseName && p.includes(baseName)).slice(0, 3);
                 const suggestion = similar.length > 0 ? `\nDid you mean: ${similar.join(', ')}` : '';
                 throw new ArtifactError(`Cannot delete non-existent artifact: ${deletePath}${suggestion}`);
             }

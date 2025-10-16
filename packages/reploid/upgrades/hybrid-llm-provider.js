@@ -309,4 +309,4 @@ const HybridLLMProvider = {
 };
 
 // Export standardized module
-HybridLLMProvider;
+export default HybridLLMProvider;
