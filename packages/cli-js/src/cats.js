@@ -735,13 +735,6 @@ class CatsBundler {
    * Create a CATS bundle with optional AI curation
    */
   async createBundle(files, aiCurate, aiProvider = 'gemini', aiKey) {
-    // Debug logging
-    if (process.env.DEBUG_CATS) {
-      console.error('[DEBUG] createBundle called with files:', files);
-      console.error('[DEBUG] aiCurate:', aiCurate);
-      console.error('[DEBUG] config:', this.config);
-    }
-
     // Get files to bundle
     if (aiCurate) {
       const spinner = ora('AI is analyzing your codebase...').start();
@@ -809,9 +802,10 @@ class CatsBundler {
         };
 
         if (isAbsolute) {
-          // For absolute glob patterns like /tmp/foo/**/*.js
-          // Find the non-glob prefix and use it as cwd
-          let basePath = pattern;
+          // For absolute glob patterns like /tmp/foo/src/**/*.js
+          // We want baseDir to be /tmp/foo (parent of src) so files appear as src/main.js
+          // and use src as the glob cwd
+          let cwdPath = this.rootPath;
           let relativePattern = '**/*';
 
           // Find where glob patterns start
@@ -821,19 +815,22 @@ class CatsBundler {
             const beforeGlob = pattern.substring(0, globStart);
             const lastSlash = beforeGlob.lastIndexOf(path.sep);
             if (lastSlash > 0) {
-              basePath = beforeGlob.substring(0, lastSlash);
+              cwdPath = beforeGlob.substring(0, lastSlash);
               relativePattern = pattern.substring(lastSlash + 1);
+
+              // Set baseDir to parent of cwdPath for display purposes
+              // e.g., if pattern is /tmp/foo/src/**/*.js
+              // cwdPath = /tmp/foo/src
+              // baseDir = /tmp/foo (so files show as src/main.js)
+              baseDir = path.dirname(cwdPath);
             }
           }
 
-          // Update baseDir to the common base of absolute patterns
-          baseDir = basePath;
-
-          globOptions.cwd = basePath;
+          globOptions.cwd = cwdPath;
           globOptions.absolute = false;
           const matches = await glob(relativePattern, globOptions);
           // Convert back to absolute paths
-          expandedFiles.push(...matches.map(m => path.join(basePath, m)));
+          expandedFiles.push(...matches.map(m => path.join(cwdPath, m)));
         } else {
           // Relative pattern
           globOptions.cwd = this.rootPath;
@@ -1131,12 +1128,6 @@ async function main() {
 
   const options = program.opts();
   const files = program.args;
-
-  // Debug
-  if (process.env.DEBUG_CATS) {
-    console.error('[DEBUG main] files from args:', files);
-    console.error('[DEBUG main] options:', options);
-  }
 
   // Build config
   const config = {
