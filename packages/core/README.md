@@ -1,5 +1,9 @@
 # @paws/core
 
+**[↑ Back to Main](../../README.md)** | **[↑ Packages](../README.md)** | **[→ CLI-JS](../cli-js/README.md)** | **[→ CLI-PY](../cli-py/README.md)** | **[→ REPLOID](../reploid/README.md)**
+
+---
+
 Shared resources for PAWS - personas, system prompts, and configuration files.
 
 ## Contents
@@ -42,3 +46,7 @@ This package uses `exports` field in package.json to expose:
 ## License
 
 MIT
+
+---
+
+**[↑ Back to Main](../../README.md)** | **[↑ Packages](../README.md)** | **[→ CLI-JS](../cli-js/README.md)** | **[→ CLI-PY](../cli-py/README.md)** | **[→ REPLOID](../reploid/README.md)**

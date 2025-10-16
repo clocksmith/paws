@@ -1,5 +1,9 @@
 # @paws/cli-js
 
+**[↑ Back to Main](../../README.md)** | **[↑ Packages](../README.md)** | **[← Core](../core/README.md)** | **[→ CLI-PY](../cli-py/README.md)** | **[→ REPLOID](../reploid/README.md)**
+
+---
+
 JavaScript CLI tools for PAWS - Context bundler (cats) and change applier (dogs).
 
 ## Installation
@@ -115,3 +119,7 @@ pnpm test:coverage
 ## License
 
 MIT
+
+---
+
+**[↑ Back to Main](../../README.md)** | **[↑ Packages](../README.md)** | **[← Core](../core/README.md)** | **[→ CLI-PY](../cli-py/README.md)** | **[→ REPLOID](../reploid/README.md)**

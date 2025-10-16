@@ -1,5 +1,9 @@
 # REPLOID - Browser Interface
 
+**[↑ Back to Main](../../README.md)** | **[↑ Packages](../README.md)** | **[← CLI-PY](../cli-py/README.md)** | **[← CLI-JS](../cli-js/README.md)** | **[← Core](../core/README.md)**
+
+---
+
 ```
     ╭─────────────────────────────────────────────────────────╮
     │                                                         │
@@ -17,24 +21,22 @@
 REPLOID is the browser-native visual interface for PAWS, providing interactive multi-agent AI workflows with human-in-the-loop approval gates and recursive self-improvement capabilities.
 
 **Core Features:**
-- ⚘ Visual diff viewer with syntax highlighting
-- ☰ File tree explorer with search capabilities
-- ♲ Live HTML preview for web projects
-- ☇ Real-time FSM state visualization
-- ⛮ 12 RSI modules for agent self-improvement
-- ☼ WebGPU local LLM support (no API keys required)
+- Visual diff viewer with syntax highlighting
+- File tree explorer with search capabilities
+- Live HTML preview for web projects
+- Real-time FSM state visualization
+- 12 RSI modules for agent self-improvement
+- WebGPU local LLM support (no API keys required)
 
 ---
 
-## Context Engineering Alignment
+## Architecture
 
-Anthropic's September 2025 engineering post [_"Effective context engineering for AI agents"_](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) validates the approach REPLOID has championed since launch. The research demonstrates that context engineering yields **up to 54% gains in agent tasks** by controlling what tokens land in the context window rather than just optimizing prompt wording.
+REPLOID uses the PAWS `cats` and `dogs` engines for curated bundles and auditable application:
 
-REPLOID leans on the canonical PAWS `cats` and `dogs` engines for curated bundles and auditable application:
-
-- `reploid/bin/cats` and `reploid/bin/dogs` are vendored copies so the browser app can ship standalone.
-- A checksum guard (`npm run check:reploid-sync`) enforces parity with `../js/cats.js` and `../js/dogs.js`.
-- Shared session libraries (`../js/paws-session.js`) keep context synchronized between CLI and browser, preventing the **"context rot"** phenomenon identified by Anthropic where model accuracy decreases as context window size increases.
+- Uses `@paws/cli-js` for context bundling and change application
+- Shared session libraries keep context synchronized between CLI and browser
+- Supports both API-based and local WebGPU models
 
 ---
 
@@ -438,20 +440,19 @@ paws-session start "feature-payments"
 ### Shared Tools
 
 REPLOID uses the same core tools as PAWS:
-- `../js/cats.js` - Context bundler
-- `../js/dogs.js` - Change applier
-- `../js/paws-session.js` - Session manager
+- `@paws/cli-js/src/cats.js` - Context bundler
+- `@paws/cli-js/src/dogs.js` - Change applier
+- `@paws/cli-js/src/session.js` - Session manager
 
 ---
 
-## Support
+## Subfolders
 
-- **Issues:** [GitHub Issues](https://github.com/yourusername/paws/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/yourusername/paws/discussions)
-- **Documentation:** [Main PAWS Docs](../)
+- **[Blueprints](blueprints/README.md)** - RSI modules for recursive self-improvement
+- **[Hermes](hermes/README.md)** - Multi-agent orchestration server
+- **[Tests](tests/README.md)** - Test suite documentation
+- **[Docs](docs/rfcs/README.md)** - RFCs and design documents
 
 ---
 
-**Made by developers who believe AI should empower, not replace, human judgment.**
-
-☥ REPLOID Browser × ☇ PAWS CLI × ⛮ Penteract = **Complete Toolkit**
+**[↑ Back to Main](../../README.md)** | **[↑ Packages](../README.md)** | **[← CLI-PY](../cli-py/README.md)** | **[← CLI-JS](../cli-js/README.md)** | **[← Core](../core/README.md)**

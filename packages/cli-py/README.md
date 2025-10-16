@@ -1,5 +1,9 @@
 # @paws/cli-py
 
+**[↑ Back to Main](../../README.md)** | **[↑ Packages](../README.md)** | **[← CLI-JS](../cli-js/README.md)** | **[← Core](../core/README.md)** | **[→ REPLOID](../reploid/README.md)**
+
+---
+
 Python CLI tools for PAWS - Context bundler (cats) and change applier (dogs).
 
 ## Installation
@@ -102,3 +106,7 @@ pytest --cov=paws --cov-report=html
 ## License
 
 MIT
+
+---
+
+**[↑ Back to Main](../../README.md)** | **[↑ Packages](../README.md)** | **[← CLI-JS](../cli-js/README.md)** | **[← Core](../core/README.md)** | **[→ REPLOID](../reploid/README.md)**
