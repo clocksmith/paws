@@ -50,29 +50,32 @@
             </p>
         </div>
 
-        <!-- Status and Config at Top -->
-        <div class="status-bar">
-            <div class="status-item">
-                <span class="status-label">Server</span>
+        <!-- Agent Setup Card -->
+        <div class="agent-setup-card" aria-labelledby="agent-setup-title">
+            <div class="agent-setup-top">
                 <div>
-                    <span id="api-status" class="status-value">⚙ Checking...</span>
-                    <div id="api-status-detail" class="status-value-detail"></div>
+                    <div id="agent-setup-title" class="agent-setup-title">Agent Setup</div>
+                    <div class="agent-config-description">Powers your autonomous agent's reasoning and actions.</div>
+                </div>
+                <button id="config-btn" class="btn-config" aria-label="Open agent settings" title="Open agent settings">⚙</button>
+            </div>
+            <div class="agent-model-row">
+                <span class="agent-config-label">AI Model</span>
+                <div class="agent-config-value">
+                    <span id="provider-status" class="agent-model-name">Detecting…</span>
+                    <span id="provider-status-detail" class="agent-model-detail"></span>
                 </div>
             </div>
-            <div class="status-item">
-                <span class="status-label">AI Model</span>
-                <div>
-                    <span id="provider-status" class="status-value">-</span>
-                    <div id="provider-status-detail" class="status-value-detail"></div>
-                </div>
+            <div class="agent-status-chips" role="status" aria-live="polite">
+                <span id="agent-chip-server" class="status-chip status-chip--checking" aria-label="Server status: checking">Server · Checking…</span>
+                <span id="agent-chip-ollama" class="status-chip status-chip--inactive" aria-label="Ollama status: detecting">Ollama · Detecting…</span>
             </div>
-            <button id="config-btn" class="btn-config" title="Configure Settings">⚙ Settings</button>
         </div>
 
-        <div id="api-error-message" class="error-message hidden">
-            <strong>⚠ Server Offline</strong>
-            <p>The REPLOID server at <code>localhost:8000</code> is not responding.</p>
-            <p>Start the server: <code>npm start</code></p>
+        <div id="api-error-message" class="error-message hidden" role="alert">
+            <strong>Server Offline</strong>
+            <p>Reploid can’t reach <code>localhost:8000</code>.</p>
+            <p><code>npm start</code> to boot the service, or read the <a href="https://github.com/clocksmith/deco/tree/main/docs" target="_blank" rel="noreferrer">setup guide</a>.</p>
         </div>
 
         <!-- Settings Modal -->
@@ -93,79 +96,91 @@
                     <div class="modal-tab-content active" id="modal-model-tab">
                         <p class="modal-tab-description">Select an AI model to power your agent. API keys are stored locally in your browser.</p>
 
-                    <!-- Model Selection -->
-                    <div class="model-selection-group">
-                        <label for="model-select" class="model-select-label">Select AI Model</label>
-                        <select id="model-select" class="model-select-dropdown">
-                            <optgroup label="Cloud Models (Require API Key)">
-                                <option value="gemini-2.0-flash" data-provider="gemini">Gemini 2.0 Flash (Fast & Efficient)</option>
-                                <option value="gemini-1.5-pro" data-provider="gemini">Gemini 1.5 Pro (Advanced Reasoning)</option>
-                                <option value="gpt-4o" data-provider="openai">GPT-4o (Multimodal)</option>
-                                <option value="gpt-4-turbo" data-provider="openai">GPT-4 Turbo (Advanced)</option>
-                                <option value="gpt-3.5-turbo" data-provider="openai">GPT-3.5 Turbo (Fast)</option>
-                                <option value="claude-3-5-sonnet" data-provider="anthropic">Claude 3.5 Sonnet (Top Performance)</option>
-                                <option value="claude-3-opus" data-provider="anthropic">Claude 3 Opus (Most Capable)</option>
-                            </optgroup>
-                            <optgroup label="Local Models (No API Key)">
-                                <option value="ollama-llama3" data-provider="local">Llama 3 (via Ollama)</option>
-                                <option value="ollama-mistral" data-provider="local">Mistral (via Ollama)</option>
-                                <option value="ollama-codellama" data-provider="local">CodeLlama (via Ollama)</option>
-                                <option value="ollama-custom" data-provider="local">Custom Ollama Model</option>
-                                <option value="web-llm" data-provider="web">Web LLM (Browser-based)</option>
-                                <option value="paxos" data-provider="paxos">Paxos (Requires Upgrade)</option>
-                            </optgroup>
-                            <optgroup label="Advanced">
-                                <option value="custom-proxy" data-provider="custom">Custom Proxy/Endpoint</option>
-                            </optgroup>
-                        </select>
-                        <small id="model-description" class="model-description">Choose a model from the list above</small>
-                    </div>
+                        <!-- Model Selection -->
+                        <div class="model-selection-group">
+                            <label for="model-select" class="model-select-label">Select AI Model</label>
+                            <select id="model-select" class="model-select-dropdown">
+                                <optgroup label="Cloud Models (Require API Key)">
+                                    <option value="gemini-2.0-flash" data-provider="gemini">Gemini 2.0 Flash (Fast & Efficient)</option>
+                                    <option value="gemini-1.5-pro" data-provider="gemini">Gemini 1.5 Pro (Advanced Reasoning)</option>
+                                    <option value="gpt-4o" data-provider="openai">GPT-4o (Multimodal)</option>
+                                    <option value="gpt-4-turbo" data-provider="openai">GPT-4 Turbo (Advanced)</option>
+                                    <option value="gpt-3.5-turbo" data-provider="openai">GPT-3.5 Turbo (Fast)</option>
+                                    <option value="claude-3-5-sonnet" data-provider="anthropic">Claude 3.5 Sonnet (Top Performance)</option>
+                                    <option value="claude-3-opus" data-provider="anthropic">Claude 3 Opus (Most Capable)</option>
+                                </optgroup>
+                                <optgroup label="Local Models (No API Key)">
+                                    <option value="ollama-llama3" data-provider="local">Llama 3 (via Ollama)</option>
+                                    <option value="ollama-mistral" data-provider="local">Mistral (via Ollama)</option>
+                                    <option value="ollama-codellama" data-provider="local">CodeLlama (via Ollama)</option>
+                                    <option value="ollama-custom" data-provider="local">Custom Ollama Model</option>
+                                    <option value="web-llm" data-provider="web">Web LLM (Browser-based)</option>
+                                    <option value="paxos" data-provider="paxos">Paxos (Requires Upgrade)</option>
+                                </optgroup>
+                                <optgroup label="Advanced">
+                                    <option value="custom-proxy" data-provider="custom">Custom Proxy/Endpoint</option>
+                                </optgroup>
+                            </select>
+                            <small id="model-description" class="model-description">Choose a model from the list above</small>
+                        </div>
 
-                    <!-- API Key Section (shown conditionally) -->
-                    <div id="api-key-section" class="api-key-section hidden">
-                        <div class="api-key-input">
-                            <label for="api-key-input" id="api-key-label">API Key</label>
-                            <input type="password" id="api-key-input" placeholder="Enter your API key" />
-                            <small id="api-key-help">Your API key will be stored securely in your browser</small>
+                        <!-- API Key Section (shown conditionally) -->
+                        <div id="api-key-section" class="api-key-section hidden">
+                            <div class="api-key-input">
+                                <label for="api-key-input" id="api-key-label">API Key</label>
+                                <input type="password" id="api-key-input" placeholder="Enter your API key" />
+                                <small id="api-key-help">Your API key will be stored securely in your browser</small>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Local Model Configuration (shown for Ollama) -->
-                    <div id="local-config-section" class="local-config-section hidden">
-                        <div class="api-key-input">
-                            <label for="local-endpoint">Ollama Endpoint</label>
-                            <input type="text" id="local-endpoint" placeholder="http://localhost:11434" value="http://localhost:11434" />
-                            <small>Make sure Ollama is running: <code>ollama serve</code></small>
+                        <!-- Local Model Configuration (shown for Ollama) -->
+                        <div id="local-config-section" class="local-config-section hidden">
+                            <div class="api-key-input">
+                                <label for="local-endpoint">Ollama Endpoint</label>
+                                <input type="text" id="local-endpoint" placeholder="http://localhost:11434" value="http://localhost:11434" />
+                                <small>Make sure Ollama is running: <code>ollama serve</code></small>
+                            </div>
+                            <div class="api-key-input" id="custom-model-name-container" style="margin-top: 10px;">
+                                <label for="local-model">Model Name</label>
+                                <input type="text" id="local-model" placeholder="e.g., llama3, mistral, codellama" />
+                                <small>Enter the exact model name from <code>ollama list</code></small>
+                            </div>
                         </div>
-                        <div class="api-key-input" id="custom-model-name-container" style="margin-top: 10px;">
-                            <label for="local-model">Model Name</label>
-                            <input type="text" id="local-model" placeholder="e.g., llama3, mistral, codellama" />
-                            <small>Enter the exact model name from <code>ollama list</code></small>
-                        </div>
-                    </div>
 
-                    <!-- Custom Proxy Configuration -->
-                    <div id="custom-proxy-section" class="custom-proxy-section hidden">
-                        <div class="api-key-input">
-                            <label for="custom-proxy-url">Custom Proxy URL</label>
-                            <input type="text" id="custom-proxy-url" placeholder="http://localhost:8000/api" />
-                            <small>Enter the full URL to your custom endpoint</small>
+                        <!-- Custom Proxy Configuration -->
+                        <div id="custom-proxy-section" class="custom-proxy-section hidden">
+                            <div class="api-key-input">
+                                <label for="custom-proxy-url">Custom Proxy URL</label>
+                                <input type="text" id="custom-proxy-url" placeholder="http://localhost:8000/api" />
+                                <small>Enter the full URL to your custom endpoint</small>
+                            </div>
+                            <div class="api-key-input" style="margin-top: 10px;">
+                                <label for="custom-api-key">API Key (Optional)</label>
+                                <input type="password" id="custom-api-key" placeholder="If your proxy requires authentication" />
+                            </div>
                         </div>
-                        <div class="api-key-input" style="margin-top: 10px;">
-                            <label for="custom-api-key">API Key (Optional)</label>
-                            <input type="password" id="custom-api-key" placeholder="If your proxy requires authentication" />
-                        </div>
-                    </div>
 
-                    <!-- Paxos Notice -->
-                    <div id="paxos-notice" class="paxos-notice hidden">
-                        <p>⚠ Paxos requires the PAXS upgrade to be loaded. Make sure to include it in your boot configuration.</p>
-                    </div>
+                        <!-- Paxos Notice -->
+                        <div id="paxos-notice" class="paxos-notice hidden">
+                            <p>⚠ Paxos requires the PAXS upgrade to be loaded. Make sure to include it in your boot configuration.</p>
+                        </div>
+
+                        <div class="multi-model-panel">
+                            <label class="setting-checkbox">
+                                <input type="checkbox" id="multi-model-toggle" />
+                                <span class="setting-checkbox-box"></span>
+                                <span class="setting-checkbox-text">Advanced: Multi-Model Setup</span>
+                            </label>
+                            <p class="setting-description">Enable Paxos / distributed models for consensus and fallback strategies.</p>
+                            <button type="button" id="multi-model-configure" class="btn secondary" disabled>Configure strategy</button>
+                        </div>
                     </div>
 
                     <!-- Advanced Tab Content -->
                     <div class="modal-tab-content" id="modal-advanced-tab">
-                        <p class="modal-tab-description">Configure advanced features and network settings.</p>
+                        <p class="settings-description">
+                            Fine-tune experimental features and network connectivity.
+                        </p>
 
                         <!-- Network & P2P Settings -->
                         <div class="settings-section">
@@ -198,8 +213,12 @@
 
         <!-- Goal Input at Top -->
         <div class="goal-container-top">
+            <div class="goal-context">
+                <p class="goal-context-tagline">Reploid launches an autonomous builder to plan, iterate, and ship for you.</p>
+                <p class="goal-context-examples">Try goals like “Design a marketing site”, “Refactor my API layer”, or “Draft onboarding docs”.</p>
+            </div>
             <div class="goal-input-group">
-                <input type="text" id="goal-input" placeholder="What is your goal? (e.g., Create a landing page, Refactor my code, Write an RFC...)" maxlength="500" />
+                <input type="text" id="goal-input" placeholder="Describe your goal..." maxlength="500" />
                 <button id="awaken-btn" class="btn primary">Launch Agent</button>
             </div>
         </div>
@@ -218,33 +237,32 @@
                 </button>
             </div>
 
-            <div class="tab-description">
-                <p id="tab-description-text">Choose your starting configuration - from minimal core to full power</p>
-            </div>
-
             <!-- Simple Mode Tab Content (NEW) -->
             <div class="tab-content active" id="simple-tab">
                 <div class="simple-mode-container">
-                    <h3 class="simple-mode-title">Choose Your Starting Configuration</h3>
-                    <p class="simple-mode-subtitle">These options control which modules and blueprints load at startup</p>
+                    <p class="simple-mode-subtitle">
+                        Choose which
+                        <button type="button" class="link-button" data-popover="modules" aria-label="What are modules?">modules ⓘ</button>
+                        and
+                        <button type="button" class="link-button" data-popover="blueprints" aria-label="What are blueprints?">blueprints ⓘ</button>
+                        load at startup
+                        <button type="button" class="browse-link" onclick="window.openDirectoryBrowser('modules')" aria-label="Browse all modules and blueprints">Browse all →</button>
+                    </p>
 
                     <div class="boot-mode-options">
                         <button class="boot-mode-btn selected" data-mode="minimal" onclick="selectBootMode('minimal')">
-                            <div class="boot-mode-label">▸ Minimal RSI Core</div>
-                            <div class="boot-mode-desc">10 essential modules only - fastest startup, agent can self-evolve</div>
-                            <div class="boot-mode-modules">APPL, UTIL, STMT, LSTR, APIC, CYCL, TLRD, TLWR, LLMR, HYBR</div>
+                            <div class="boot-mode-label">Minimal Core</div>
+                            <div class="boot-mode-desc">Lean reasoning and safety stack for rapid spins.</div>
                         </button>
 
                         <button class="boot-mode-btn" data-mode="all-blueprints" onclick="selectBootMode('all-blueprints')">
-                            <div class="boot-mode-label">▦ Core + All Blueprints</div>
-                            <div class="boot-mode-desc">10 core modules + 62 blueprints for maximum knowledge</div>
-                            <div class="boot-mode-modules">Minimal + all .md knowledge documents</div>
+                            <div class="boot-mode-label">Core + Knowledge</div>
+                            <div class="boot-mode-desc">Boot with guides, playbooks, and docs for richer context.</div>
                         </button>
 
                         <button class="boot-mode-btn" data-mode="all-upgrades" onclick="selectBootMode('all-upgrades')">
-                            <div class="boot-mode-label">⬢ All Upgrades + Blueprints</div>
-                            <div class="boot-mode-desc">62 upgrades + 62 blueprints - full power from the start</div>
-                            <div class="boot-mode-modules">Every available capability enabled</div>
+                            <div class="boot-mode-label">Full Arsenal</div>
+                            <div class="boot-mode-desc">Everything enabled from the start—automation, analysis, and blueprints.</div>
                         </button>
                     </div>
                 </div>
@@ -261,6 +279,92 @@
             <div class="tab-content" id="hunter-tab">
                 <div id="advanced-options">
                     <!-- Advanced selection UI will be rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Overlay -->
+        <div id="info-overlay" class="info-overlay hidden">
+            <div class="info-card">
+                <div class="info-card-header">
+                    <h3 id="info-card-title">Info</h3>
+                    <button type="button" class="close-btn" onclick="window.closeInfoCard()">×</button>
+                </div>
+                <div id="info-card-body" class="info-card-body"></div>
+                <div class="info-card-footer">
+                    <button type="button" id="info-card-browse" class="secondary-btn">Browse Directory →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Directory Browser -->
+        <div id="directory-modal" class="modal hidden">
+            <div class="modal-content directory-modal-content">
+                <div class="modal-header">
+                    <h3 id="directory-modal-title">Module & Blueprint Directory</h3>
+                    <button type="button" class="close-btn" onclick="window.closeDirectoryModal()">×</button>
+                </div>
+                <div class="modal-body directory-modal-body">
+                    <div class="directory-toolbar">
+                        <div class="directory-tabs">
+                            <button type="button" class="directory-tab active" data-category="modules">Modules</button>
+                            <button type="button" class="directory-tab" data-category="blueprints">Blueprints</button>
+                        </div>
+                        <input type="text" id="directory-search" class="directory-search" placeholder="Search..." aria-label="Search modules and blueprints" />
+                    </div>
+                    <div class="directory-filters" role="group" aria-label="Filter by preset">
+                        <button type="button" class="directory-filter active" data-filter="all">All Presets</button>
+                        <button type="button" class="directory-filter" data-filter="minimal">Minimal Core</button>
+                        <button type="button" class="directory-filter" data-filter="knowledge">Core + Knowledge</button>
+                        <button type="button" class="directory-filter" data-filter="full">Full Arsenal</button>
+                    </div>
+                    <div class="directory-content" id="directory-content"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="help-popover" class="help-popover hidden" role="dialog" aria-modal="false" aria-hidden="true">
+            <div class="help-popover-content">
+                <div class="help-popover-header">
+                    <div id="help-popover-title" class="help-popover-title">Help</div>
+                    <button type="button" class="close-btn help-popover-close" aria-label="Close help popover">×</button>
+                </div>
+                <div id="help-popover-body" class="help-popover-body"></div>
+            </div>
+        </div>
+
+        <div id="multi-model-modal" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true">
+            <div class="modal-content multi-model-modal-content">
+                <div class="modal-header">
+                    <h3>Multi-Model Setup</h3>
+                    <button type="button" class="close-btn" id="close-multi-model">×</button>
+                </div>
+                <div class="modal-body">
+                    <p class="settings-description">Define primary, fallback, and consensus models for Paxos orchestration.</p>
+                    <div class="paxos-field">
+                        <label for="paxos-primary">Primary Model</label>
+                        <input type="text" id="paxos-primary" placeholder="e.g., gemini-2.0-flash" />
+                    </div>
+                    <div class="paxos-field">
+                        <label for="paxos-fallback">Fallback Model</label>
+                        <input type="text" id="paxos-fallback" placeholder="e.g., gpt-4o" />
+                    </div>
+                    <div class="paxos-field">
+                        <label for="paxos-consensus">Consensus Model</label>
+                        <input type="text" id="paxos-consensus" placeholder="e.g., claude-3-opus" />
+                    </div>
+                    <div class="paxos-field">
+                        <label for="paxos-strategy">Strategy</label>
+                        <select id="paxos-strategy">
+                            <option value="fastest">Fastest First</option>
+                            <option value="consensus">Consensus Vote</option>
+                            <option value="fallback">Fallback Chain</option>
+                        </select>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn secondary" id="cancel-multi-model">Cancel</button>
+                        <button type="button" class="btn primary" id="save-multi-model">Save Multi-Model Plan</button>
+                    </div>
                 </div>
             </div>
         </div>
