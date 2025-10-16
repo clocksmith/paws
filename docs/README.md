@@ -5,7 +5,6 @@ Welcome to the PAWS documentation hub.
 ## Architecture
 
 - [Cognitive Architecture](./COGNITIVE_ARCHITECTURE.md) - Multi-perspective deliberation system
-- [Monorepo Structure](./MIGRATION.md) - Understanding the monorepo layout
 
 ## Usage Examples
 
