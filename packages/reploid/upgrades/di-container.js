@@ -46,25 +46,45 @@ const DIContainer = {
       const dependencies = {};
       if (module.metadata.dependencies) {
         for (const depId of module.metadata.dependencies) {
+          // Check if dependency is optional (ends with '?')
+          const isOptional = depId.endsWith('?');
+          const actualDepId = isOptional ? depId.slice(0, -1) : depId;
+
           try {
-            dependencies[depId] = await resolve(depId);
+            dependencies[actualDepId] = await resolve(actualDepId);
           } catch (err) {
-            throw new Error(
-              `[DIContainer] Failed to resolve dependency '${depId}' for module '${id}'.\n` +
-              `Dependency chain: ${id} → ${depId}\n` +
-              `Original error: ${err.message}\n` +
-              `Check for circular dependencies or missing module registrations.`
-            );
+            if (isOptional) {
+              // Optional dependency not found - set to null
+              logger.debug(`[DIContainer] Optional dependency '${actualDepId}' not available for module '${id}'`);
+              dependencies[actualDepId] = null;
+            } else {
+              // Required dependency not found - throw error
+              throw new Error(
+                `[DIContainer] Failed to resolve dependency '${depId}' for module '${id}'.\n` +
+                `Dependency chain: ${id} → ${depId}\n` +
+                `Original error: ${err.message}\n` +
+                `Check for circular dependencies or missing module registrations.`
+              );
+            }
           }
         }
       }
 
       logger.debug(`[DIContainer] Creating instance of: ${id}`);
       const instance = module.factory(dependencies);
-      
+
       // Handle async initialization if required
       if (module.metadata.async && typeof instance.init === 'function') {
-        await instance.init();
+        try {
+          await instance.init();
+        } catch (initError) {
+          // Log init failure but don't throw - allow graceful degradation
+          logger.warn(`[DIContainer] Module '${id}' init() failed:`, initError.message);
+          // Store error state in instance if it has an error property
+          if (instance.api && typeof instance.api === 'object') {
+            instance.api._initError = initError.message;
+          }
+        }
       }
 
       // The public API is under the 'api' property for services/ui modules

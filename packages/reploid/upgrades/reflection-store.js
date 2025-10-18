@@ -428,4 +428,4 @@ const ReflectionStore = {
 };
 
 // Export standardized module
-ReflectionStore;
+export default ReflectionStore;

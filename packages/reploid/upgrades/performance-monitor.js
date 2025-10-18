@@ -394,4 +394,4 @@ const PerformanceMonitor = {
 };
 
 // Export standardized module
-PerformanceMonitor;
+export default PerformanceMonitor;

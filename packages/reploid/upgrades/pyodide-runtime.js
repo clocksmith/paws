@@ -393,4 +393,4 @@ const PyodideRuntime = {
 };
 
 // Export standardized module
-PyodideRuntime;
+export default PyodideRuntime;

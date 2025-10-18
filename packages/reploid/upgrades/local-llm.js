@@ -83,14 +83,22 @@ const LocalLLM = {
         // Check WebGPU availability
         const gpuCheck = await checkWebGPU();
         if (!gpuCheck.available) {
-          throw new Error(`WebGPU unavailable: ${gpuCheck.error}`);
+          const msg = `WebGPU unavailable: ${gpuCheck.error}`;
+          logger.warn(`[LocalLLM] ${msg}`);
+          initError = msg;
+          isReady = false;
+          return { success: false, error: msg };
         }
 
         logger.info('[LocalLLM] WebGPU available:', gpuCheck.info);
 
         // Check if WebLLM is loaded
         if (typeof window.webllm === 'undefined') {
-          throw new Error('WebLLM library not loaded. Add script tag: https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm');
+          const msg = 'WebLLM library not loaded - Local LLM mode unavailable';
+          logger.warn(`[LocalLLM] ${msg}`);
+          initError = msg;
+          isReady = false;
+          return { success: false, error: msg };
         }
 
         isLoading = true;
@@ -140,7 +148,8 @@ const LocalLLM = {
 
         EventBus.emit('local-llm:error', { error: error.message });
 
-        throw error;
+        // Don't throw - allow graceful degradation for cloud mode
+        return { success: false, error: error.message };
       }
     };
 
@@ -380,4 +389,4 @@ const LocalLLM = {
 };
 
 // Export standardized module
-LocalLLM;
+export default LocalLLM;

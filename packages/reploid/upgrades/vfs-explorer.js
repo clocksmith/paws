@@ -499,7 +499,13 @@ const VFSExplorer = {
 
     const explorer = new Explorer();
 
+    // Init function for DI container
+    const init = () => {
+      logger.info('[VFSExplorer] Module initialized');
+    };
+
     return {
+      init,
       api: {
         init: (containerId) => explorer.init(containerId),
         render: () => explorer.render(),
@@ -525,4 +531,4 @@ const VFSExplorer = {
 };
 
 // Export
-VFSExplorer;
+export default VFSExplorer;

@@ -20,7 +20,7 @@
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
     <!-- Web LLM library loaded via esm.run CDN - loaded dynamically when needed by local-llm.js module -->
-    <!-- <script type="module" src="https://esm.run/@mlc-ai/web-llm"></script> -->
+    <script type="module" src="https://esm.run/@mlc-ai/web-llm"></script>
 
     <!-- Firebase Analytics -->
     <script type="module">
@@ -52,23 +52,21 @@
 
         <!-- Agent Setup Card -->
         <div class="agent-setup-card" aria-labelledby="agent-setup-title">
-            <div class="agent-setup-top">
-                <div>
-                    <div id="agent-setup-title" class="agent-setup-title">Agent Setup</div>
-                    <div class="agent-config-description">Powers your autonomous agent's reasoning and actions.</div>
+            <div class="agent-setup-header">
+                <span class="mode-icon" id="current-mode-icon">▲</span>
+                <div class="agent-setup-main">
+                    <div id="agent-setup-title" class="agent-setup-title">Current Configuration</div>
+                    <div id="provider-status" class="agent-model-name">Detecting…</div>
                 </div>
-                <button id="config-btn" class="btn-config" aria-label="Open agent settings" title="Open agent settings">⚙</button>
+                <button id="config-btn" class="btn-config" aria-label="Change configuration" title="Change configuration">⛮</button>
             </div>
-            <div class="agent-model-row">
-                <span class="agent-config-label">AI Model</span>
-                <div class="agent-config-value">
-                    <span id="provider-status" class="agent-model-name">Detecting…</span>
-                    <span id="provider-status-detail" class="agent-model-detail"></span>
-                </div>
-            </div>
+            <ul class="agent-features">
+                <li id="feature-1" class="feature-status">+ <span id="provider-status-detail">Checking availability...</span></li>
+                <li id="feature-2" class="feature-status">+ <span id="feature-2-text">Ready to use</span></li>
+            </ul>
             <div class="agent-status-chips" role="status" aria-live="polite">
-                <span id="agent-chip-server" class="status-chip status-chip--checking" aria-label="Server status: checking">Server · Checking…</span>
-                <span id="agent-chip-ollama" class="status-chip status-chip--inactive" aria-label="Ollama status: detecting">Ollama · Detecting…</span>
+                <span id="agent-chip-proxy" class="status-chip status-chip--checking" aria-label="Proxy server status: checking">Proxy · Checking…</span>
+                <span id="agent-chip-provider" class="status-chip status-chip--inactive" aria-label="AI provider status">No Provider</span>
             </div>
         </div>
 
@@ -82,142 +80,86 @@
         <div id="config-modal" class="modal hidden">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3>Settings</h3>
+                    <h3>Operating Mode</h3>
                     <button id="close-modal" class="close-btn">×</button>
                 </div>
                 <div class="modal-body">
-                    <!-- Modal Tabs -->
-                    <div class="modal-tabs">
-                        <button class="modal-tab active" data-modal-tab="mode">Deployment Mode</button>
-                        <button class="modal-tab" data-modal-tab="advanced">Advanced Settings</button>
-                    </div>
-
-                    <!-- Deployment Mode Tab Content -->
-                    <div class="modal-tab-content active" id="modal-mode-tab">
-                        <p class="modal-tab-description">Choose how Reploid connects to AI models. Each mode has different tradeoffs.</p>
-
-                        <!-- Environment Detection & Recommendations -->
-                        <div id="mode-recommendation" class="mode-recommendation hidden">
-                            <div class="recommendation-header">
-                                <span class="recommendation-icon">💡</span>
-                                <strong>Recommended Setup</strong>
-                            </div>
-                            <p id="recommendation-text" class="recommendation-text"></p>
-                            <button type="button" id="use-recommended" class="btn secondary btn-sm">Use Recommended</button>
-                        </div>
+                    <!-- Deployment Mode Content -->
+                    <div id="modal-mode-content">
+                        <p class="modal-tab-description">Choose how Reploid connects to AI models.</p>
 
                         <!-- Mode Selection Cards -->
                         <div class="mode-cards">
-                            <div class="mode-card" data-mode="local">
-                                <div class="mode-card-header">
-                                    <span class="mode-icon">🖥️</span>
-                                    <h4 class="mode-title">Local (Ollama)</h4>
-                                    <button type="button" class="mode-help-btn" data-help-mode="local" aria-label="Learn more about Local mode">ⓘ</button>
-                                </div>
-                                <ul class="mode-features">
-                                    <li class="feature-pro">✅ Completely free</li>
-                                    <li class="feature-pro">✅ Maximum privacy</li>
-                                    <li class="feature-con">⚙️ Requires Ollama</li>
-                                </ul>
-                                <button type="button" class="btn-select-mode" data-mode="local">Select</button>
-                            </div>
-
-                            <div class="mode-card" data-mode="offline">
-                                <div class="mode-card-header">
-                                    <span class="mode-icon">🛡️</span>
-                                    <h4 class="mode-title">Fully Offline</h4>
-                                    <button type="button" class="mode-help-btn" data-help-mode="offline" aria-label="Learn more about Offline mode">ⓘ</button>
-                                </div>
-                                <ul class="mode-features">
-                                    <li class="feature-pro">✅ Zero network traffic</li>
-                                    <li class="feature-pro">✅ Maximum privacy</li>
-                                    <li class="feature-con">📦 Preload models & assets</li>
-                                </ul>
-                                <button type="button" class="btn-select-mode" data-mode="offline">Select</button>
-                            </div>
-
                             <div class="mode-card" data-mode="cloud">
                                 <div class="mode-card-header">
-                                    <span class="mode-icon">☁️</span>
+                                    <span class="mode-icon">▲</span>
                                     <h4 class="mode-title">Cloud Provider</h4>
-                                    <button type="button" class="mode-help-btn" data-help-mode="cloud" aria-label="Learn more about Cloud mode">ⓘ</button>
                                 </div>
                                 <ul class="mode-features">
-                                    <li class="feature-pro">✅ Fast & powerful</li>
-                                    <li class="feature-pro">✅ Advanced models</li>
-                                    <li class="feature-con">💳 API costs apply</li>
+                                    <li class="feature-pro">+ Fast & powerful</li>
+                                    <li class="feature-pro">+ Advanced models</li>
+                                    <li class="feature-con">− API costs apply</li>
                                 </ul>
-                                <button type="button" class="btn-select-mode" data-mode="cloud">Select</button>
+                            </div>
+
+                            <div class="mode-card" data-mode="local">
+                                <div class="mode-card-header">
+                                    <span class="mode-icon">■</span>
+                                    <h4 class="mode-title">Local (Ollama)</h4>
+                                </div>
+                                <ul class="mode-features">
+                                    <li class="feature-pro">+ Completely free</li>
+                                    <li class="feature-pro">+ Maximum privacy</li>
+                                    <li class="feature-con">− Requires Ollama</li>
+                                </ul>
                             </div>
 
                             <div class="mode-card" data-mode="web-llm">
                                 <div class="mode-card-header">
-                                    <span class="mode-icon">🕸️</span>
+                                    <span class="mode-icon">◆</span>
                                     <h4 class="mode-title">Web LLM (WebGPU)</h4>
-                                    <button type="button" class="mode-help-btn" data-help-mode="web-llm" aria-label="Learn more about Web LLM mode">ⓘ</button>
                                 </div>
                                 <ul class="mode-features">
-                                    <li class="feature-pro">✅ Runs in browser</li>
-                                    <li class="feature-pro">✅ No API key</li>
-                                    <li class="feature-con">⚠️ Needs WebGPU GPU</li>
+                                    <li class="feature-pro">+ Runs in browser</li>
+                                    <li class="feature-pro">+ No API key</li>
+                                    <li class="feature-con">− Needs WebGPU</li>
                                 </ul>
-                                <button type="button" class="btn-select-mode" data-mode="web-llm">Select</button>
-                            </div>
-
-                            <div class="mode-card" data-mode="browser">
-                                <div class="mode-card-header">
-                                    <span class="mode-icon">🌐</span>
-                                    <h4 class="mode-title">Browser Only</h4>
-                                    <button type="button" class="mode-help-btn" data-help-mode="browser" aria-label="Learn more about Browser mode">ⓘ</button>
-                                </div>
-                                <ul class="mode-features">
-                                    <li class="feature-pro">✅ No setup needed</li>
-                                    <li class="feature-con">⚠️ Limited features</li>
-                                    <li class="feature-con">🐌 Slower inference</li>
-                                </ul>
-                                <button type="button" class="btn-select-mode" data-mode="browser">Select</button>
                             </div>
 
                             <div class="mode-card" data-mode="hybrid">
                                 <div class="mode-card-header">
-                                    <span class="mode-icon">🔄</span>
+                                    <span class="mode-icon">◐</span>
                                     <h4 class="mode-title">Hybrid (Auto)</h4>
-                                    <button type="button" class="mode-help-btn" data-help-mode="hybrid" aria-label="Learn more about Hybrid mode">ⓘ</button>
                                 </div>
                                 <ul class="mode-features">
-                                    <li class="feature-pro">✅ Cost optimized</li>
-                                    <li class="feature-pro">✅ Auto-switching</li>
-                                    <li class="feature-con">⚙️ Ollama + API key</li>
+                                    <li class="feature-pro">+ Cost optimized</li>
+                                    <li class="feature-pro">+ Auto-switching</li>
+                                    <li class="feature-con">− Ollama + API key</li>
                                 </ul>
-                                <button type="button" class="btn-select-mode" data-mode="hybrid">Select</button>
                             </div>
 
                             <div class="mode-card" data-mode="multi">
                                 <div class="mode-card-header">
-                                    <span class="mode-icon">🏢</span>
+                                    <span class="mode-icon">◈</span>
                                     <h4 class="mode-title">High Availability</h4>
-                                    <button type="button" class="mode-help-btn" data-help-mode="multi" aria-label="Learn more about High Availability mode">ⓘ</button>
                                 </div>
                                 <ul class="mode-features">
-                                    <li class="feature-pro">✅ Never fails</li>
-                                    <li class="feature-pro">✅ Best quality</li>
-                                    <li class="feature-con">💰 3x cost</li>
+                                    <li class="feature-pro">+ Never fails</li>
+                                    <li class="feature-pro">+ Best quality</li>
+                                    <li class="feature-con">− 3x cost</li>
                                 </ul>
-                                <button type="button" class="btn-select-mode" data-mode="multi">Select</button>
                             </div>
 
                             <div class="mode-card" data-mode="custom">
                                 <div class="mode-card-header">
-                                    <span class="mode-icon">🔧</span>
+                                    <span class="mode-icon">⬢</span>
                                     <h4 class="mode-title">Custom Endpoint</h4>
-                                    <button type="button" class="mode-help-btn" data-help-mode="custom" aria-label="Learn more about Custom mode">ⓘ</button>
                                 </div>
                                 <ul class="mode-features">
-                                    <li class="feature-pro">✅ Your infrastructure</li>
-                                    <li class="feature-pro">✅ Enterprise ready</li>
-                                    <li class="feature-con">🔧 Advanced setup</li>
+                                    <li class="feature-pro">+ Your infrastructure</li>
+                                    <li class="feature-pro">+ Enterprise ready</li>
+                                    <li class="feature-con">− Advanced setup</li>
                                 </ul>
-                                <button type="button" class="btn-select-mode" data-mode="custom">Select</button>
                             </div>
                         </div>
 
@@ -241,6 +183,8 @@
                             <label for="model-select" class="model-select-label">Select AI Model</label>
                             <select id="model-select" class="model-select-dropdown">
                                 <optgroup label="Cloud Models (Require API Key)">
+                                    <option value="gemini-2.5-flash-lite-preview-09-2025" data-provider="gemini">Gemini 2.5 Flash Lite (Preview - Fast)</option>
+                                    <option value="gemini-2.5-flash-preview-09-2025" data-provider="gemini">Gemini 2.5 Flash (Preview - Balanced)</option>
                                     <option value="gemini-2.0-flash" data-provider="gemini">Gemini 2.0 Flash (Fast & Efficient)</option>
                                     <option value="gemini-1.5-pro" data-provider="gemini">Gemini 1.5 Pro (Advanced Reasoning)</option>
                                     <option value="gpt-4o" data-provider="openai">GPT-4o (Multimodal)</option>
@@ -305,38 +249,6 @@
                         </div>
                         <!-- End legacy model selection -->
                     </div>
-
-                    <!-- Advanced Settings Tab Content -->
-                    <div class="modal-tab-content" id="modal-advanced-tab">
-                        <p class="settings-description">
-                            Fine-tune experimental features and network connectivity.
-                        </p>
-
-                        <!-- Network & P2P Settings -->
-                        <div class="settings-section">
-                            <h4 class="settings-section-title">Network & P2P</h4>
-                            <div class="setting-item">
-                                <label class="setting-checkbox-label">
-                                    <span class="custom-checkbox">
-                                        <input type="checkbox" id="enable-webrtc-modal" />
-                                        <span class="custom-checkbox-box"></span>
-                                    </span>
-                                    <span class="setting-checkbox-text">Enable WebRTC Swarm (P2P Connections)</span>
-                                </label>
-                                <p class="setting-description">⚠ Allows peer-to-peer connections with other Reploid instances. Disabled by default for security.</p>
-                            </div>
-                        </div>
-
-                        <!-- Future settings sections can go here -->
-                        <div class="settings-section">
-                            <h4 class="settings-section-title">Developer Options</h4>
-                            <div class="setting-item">
-                                <p class="setting-placeholder">Additional developer settings will appear here in future updates.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <button id="save-keys-btn" class="btn primary">Save Configuration</button>
                 </div>
             </div>
         </div>
@@ -344,8 +256,8 @@
         <!-- Goal Input at Top -->
         <div class="goal-container-top">
             <div class="goal-context">
-                <p class="goal-context-tagline">Reploid launches an autonomous builder to plan, iterate, and ship for you.</p>
-                <p class="goal-context-examples">Try goals like “Design a marketing site”, “Refactor my API layer”, or “Draft onboarding docs”.</p>
+                <p class="goal-context-tagline">Where AI agents propose, critique, and evolve their own capabilities.</p>
+                <p class="goal-context-examples">Try goals like "Improve your performance" or "Build an introspective dashboard".</p>
             </div>
             <div class="goal-input-group">
                 <input type="text" id="goal-input" placeholder="Describe your goal..." maxlength="500" />

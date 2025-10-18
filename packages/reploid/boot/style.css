@@ -49,6 +49,7 @@ body {
   width: 100%;
   max-width: 900px;
   text-align: center;
+  box-sizing: border-box;
 }
 
 .boot-header {
@@ -146,6 +147,8 @@ body {
   color: var(--color-primary);
   width: 40px;
   height: 40px;
+  min-width: 40px;
+  min-height: 40px;
   cursor: pointer;
   border-radius: 50%;
   font-size: 18px;
@@ -155,6 +158,7 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .btn-config:hover {
@@ -569,6 +573,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .goal-label {
@@ -615,6 +621,8 @@ body {
 /* Configuration Section */
 .config-section {
   margin-bottom: 20px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Tabs */
@@ -1081,6 +1089,7 @@ body {
 
   #boot-container {
     max-width: 100%;
+    padding: 0 10px;
   }
 
   .boot-header h1 {
@@ -1103,8 +1112,16 @@ body {
     min-width: 100%;
   }
 
-  .btn-config {
-    width: 100%;
+  .agent-setup-card {
+    padding: 14px 16px;
+  }
+
+  .agent-setup-header {
+    gap: 10px;
+  }
+
+  .agent-model-name {
+    font-size: 16px;
   }
 
   #persona-selection-container {
@@ -1501,19 +1518,43 @@ body {
   margin-bottom: 24px;
   box-shadow: 0 8px 24px rgba(8, 8, 12, 0.45);
   text-align: left;
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow: hidden;
 }
-.agent-setup-top {
+.agent-setup-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: center;
+  gap: 14px;
   margin-bottom: 14px;
 }
+.agent-setup-main {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
 .agent-setup-title {
-  font-size: 13px;
-  letter-spacing: 0.18em;
+  font-size: 11px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #6f6f7a;
+  margin-bottom: 6px;
+}
+.agent-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.agent-features li {
+  font-size: 13px;
+  color: #a3a3ba;
+  line-height: 1.5;
+}
+.feature-status {
+  color: #a3a3ba;
 }
 .agent-config-description {
   margin-top: 6px;
@@ -1546,6 +1587,8 @@ body {
   color: #f4f4ff;
   font-weight: 600;
   word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 .agent-model-detail {
   font-size: 13px;
@@ -1582,6 +1625,12 @@ body {
   background: rgba(110, 110, 130, 0.12);
   border-color: rgba(110, 110, 130, 0.3);
   color: #8e8ea6;
+}
+.status-chip--active {
+  background: rgba(76, 201, 176, 0.2);
+  border-color: rgba(76, 201, 176, 0.6);
+  color: #4ec9b0;
+  font-weight: 500;
 }
 .status-chip--success {
   background: rgba(76, 201, 176, 0.15);
@@ -2060,6 +2109,17 @@ body {
   border-color: #4fc3f7;
   background: linear-gradient(135deg, #1e2a3a 0%, #1a2332 100%);
   box-shadow: 0 0 20px rgba(79, 195, 247, 0.3);
+}
+
+.mode-card.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.mode-card.disabled .btn-select-mode {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .mode-card-header {

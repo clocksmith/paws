@@ -241,7 +241,7 @@ const Introspector = {
           metrics: {
             avgLineLength: 0,
             maxLineLength: 0,
-            complexity Score: 0
+            complexityScore: 0
           }
         };
 
@@ -547,4 +547,4 @@ const Introspector = {
 };
 
 // Export standardized module
-Introspector;
+export default Introspector;

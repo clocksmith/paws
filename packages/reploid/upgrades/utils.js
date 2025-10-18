@@ -387,6 +387,15 @@ const Utils = {
       URL.revokeObjectURL(url);
     };
 
+    /**
+     * Generate a unique ID
+     * @param {string} prefix - Optional prefix for the ID
+     * @returns {string} Unique ID
+     */
+    const generateId = (prefix = 'id') => {
+      return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    };
+
     // Public API
     return {
       Errors,
@@ -398,7 +407,8 @@ const Utils = {
       post,
       createSubscriptionTracker,
       showButtonSuccess,
-      exportAsMarkdown
+      exportAsMarkdown,
+      generateId
     };
   }
 };

@@ -80,6 +80,49 @@ ${code}
                (typeof DiffViewerUI !== 'undefined') ? DiffViewerUI :
                (typeof SentinelFSM !== 'undefined') ? SentinelFSM :
                (typeof EventBus !== 'undefined') ? EventBus :
+               (typeof LocalLLM !== 'undefined') ? LocalLLM :
+               (typeof HybridLLMProvider !== 'undefined') ? HybridLLMProvider :
+               (typeof RateLimiter !== 'undefined') ? RateLimiter :
+               (typeof AuditLogger !== 'undefined') ? AuditLogger :
+               (typeof AgentVisualizer !== 'undefined') ? AgentVisualizer :
+               (typeof ApiClientMulti !== 'undefined') ? ApiClientMulti :
+               (typeof AppLogic !== 'undefined') ? AppLogic :
+               (typeof ASTVisualizer !== 'undefined') ? ASTVisualizer :
+               (typeof AutonomousOrchestrator !== 'undefined') ? AutonomousOrchestrator :
+               (typeof BackupRestore !== 'undefined') ? BackupRestore :
+               (typeof BrowserAPIs !== 'undefined') ? BrowserAPIs :
+               (typeof ConfirmationModal !== 'undefined') ? ConfirmationModal :
+               (typeof CostTracker !== 'undefined') ? CostTracker :
+               (typeof HotReload !== 'undefined') ? HotReload :
+               (typeof InterTabCoordinator !== 'undefined') ? InterTabCoordinator :
+               (typeof Introspector !== 'undefined') ? Introspector :
+               (typeof MetricsDashboard !== 'undefined') ? MetricsDashboard :
+               (typeof ModuleGraphVisualizer !== 'undefined') ? ModuleGraphVisualizer :
+               (typeof ModuleIntegrity !== 'undefined') ? ModuleIntegrity :
+               (typeof MultiProviderAPI !== 'undefined') ? MultiProviderAPI :
+               (typeof PenteractAnalytics !== 'undefined') ? PenteractAnalytics :
+               (typeof PenteractVisualizer !== 'undefined') ? PenteractVisualizer :
+               (typeof PerformanceMonitor !== 'undefined') ? PerformanceMonitor :
+               (typeof PerformanceOptimizer !== 'undefined') ? PerformanceOptimizer :
+               (typeof PyodideRuntime !== 'undefined') ? PyodideRuntime :
+               (typeof PythonTool !== 'undefined') ? PythonTool :
+               (typeof ReflectionAnalyzer !== 'undefined') ? ReflectionAnalyzer :
+               (typeof ReflectionSearch !== 'undefined') ? ReflectionSearch :
+               (typeof ReflectionStore !== 'undefined') ? ReflectionStore :
+               (typeof RFCAuthor !== 'undefined') ? RFCAuthor :
+               (typeof SelfTester !== 'undefined') ? SelfTester :
+               (typeof SwarmOrchestrator !== 'undefined') ? SwarmOrchestrator :
+               (typeof TabCoordinator !== 'undefined') ? TabCoordinator :
+               (typeof ToastNotifications !== 'undefined') ? ToastNotifications :
+               (typeof ToolAnalytics !== 'undefined') ? ToolAnalytics :
+               (typeof ToolDocGenerator !== 'undefined') ? ToolDocGenerator :
+               (typeof TutorialSystem !== 'undefined') ? TutorialSystem :
+               (typeof VerificationManager !== 'undefined') ? VerificationManager :
+               (typeof VFSExplorer !== 'undefined') ? VFSExplorer :
+               (typeof VDAT !== 'undefined') ? VDAT :
+               (typeof VRSI !== 'undefined') ? VRSI :
+               (typeof WebRTCSwarm !== 'undefined') ? WebRTCSwarm :
+               (typeof WorkerPool !== 'undefined') ? WorkerPool :
                undefined;`;
 
       try {
@@ -124,30 +167,58 @@ ${code}
         console.warn(`[CoreLogic] ESM module at ${path} did not expose metadata; attempting legacy evaluation fallback.`);
         return evaluateLegacyModule(transpileESMForEval(code), path);
       }
-      return evaluateLegacyModule(code);
+      const result = evaluateLegacyModule(code, path);
+      console.log(`[CoreLogic] Loaded module from ${path}:`, result?.metadata?.id || 'NO_METADATA');
+      return result;
     };
 
     const moduleFiles = [
+      // Pure modules (no dependencies)
       "/upgrades/utils.js",
       "/upgrades/event-bus.js",
       "/upgrades/di-container.js",
       "/upgrades/state-helpers-pure.js",
       "/upgrades/tool-runner-pure-helpers.js",
       "/upgrades/agent-logic-pure.js",
+      // Storage and logging (need Utils)
       "/upgrades/storage-indexeddb.js",
       "/upgrades/audit-logger.js",
       "/upgrades/rate-limiter.js",
-      "/upgrades/hybrid-llm-provider.js",
+      // State management (needs Storage, AuditLogger)
       "/upgrades/state-manager.js",
+      // LLM providers (need StateManager)
+      "/upgrades/local-llm.js",
+      "/upgrades/hybrid-llm-provider.js",
+      // API and tools (need StateManager, ApiClient needs RateLimiter)
       "/upgrades/api-client.js",
       "/upgrades/tool-runner.js",
       "/utils/diff-generator.js",
+      // Reflection and monitoring (need StateManager, EventBus)
+      "/upgrades/reflection-store.js",
+      "/upgrades/performance-monitor.js",
+      "/upgrades/toast-notifications.js",
+      // Browser features and runtimes (need StateManager, EventBus)
+      "/upgrades/browser-apis.js",
+      "/upgrades/pyodide-runtime.js",
+      // Testing and introspection (need StateManager, EventBus)
+      "/upgrades/introspector.js",
+      "/upgrades/self-tester.js",
+      // Visualizers and dashboards (need various deps)
+      "/upgrades/vfs-explorer.js",
+      "/upgrades/metrics-dashboard.js",
+      "/upgrades/agent-visualizer.js",
+      "/upgrades/ast-visualizer.js",
+      "/upgrades/module-graph-visualizer.js",
+      "/upgrades/tutorial-system.js",
+      // UI and agent cycle (need everything above)
       "/upgrades/ui-manager.js",
       "/upgrades/agent-cycle.js",
-      // Sentinel modules
+      // Sentinel and orchestration modules (need most other modules)
       "/upgrades/git-vfs.js",
       "/upgrades/sentinel-tools.js",
       "/upgrades/diff-viewer-ui.js",
+      "/upgrades/webrtc-swarm.js",
+      "/upgrades/swarm-orchestrator.js",
       "/upgrades/sentinel-fsm.js"
     ];
 
@@ -168,9 +239,9 @@ ${code}
 
       if (module && module.metadata && module.metadata.id !== 'config') {
         container.register(module);
-        logger.debug(`[CoreLogic] Registered module: ${module.metadata.id} from ${filePath}`);
+        logger.info(`[CoreLogic] Registered module: ${module.metadata.id} from ${filePath}`);
       } else {
-        logger.warn(`[CoreLogic] Module at ${filePath} missing metadata; registration skipped.`);
+        logger.warn(`[CoreLogic] Module at ${filePath} missing metadata. Module:`, module);
       }
     }
 

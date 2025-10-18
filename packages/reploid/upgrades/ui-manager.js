@@ -49,7 +49,7 @@ const UI = {
         }
 
         const hostname = config?.hermes?.host || window.location.hostname || 'localhost';
-        const port = config?.hermes?.port || 3000;
+        const port = config?.hermes?.port || 8000;
         return `${protocol}//${hostname}:${port}`;
     };
 

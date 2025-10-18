@@ -5,13 +5,14 @@ const WebRTCSwarm = {
   metadata: {
     id: 'WebRTCSwarm',
     version: '1.0.0',
-    dependencies: ['logger', 'Utils', 'StateManager'],
+    dependencies: ['Utils', 'StateManager'],
     async: false,
     type: 'service'
   },
 
   factory: (deps) => {
-    const { logger, Utils, StateManager } = deps;
+    const { Utils, StateManager } = deps;
+    const { logger } = Utils;
 
     // Swarm configuration
     const CONFIG = {
@@ -879,5 +880,4 @@ const WebRTCSwarmModule = (logger, Utils, StateManager) => {
 };
 
 // Export both formats
-WebRTCSwarm;
-WebRTCSwarmModule;
+export default WebRTCSwarm;

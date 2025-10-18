@@ -340,4 +340,4 @@ ${Object.entries(metrics.tools)
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = MetricsDashboard;
 }
-MetricsDashboard;
+export default MetricsDashboard;
