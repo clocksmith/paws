@@ -52,7 +52,7 @@ const TutorialSystem = {
           {
             title: 'Current Goal',
             content: 'Your goal is displayed here. The agent works towards achieving this goal through multiple cycles.',
-            target: '#goal-display',
+            target: '#goal-panel',
             placement: 'bottom',
             highlight: true,
             action: 'next'
@@ -68,15 +68,15 @@ const TutorialSystem = {
           {
             title: 'Proposed Changes',
             content: 'When the agent wants to modify code, it shows the changes here. You can review and approve them.',
-            target: '#proposed-changes-panel',
+            target: '#diff-viewer-panel',
             placement: 'left',
             highlight: true,
             action: 'next'
           },
           {
-            title: 'Advanced Panel',
-            content: 'Click this toggle to access advanced features: Performance Metrics, Introspection, Reflections, Tests, Browser APIs, and Logs.',
-            target: '#log-toggle-btn',
+            title: 'Advanced Features',
+            content: 'Expand the collapsible sections below to access debugging tools, development features, and advanced capabilities organized by category.',
+            target: '.panel-section',
             placement: 'top',
             highlight: true,
             action: 'next'
@@ -206,9 +206,9 @@ const TutorialSystem = {
             action: 'next'
           },
           {
-            title: 'Step 5: Human Approval',
-            content: 'You review and approve the changes. This keeps the human in the loop for safety.',
-            target: '#proposed-changes-panel',
+            title: 'Step 5: Human Approval (or Autonomous Mode)',
+            content: 'By default, you review and approve changes for safety. However, REPLOID also supports autonomous mode where the agent can self-review and apply changes automatically. Configure this in the persona settings.',
+            target: '#sentinel-panel',
             placement: 'left',
             highlight: true,
             action: 'next'
@@ -269,7 +269,8 @@ const TutorialSystem = {
      */
     const positionTooltip = (target, placement) => {
       if (!target) {
-        // Center on screen
+        // Center on screen (fixed position)
+        tooltipEl.style.position = 'fixed';
         tooltipEl.style.top = '50%';
         tooltipEl.style.left = '50%';
         tooltipEl.style.transform = 'translate(-50%, -50%)';
@@ -280,46 +281,60 @@ const TutorialSystem = {
       if (!targetEl) {
         logger.warn('[TutorialSystem] Target element not found:', target);
         // Fallback to center
+        tooltipEl.style.position = 'fixed';
         tooltipEl.style.top = '50%';
         tooltipEl.style.left = '50%';
         tooltipEl.style.transform = 'translate(-50%, -50%)';
         return;
       }
 
-      const rect = targetEl.getBoundingClientRect();
-      const tooltipRect = tooltipEl.getBoundingClientRect();
+      // Scroll target into view to ensure it's visible
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-      let top, left;
+      // Wait a moment for scroll to complete, then position
+      setTimeout(() => {
+        const rect = targetEl.getBoundingClientRect();
+        const tooltipRect = tooltipEl.getBoundingClientRect();
 
-      switch (placement) {
-        case 'top':
-          top = rect.top - tooltipRect.height - 20;
-          left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-          break;
-        case 'bottom':
-          top = rect.bottom + 20;
-          left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-          break;
-        case 'left':
-          top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
-          left = rect.left - tooltipRect.width - 20;
-          break;
-        case 'right':
-          top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
-          left = rect.right + 20;
-          break;
-        default:
-          top = rect.bottom + 20;
-          left = rect.left;
-      }
+        let top, left;
 
-      // Keep within viewport
-      top = Math.max(20, Math.min(top, window.innerHeight - tooltipRect.height - 20));
-      left = Math.max(20, Math.min(left, window.innerWidth - tooltipRect.width - 20));
+        // Use fixed positioning relative to viewport
+        tooltipEl.style.position = 'fixed';
 
-      tooltipEl.style.top = `${top}px`;
-      tooltipEl.style.left = `${left}px`;
-      tooltipEl.style.transform = 'none';
+        switch (placement) {
+          case 'top':
+            top = rect.top - tooltipRect.height - 20;
+            left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+            break;
+          case 'bottom':
+            top = rect.bottom + 20;
+            left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+            break;
+          case 'left':
+            top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
+            left = rect.left - tooltipRect.width - 20;
+            break;
+          case 'right':
+            top = rect.top + (rect.height / 2) - (tooltipRect.height / 2);
+            left = rect.right + 20;
+            break;
+          case 'center':
+            top = window.innerHeight / 2 - tooltipRect.height / 2;
+            left = window.innerWidth / 2 - tooltipRect.width / 2;
+            break;
+          default:
+            top = rect.bottom + 20;
+            left = rect.left;
+        }
+
+        // Keep within viewport with padding
+        top = Math.max(20, Math.min(top, window.innerHeight - tooltipRect.height - 20));
+        left = Math.max(20, Math.min(left, window.innerWidth - tooltipRect.width - 20));
+
+        tooltipEl.style.top = `${top}px`;
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.style.transform = 'none';
+      }, 300); // Wait for scroll animation
     };
 
     /**

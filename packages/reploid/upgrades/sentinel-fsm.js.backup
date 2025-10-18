@@ -237,18 +237,6 @@ const SentinelFSM = {
         session_id: cycleContext.sessionId
       });
 
-      // Check if auto-approve is enabled (session-level only for now)
-      const sessionAutoApprove = typeof localStorage !== 'undefined' && localStorage.getItem('SESSION_AUTO_APPROVE') === 'true';
-      const globalAutoApprove = typeof localStorage !== 'undefined' && localStorage.getItem('GLOBAL_AUTO_APPROVE') === 'true';
-
-      if (globalAutoApprove || sessionAutoApprove) {
-        logger.info('[SentinelFSM] Auto-approving context (auto-approve enabled)');
-        // Auto-approve immediately to avoid async issues
-        transitionTo('PLANNING_WITH_CONTEXT');
-        executeState();
-        return;
-      }
-
       // Store listener references for cleanup
       const listeners = {
         approval: null,
@@ -372,38 +360,13 @@ IMPORTANT RULES:
 5. You can include a brief explanation before the changes, but changes MUST be in this format
 6. Generate COMPLETE, working code - don't use placeholders or "..." to skip sections
 
-ADVANCED CAPABILITY - TOOL CREATION:
-You can create custom tools using the create_dynamic_tool function. Example:
-
-## CREATE: /vfs/tools/log_tool.js
-\`\`\`javascript
-create_dynamic_tool({
-  name: 'log_message',
-  description: 'Logs a message to the agent console',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      message: { type: 'string', description: 'The message to log' }
-    },
-    required: ['message']
-  },
-  implementation: {
-    type: 'javascript',
-    code: 'console.log(\`AGENT: \${args.message}\`); return "Message logged";'
-  }
-});
-\`\`\`
-
-Implementation types: javascript (simple logic), composite (chain tools), workflow (complex automation).
-Create tools only when existing ones are insufficient for your goal.
-
 Now generate your proposal:`
       }, {
         role: 'user',
         content: cycleContext.planPrompt
       }], {
         temperature: 0.7,
-        maxOutputTokens: 32768  // Increased from 16384 to prevent MAX_TOKENS errors
+        maxOutputTokens: 16384
       });
 
       // Parse response for proposed changes

@@ -163,6 +163,23 @@
                             </div>
                         </div>
 
+                        <!-- Auto-Approve Settings -->
+                        <div class="auto-approve-section" style="margin-top: 24px; padding: 16px; background: rgba(78, 201, 176, 0.08); border: 1px solid rgba(78, 201, 176, 0.2); border-radius: 8px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                                <div>
+                                    <h4 style="margin: 0 0 4px 0; font-size: 14px; color: #4ec9b0;">⚡ Auto-Approve Mode</h4>
+                                    <p style="margin: 0; font-size: 12px; color: #888; line-height: 1.4;">Automatically approve context curation (never auto-approves code changes for safety)</p>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="auto-approve-toggle" />
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div id="auto-approve-info" class="hidden" style="font-size: 11px; color: #4ec9b0; padding: 8px; background: rgba(78, 201, 176, 0.05); border-radius: 4px;">
+                                ✓ Context will be auto-approved. Proposals still require your review.
+                            </div>
+                        </div>
+
                         <!-- Mode Configuration Section (shown after selecting a mode) -->
                         <div id="mode-config-section" class="mode-config-section hidden">
                             <div class="mode-config-header">
@@ -183,15 +200,12 @@
                             <label for="model-select" class="model-select-label">Select AI Model</label>
                             <select id="model-select" class="model-select-dropdown">
                                 <optgroup label="Cloud Models (Require API Key)">
-                                    <option value="gemini-2.5-flash-lite-preview-09-2025" data-provider="gemini">Gemini 2.5 Flash Lite (Preview - Fast)</option>
-                                    <option value="gemini-2.5-flash-preview-09-2025" data-provider="gemini">Gemini 2.5 Flash (Preview - Balanced)</option>
-                                    <option value="gemini-2.0-flash" data-provider="gemini">Gemini 2.0 Flash (Fast & Efficient)</option>
-                                    <option value="gemini-1.5-pro" data-provider="gemini">Gemini 1.5 Pro (Advanced Reasoning)</option>
-                                    <option value="gpt-4o" data-provider="openai">GPT-4o (Multimodal)</option>
-                                    <option value="gpt-4-turbo" data-provider="openai">GPT-4 Turbo (Advanced)</option>
-                                    <option value="gpt-3.5-turbo" data-provider="openai">GPT-3.5 Turbo (Fast)</option>
-                                    <option value="claude-3-5-sonnet" data-provider="anthropic">Claude 3.5 Sonnet (Top Performance)</option>
-                                    <option value="claude-3-opus" data-provider="anthropic">Claude 3 Opus (Most Capable)</option>
+                                    <option value="gemini-2.5-flash-lite" data-provider="gemini">Gemini 2.5 Flash Lite (Fast)</option>
+                                    <option value="gemini-2.5-flash" data-provider="gemini">Gemini 2.5 Flash (Balanced)</option>
+                                    <option value="gpt-5-2025-08-07-mini" data-provider="openai">GPT-5 Mini (Fast)</option>
+                                    <option value="gpt-5-2025-08-07" data-provider="openai">GPT-5 (Advanced)</option>
+                                    <option value="claude-4-5-haiku" data-provider="anthropic">Claude 4.5 Haiku (Fast)</option>
+                                    <option value="claude-4-5-sonnet" data-provider="anthropic">Claude 4.5 Sonnet (Balanced)</option>
                                 </optgroup>
                                 <optgroup label="Local Models (No API Key)">
                                     <!-- Ollama models will be dynamically populated from your system -->
@@ -293,18 +307,18 @@
 
                     <div class="boot-mode-options">
                         <button class="boot-mode-btn selected" data-mode="minimal" onclick="selectBootMode('minimal')">
-                            <div class="boot-mode-label">Minimal Core</div>
-                            <div class="boot-mode-desc">Lean reasoning and safety stack for rapid spins.</div>
+                            <div class="boot-mode-label">Standard RSI</div>
+                            <div class="boot-mode-desc">23 modules — Complete RSI with streaming, context management, and tool creation.</div>
                         </button>
 
                         <button class="boot-mode-btn" data-mode="all-blueprints" onclick="selectBootMode('all-blueprints')">
-                            <div class="boot-mode-label">Core + Knowledge</div>
-                            <div class="boot-mode-desc">Boot with guides, playbooks, and docs for richer context.</div>
+                            <div class="boot-mode-label">RSI + Guides</div>
+                            <div class="boot-mode-desc">23 modules + 64 blueprints — Standard RSI plus architectural guides and patterns.</div>
                         </button>
 
                         <button class="boot-mode-btn" data-mode="all-upgrades" onclick="selectBootMode('all-upgrades')">
-                            <div class="boot-mode-label">Full Arsenal</div>
-                            <div class="boot-mode-desc">Everything enabled from the start—automation, analysis, and blueprints.</div>
+                            <div class="boot-mode-label">Complete System</div>
+                            <div class="boot-mode-desc">64 modules + 64 blueprints — Full stack with visualization, Python, monitoring, swarm.</div>
                         </button>
                     </div>
                 </div>
@@ -385,15 +399,15 @@
                     <p class="settings-description">Define primary, fallback, and consensus models for Paxos orchestration.</p>
                     <div class="paxos-field">
                         <label for="paxos-primary">Primary Model</label>
-                        <input type="text" id="paxos-primary" placeholder="e.g., gemini-2.0-flash" />
+                        <input type="text" id="paxos-primary" placeholder="e.g., gemini-2.5-flash-lite" />
                     </div>
                     <div class="paxos-field">
                         <label for="paxos-fallback">Fallback Model</label>
-                        <input type="text" id="paxos-fallback" placeholder="e.g., gpt-4o" />
+                        <input type="text" id="paxos-fallback" placeholder="e.g., gpt-5-2025-08-07" />
                     </div>
                     <div class="paxos-field">
                         <label for="paxos-consensus">Consensus Model</label>
-                        <input type="text" id="paxos-consensus" placeholder="e.g., claude-3-opus" />
+                        <input type="text" id="paxos-consensus" placeholder="e.g., claude-4-5-sonnet" />
                     </div>
                     <div class="paxos-field">
                         <label for="paxos-strategy">Strategy</label>

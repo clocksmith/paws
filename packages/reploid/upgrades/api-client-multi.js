@@ -127,7 +127,7 @@ const ApiClientMulti = {
         
         case 'openai':
           return {
-            model: options.model || 'gpt-4-turbo-preview',
+            model: options.model || 'gpt-5-2025-08-07',
             messages: formattedMessages,
             temperature: options.temperature || 0.8,
             max_tokens: options.maxTokens || 4096
@@ -138,7 +138,7 @@ const ApiClientMulti = {
           const otherMessages = formattedMessages.filter(m => m.role !== 'system');
           
           return {
-            model: options.model || 'claude-3-opus-20240229',
+            model: options.model || 'claude-4-5-sonnet',
             system: systemMessage?.content || '',
             messages: otherMessages,
             max_tokens: options.maxTokens || 4096,
@@ -339,7 +339,7 @@ const ApiClientMulti = {
         // Use proxy endpoints
         switch (provider) {
           case 'gemini':
-            apiEndpoint = `/api/gemini/models/gemini-1.5-flash-latest:generateContent`;
+            apiEndpoint = `/api/gemini/models/gemini-2.5-flash:generateContent`;
             break;
           case 'openai':
             apiEndpoint = `/api/openai/chat/completions`;
@@ -361,7 +361,7 @@ const ApiClientMulti = {
         
         switch (provider) {
           case 'gemini':
-            apiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+            apiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
             break;
           case 'openai':
             apiEndpoint = `https://api.openai.com/v1/chat/completions`;

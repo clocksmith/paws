@@ -9,14 +9,34 @@ const ToolRunner = {
     async: false,
     type: 'service'
   },
-  
+
   factory: (deps) => {
     // Validate dependencies
     const { config, Storage, StateManager, ApiClient, Utils, ToolRunnerPureHelpers } = deps;
-    const { logger, Errors } = Utils;
-    
-    if (!config || !logger || !Storage || !StateManager || !ApiClient || !Errors || !Utils || !ToolRunnerPureHelpers) {
-      throw new Error('ToolRunner: Missing required dependencies');
+    const { logger, Errors } = Utils || {};
+
+    // Lazy-load MetaToolCreator to break circular dependency
+    let _metaToolCreator = null;
+    const getMetaToolCreator = () => {
+      if (!_metaToolCreator && typeof globalThis.DIContainer !== 'undefined') {
+        _metaToolCreator = globalThis.DIContainer.resolve('MetaToolCreator');
+      }
+      return _metaToolCreator;
+    };
+
+    // Detailed dependency validation
+    const missing = [];
+    if (!config) missing.push('config');
+    if (!Storage) missing.push('Storage');
+    if (!StateManager) missing.push('StateManager');
+    if (!ApiClient) missing.push('ApiClient');
+    if (!Utils) missing.push('Utils');
+    if (!logger) missing.push('logger (from Utils)');
+    if (!Errors) missing.push('Errors (from Utils)');
+    if (!ToolRunnerPureHelpers) missing.push('ToolRunnerPureHelpers');
+
+    if (missing.length > 0) {
+      throw new Error(`ToolRunner: Missing required dependencies: ${missing.join(', ')}`);
     }
     
     const { ToolError, ArtifactError } = Errors;
@@ -39,6 +59,15 @@ const ToolRunner = {
 
     if (injectedStaticTools.some(t => t.name === toolName)) {
       switch (toolName) {
+        case "create_dynamic_tool": {
+            const { name, description, inputSchema, implementation, metadata } = toolArgs;
+            const MetaToolCreator = getMetaToolCreator();
+            if (!MetaToolCreator) {
+              throw new ToolError('MetaToolCreator not available - cannot create dynamic tools');
+            }
+            return await MetaToolCreator.createDynamicTool(name, description, inputSchema, implementation, metadata);
+        }
+
         case "read_artifact": {
           const content = await StateManager.getArtifactContent(toolArgs.path, toolArgs.version);
           if (content === null) {

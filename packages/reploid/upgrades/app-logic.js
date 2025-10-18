@@ -17,6 +17,9 @@ const CoreLogicModule = async (initialConfig, vfs) => {
     const DIContainerModule = new Function(diContainerContent + "\nreturn DIContainer;");
     const container = DIContainerModule().factory({ Utils });
 
+    // Expose container globally for lazy dependency resolution
+    globalThis.DIContainer = container;
+
     // Load config.json and register it as a module
     logger.info("[CoreLogic] Loading configuration...");
     const configContent = await vfs.read("/config.json");
@@ -69,16 +72,20 @@ ${code}
                (typeof ToolRunner !== 'undefined') ? ToolRunner :
                (typeof UI !== 'undefined') ? UI :
                (typeof Utils !== 'undefined') ? Utils :
-               (typeof DIContainer !== 'undefined') ? DIContainer :
                (typeof StateHelpersPure !== 'undefined') ? StateHelpersPure :
                (typeof ToolRunnerPureHelpers !== 'undefined') ? ToolRunnerPureHelpers :
                (typeof AgentLogicPureHelpers !== 'undefined') ? AgentLogicPureHelpers :
+               (typeof DIContainer !== 'undefined') ? DIContainer :
                (typeof Storage !== 'undefined') ? Storage :
                (typeof DiffGenerator !== 'undefined') ? DiffGenerator :
                (typeof GitVFS !== 'undefined') ? GitVFS :
                (typeof SentinelTools !== 'undefined') ? SentinelTools :
+               (typeof DiffViewerUIModule !== 'undefined') ? DiffViewerUIModule :
                (typeof DiffViewerUI !== 'undefined') ? DiffViewerUI :
                (typeof SentinelFSM !== 'undefined') ? SentinelFSM :
+               (typeof MetaToolCreator !== 'undefined') ? MetaToolCreator :
+               (typeof StreamingResponseHandler !== 'undefined') ? StreamingResponseHandler :
+               (typeof ContextManager !== 'undefined') ? ContextManager :
                (typeof EventBus !== 'undefined') ? EventBus :
                (typeof LocalLLM !== 'undefined') ? LocalLLM :
                (typeof HybridLLMProvider !== 'undefined') ? HybridLLMProvider :
@@ -197,6 +204,9 @@ ${code}
       "/upgrades/reflection-store.js",
       "/upgrades/performance-monitor.js",
       "/upgrades/toast-notifications.js",
+      // Context and streaming (need StateManager, EventBus)
+      "/upgrades/streaming-response-handler.js",
+      "/upgrades/context-manager.js",
       // Browser features and runtimes (need StateManager, EventBus)
       "/upgrades/browser-apis.js",
       "/upgrades/pyodide-runtime.js",
@@ -219,13 +229,20 @@ ${code}
       "/upgrades/diff-viewer-ui.js",
       "/upgrades/webrtc-swarm.js",
       "/upgrades/swarm-orchestrator.js",
-      "/upgrades/sentinel-fsm.js"
+      "/upgrades/sentinel-fsm.js",
+      "/upgrades/meta-tool-creator.js"
     ];
 
     // Load and register all modules
     logger.info("[CoreLogic] Loading and registering all application modules...");
+    logger.info(`[CoreLogic] Total module files to load: ${moduleFiles.length}`);
+    logger.info(`[CoreLogic] Module list includes agent-logic-pure: ${moduleFiles.some(f => f.includes('agent-logic-pure'))}`);
+
     const moduleContents = await Promise.all(moduleFiles.map(path => vfs.read(path)));
-    
+
+    logger.info(`[CoreLogic] Module contents loaded: ${moduleContents.length} items`);
+    logger.info(`[CoreLogic] agent-logic-pure content length: ${moduleContents[moduleFiles.findIndex(f => f.includes('agent-logic-pure'))]?.length || 'NOT FOUND'}`);
+
     for (let i = 0; i < moduleContents.length; i++) {
       const content = moduleContents[i];
       const filePath = moduleFiles[i];
@@ -235,7 +252,34 @@ ${code}
         continue;
       }
 
+      // Special debug logging for agent-logic-pure
+      if (filePath.includes('agent-logic-pure')) {
+        logger.info(`[CoreLogic] Loading agent-logic-pure.js (size: ${content.length})`);
+      }
+
       const module = await loadModuleFromContent(content, filePath);
+
+      // Special debug logging for agent-logic-pure
+      if (filePath.includes('agent-logic-pure')) {
+        logger.info(`[CoreLogic] agent-logic-pure.js loaded:`, {
+          hasModule: !!module,
+          hasMetadata: !!(module && module.metadata),
+          moduleType: typeof module,
+          moduleKeys: module ? Object.keys(module) : [],
+          metadataId: module?.metadata?.id,
+          factoryType: module?.factory ? typeof module.factory : 'undefined'
+        });
+      }
+
+      // Debug logging for problematic modules
+      if (!module || !module.metadata) {
+        logger.error(`[CoreLogic] Module load failed for ${filePath}:`, {
+          hasModule: !!module,
+          hasMetadata: !!(module && module.metadata),
+          moduleKeys: module ? Object.keys(module) : [],
+          metadataId: module?.metadata?.id
+        });
+      }
 
       if (module && module.metadata && module.metadata.id !== 'config') {
         container.register(module);
@@ -251,11 +295,9 @@ ${code}
     const CycleLogic = await container.resolve('CycleLogic');
     const UI = await container.resolve('UI');
 
-    // The UI's init was designed to take dependencies. In a pure DI system,
-    // this would be handled differently, but we adapt for now.
-    const StateManager = await container.resolve('StateManager');
+    // Initialize UI (StateManager is now injected via DI)
     if (UI.init) {
-        await UI.init(StateManager, CycleLogic);
+        await UI.init();
     }
 
     // Initialize GitVFS for version control
@@ -270,19 +312,34 @@ ${code}
     }
 
     // Initialize the interactive diff viewer
+    console.log('[CoreLogic] Attempting to initialize DiffViewerUI...');
     try {
+        console.log('[CoreLogic] Resolving DiffViewerUI from container...');
         const DiffViewerUI = await container.resolve('DiffViewerUI');
+        console.log('[CoreLogic] DiffViewerUI resolved:', DiffViewerUI);
+        console.log('[CoreLogic] DiffViewerUI.init exists?', typeof DiffViewerUI?.init);
+
         if (DiffViewerUI && DiffViewerUI.init) {
             // Use the existing diff-viewer div from ui-dashboard.html
             const diffViewerId = 'diff-viewer';
-            if (document.getElementById(diffViewerId)) {
+            const diffViewerElement = document.getElementById(diffViewerId);
+            console.log('[CoreLogic] Looking for element with id:', diffViewerId);
+            console.log('[CoreLogic] Element found:', diffViewerElement);
+
+            if (diffViewerElement) {
+                console.log('[CoreLogic] Calling DiffViewerUI.init()...');
                 DiffViewerUI.init(diffViewerId);
+                console.log('[CoreLogic] DiffViewerUI.init() completed');
                 logger.info("[CoreLogic] DiffViewerUI initialized");
             } else {
+                console.warn('[CoreLogic] Diff viewer container not found in UI');
                 logger.warn("[CoreLogic] Diff viewer container not found in UI");
             }
+        } else {
+            console.warn('[CoreLogic] DiffViewerUI or DiffViewerUI.init not available');
         }
     } catch (diffError) {
+        console.error('[CoreLogic] DiffViewerUI initialization error:', diffError);
         logger.warn("[CoreLogic] DiffViewerUI initialization failed:", diffError.message);
     }
 
@@ -293,6 +350,36 @@ ${code}
     const appRoot = document.getElementById("app-root");
     if (bootContainer) bootContainer.style.display = "none";
     if (appRoot) appRoot.style.display = "block";
+
+    // If a goal was provided, start the agent cycle
+    if (initialConfig && initialConfig.goal) {
+      logger.info("[CoreLogic] Starting agent with initial goal:", initialConfig.goal);
+
+      try {
+        // Update UI with the goal
+        if (UI.updateGoal) {
+          UI.updateGoal(initialConfig.goal);
+        }
+
+        // Start the agent cycle
+        const SentinelFSM = await container.resolve('SentinelFSM');
+        if (SentinelFSM && SentinelFSM.startCycle) {
+          await SentinelFSM.startCycle(initialConfig.goal);
+          logger.info("[CoreLogic] Agent cycle started successfully");
+        } else {
+          logger.error("[CoreLogic] SentinelFSM.startCycle not available");
+        }
+      } catch (startError) {
+        logger.error("[CoreLogic] Failed to start agent cycle:", {
+          name: startError.name,
+          message: startError.message,
+          stack: startError.stack,
+          details: startError.details
+        });
+      }
+    } else {
+      logger.info("[CoreLogic] No initial goal provided. Agent is in IDLE state.");
+    }
 
   } catch (error) {
     handleInitializationError(error);

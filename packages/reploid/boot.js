@@ -86,6 +86,57 @@ function setupEventListeners() {
         // Handle Launch Agent button click
         elements.awakenBtn.addEventListener('click', launchAgent);
     }
+
+    // Global auto-approve toggle (in settings modal)
+    const autoApproveToggle = document.getElementById('auto-approve-toggle');
+    if (autoApproveToggle) {
+        // Load saved state
+        const globalAutoApprove = localStorage.getItem('GLOBAL_AUTO_APPROVE') === 'true';
+        autoApproveToggle.checked = globalAutoApprove;
+
+        // Show info if enabled
+        const autoApproveInfo = document.getElementById('auto-approve-info');
+        if (autoApproveInfo) {
+            autoApproveInfo.classList.toggle('hidden', !globalAutoApprove);
+        }
+
+        // Handle toggle change
+        autoApproveToggle.addEventListener('change', (e) => {
+            const enabled = e.target.checked;
+            localStorage.setItem('GLOBAL_AUTO_APPROVE', enabled);
+
+            // Update config.json in memory (will be persisted on next save)
+            if (typeof globalThis.config !== 'undefined') {
+                if (!globalThis.config.curatorMode) {
+                    globalThis.config.curatorMode = {};
+                }
+                globalThis.config.curatorMode.enabled = enabled;
+                globalThis.config.curatorMode.autoApproveContext = enabled;
+            }
+
+            // Show/hide info message
+            if (autoApproveInfo) {
+                autoApproveInfo.classList.toggle('hidden', !enabled);
+            }
+
+            console.log('[Boot] Global auto-approve:', enabled);
+        });
+    }
+
+    // Session auto-approve toggle (in Sentinel card - will be set up by UI manager)
+    const sessionAutoApproveToggle = document.getElementById('session-auto-approve-toggle');
+    if (sessionAutoApproveToggle) {
+        // Load saved state
+        const sessionAutoApprove = localStorage.getItem('SESSION_AUTO_APPROVE') === 'true';
+        sessionAutoApproveToggle.checked = sessionAutoApprove;
+
+        // Handle toggle change
+        sessionAutoApproveToggle.addEventListener('change', (e) => {
+            const enabled = e.target.checked;
+            localStorage.setItem('SESSION_AUTO_APPROVE', enabled);
+            console.log('[Boot] Session auto-approve:', enabled);
+        });
+    }
 }
 
 function updateCurrentModeDisplay(modeName) {
@@ -109,7 +160,9 @@ function updateCurrentModeDisplay(modeName) {
 }
 
 async function launchAgent() {
+    console.log('[Boot] launchAgent() called');
     const goal = elements.goalInput?.value?.trim();
+    console.log('[Boot] Goal from input:', goal);
 
     if (!goal) {
         console.warn('[Boot] No goal specified');
@@ -175,14 +228,22 @@ async function launchAgent() {
         // Load app-logic.js
         console.log('[Boot] Loading app-logic.js...');
         const appLogicCode = await vfs.read('/upgrades/app-logic.js');
+        console.log('[Boot] app-logic.js loaded, size:', appLogicCode.length);
 
         // Execute app-logic.js to get the CoreLogicModule function
+        console.log('[Boot] Executing app-logic.js...');
         const CoreLogicModule = new Function(appLogicCode + '\nreturn CoreLogicModule;')();
+        console.log('[Boot] CoreLogicModule extracted:', typeof CoreLogicModule);
+
+        // Get selected boot mode (module preset)
+        const bootMode = localStorage.getItem('BOOT_MODE') || 'minimal';
+        console.log('[Boot] Boot mode:', bootMode);
 
         // Prepare initial configuration
         const initialConfig = {
             goal: goal,
             mode: state.selectedMode || 'cloud',
+            bootMode: bootMode,  // Pass boot mode to determine which modules to load
             persona: {
                 id: 'code_refactorer'  // Default persona
             }
@@ -191,6 +252,7 @@ async function launchAgent() {
         console.log('[Boot] Initializing agent system with config:', initialConfig);
 
         // Initialize the agent system
+        console.log('[Boot] Calling CoreLogicModule...');
         await CoreLogicModule(initialConfig, vfs);
 
         console.log('[Boot] Agent system initialized successfully');
@@ -234,6 +296,18 @@ async function openConfigModal() {
         });
     }
 }
+
+// Expose selectBootMode globally for inline onclick handlers
+window.selectBootMode = function(mode) {
+    console.log('[Boot] Boot mode selected:', mode);
+    localStorage.setItem('BOOT_MODE', mode);
+
+    // Update visual selection
+    document.querySelectorAll('.boot-mode-btn').forEach(btn => {
+        btn.classList.remove('selected');
+    });
+    document.querySelector(`[data-mode="${mode}"]`)?.classList.add('selected');
+};
 
 // Start the application
 main();

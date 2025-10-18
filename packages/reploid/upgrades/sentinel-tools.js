@@ -5,13 +5,13 @@ const SentinelTools = {
   metadata: {
     id: 'SentinelTools',
     version: '1.0.0',
-    dependencies: ['Storage', 'StateManager', 'Utils', 'ApiClient', 'VerificationManager?'],
+    dependencies: ['config', 'Storage', 'StateManager', 'Utils', 'ApiClient', 'VerificationManager?'],
     async: false,
     type: 'service'
   },
 
   factory: (deps) => {
-    const { Storage, StateManager, Utils, ApiClient } = deps;
+    const { Storage, StateManager, Utils, ApiClient, config } = deps;
     const { logger, Errors } = Utils;
     const { ArtifactError, ToolError } = Errors;
 
@@ -124,6 +124,11 @@ const SentinelTools = {
         !path.includes('.backup')
       );
 
+      if (relevantPaths.length === 0) {
+        logger.warn('[SentinelTools] No files available for curation');
+        return [];
+      }
+
       // Create a file tree summary for the LLM
       const fileTree = relevantPaths.map(path => {
         const parts = path.split('/');
@@ -144,23 +149,42 @@ Return a JSON array of file paths.
 Example: ["/modules/api.js", "/config.json"]`;
 
       try {
-        const response = await ApiClient.sendMessage([{
+        logger.info('[SentinelTools] Calling LLM for file curation via proxy...');
+
+        // Format message for Gemini API (needs 'parts' array with 'text' property)
+        const history = [{
           role: 'user',
-          content: prompt
-        }]);
+          parts: [{ text: prompt }]
+        }];
+
+        // Call the API method - ApiClient will automatically use proxy if available
+        // The proxy server has the API key from environment variables
+        const response = await ApiClient.callApiWithRetry(history, null);
+
+        logger.info('[SentinelTools] LLM response received:', response.type);
 
         // Parse the LLM response to extract file paths
         const content = response.content;
         const jsonMatch = content.match(/\[[\s\S]*?\]/);
         if (jsonMatch) {
           const selectedFiles = JSON.parse(jsonMatch[0]);
-          return selectedFiles.filter(f => relevantPaths.includes(f));
+          const validFiles = selectedFiles.filter(f => relevantPaths.includes(f));
+          logger.info(`[SentinelTools] AI selected ${validFiles.length} files:`, validFiles);
+          return validFiles;
+        } else {
+          logger.warn('[SentinelTools] No JSON array found in LLM response');
         }
       } catch (error) {
-        logger.error('[SentinelTools] AI curation failed:', error);
+        logger.error('[SentinelTools] AI curation failed:', {
+          name: error.name,
+          message: error.message,
+          code: error.code,
+          stack: error.stack
+        });
       }
 
       // Fallback to heuristic selection
+      logger.warn('[SentinelTools] Falling back to heuristic file selection');
       return relevantPaths.slice(0, 10);
     };
 

@@ -1310,6 +1310,53 @@ a:focus-visible,
     transform: scale(0.98);
 }
 
+/* Agent Progress Tracker */
+.agent-progress-tracker {
+    margin-bottom: var(--space-lg);
+}
+
+.progress-steps {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+    margin-top: var(--space-md);
+}
+
+.progress-step {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-md);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-secondary);
+    border-radius: var(--radius-md);
+    font-size: var(--font-sm);
+    color: var(--text-secondary);
+    transition: all var(--transition-normal);
+}
+
+.progress-step.active {
+    background: var(--accent-cyan-dim);
+    border-color: var(--border-primary);
+    color: var(--accent-cyan);
+    box-shadow: 0 0 8px var(--border-primary);
+}
+
+.progress-step.completed {
+    background: var(--success-bg);
+    border-color: rgba(0, 255, 0, 0.3);
+    color: var(--success);
+}
+
+.progress-step .step-icon {
+    font-size: var(--font-md);
+}
+
+.progress-step .step-label {
+    font-family: 'Courier New', monospace;
+}
+
 /* Card Components */
 .card {
     background: var(--bg-panel);
@@ -2368,4 +2415,189 @@ a:focus-visible,
     border-top: 1px solid rgba(138, 43, 226, 0.2);
     font-size: var(--font-xs);
     color: var(--text-muted);
+}
+
+/* Empty State Messages */
+.empty-state-message {
+    color: var(--text-muted);
+    font-size: var(--font-md);
+    margin: var(--space-lg) 0 var(--space-sm);
+    text-align: center;
+    font-style: italic;
+}
+
+.empty-state-help {
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+    text-align: center;
+    padding: 0 var(--space-md);
+    line-height: 1.5;
+}
+
+.goal-text-empty {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.sentinel-empty .empty-state-message {
+    margin-top: var(--space-sm);
+}
+
+/* Collapsible Panel Sections */
+.panel-section {
+    margin: var(--space-md) 0;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-secondary);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.section-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: var(--font-md);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.section-toggle:hover {
+    background: var(--bg-hover);
+}
+
+.section-toggle[aria-expanded="true"] .section-icon {
+    transform: rotate(90deg);
+}
+
+.section-icon {
+    font-size: var(--font-sm);
+    transition: transform var(--transition-normal);
+}
+
+.section-title {
+    flex: 1;
+    text-align: left;
+}
+
+.section-count {
+    font-size: var(--font-sm);
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+}
+
+.section-content {
+    border-top: 1px solid var(--border-secondary);
+    padding: var(--space-md);
+    animation: slideDown var(--transition-normal) ease-out;
+}
+
+.section-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+}
+
+.panel-switch-btn {
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: var(--font-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.panel-switch-btn:hover {
+    background: var(--accent-cyan-dim);
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+}
+
+.panel-switch-btn.active {
+    background: var(--accent-cyan-bright);
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+    font-weight: 600;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 500px;
+    }
+}
+
+/* Remove empty state messages when content is present */
+#vfs-tree:not(:empty) .empty-state-message,
+#vfs-tree:not(:empty) .empty-state-help,
+#thought-stream:not(:empty) .empty-state-message,
+#thought-stream:not(:empty) .empty-state-help,
+#diff-viewer:not(:empty) .empty-state-message,
+#diff-viewer:not(:empty) .empty-state-help,
+#sentinel-content:not(.sentinel-empty) .empty-state-message,
+#sentinel-content:not(.sentinel-empty) .empty-state-help {
+    display: none;
+}
+
+/* Toggle Switch Styles */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #555;
+    transition: 0.3s;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background-color: #4ec9b0;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+}
+
+.toggle-switch input:focus + .toggle-slider {
+    box-shadow: 0 0 1px #4ec9b0;
 }

@@ -41,10 +41,52 @@ const Storage = {
         return sha;
     };
 
+    /**
+     * Create directory and all parent directories recursively
+     */
+    const mkdirRecursive = async (dirPath) => {
+        if (!dirPath || dirPath === '/') return;
+
+        try {
+            await pfs.stat(dirPath);
+            // Directory exists
+            return;
+        } catch (e) {
+            // Directory doesn't exist, create parent first
+            const lastSlash = dirPath.lastIndexOf('/');
+            const parentDir = lastSlash > 0 ? dirPath.substring(0, lastSlash) : '/';
+
+            if (parentDir !== '/') {
+                await mkdirRecursive(parentDir);
+            }
+
+            try {
+                await pfs.mkdir(dirPath);
+                logger.debug(`[Storage-Git] Created directory: ${dirPath}`);
+            } catch (mkdirError) {
+                // Ignore if directory was created by another call
+                if (mkdirError.code !== 'EEXIST') {
+                    logger.error(`[Storage-Git] Failed to create directory ${dirPath}:`, mkdirError);
+                    throw mkdirError;
+                }
+            }
+        }
+    };
+
     const setArtifactContent = async (path, content) => {
         try {
+            // Ensure parent directories exist
+            const dir = path.substring(0, path.lastIndexOf('/'));
+            if (dir && dir !== '/') {
+                await mkdirRecursive(dir);
+            }
+
             await pfs.writeFile(path, content, 'utf8');
-            await git.add({ fs, dir: '/', filepath: path });
+
+            // git.add requires relative path (no leading slash)
+            const relativePath = path.startsWith('/') ? path.substring(1) : path;
+            await git.add({ fs, dir: '/', filepath: relativePath });
+
             await _commit(`Agent modified ${path}`);
         } catch (e) {
             throw new ArtifactError(`[Storage-Git] Failed to write artifact: ${e.message}`);
@@ -62,7 +104,9 @@ const Storage = {
 
     const deleteArtifact = async (path) => {
         try {
-            await git.remove({ fs, dir: '/', filepath: path });
+            // git.remove requires relative path (no leading slash)
+            const relativePath = path.startsWith('/') ? path.substring(1) : path;
+            await git.remove({ fs, dir: '/', filepath: relativePath });
             await _commit(`Agent deleted ${path}`);
         } catch (e) {
             throw new ArtifactError(`[Storage-Git] Failed to delete artifact: ${e.message}`);
@@ -84,14 +128,18 @@ const Storage = {
 
     // New Git-specific functions
     const getArtifactHistory = async (path) => {
-        return await git.log({ fs, dir: '/', filepath: path });
+        // git.log requires relative path (no leading slash)
+        const relativePath = path.startsWith('/') ? path.substring(1) : path;
+        return await git.log({ fs, dir: '/', filepath: relativePath });
     };
 
     const getArtifactDiff = async (path, refA, refB = 'HEAD') => {
-        const contentA = await git.readBlob({ fs, dir: '/', oid: refA, filepath: path });
-        const contentB = await git.readBlob({ fs, dir: '/', oid: refB, filepath: path });
+        // git.readBlob requires relative path (no leading slash)
+        const relativePath = path.startsWith('/') ? path.substring(1) : path;
+        const contentA = await git.readBlob({ fs, dir: '/', oid: refA, filepath: relativePath });
+        const contentB = await git.readBlob({ fs, dir: '/', oid: refB, filepath: relativePath });
         // This is a simplified diff. A real implementation would use a diff library.
-        return { 
+        return {
             contentA: new TextDecoder().decode(contentA.blob),
             contentB: new TextDecoder().decode(contentB.blob)
         };

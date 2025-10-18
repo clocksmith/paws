@@ -53,21 +53,30 @@ const DiffViewerUI = {
 
     // Initialize the diff viewer
     const init = (containerId) => {
+      console.log('[DiffViewerUI] init() called with containerId:', containerId);
+      logger.info('[DiffViewerUI] init() called with containerId:', containerId);
+
       // Clean up any existing listeners first
       cleanup();
 
       container = document.getElementById(containerId);
+      console.log('[DiffViewerUI] Container element:', container);
+
       if (!container) {
+        console.error('[DiffViewerUI] Container not found:', containerId);
         logger.error('[DiffViewerUI] Container not found:', containerId);
         return;
       }
 
       // Add styles if not already present (idempotent)
       if (!document.getElementById('diff-viewer-styles')) {
+        console.log('[DiffViewerUI] Adding styles to DOM');
         const styles = document.createElement('style');
         styles.id = 'diff-viewer-styles';
         styles.innerHTML = getDiffViewerStyles();
         document.head.appendChild(styles);
+      } else {
+        console.log('[DiffViewerUI] Styles already present');
       }
 
       // Register event listeners and store references
@@ -78,27 +87,40 @@ const DiffViewerUI = {
       EventBus.on('diff:clear', eventListeners.clearDiff);
       EventBus.on('diff:refresh', eventListeners.refreshDiff);
 
-      logger.info('[DiffViewerUI] Initialized');
+      console.log('[DiffViewerUI] Event listeners registered');
+      logger.info('[DiffViewerUI] Initialized successfully');
     };
 
     // Handle showing a diff
     const handleShowDiff = async (data) => {
+      console.log('[DiffViewerUI] handleShowDiff() called with data:', data);
       const { dogs_path, session_id, turn } = data;
 
       try {
+        console.log('[DiffViewerUI] Loading dogs bundle from:', dogs_path);
         // Load and parse the dogs bundle
         const dogsContent = await StateManager.getArtifactContent(dogs_path);
+        console.log('[DiffViewerUI] Dogs content loaded, length:', dogsContent?.length);
+
         if (!dogsContent) {
+          console.error('[DiffViewerUI] Dogs bundle not found at:', dogs_path);
           showError('Dogs bundle not found');
           return;
         }
 
+        console.log('[DiffViewerUI] Parsing dogs bundle...');
         const changes = await parseDogsBundle(dogsContent);
+        console.log('[DiffViewerUI] Parsed changes:', changes.length, 'changes');
+        console.log('[DiffViewerUI] Changes:', changes);
+
         currentDiff = { changes, dogs_path, session_id, turn };
 
+        console.log('[DiffViewerUI] Rendering diff...');
         renderDiff(changes);
+        console.log('[DiffViewerUI] Diff rendered successfully');
 
       } catch (error) {
+        console.error('[DiffViewerUI] Error showing diff:', error);
         logger.error('[DiffViewerUI] Error showing diff:', error);
         showError('Failed to load diff');
       }
@@ -208,7 +230,12 @@ const DiffViewerUI = {
 
     // Render the diff viewer
     const renderDiff = (changes) => {
-      if (!container) return;
+      console.log('[DiffViewerUI] renderDiff() called, container:', container, 'changes:', changes.length);
+
+      if (!container) {
+        console.error('[DiffViewerUI] Cannot render: container is null');
+        return;
+      }
 
       const html = `
         <div class="diff-viewer">
@@ -255,16 +282,21 @@ const DiffViewerUI = {
         </div>
       `;
 
+      console.log('[DiffViewerUI] Setting container innerHTML, html length:', html.length);
       container.innerHTML = html;
+      console.log('[DiffViewerUI] Container innerHTML set successfully');
 
       // Initialize diff rendering for each file
       changes.forEach((change, index) => {
         if (change.operation === 'MODIFY') {
+          console.log('[DiffViewerUI] Rendering MODIFY diff for:', change.file_path);
           renderFileDiff(change, index);
         }
       });
 
+      console.log('[DiffViewerUI] Updating approval stats...');
       updateApprovalStats();
+      console.log('[DiffViewerUI] Diff rendering complete');
     };
 
     // Get change statistics
@@ -1232,11 +1264,14 @@ const DiffViewerUI = {
   }
 };
 
+// Store module definition before setting up global API
+const DiffViewerUIModule = DiffViewerUI;
+
 // Register module and expose global API for onclick handlers
 // Fix: Create a single shared instance instead of creating new instances on each call
 if (typeof window !== 'undefined') {
   if (window.ModuleRegistry) {
-    window.ModuleRegistry.register(DiffViewerUI);
+    window.ModuleRegistry.register(DiffViewerUIModule);
   }
 
   // Create shared instance that will be initialized properly via DI container
@@ -1329,4 +1364,4 @@ if (typeof window !== 'undefined') {
   };
 }
 
-export default DiffViewerUI;
+export default DiffViewerUIModule;

@@ -75,9 +75,9 @@ async function runPaxosWorkflow({ objective, contextPath, verifyCmd, broadcast }
     await fs.writeFile(path.join(PARENT_DIR, contextPath), "# Mock Context");
     await fs.writeFile(CONFIG_PATH, JSON.stringify({
         "competitors": [
-            { "name": "gemini-pro", "model_id": "gemini-pro-1.5", "persona": "p_gemini_coder.md" },
-            { "name": "claude-3", "model_id": "claude-3-opus", "persona": "p_claude_coder.md" },
-            { "name": "codex-davinci", "model_id": "codex-davinci-002", "persona": "p_codex_coder.md" }
+            { "name": "gemini-flash", "model_id": "gemini-2.5-flash", "persona": "p_gemini_coder.md" },
+            { "name": "claude-sonnet", "model_id": "claude-4-5-sonnet", "persona": "p_claude_coder.md" },
+            { "name": "gpt-5", "model_id": "gpt-5-2025-08-07", "persona": "p_gpt_coder.md" }
         ]
     }, null, 2));
     await fs.mkdir(PERSONAS_DIR, { recursive: true });

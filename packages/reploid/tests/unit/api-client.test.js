@@ -32,7 +32,7 @@ describe('ApiClient Module (api-client.js)', () => {
     mockDeps = {
       config: {
         apiKey: 'test-api-key',
-        model: 'gemini-1.5-flash-latest'
+        model: 'gemini-2.5-flash'
       },
       Utils: {
         logger: {

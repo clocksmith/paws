@@ -122,8 +122,8 @@ class GeminiProvider extends BaseProvider {
   constructor(config, logger) {
     super(config, logger);
     this.apiKey = config.geminiApiKey || config.apiKey;
-    this.endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
-    this.model = config.geminiModel || 'gemini-1.5-flash';
+    this.endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+    this.model = config.geminiModel || 'gemini-2.5-flash';
   }
 
   async call(messages, options = {}) {
@@ -196,7 +196,7 @@ class OpenAIProvider extends BaseProvider {
     super(config, logger);
     this.apiKey = config.openaiApiKey;
     this.endpoint = config.openaiEndpoint || 'https://api.openai.com/v1/chat/completions';
-    this.model = config.openaiModel || 'gpt-4-turbo-preview';
+    this.model = config.openaiModel || 'gpt-5-2025-08-07';
   }
 
   async call(messages, options = {}) {
@@ -321,7 +321,7 @@ class AnthropicProvider extends BaseProvider {
     super(config, logger);
     this.apiKey = config.anthropicApiKey;
     this.endpoint = 'https://api.anthropic.com/v1/messages';
-    this.model = config.anthropicModel || 'claude-3-opus-20240229';
+    this.model = config.anthropicModel || 'claude-4-5-sonnet';
   }
 
   async call(messages, options = {}) {

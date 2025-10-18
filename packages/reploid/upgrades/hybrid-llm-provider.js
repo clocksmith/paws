@@ -12,24 +12,22 @@ const HybridLLMProvider = {
   metadata: {
     id: 'HybridLLMProvider',
     version: '1.0.0',
-    dependencies: ['Utils', 'EventBus', 'StateManager', 'LocalLLM'],
+    dependencies: ['config', 'Utils', 'EventBus', 'StateManager', 'LocalLLM', 'ApiClient'],
     async: true,
     type: 'agent'
   },
 
   factory: (deps) => {
-    const { Utils, EventBus, StateManager, LocalLLM } = deps;
+    const { config, Utils, EventBus, StateManager, LocalLLM, ApiClient } = deps;
     const { logger } = Utils;
 
     let useLocal = false; // Default to cloud
-    let cloudAPIClient = null;
 
     /**
      * Initialize hybrid provider
      */
-    const init = async (apiClient) => {
+    const init = async () => {
       logger.info('[HybridLLM] Initializing hybrid LLM provider');
-      cloudAPIClient = apiClient;
 
       // Check if local LLM is available and ready
       if (LocalLLM && LocalLLM.isReady()) {
@@ -104,17 +102,22 @@ const HybridLLMProvider = {
           return await completeLocal(messages, options);
         } else {
           // Use cloud API
-          if (!cloudAPIClient) {
-            throw new Error('Cloud API client not initialized');
+          if (!ApiClient) {
+            throw new Error('Cloud API client not available');
           }
 
           return await completeCloud(messages, options);
         }
       } catch (error) {
-        logger.error(`[HybridLLM] ${mode} completion failed:`, error);
+        logger.error(`[HybridLLM] ${mode} completion failed:`, {
+          name: error.name,
+          message: error.message,
+          code: error.code,
+          stack: error.stack
+        });
 
         // Auto-fallback: if local fails, try cloud
-        if (useLocal && cloudAPIClient) {
+        if (useLocal && ApiClient) {
           logger.info('[HybridLLM] Local inference failed, falling back to cloud');
 
           EventBus.emit('hybrid-llm:fallback', {
@@ -176,32 +179,34 @@ const HybridLLMProvider = {
      * Generate completion using cloud API
      */
     const completeCloud = async (messages, options = {}) => {
-      // Use existing cloud API client
-      const response = await cloudAPIClient.generateContent({
-        contents: messages.map(msg => ({
-          role: msg.role,
-          parts: [{ text: msg.content }]
-        })),
-        generationConfig: {
-          temperature: options.temperature || 0.7,
-          maxOutputTokens: options.maxOutputTokens || 8192
-        }
-      });
+      // Format messages for Gemini API (needs 'parts' array with 'text' property)
+      const history = messages.map(msg => ({
+        role: msg.role === 'system' ? 'user' : msg.role, // Gemini doesn't support 'system' role
+        parts: [{ text: msg.content }]
+      }));
+
+      logger.info('[HybridLLM] Calling Gemini API via ApiClient (proxy mode)');
+
+      // Call ApiClient - it will automatically use proxy if available
+      // The proxy server has the API key from environment variables
+      const response = await ApiClient.callApiWithRetry(history, null);
 
       // Extract text from response
-      const text = response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const text = response.content || '';
 
-      // Get usage metadata
-      const usage = response?.usageMetadata || {};
+      logger.info('[HybridLLM] Cloud completion generated', {
+        type: response.type,
+        length: text.length
+      });
 
       return {
         text,
         usage: {
-          promptTokens: usage.promptTokenCount || 0,
-          completionTokens: usage.candidatesTokenCount || 0,
-          totalTokens: usage.totalTokenCount || 0
+          promptTokens: 0,  // Gemini doesn't always return usage in our current setup
+          completionTokens: 0,
+          totalTokens: 0
         },
-        model: options.model || 'cloud',
+        model: options.model || 'gemini-2.5-flash',
         provider: 'cloud'
       };
     };
@@ -273,7 +278,7 @@ const HybridLLMProvider = {
       return {
         mode: getMode(),
         localAvailable: isLocalAvailable(),
-        cloudAvailable: !!cloudAPIClient,
+        cloudAvailable: !!ApiClient && !!config?.api?.gemini?.apiKey,
         localModel: LocalLLM?.getCurrentModel?.() || null,
         localReady: LocalLLM?.isReady?.() || false
       };

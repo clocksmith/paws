@@ -387,6 +387,7 @@ app.post('/api/anthropic/*', async (req, res) => {
 app.get('/api/proxy-status', (req, res) => {
   res.json({
     proxyAvailable: true,
+    hasApiKey: !!GEMINI_API_KEY, // For backwards compatibility with ApiClient
     providers: {
       gemini: !!GEMINI_API_KEY,
       openai: !!OPENAI_API_KEY,

@@ -263,13 +263,26 @@
     "APPL",
     "UTIL",
     "STMT",
-    "LSTR",
+    "IDXB",
     "APIC",
     "CYCL",
+    "PRMT",
+    "AGLP",
+    "STHP",
+    "TRUN",
     "TLRD",
     "TLWR",
+    "TRHP",
+    "MTCP",
+    "INTR",
+    "STRM",
+    "CTXM",
+    "UIMN",
+    "STYL",
+    "BODY",
     "LLMR",
-    "HYBR"
+    "HYBR",
+    "PMON"
   ],
   "curatorMode": {
     "enabled": false,
@@ -897,6 +910,20 @@
       "description": "Aggregates Paxos telemetry and emits analytics snapshots",
       "category": "analytics",
       "blueprint": "0x000024"
+    },
+    {
+      "id": "STRM",
+      "path": "streaming-response-handler.js",
+      "description": "Real-time streaming response handler for incremental UI updates",
+      "category": "service",
+      "blueprint": "0x000045"
+    },
+    {
+      "id": "CTXM",
+      "path": "context-manager.js",
+      "description": "Intelligent context window management and pruning",
+      "category": "intelligence",
+      "blueprint": "0x000046"
     }
   ],
   "blueprints": [
@@ -1209,6 +1236,16 @@
       "id": "0x000044",
       "path": "0x000044-webrtc-swarm-transport.md",
       "description": "Implements WebRTC swarm transport."
+    },
+    {
+      "id": "0x000045",
+      "path": "0x000045-streaming-response-handler.md",
+      "description": "Real-time streaming response handler for incremental UI updates."
+    },
+    {
+      "id": "0x000046",
+      "path": "0x000046-context-management.md",
+      "description": "Intelligent context window management and pruning for optimal LLM performance."
     }
   ]
 }

@@ -21,37 +21,109 @@
         </button>
     </div>
     <div id="goal-panel" class="panel" role="region" aria-labelledby="dashboard-goal-title">
-        <h2 id="dashboard-goal-title">Current Goal</h2>
-        <p id="goal-text" aria-live="polite"></p>
+        <h2 id="dashboard-goal-title">◈ Current Goal</h2>
+        <p id="goal-text" aria-live="polite" class="goal-text-empty">No goal set. Launch agent from boot screen with a goal.</p>
     </div>
-                <div id="sentinel-panel" class="panel" role="region" aria-label="Sentinel Control">
-            <h4>Sentinel Control</h4>
-            <div id="sentinel-content" aria-live="polite" aria-relevant="additions text"></div>
-            <div id="sentinel-actions" role="group" aria-label="Sentinel actions">
-                <button id="sentinel-approve-btn" class="hidden" aria-label="Approve changes">Approve</button>
-                <button id="sentinel-revise-btn" class="hidden" aria-label="Revise proposal">Revise</button>
+    <div id="agent-progress-tracker" class="panel agent-progress-tracker" role="region" aria-label="Agent Progress">
+        <h3>◐ Agent Progress</h3>
+        <div id="progress-steps" class="progress-steps"></div>
+    </div>
+    <div id="sentinel-panel" class="panel" role="region" aria-label="Sentinel Control">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h4 style="margin: 0;">⛨ Sentinel Control</h4>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 11px; color: #888;">Auto-Approve</span>
+                <label class="toggle-switch" title="Auto-approve context curation (never approves code changes)">
+                    <input type="checkbox" id="session-auto-approve-toggle" />
+                    <span class="toggle-slider"></span>
+                </label>
             </div>
         </div>
-        <div class="panel-container">
-            <div id="vfs-explorer-panel" class="panel" role="region" aria-labelledby="vfs-explorer-title">
-                <h4 id="vfs-explorer-title">VFS Explorer</h4>
-                <div id="vfs-tree" role="tree" aria-label="Virtual file system explorer"></div>
-            </div>
-            <div id="thought-panel" class="panel" role="region" aria-labelledby="thought-panel-title">
-                <h4 id="thought-panel-title">Agent Thoughts</h4>
-                <div id="thought-stream" aria-live="polite" aria-relevant="additions" aria-atomic="false"></div>
-            </div>
-            <div id="diff-viewer-panel" class="panel" role="region" aria-labelledby="diff-viewer-title">
-                <h4 id="diff-viewer-title">Visual Diffs</h4>
-                <div id="diff-viewer" aria-live="polite" aria-relevant="additions text"></div>
+        <div id="sentinel-content" aria-live="polite" aria-relevant="additions text" class="sentinel-empty">
+            <p class="empty-state-message">Waiting for agent to request approval...</p>
+            <p class="empty-state-help">When the agent wants to read files or modify code, approval buttons will appear here.</p>
+        </div>
+        <div id="sentinel-actions" role="group" aria-label="Sentinel actions">
+            <button id="sentinel-approve-btn" class="btn-primary hidden" aria-label="Approve changes">✓ Approve</button>
+            <button id="sentinel-revise-btn" class="btn-secondary hidden" aria-label="Revise proposal">⟲ Revise</button>
+        </div>
+    </div>
+    <div class="panel-container">
+        <div id="vfs-explorer-panel" class="panel" role="region" aria-labelledby="vfs-explorer-title">
+            <h4 id="vfs-explorer-title">⛁ VFS Explorer</h4>
+            <div id="vfs-tree" role="tree" aria-label="Virtual file system explorer">
+                <div class="empty-state-message">No files yet.</div>
+                <div class="empty-state-help">Files will appear here when the agent creates or modifies them.</div>
             </div>
         </div>
+        <div id="thought-panel" class="panel" role="region" aria-labelledby="thought-panel-title">
+            <h4 id="thought-panel-title">◐ Agent Thoughts</h4>
+            <div id="thought-stream" aria-live="polite" aria-relevant="additions" aria-atomic="false">
+                <div class="empty-state-message">Agent hasn't started yet.</div>
+                <div class="empty-state-help">Enter a goal and launch the agent to see its reasoning stream here.</div>
+            </div>
+        </div>
+        <div id="diff-viewer-panel" class="panel" role="region" aria-labelledby="diff-viewer-title">
+            <h4 id="diff-viewer-title">◫ Visual Diffs</h4>
+            <div id="diff-viewer" aria-live="polite" aria-relevant="additions text">
+                <div class="empty-state-message">No changes proposed yet.</div>
+                <div class="empty-state-help">Side-by-side diffs appear here when the agent proposes code modifications.</div>
+            </div>
+        </div>
+    </div>
     <div id="visual-preview-panel" class="panel hidden" role="region" aria-labelledby="preview-panel-title">
         <h2 id="preview-panel-title">Live Preview</h2>
         <iframe id="preview-iframe" sandbox="allow-scripts" csp="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline';" title="Live preview of generated content"></iframe>
     </div>
-    <div id="advanced-log-toggle" class="panel" role="region" aria-label="Log view controls">
-        <button id="log-toggle-btn" aria-pressed="false" aria-controls="advanced-log-panel thought-panel">Show Advanced Logs</button>
+
+    <!-- Collapsible Section: Debugging & Monitoring -->
+    <div class="panel-section">
+        <button class="section-toggle" data-section="debugging" aria-expanded="false">
+            <span class="section-icon">▶</span>
+            <span class="section-title">⚙ Debugging & Monitoring</span>
+            <span class="section-count">3 tools</span>
+        </button>
+        <div class="section-content" id="debugging-section" style="display: none;">
+            <div class="section-buttons">
+                <button class="panel-switch-btn" data-panel="logs">Advanced Logs</button>
+                <button class="panel-switch-btn" data-panel="performance">Performance Metrics</button>
+                <button class="panel-switch-btn" data-panel="introspection">Self-Analysis</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collapsible Section: Development Tools -->
+    <div class="panel-section">
+        <button class="section-toggle" data-section="dev-tools" aria-expanded="false">
+            <span class="section-icon">▶</span>
+            <span class="section-title">⚗ Development Tools</span>
+            <span class="section-count">3 tools</span>
+        </button>
+        <div class="section-content" id="dev-tools-section" style="display: none;">
+            <div class="section-buttons">
+                <button class="panel-switch-btn" data-panel="python">Python REPL</button>
+                <button class="panel-switch-btn" data-panel="llm">Local LLM (WebGPU)</button>
+                <button class="panel-switch-btn" data-panel="ast">AST Visualizer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collapsible Section: Advanced Features -->
+    <div class="panel-section">
+        <button class="section-toggle" data-section="advanced" aria-expanded="false">
+            <span class="section-icon">▶</span>
+            <span class="section-title">◆ Advanced Features</span>
+            <span class="section-count">5 tools</span>
+        </button>
+        <div class="section-content" id="advanced-section" style="display: none;">
+            <div class="section-buttons">
+                <button class="panel-switch-btn" data-panel="reflections">Learning History</button>
+                <button class="panel-switch-btn" data-panel="tests">Self-Test Validation</button>
+                <button class="panel-switch-btn" data-panel="apis">Browser Capabilities</button>
+                <button class="panel-switch-btn" data-panel="agent-viz">Agent Visualization</button>
+                <button class="panel-switch-btn" data-panel="canvas-viz">Canvas Visualizer</button>
+            </div>
+        </div>
     </div>
     <div id="advanced-log-panel" class="panel hidden" role="region" aria-labelledby="advanced-log-title" aria-live="polite">
         <h2 id="advanced-log-title">Advanced Logs</h2>

@@ -619,7 +619,7 @@ function renderCloudConfig(env) {
     const geminiKey = localStorage.getItem('GEMINI_API_KEY') || '';
     const geminiConfigured = !!geminiKey;
     const geminiStoredModel = localStorage.getItem('GEMINI_SELECTED_MODEL') ||
-        (selectedModel.startsWith('gemini-') ? selectedModel : 'gemini-2.0-flash');
+        (selectedModel.startsWith('gemini-') ? selectedModel : 'gemini-2.5-flash');
     html += `
         <div class="provider-card ${geminiConfigured ? 'configured' : ''} ${state.selectedProvider === 'gemini' ? 'selected' : ''}" data-provider="gemini">
             <div class="provider-header">
@@ -630,8 +630,8 @@ function renderCloudConfig(env) {
             </div>
             <p class="provider-description">Fast and cost-effective • 1,500 free requests/day • Best for rapid iteration</p>
             <select class="provider-model-select" data-provider="gemini">
-                <option value="gemini-2.0-flash" ${geminiStoredModel === 'gemini-2.0-flash' ? 'selected' : ''}>Gemini 2.0 Flash (~$0.01/1K)</option>
-                <option value="gemini-1.5-pro" ${geminiStoredModel === 'gemini-1.5-pro' ? 'selected' : ''}>Gemini 1.5 Pro (~$0.05/1K)</option>
+                <option value="gemini-2.5-flash-lite" ${geminiStoredModel === 'gemini-2.5-flash-lite' ? 'selected' : ''}>Gemini 2.5 Flash Lite (Fast)</option>
+                <option value="gemini-2.5-flash" ${geminiStoredModel === 'gemini-2.5-flash' ? 'selected' : ''}>Gemini 2.5 Flash (Balanced)</option>
             </select>
             <input type="password" class="provider-api-key ${geminiConfigured ? 'configured' : ''}" data-provider="gemini" placeholder="AIza..." value="${geminiKey ? '●●●●●●●●' + geminiKey.slice(-4) : ''}" />
         </div>
@@ -640,7 +640,7 @@ function renderCloudConfig(env) {
     const openaiKey = localStorage.getItem('OPENAI_API_KEY') || '';
     const openaiConfigured = !!openaiKey;
     const openaiStoredModel = localStorage.getItem('OPENAI_SELECTED_MODEL') ||
-        (selectedModel.startsWith('gpt-') ? selectedModel : 'gpt-4o');
+        (selectedModel.startsWith('gpt-') ? selectedModel : 'gpt-5-2025-08-07');
     html += `
         <div class="provider-card ${openaiConfigured ? 'configured' : ''} ${state.selectedProvider === 'openai' ? 'selected' : ''}" data-provider="openai">
             <div class="provider-header">
@@ -651,9 +651,8 @@ function renderCloudConfig(env) {
             </div>
             <p class="provider-description">Most popular • Vision and multimodal support • Best for production</p>
             <select class="provider-model-select" data-provider="openai">
-                <option value="gpt-4o" ${openaiStoredModel === 'gpt-4o' ? 'selected' : ''}>GPT-4o (~$0.10/1K)</option>
-                <option value="gpt-4-turbo" ${openaiStoredModel === 'gpt-4-turbo' ? 'selected' : ''}>GPT-4 Turbo (~$0.08/1K)</option>
-                <option value="gpt-3.5-turbo" ${openaiStoredModel === 'gpt-3.5-turbo' ? 'selected' : ''}>GPT-3.5 Turbo (~$0.02/1K)</option>
+                <option value="gpt-5-2025-08-07-mini" ${openaiStoredModel === 'gpt-5-2025-08-07-mini' ? 'selected' : ''}>GPT-5 Mini (Fast)</option>
+                <option value="gpt-5-2025-08-07" ${openaiStoredModel === 'gpt-5-2025-08-07' ? 'selected' : ''}>GPT-5 (Advanced)</option>
             </select>
             <input type="password" class="provider-api-key ${openaiConfigured ? 'configured' : ''}" data-provider="openai" placeholder="sk-..." value="${openaiKey ? '●●●●●●●●' + openaiKey.slice(-4) : ''}" />
         </div>
@@ -662,7 +661,7 @@ function renderCloudConfig(env) {
     const anthropicKey = localStorage.getItem('ANTHROPIC_API_KEY') || '';
     const anthropicConfigured = !!anthropicKey;
     const anthropicStoredModel = localStorage.getItem('ANTHROPIC_SELECTED_MODEL') ||
-        (selectedModel.startsWith('claude-') ? selectedModel : 'claude-3-5-sonnet');
+        (selectedModel.startsWith('claude-') ? selectedModel : 'claude-4-5-sonnet');
     html += `
         <div class="provider-card ${anthropicConfigured ? 'configured' : ''} ${state.selectedProvider === 'anthropic' ? 'selected' : ''}" data-provider="anthropic">
             <div class="provider-header">
@@ -673,8 +672,8 @@ function renderCloudConfig(env) {
             </div>
             <p class="provider-description">Excellent for coding • Best safety features • Best for complex reasoning</p>
             <select class="provider-model-select" data-provider="anthropic">
-                <option value="claude-3-5-sonnet" ${anthropicStoredModel === 'claude-3-5-sonnet' ? 'selected' : ''}>Claude 3.5 Sonnet (~$0.06/1K)</option>
-                <option value="claude-3-opus" ${anthropicStoredModel === 'claude-3-opus' ? 'selected' : ''}>Claude 3 Opus (~$0.12/1K)</option>
+                <option value="claude-4-5-haiku" ${anthropicStoredModel === 'claude-4-5-haiku' ? 'selected' : ''}>Claude 4.5 Haiku (Fast)</option>
+                <option value="claude-4-5-sonnet" ${anthropicStoredModel === 'claude-4-5-sonnet' ? 'selected' : ''}>Claude 4.5 Sonnet (Balanced)</option>
             </select>
             <input type="password" class="provider-api-key ${anthropicConfigured ? 'configured' : ''}" data-provider="anthropic" placeholder="sk-ant-..." value="${anthropicKey ? '●●●●●●●●' + anthropicKey.slice(-4) : ''}" />
         </div>
@@ -812,15 +811,15 @@ function renderMultiConfig(env) {
     html += `
         <div style="margin: 16px 0;">
             <label style="display: block; margin-bottom: 6px; color: #b9bad6; font-size: 13px;">Primary Model (Fast, cheap):</label>
-            <input type="text" id="mode-paxos-primary" value="${paxosPrimary}" placeholder="e.g., gemini-2.0-flash" style="width: 100%; padding: 8px; background: #0d0d14; border: 1px solid #252532; border-radius: 6px; color: #f4f4ff;" />
+            <input type="text" id="mode-paxos-primary" value="${paxosPrimary}" placeholder="e.g., gemini-2.5-flash-lite" style="width: 100%; padding: 8px; background: #0d0d14; border: 1px solid #252532; border-radius: 6px; color: #f4f4ff;" />
         </div>
         <div style="margin: 16px 0;">
             <label style="display: block; margin-bottom: 6px; color: #b9bad6; font-size: 13px;">Fallback Model (Reliable backup):</label>
-            <input type="text" id="mode-paxos-fallback" value="${paxosFallback}" placeholder="e.g., gpt-4o" style="width: 100%; padding: 8px; background: #0d0d14; border: 1px solid #252532; border-radius: 6px; color: #f4f4ff;" />
+            <input type="text" id="mode-paxos-fallback" value="${paxosFallback}" placeholder="e.g., gpt-5-2025-08-07" style="width: 100%; padding: 8px; background: #0d0d14; border: 1px solid #252532; border-radius: 6px; color: #f4f4ff;" />
         </div>
         <div style="margin: 16px 0;">
             <label style="display: block; margin-bottom: 6px; color: #b9bad6; font-size: 13px;">Consensus Model (Quality tiebreaker):</label>
-            <input type="text" id="mode-paxos-consensus" value="${paxosConsensus}" placeholder="e.g., claude-3-5-sonnet" style="width: 100%; padding: 8px; background: #0d0d14; border: 1px solid #252532; border-radius: 6px; color: #f4f4ff;" />
+            <input type="text" id="mode-paxos-consensus" value="${paxosConsensus}" placeholder="e.g., claude-4-5-sonnet" style="width: 100%; padding: 8px; background: #0d0d14; border: 1px solid #252532; border-radius: 6px; color: #f4f4ff;" />
         </div>
     `;
 
@@ -980,10 +979,10 @@ function saveCloudMode() {
 
     if (!selectedModel) {
         selectedModel = primaryProvider === 'gemini'
-            ? 'gemini-2.0-flash'
+            ? 'gemini-2.5-flash'
             : primaryProvider === 'openai'
-                ? 'gpt-4o'
-                : 'claude-3-5-sonnet';
+                ? 'gpt-5-2025-08-07'
+                : 'claude-4-5-sonnet';
         localStorage.setItem(primaryModelKey, selectedModel);
     }
 

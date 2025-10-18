@@ -6,13 +6,13 @@ const UI = {
     id: 'UI',
     version: '4.0.0',
     description: 'Central UI management with browser-native visualizer integration, modal system, toast notifications, Python REPL, and Local LLM',
-    dependencies: ['config', 'Utils', 'DiffGenerator', 'EventBus', 'VFSExplorer', 'PerformanceMonitor', 'MetricsDashboard', 'Introspector', 'ReflectionStore', 'SelfTester', 'BrowserAPIs', 'AgentVisualizer', 'ASTVisualizer', 'ModuleGraphVisualizer', 'ToastNotifications', 'TutorialSystem', 'PyodideRuntime', 'LocalLLM'],
+    dependencies: ['config', 'Utils', 'StateManager', 'DiffGenerator', 'EventBus', 'VFSExplorer', 'PerformanceMonitor', 'MetricsDashboard', 'Introspector', 'ReflectionStore', 'SelfTester', 'BrowserAPIs', 'AgentVisualizer', 'ASTVisualizer', 'ModuleGraphVisualizer', 'ToastNotifications', 'TutorialSystem', 'PyodideRuntime', 'LocalLLM'],
     async: true,
     type: 'ui'
   },
 
   factory: (deps) => {
-    const { config, Utils, DiffGenerator, EventBus, VFSExplorer, PerformanceMonitor, MetricsDashboard, Introspector, ReflectionStore, SelfTester, BrowserAPIs, AgentVisualizer, ASTVisualizer, ModuleGraphVisualizer, ToastNotifications, TutorialSystem, PyodideRuntime, LocalLLM } = deps;
+    const { config, Utils, StateManager, DiffGenerator, EventBus, VFSExplorer, PerformanceMonitor, MetricsDashboard, Introspector, ReflectionStore, SelfTester, BrowserAPIs, AgentVisualizer, ASTVisualizer, ModuleGraphVisualizer, ToastNotifications, TutorialSystem, PyodideRuntime, LocalLLM } = deps;
     const { logger, showButtonSuccess, exportAsMarkdown } = Utils;
 
     let uiRefs = {};
@@ -162,47 +162,9 @@ const UI = {
     };
 
     const setupProgressStream = () => {
-        if (typeof WebSocket === 'undefined') {
-            logger.warn('[UI] Browser lacks WebSocket support; skipping progress stream');
-            return;
-        }
-
-        const url = resolveProgressUrl();
-
-        const connect = () => {
-            try {
-                progressSocket = new WebSocket(url);
-            } catch (err) {
-                logger.warn(`[UI] Unable to connect to progress stream at ${url}:`, err.message || err);
-                return;
-            }
-
-            progressSocket.addEventListener('open', () => {
-                progressAttempts = 0;
-                logger.info(`[UI] Connected to progress stream (${url})`);
-            });
-
-            progressSocket.addEventListener('message', handleProgressMessage);
-
-            progressSocket.addEventListener('close', () => {
-                if (progressAttempts >= 5) {
-                    logger.warn('[UI] Progress stream disconnected; retries exhausted');
-                    return;
-                }
-                progressAttempts += 1;
-                const delay = Math.min(10000, progressAttempts * 1000);
-                if (progressReconnectTimer) {
-                    clearTimeout(progressReconnectTimer);
-                }
-                progressReconnectTimer = setTimeout(connect, delay);
-            });
-
-            progressSocket.addEventListener('error', (event) => {
-                logger.warn('[UI] Progress stream error:', event?.message || event);
-            });
-        };
-
-        connect();
+        // Progress streaming is disabled - server only has /signaling WebSocket for WebRTC
+        logger.debug('[UI] Progress streaming disabled (not supported by server)');
+        return;
     };
 
     // Save current panel state to localStorage
@@ -1378,6 +1340,7 @@ const UI = {
             "goal-text", "thought-stream", "diff-viewer", "log-toggle-btn",
             "advanced-log-panel", "log-output", "thought-panel",
             "visual-preview-panel", "preview-iframe", "dashboard", "status-bar",
+            "status-icon", "status-state", "status-detail", "status-progress", "progress-fill",
             "performance-panel", "perf-session", "perf-llm", "perf-memory", "perf-tools",
             "introspection-panel", "intro-modules", "intro-tools", "intro-capabilities",
             "reflections-panel", "refl-summary", "refl-patterns", "refl-recent",
@@ -1387,7 +1350,9 @@ const UI = {
             "agent-visualizer-panel", "agent-visualizer-container",
             "ast-visualizer-panel", "ast-viz-container", "ast-code-input",
             "python-repl-panel", "python-code-input", "python-output", "pyodide-status-icon", "pyodide-status-text",
-            "local-llm-panel", "llm-status-icon", "llm-status-text", "llm-current-model"
+            "local-llm-panel", "llm-status-icon", "llm-status-text", "llm-current-model",
+            "sentinel-content", "sentinel-approve-btn", "sentinel-revise-btn",
+            "agent-progress-tracker", "progress-steps"
         ];
         ids.forEach(id => {
             uiRefs[Utils.kabobToCamel(id)] = document.getElementById(id);
@@ -1885,84 +1850,93 @@ function greet(name) {
     };
 
     const setupEventListeners = () => {
-        uiRefs.logToggleBtn?.addEventListener('click', async () => {
-            // Cycle: Thoughts → Performance → Introspection → Reflections → Tests → APIs → Agent Viz → AST Viz → Python REPL → Local LLM → Logs → Thoughts
-            if (isLlmView) {
-                // Switch from Local LLM to logs
-                isLlmView = false;
-                isLogView = true;
-                showOnlyPanel(uiRefs.advancedLogPanel);
-                uiRefs.logToggleBtn.textContent = 'Show Agent Thoughts';
-            } else if (isPyReplView) {
-                // Switch from Python REPL to Local LLM
-                isPyReplView = false;
-                isLlmView = true;
-                showOnlyPanel(uiRefs.localLlmPanel);
-                await renderLocalLLMPanel();
-                uiRefs.logToggleBtn.textContent = 'Show Advanced Logs';
-            } else if (isAstvView) {
-                // Switch from AST Viz to Python REPL
-                isAstvView = false;
-                isPyReplView = true;
-                showOnlyPanel(uiRefs.pythonReplPanel);
-                renderPythonReplPanel();
-                uiRefs.logToggleBtn.textContent = 'Show Local LLM';
-            } else if (isAvisView) {
-                // Switch from Agent Viz to AST Viz
-                isAvisView = false;
-                isAstvView = true;
-                showOnlyPanel(uiRefs.astVisualizerPanel);
-                renderASTVisualizerPanel();
-                uiRefs.logToggleBtn.textContent = 'Show Python REPL';
-            } else if (isApiView) {
-                // Switch from APIs to Agent Viz
-                isApiView = false;
-                isAvisView = true;
-                showOnlyPanel(uiRefs.agentVisualizerPanel);
-                renderAgentVisualizerPanel();
-                uiRefs.logToggleBtn.textContent = 'Show AST Visualization';
-            } else if (isTestView) {
-                // Switch from tests to APIs
-                isTestView = false;
-                isApiView = true;
-                showOnlyPanel(uiRefs.browserApisPanel);
-                await renderBrowserAPIsPanel();
-                uiRefs.logToggleBtn.textContent = 'Show Agent Visualization';
-            } else if (isReflView) {
-                // Switch from reflections to tests
-                isReflView = false;
-                isTestView = true;
-                showOnlyPanel(uiRefs.selfTestPanel);
-                await renderSelfTestPanel();
-                uiRefs.logToggleBtn.textContent = 'Show Browser APIs';
-            } else if (isIntroView) {
-                // Switch from introspection to reflections
-                isIntroView = false;
-                isReflView = true;
-                showOnlyPanel(uiRefs.reflectionsPanel);
-                await renderReflectionsPanel();
-                uiRefs.logToggleBtn.textContent = 'Show Self-Tests';
-            } else if (isPerfView) {
-                // Switch from perf to introspection
-                isPerfView = false;
-                isIntroView = true;
-                showOnlyPanel(uiRefs.introspectionPanel);
-                await renderIntrospectionPanel();
-                uiRefs.logToggleBtn.textContent = 'Show Learning History';
-            } else if (isLogView) {
-                // Switch from logs to thoughts
-                isLogView = false;
-                showOnlyPanel(uiRefs.thoughtPanel);
-                uiRefs.logToggleBtn.textContent = 'Show Performance';
-            } else {
-                // Switch from thoughts to perf
-                isPerfView = true;
-                showOnlyPanel(uiRefs.performancePanel);
-                renderPerformancePanel();
-                uiRefs.logToggleBtn.textContent = 'Show Self-Analysis';
-            }
-            uiRefs.logToggleBtn.setAttribute('aria-pressed', (isLogView || isPerfView || isIntroView || isReflView || isTestView || isApiView || isAvisView || isAstvView || isPyReplView || isLlmView).toString());
-            savePanelState(); // Persist panel state
+        // Collapsible section toggles
+        document.querySelectorAll('.section-toggle').forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                const section = toggle.dataset.section;
+                const content = document.getElementById(`${section}-section`);
+                const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+
+                if (isExpanded) {
+                    content.style.display = 'none';
+                    toggle.setAttribute('aria-expanded', 'false');
+                } else {
+                    content.style.display = 'block';
+                    toggle.setAttribute('aria-expanded', 'true');
+                }
+            });
+        });
+
+        // Panel switch buttons
+        document.querySelectorAll('.panel-switch-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const panel = btn.dataset.panel;
+
+                // Remove active class from all buttons
+                document.querySelectorAll('.panel-switch-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Hide all special panels, show main three
+                showOnlyPanel(null);
+
+                // Switch to requested panel
+                switch(panel) {
+                    case 'logs':
+                        isLogView = true;
+                        showOnlyPanel(uiRefs.advancedLogPanel);
+                        break;
+                    case 'performance':
+                        isPerfView = true;
+                        showOnlyPanel(uiRefs.performancePanel);
+                        renderPerformancePanel();
+                        break;
+                    case 'introspection':
+                        isIntroView = true;
+                        showOnlyPanel(uiRefs.introspectionPanel);
+                        await renderIntrospectionPanel();
+                        break;
+                    case 'reflections':
+                        isReflView = true;
+                        showOnlyPanel(uiRefs.reflectionsPanel);
+                        await renderReflectionsPanel();
+                        break;
+                    case 'tests':
+                        isTestView = true;
+                        showOnlyPanel(uiRefs.selfTestPanel);
+                        await renderSelfTestPanel();
+                        break;
+                    case 'apis':
+                        isApiView = true;
+                        showOnlyPanel(uiRefs.browserApisPanel);
+                        await renderBrowserAPIsPanel();
+                        break;
+                    case 'python':
+                        isPyReplView = true;
+                        showOnlyPanel(uiRefs.pythonReplPanel);
+                        renderPythonReplPanel();
+                        break;
+                    case 'llm':
+                        isLlmView = true;
+                        showOnlyPanel(uiRefs.localLlmPanel);
+                        await renderLocalLLMPanel();
+                        break;
+                    case 'ast':
+                        isAstvView = true;
+                        showOnlyPanel(uiRefs.astVisualizerPanel);
+                        renderASTVisualizerPanel();
+                        break;
+                    case 'agent-viz':
+                        isAvisView = true;
+                        showOnlyPanel(uiRefs.agentVisualizerPanel);
+                        renderAgentVisualizerPanel();
+                        break;
+                    case 'canvas-viz':
+                        // Canvas viz logic here
+                        break;
+                }
+
+                savePanelState();
+            });
         });
 
         // Export session report button
@@ -2090,9 +2064,88 @@ function greet(name) {
         return md;
     };
 
+    const updateStatusBar = (state, detail, progress) => {
+        // Update state text and icon
+        if (uiRefs.statusState) {
+            uiRefs.statusState.textContent = state || 'IDLE';
+        }
+
+        // Update status icon based on state (non-emoji unicode only)
+        if (uiRefs.statusIcon) {
+            const icons = {
+                'IDLE': '○',
+                'CURATING_CONTEXT': '⚙',
+                'AWAITING_CONTEXT_APPROVAL': '⏸',
+                'PLANNING_WITH_CONTEXT': '⚙',
+                'GENERATING_PROPOSAL': '⚙',
+                'AWAITING_PROPOSAL_APPROVAL': '⏸',
+                'APPLYING_CHANGESET': '▶',
+                'REFLECTING': '◐',
+                'ERROR': '⚠'
+            };
+            uiRefs.statusIcon.textContent = icons[state] || '○';
+        }
+
+        // Update detail text
+        if (uiRefs.statusDetail && detail !== null && detail !== undefined) {
+            uiRefs.statusDetail.textContent = detail || '';
+        }
+
+        // Update progress bar
+        if (uiRefs.statusProgress && uiRefs.progressFill) {
+            if (progress !== null && progress !== undefined) {
+                uiRefs.statusProgress.style.display = 'block';
+                uiRefs.progressFill.style.width = `${progress}%`;
+                uiRefs.statusProgress.setAttribute('aria-valuenow', progress);
+            } else {
+                uiRefs.statusProgress.style.display = 'none';
+            }
+        }
+    };
+
     const setupEventBusListeners = () => {
+        // Listen to FSM state changes
+        EventBus.on('fsm:state:changed', (data) => {
+            handleStateChange({ newState: data.newState, context: data.context });
+        });
+
+        // Listen to status updates
+        EventBus.on('status:updated', (data) => {
+            updateStatusBar(data.state, data.detail, data.progress);
+        });
+
+        // Legacy event name support
         EventBus.on('agent:state:change', handleStateChange);
-        // ... other listeners
+    };
+
+    const updateProgressTracker = (currentState) => {
+        if (!uiRefs.progressSteps) return;
+
+        const steps = [
+            { state: 'IDLE', icon: '○', label: 'Idle' },
+            { state: 'CURATING_CONTEXT', icon: '⚙', label: 'Curating' },
+            { state: 'AWAITING_CONTEXT_APPROVAL', icon: '⏸', label: 'Approve Context' },
+            { state: 'PLANNING_WITH_CONTEXT', icon: '◐', label: 'Planning' },
+            { state: 'GENERATING_PROPOSAL', icon: '✎', label: 'Generating' },
+            { state: 'AWAITING_PROPOSAL_APPROVAL', icon: '⏸', label: 'Approve Proposal' },
+            { state: 'APPLYING_CHANGESET', icon: '▶', label: 'Applying' },
+            { state: 'REFLECTING', icon: '◐', label: 'Reflecting' }
+        ];
+
+        const currentIndex = steps.findIndex(s => s.state === currentState);
+
+        uiRefs.progressSteps.innerHTML = steps.map((step, index) => {
+            let className = 'progress-step';
+            if (index < currentIndex) className += ' completed';
+            if (index === currentIndex) className += ' active';
+
+            return `
+                <div class="${className}">
+                    <span class="step-icon">${step.icon}</span>
+                    <span class="step-label">${step.label}</span>
+                </div>
+            `;
+        }).join('');
     };
 
     const handleStateChange = async ({ newState, context }) => {
@@ -2100,10 +2153,15 @@ function greet(name) {
         const approveBtn = uiRefs.sentinelApproveBtn;
         const reviseBtn = uiRefs.sentinelReviseBtn;
 
+        // Update progress tracker
+        updateProgressTracker(newState);
+
         // Hide all actions by default
         approveBtn.classList.add('hidden');
         reviseBtn.classList.add('hidden');
         sentinelContent.innerHTML = '';
+        // Remove empty state class when showing actual content
+        sentinelContent.classList.remove('sentinel-empty');
 
         switch (newState) {
             case 'AWAITING_CONTEXT_APPROVAL':
@@ -2177,13 +2235,42 @@ function greet(name) {
     };
 
     const updateGoal = (text) => {
-        if (uiRefs.goalText) uiRefs.goalText.textContent = text;
+        logger.info('[UI] updateGoal called with:', { text, hasGoalTextRef: !!uiRefs.goalText });
+
+        if (uiRefs.goalText) {
+            uiRefs.goalText.textContent = text;
+            // Remove empty state class when goal is set
+            if (text && text.trim()) {
+                uiRefs.goalText.classList.remove('goal-text-empty');
+            } else {
+                uiRefs.goalText.classList.add('goal-text-empty');
+            }
+            logger.info('[UI] Goal text element updated successfully');
+        } else {
+            logger.error('[UI] goalText ref is null - element not found');
+            // Try direct DOM access as fallback
+            const goalEl = document.getElementById('goal-text');
+            if (goalEl) {
+                logger.warn('[UI] Using fallback direct DOM access');
+                goalEl.textContent = text;
+                if (text && text.trim()) {
+                    goalEl.classList.remove('goal-text-empty');
+                } else {
+                    goalEl.classList.add('goal-text-empty');
+                }
+            } else {
+                logger.error('[UI] goal-text element not found in DOM');
+            }
+        }
         logToAdvanced(`Goal Updated: ${text}`, 'goal_modified');
     };
 
     const streamThought = (textChunk) => {
         if (isLogView) return;
         if (uiRefs.thoughtStream) {
+            // Clear empty state messages on first thought
+            const emptyMessages = uiRefs.thoughtStream.querySelectorAll('.empty-state-message, .empty-state-help');
+            emptyMessages.forEach(msg => msg.remove());
             uiRefs.thoughtStream.textContent += textChunk;
         }
     };
@@ -2249,7 +2336,12 @@ function greet(name) {
 
     return {
       init,
-      api: {}
+      updateGoal,
+      api: {
+        updateGoal,
+        streamThought,
+        updateStatusBar
+      }
     };
   }
 };

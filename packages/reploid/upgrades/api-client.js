@@ -83,8 +83,8 @@ const ApiClient = {
         currentAbortController.abort("New call initiated");
       }
       currentAbortController = new AbortController();
-      
-      const modelName = "gemini-1.5-flash-latest";
+
+      const modelName = "gemini-2.5-flash";
       
       // Use proxy if available, otherwise direct API
       let apiEndpoint;
@@ -112,22 +112,21 @@ const ApiClient = {
         contents: history,
         safetySettings: [
           "HARASSMENT", "HATE_SPEECH", "SEXUALLY_EXPLICIT", "DANGEROUS_CONTENT"
-        ].map(cat => ({ 
-          category: `HARM_CATEGORY_${cat}`, 
-          threshold: "BLOCK_ONLY_HIGH" 
+        ].map(cat => ({
+          category: `HARM_CATEGORY_${cat}`,
+          threshold: "BLOCK_ONLY_HIGH"
         })),
         generationConfig: {
           temperature: 0.8,
-          maxOutputTokens: 8192,
-          responseMimeType: "application/json"
+          maxOutputTokens: 8192
+          // Note: responseMimeType not supported in v1 API
         },
       };
-      
+
       // Add function declarations if provided
       if (funcDecls && funcDecls.length > 0) {
         reqBody.tools = [{ functionDeclarations: funcDecls }];
         reqBody.tool_config = { function_calling_config: { mode: "AUTO" } };
-        delete reqBody.generationConfig.responseMimeType;
       }
       
       try {
@@ -148,22 +147,44 @@ const ApiClient = {
         }
         
         const data = await response.json();
-        
+
         // Validate response
         if (!data.candidates || data.candidates.length === 0) {
           if (data.promptFeedback && data.promptFeedback.blockReason) {
             throw new ApiError(
-              `Request blocked: ${data.promptFeedback.blockReason}`, 
-              400, 
-              "PROMPT_BLOCK", 
+              `Request blocked: ${data.promptFeedback.blockReason}`,
+              400,
+              "PROMPT_BLOCK",
               data.promptFeedback
             );
           }
+          logger.error('[ApiClient] API response has no candidates:', JSON.stringify(data, null, 2));
           throw new ApiError("API returned no candidates.", 500, "NO_CANDIDATES");
         }
-        
+
         // Extract result
         const candidate = data.candidates[0];
+
+        // Validate candidate structure
+        if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+          logger.error('[ApiClient] Invalid candidate structure:', JSON.stringify(candidate, null, 2));
+
+          // Check for finish reason
+          if (candidate.finishReason === 'SAFETY' || candidate.finishReason === 'RECITATION') {
+            throw new ApiError(
+              `Response blocked by ${candidate.finishReason} filter`,
+              400,
+              `BLOCKED_${candidate.finishReason}`
+            );
+          }
+
+          throw new ApiError(
+            `Invalid response structure: candidate missing content.parts. Finish reason: ${candidate.finishReason || 'unknown'}`,
+            500,
+            "INVALID_STRUCTURE"
+          );
+        }
+
         const part = candidate.content.parts[0];
         
         let resultType = "empty";
