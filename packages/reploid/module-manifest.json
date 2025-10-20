@@ -1,0 +1,113 @@
+{
+  "version": "1.0",
+  "description": "REPLOID Universal Module Manifest - Defines all modules and their load order",
+  "loadGroups": [
+    {
+      "description": "Pure modules (no dependencies)",
+      "modules": [
+        { "id": "Utils", "path": "/upgrades/utils.js" },
+        { "id": "EventBus", "path": "/upgrades/event-bus.js" },
+        { "id": "DIContainer", "path": "/upgrades/di-container.js" },
+        { "id": "StateHelpersPure", "path": "/upgrades/state-helpers-pure.js" },
+        { "id": "ToolRunnerPureHelpers", "path": "/upgrades/tool-runner-pure-helpers.js" },
+        { "id": "AgentLogicPure", "path": "/upgrades/agent-logic-pure.js" }
+      ]
+    },
+    {
+      "description": "Storage and logging (need Utils)",
+      "modules": [
+        { "id": "Storage", "path": "/upgrades/storage-indexeddb.js" },
+        { "id": "AuditLogger", "path": "/upgrades/audit-logger.js" },
+        { "id": "RateLimiter", "path": "/upgrades/rate-limiter.js" }
+      ]
+    },
+    {
+      "description": "State management (needs Storage, AuditLogger)",
+      "modules": [
+        { "id": "StateManager", "path": "/upgrades/state-manager.js" }
+      ]
+    },
+    {
+      "description": "LLM providers (need StateManager)",
+      "modules": [
+        { "id": "LocalLLM", "path": "/upgrades/local-llm.js" },
+        { "id": "HybridLLMProvider", "path": "/upgrades/hybrid-llm-provider.js" }
+      ]
+    },
+    {
+      "description": "API and tools (need StateManager, RateLimiter)",
+      "modules": [
+        { "id": "ApiClient", "path": "/upgrades/api-client.js" },
+        { "id": "ToolRunner", "path": "/upgrades/tool-runner.js" },
+        { "id": "DiffGenerator", "path": "/utils/diff-generator.js" }
+      ]
+    },
+    {
+      "description": "Reflection and monitoring (need StateManager, EventBus)",
+      "modules": [
+        { "id": "ReflectionStore", "path": "/upgrades/reflection-store.js" },
+        { "id": "PerformanceMonitor", "path": "/upgrades/performance-monitor.js" },
+        { "id": "ToastNotifications", "path": "/upgrades/toast-notifications.js" }
+      ]
+    },
+    {
+      "description": "Context and streaming (need StateManager, EventBus)",
+      "modules": [
+        { "id": "StreamingResponseHandler", "path": "/upgrades/streaming-response-handler.js" },
+        { "id": "ContextManager", "path": "/upgrades/context-manager.js" }
+      ]
+    },
+    {
+      "description": "Browser features and runtimes (need StateManager, EventBus)",
+      "modules": [
+        { "id": "BrowserAPIs", "path": "/upgrades/browser-apis.js" },
+        { "id": "PyodideRuntime", "path": "/upgrades/pyodide-runtime.js" }
+      ]
+    },
+    {
+      "description": "Testing and introspection (need StateManager, EventBus)",
+      "modules": [
+        { "id": "Introspector", "path": "/upgrades/introspector.js" },
+        { "id": "SelfTester", "path": "/upgrades/self-tester.js" }
+      ]
+    },
+    {
+      "description": "Visualizers and dashboards (need various deps)",
+      "modules": [
+        { "id": "VFSExplorer", "path": "/upgrades/vfs-explorer.js" },
+        { "id": "MetricsDashboard", "path": "/upgrades/metrics-dashboard.js" },
+        { "id": "AgentVisualizer", "path": "/upgrades/agent-visualizer.js" },
+        { "id": "ASTVisualizer", "path": "/upgrades/ast-visualizer.js" },
+        { "id": "ModuleGraphVisualizer", "path": "/upgrades/module-graph-visualizer.js" },
+        { "id": "TutorialSystem", "path": "/upgrades/tutorial-system.js" }
+      ]
+    },
+    {
+      "description": "CLUSTER 1 UI Panels (need ModuleLoader, EventBus)",
+      "modules": [
+        { "id": "ProgressTracker", "path": "/upgrades/progress-tracker.js" },
+        { "id": "LogPanel", "path": "/upgrades/log-panel.js" },
+        { "id": "StatusBar", "path": "/upgrades/status-bar.js" }
+      ]
+    },
+    {
+      "description": "UI and agent cycle (need everything above)",
+      "modules": [
+        { "id": "UIManager", "path": "/upgrades/ui-manager.js" },
+        { "id": "AgentCycle", "path": "/upgrades/agent-cycle.js" }
+      ]
+    },
+    {
+      "description": "Sentinel and orchestration (need most other modules)",
+      "modules": [
+        { "id": "GitVFS", "path": "/upgrades/git-vfs.js" },
+        { "id": "SentinelTools", "path": "/upgrades/sentinel-tools.js" },
+        { "id": "DiffViewerUI", "path": "/upgrades/diff-viewer-ui.js" },
+        { "id": "WebRTCSwarm", "path": "/upgrades/webrtc-swarm.js" },
+        { "id": "WebRTCCoordinator", "path": "/upgrades/webrtc-coordinator.js" },
+        { "id": "SentinelFSM", "path": "/upgrades/sentinel-fsm.js" },
+        { "id": "MetaToolCreator", "path": "/upgrades/meta-tool-creator.js" }
+      ]
+    }
+  ]
+}

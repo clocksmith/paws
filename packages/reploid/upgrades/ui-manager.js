@@ -5,15 +5,15 @@
 const UI = {
   metadata: {
     id: 'UI',
-    version: '4.0.0',
-    description: 'Central UI management with browser-native visualizer integration, modal system, toast notifications, Python REPL, and Local LLM',
-    dependencies: ['config', 'Utils', 'StateManager', 'DiffGenerator', 'EventBus', 'VFSExplorer', 'PerformanceMonitor', 'MetricsDashboard', 'Introspector', 'ReflectionStore', 'SelfTester', 'BrowserAPIs', 'AgentVisualizer', 'ASTVisualizer', 'ModuleGraphVisualizer', 'ToastNotifications', 'TutorialSystem', 'PyodideRuntime', 'LocalLLM'],
+    version: '5.0.0',
+    description: 'Central UI management with browser-native visualizer integration, modal system, toast notifications, Python REPL, Local LLM, and modular panel support',
+    dependencies: ['config', 'Utils', 'StateManager', 'DiffGenerator', 'EventBus', 'VFSExplorer', 'PerformanceMonitor', 'MetricsDashboard', 'Introspector', 'ReflectionStore', 'SelfTester', 'BrowserAPIs', 'AgentVisualizer', 'ASTVisualizer', 'ModuleGraphVisualizer', 'ToastNotifications', 'TutorialSystem', 'PyodideRuntime', 'LocalLLM', 'ProgressTracker?', 'LogPanel?', 'StatusBar?', 'ThoughtPanel?', 'GoalPanel?', 'SentinelPanel?'],
     async: true,
     type: 'ui'
   },
 
   factory: (deps) => {
-    const { config, Utils, StateManager, DiffGenerator, EventBus, VFSExplorer, PerformanceMonitor, MetricsDashboard, Introspector, ReflectionStore, SelfTester, BrowserAPIs, AgentVisualizer, ASTVisualizer, ModuleGraphVisualizer, ToastNotifications, TutorialSystem, PyodideRuntime, LocalLLM } = deps;
+    const { config, Utils, StateManager, DiffGenerator, EventBus, VFSExplorer, PerformanceMonitor, MetricsDashboard, Introspector, ReflectionStore, SelfTester, BrowserAPIs, AgentVisualizer, ASTVisualizer, ModuleGraphVisualizer, ToastNotifications, TutorialSystem, PyodideRuntime, LocalLLM, ProgressTracker, LogPanel, StatusBar, ThoughtPanel, GoalPanel, SentinelPanel } = deps;
     const { logger, showButtonSuccess, exportAsMarkdown } = Utils;
 
     let uiRefs = {};
@@ -327,6 +327,79 @@ const UI = {
         });
     };
 
+    // Helper to check if modular panel is enabled
+    const isModularPanelEnabled = (panelName) => {
+        try {
+            const flags = window.reploidConfig?.featureFlags?.useModularPanels;
+            return flags && flags[panelName] === true;
+        } catch (err) {
+            return false;
+        }
+    };
+
+    // Initialize modular panel support (CLUSTER 1 + CLUSTER 2)
+    const initializeModularPanels = () => {
+        logger.info('[UIManager] Initializing modular panel support...');
+
+        // CLUSTER 1 Panels
+        if (ProgressTracker && isModularPanelEnabled('ProgressTracker')) {
+            try {
+                ProgressTracker.init('progress-tracker-container');
+                logger.info('[UIManager] ProgressTracker modular panel initialized');
+            } catch (err) {
+                logger.error('[UIManager] Failed to initialize ProgressTracker:', err);
+            }
+        }
+
+        if (LogPanel && isModularPanelEnabled('LogPanel')) {
+            try {
+                LogPanel.init('log-panel-container');
+                logger.info('[UIManager] LogPanel modular panel initialized');
+            } catch (err) {
+                logger.error('[UIManager] Failed to initialize LogPanel:', err);
+            }
+        }
+
+        if (StatusBar && isModularPanelEnabled('StatusBar')) {
+            try {
+                StatusBar.init('status-bar-container');
+                logger.info('[UIManager] StatusBar modular panel initialized');
+            } catch (err) {
+                logger.error('[UIManager] Failed to initialize StatusBar:', err);
+            }
+        }
+
+        // CLUSTER 2 Panels
+        if (ThoughtPanel && isModularPanelEnabled('ThoughtPanel')) {
+            try {
+                ThoughtPanel.init('thought-panel-container');
+                logger.info('[UIManager] ThoughtPanel modular panel initialized');
+            } catch (err) {
+                logger.error('[UIManager] Failed to initialize ThoughtPanel:', err);
+            }
+        }
+
+        if (GoalPanel && isModularPanelEnabled('GoalPanel')) {
+            try {
+                GoalPanel.init('goal-panel-container');
+                logger.info('[UIManager] GoalPanel modular panel initialized');
+            } catch (err) {
+                logger.error('[UIManager] Failed to initialize GoalPanel:', err);
+            }
+        }
+
+        if (SentinelPanel && isModularPanelEnabled('SentinelPanel')) {
+            try {
+                SentinelPanel.init('sentinel-panel-container');
+                logger.info('[UIManager] SentinelPanel modular panel initialized');
+            } catch (err) {
+                logger.error('[UIManager] Failed to initialize SentinelPanel:', err);
+            }
+        }
+
+        logger.info('[UIManager] Modular panel initialization complete');
+    };
+
     const init = async () => {
         logger.info("Dashboard UI Manager (Event-Driven) taking control of DOM...");
         bootConfig = window.REPLOID_BOOT_CONFIG || {};
@@ -363,6 +436,7 @@ const UI = {
         setupEventBusListeners(); // New setup for event listeners
         checkPersonaMode();
         if (ToastNotifications) ToastNotifications.init(); // Initialize toast system
+        initializeModularPanels(); // Initialize modular panel support
         await renderVfsExplorer(); // Render the VFS tree
         await restorePanelState(); // Restore last viewed panel
         logger.info("Dashboard UI Initialized. Listening for events.");
@@ -2066,6 +2140,9 @@ function greet(name) {
     };
 
     const updateStatusBar = (state, detail, progress) => {
+        // Skip monolithic implementation if modular panel is enabled
+        if (isModularPanelEnabled('StatusBar')) return;
+
         // Update state text and icon
         if (uiRefs.statusState) {
             uiRefs.statusState.textContent = state || 'IDLE';
@@ -2120,6 +2197,9 @@ function greet(name) {
     };
 
     const updateProgressTracker = (currentState) => {
+        // Skip monolithic implementation if modular panel is enabled
+        if (isModularPanelEnabled('ProgressTracker')) return;
+
         if (!uiRefs.progressSteps) return;
 
         const steps = [
@@ -2150,6 +2230,13 @@ function greet(name) {
     };
 
     const handleStateChange = async ({ newState, context }) => {
+        // Skip monolithic implementation if modular panel is enabled
+        if (isModularPanelEnabled('SentinelPanel')) {
+            // Still update progress tracker if it's not using modular panel
+            updateProgressTracker(newState);
+            return;
+        }
+
         const sentinelContent = uiRefs.sentinelContent;
         const approveBtn = uiRefs.sentinelApproveBtn;
         const reviseBtn = uiRefs.sentinelReviseBtn;
@@ -2236,6 +2323,9 @@ function greet(name) {
     };
 
     const updateGoal = (text) => {
+        // Skip monolithic implementation if modular panel is enabled
+        if (isModularPanelEnabled('GoalPanel')) return;
+
         logger.info('[UI] updateGoal called with:', { text, hasGoalTextRef: !!uiRefs.goalText });
 
         if (uiRefs.goalText) {
@@ -2267,6 +2357,9 @@ function greet(name) {
     };
 
     const streamThought = (textChunk) => {
+        // Skip monolithic implementation if modular panel is enabled
+        if (isModularPanelEnabled('ThoughtPanel')) return;
+
         if (isLogView) return;
         if (uiRefs.thoughtStream) {
             // Clear empty state messages on first thought
@@ -2277,6 +2370,9 @@ function greet(name) {
     };
     
     const clearThoughts = () => {
+        // Skip monolithic implementation if modular panel is enabled
+        if (isModularPanelEnabled('ThoughtPanel')) return;
+
         if(uiRefs.thoughtStream) uiRefs.thoughtStream.textContent = '';
     };
 
@@ -2300,6 +2396,9 @@ function greet(name) {
     };
 
     const logToAdvanced = (data, type = 'info') => {
+        // Skip monolithic implementation if modular panel is enabled
+        if (isModularPanelEnabled('LogPanel')) return;
+
         if (uiRefs.logOutput) {
             let message = data;
             let details = {};

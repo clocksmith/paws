@@ -5,7 +5,8 @@
 **Target Upgrade:** APPL (`app-logic.js`)
 
 
-**Prerequisites:** None
+**Prerequisites:**
+- **0x00004E** (Module Widget Protocol) - REQUIRED for widget implementation
 
 **Affected Artifacts:** `/modules/app-logic.js`, `/boot.js`
 
@@ -67,19 +68,65 @@ const AppLogic = {
         };
       }
 
-      renderPanel() {
-        // Returns HTML with boot statistics:
-        // - Status, total time, module count
-        // - Module errors (if any)
-        // - Top 10 slowest modules
-        // - Load timeline with relative timestamps
-        // - Summary with average load time
-      }
-
       render() {
+        const durationSec = _bootStats.totalDuration
+          ? (_bootStats.totalDuration / 1000).toFixed(2)
+          : '—';
+
+        const avgLoadTime = _bootStats.modulesLoaded.length > 0
+          ? (_bootStats.totalDuration / _bootStats.modulesLoaded.length).toFixed(0)
+          : '—';
+
         this.shadowRoot.innerHTML = `
-          <style>/* Shadow DOM styles */</style>
-          ${this.renderPanel()}
+          <style>
+            :host {
+              display: block;
+              font-family: monospace;
+              font-size: 12px;
+              color: #e0e0e0;
+            }
+            .boot-panel {
+              background: rgba(255, 255, 255, 0.05);
+              padding: 16px;
+              border-radius: 8px;
+            }
+            .status-badge {
+              display: inline-block;
+              padding: 4px 8px;
+              border-radius: 4px;
+              font-weight: bold;
+            }
+            .status-ready { background: #0a0; color: #000; }
+            .status-failed { background: #a00; color: #fff; }
+            .module-list {
+              max-height: 300px;
+              overflow-y: auto;
+              margin-top: 8px;
+            }
+            .error { color: #f00; }
+            .success { color: #0f0; }
+          </style>
+          <div class="boot-panel">
+            <h4>⛻ Boot Orchestrator</h4>
+            <div class="status-badge status-${_bootStats.status}">
+              ${_bootStats.status}
+            </div>
+            <div>Total Time: ${durationSec}s</div>
+            <div>Modules: ${_bootStats.modulesLoaded.length}</div>
+            ${_bootStats.moduleErrors.length > 0 ? `
+              <div class="error">Errors: ${_bootStats.moduleErrors.length}</div>
+            ` : ''}
+            <div class="module-list">
+              ${_bootStats.modulesLoaded.slice(-10).map(m => `
+                <div>
+                  <span class="success">✓</span> ${m.id} (${m.loadTime}ms)
+                </div>
+              `).join('')}
+            </div>
+            <div style="margin-top: 8px; color: #888;">
+              Avg load time: ${avgLoadTime}ms
+            </div>
+          </div>
         `;
       }
     }
@@ -247,19 +294,34 @@ class AppLogicWidget extends HTMLElement {
     // Return dashboard status based on _bootStats
   }
 
-  renderPanel() {
-    // Render boot statistics:
-    // - Status badge (not_started, booting, ready, failed)
-    // - Total boot time and module count
-    // - Module errors (if any)
-    // - Top 10 slowest modules
-    // - Load timeline with relative timestamps
-  }
-
   render() {
+    const durationSec = _bootStats.totalDuration
+      ? (_bootStats.totalDuration / 1000).toFixed(2)
+      : '—';
+
     this.shadowRoot.innerHTML = `
-      <style>/* Shadow DOM styles */</style>
-      ${this.renderPanel()}
+      <style>
+        :host { display: block; font-family: monospace; font-size: 12px; }
+        .boot-panel { background: rgba(255, 255, 255, 0.05); padding: 16px; }
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+        .status-ready { background: #0a0; color: #000; }
+        .error { color: #f00; }
+        .success { color: #0f0; }
+      </style>
+      <div class="boot-panel">
+        <h4>⛻ Boot Orchestrator</h4>
+        <div class="status-badge status-${_bootStats.status}">${_bootStats.status}</div>
+        <div>Total Time: ${durationSec}s</div>
+        <div>Modules: ${_bootStats.modulesLoaded.length}</div>
+        ${_bootStats.moduleErrors.length > 0 ? `
+          <div class="error">Errors: ${_bootStats.moduleErrors.length}</div>
+        ` : ''}
+        <div>
+          ${_bootStats.modulesLoaded.slice(-10).map(m => `
+            <div><span class="success">✓</span> ${m.id} (${m.loadTime}ms)</div>
+          `).join('')}
+        </div>
+      </div>
     `;
   }
 }

@@ -4,7 +4,7 @@
 
 **Target Upgrade:** MTCP (`meta-tool-creator.js`)
 
-**Prerequisites:** `0x000015` (Dynamic Tools), TLWR upgrade
+**Prerequisites:** `0x000015` (Dynamic Tools), TLWR upgrade, **0x00004E** (Module Widget Protocol)
 
 **Affected Artifacts:** Any new **dynamic tool** the agent creates (stored in `/system/tools-dynamic.json`)
 

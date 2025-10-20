@@ -5,7 +5,7 @@
 **Target Upgrade:** AGLP (`agent-logic-pure.js`)
 
 
-**Prerequisites:** `0x000001`
+**Prerequisites:** `0x000001`, **0x00004E** (Module Widget Protocol)
 
 **Affected Artifacts:** `/modules/agent-logic-pure.js`, `/modules/agent-cycle.js`
 
@@ -54,18 +54,38 @@ class AgentLogicPureHelpersWidget extends HTMLElement {
       state: 'idle',
       primaryMetric: 'Pure helpers',
       secondaryMetric: 'Stateless',
+      lastActivity: null,
       message: 'Pure functions for agent prompt assembly'
     };
   }
 
-  renderPanel() {
-    // Returns documentation of available pure functions
-  }
-
   render() {
     this.shadowRoot.innerHTML = `
-      <style>/* Shadow DOM styles */</style>
-      <div class="widget-content">${this.renderPanel()}</div>
+      <style>
+        :host { display: block; font-family: monospace; font-size: 12px; }
+        .pure-helpers-panel { background: rgba(255, 255, 255, 0.05); padding: 16px; }
+        .function-list { margin-top: 8px; }
+        .function-item { padding: 4px; margin: 4px 0; background: rgba(0, 255, 0, 0.1); }
+        .badge { background: #0a0; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 10px; }
+      </style>
+      <div class="pure-helpers-panel">
+        <h4>🔧 Agent Logic Pure Helpers</h4>
+        <div><span class="badge">PURE</span> No side effects, deterministic</div>
+        <div class="function-list">
+          <div class="function-item">
+            <strong>getArtifactListSummaryPure()</strong>
+            <div style="font-size: 10px; color: #888;">Formats artifact metadata as markdown</div>
+          </div>
+          <div class="function-item">
+            <strong>getToolListSummaryPure()</strong>
+            <div style="font-size: 10px; color: #888;">Summarizes available tools</div>
+          </div>
+          <div class="function-item">
+            <strong>assembleCorePromptPure()</strong>
+            <div style="font-size: 10px; color: #888;">Assembles complete LLM prompt</div>
+          </div>
+        </div>
+      </div>
     `;
   }
 }

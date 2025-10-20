@@ -109,7 +109,66 @@ const WebRTCCoordinator = {
       }
 
       render() {
-        this.shadowRoot.innerHTML = `<style>...</style>${this.renderPanel()}`;
+        const stats = getStats();
+        const totalUpdates = coordinationStats.totalTasks;
+        const successRate = coordinationStats.tasksCompleted > 0
+          ? Math.round((coordinationStats.tasksCompleted / coordinationStats.totalTasks) * 100)
+          : 0;
+        const connectedPeers = stats.connectedPeers || [];
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host { display: block; font-family: monospace; font-size: 12px; }
+            .coordinator-panel { background: rgba(255, 255, 255, 0.05); padding: 16px; }
+            .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 8px 0; }
+            .stat { padding: 6px; background: rgba(255, 255, 255, 0.08); }
+            .swarm-status { margin: 8px 0; padding: 8px; background: rgba(0, 255, 255, 0.05); }
+            .peer-list { margin: 8px 0; max-height: 150px; overflow-y: auto; }
+            .peer-item { padding: 4px; margin: 2px 0; background: rgba(255, 255, 255, 0.08); font-size: 10px; }
+            .activity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+            .init-btn { padding: 4px 8px; background: #0a0; color: #000; border: none; cursor: pointer; margin-top: 8px; }
+          </style>
+          <div class="coordinator-panel">
+            <h4>♁ WebRTC Coordinator</h4>
+            <div class="stats-grid">
+              <div class="stat">Tasks: ${coordinationStats.totalTasks}</div>
+              <div class="stat">Success: ${successRate}%</div>
+              <div class="stat">Patterns: ${coordinationStats.patternsShared}</div>
+            </div>
+            <div class="swarm-status">
+              <div><strong>Swarm Status</strong></div>
+              <div>Local Peer: ${stats.localPeerId?.substring(0, 8) || 'N/A'}...</div>
+              <div>Connected: ${stats.connectedPeers?.length || 0} / ${stats.totalPeers || 0} peers</div>
+              <div>Capabilities: ${stats.capabilities?.join(', ') || 'None'}</div>
+            </div>
+            ${connectedPeers.length > 0 ? `
+              <div class="peer-list">
+                <strong>Connected Peers:</strong>
+                ${connectedPeers.map(peer => `
+                  <div class="peer-item">
+                    ${peer.id.substring(0, 8)}... | ${peer.capabilities?.join(', ') || 'No caps'} | ${peer.status || 'active'}
+                  </div>
+                `).join('')}
+              </div>
+            ` : '<div>No peers connected</div>'}
+            <div class="activity-grid">
+              <div class="stat">Consensus: ${coordinationStats.consensusRequests}</div>
+              <div class="stat">Knowledge: ${coordinationStats.knowledgeQueries}</div>
+            </div>
+            ${!isInitialized ? `
+              <button class="init-btn init-coordinator-btn">Initialize Coordinator</button>
+            ` : ''}
+          </div>
+        `;
+
+        // Wire up initialize button
+        const initBtn = this.shadowRoot.querySelector('.init-coordinator-btn');
+        if (initBtn) {
+          initBtn.addEventListener('click', async () => {
+            await init();
+            this.render();
+          });
+        }
       }
     }
 
@@ -191,541 +250,151 @@ The `WebRTCCoordinatorWidget` provides comprehensive swarm monitoring and contro
 ### 3. Implementation Pathway
 
 **Step 1: Module Registration**
-```javascript
-// In config.json, ensure WebRTCCoordinator is registered with dependencies
-{
-  "modules": {
-    "WebRTCCoordinator": {
-      "dependencies": ["WebRTCSwarm", "StateManager", "ReflectionStore", "EventBus", "Utils", "ToolRunner"],
-      "enabled": true,
-      "async": true
-    }
-  }
-}
-```
-
-**Step 2: Factory Function Implementation**
-
-The factory receives dependencies and creates coordination logic:
-```javascript
-factory: (deps) => {
-  const { WebRTCSwarm, StateManager, ReflectionStore, EventBus, Utils, ToolRunner } = deps;
-  const { logger } = Utils;
-
-  // Internal state (accessible to widget via closure)
-  let isInitialized = false;
-  let localCapabilities = [];
-  let coordinationStats = {
-    totalTasks: 0,
-    tasksCompleted: 0,
-    tasksFailed: 0,
-    patternsShared: 0,
-    consensusRequests: 0,
-    knowledgeQueries: 0,
-    lastActivity: null
-  };
-
-  // Initialization
-  const init = async () => {
-    logger.info('[SwarmOrch] Initializing swarm orchestrator');
-
-    // Detect local capabilities
-    localCapabilities = await detectCapabilities();
-
-    // Register capabilities with WebRTCSwarm
-    WebRTCSwarm.updateCapabilities(localCapabilities);
-
-    // Register message handlers
-    registerMessageHandlers();
-
-    isInitialized = true;
-    logger.info('[SwarmOrch] Initialized', { capabilities: localCapabilities });
-    return true;
-  };
-
-  // Web Component defined here to access closure variables
-  class WebRTCCoordinatorWidget extends HTMLElement { /*...*/ }
-  customElements.define('webrtc-coordinator-widget', WebRTCCoordinatorWidget);
-
-  return { init, api, widget };
-}
-```
-
-**Step 3: Capability Detection Implementation**
-
-Detect available features in the browser instance:
-```javascript
-const detectCapabilities = async () => {
-  const caps = ['code-generation', 'file-management'];
-
-  // Check for Python runtime (Pyodide)
-  if (window.PyodideRuntime && window.PyodideRuntime.isReady()) {
-    caps.push('python-execution');
-    logger.info('[SwarmOrch] Python execution capability available');
-  }
-
-  // Check for local LLM (WebLLM, transformers.js, etc.)
-  if (window.LocalLLM && window.LocalLLM.isReady()) {
-    caps.push('local-llm');
-    logger.info('[SwarmOrch] Local LLM capability available');
-  }
-
-  // Check for Git VFS
-  const GitVFS = window.GitVFS;
-  if (GitVFS && GitVFS.isInitialized()) {
-    caps.push('git-vfs');
-    logger.info('[SwarmOrch] Git VFS capability available');
-  }
-
-  logger.info(`[SwarmOrch] Detected ${caps.length} capabilities:`, caps);
-  return caps;
-};
-
-const getRequirementsForTaskType = (taskType) => {
-  const requirements = {
-    'python-computation': ['python-execution'],
-    'code-generation': ['local-llm'],
-    'file-analysis': ['file-management'],
-    'git-operation': ['git-vfs']
-  };
-  return requirements[taskType] || [];
-};
-```
-
-**Step 4: Message Handler Registration**
-
-Register handlers for incoming peer messages:
-```javascript
-const registerMessageHandlers = () => {
-  // Handle task execution requests from peers
-  WebRTCSwarm.registerMessageHandler('task-execution', async (peerId, message) => {
-    logger.info(`[SwarmOrch] Task execution request from ${peerId}`, message.task);
-    const result = await executeTask(message.task);
-
-    WebRTCSwarm.sendToPeer(peerId, {
-      type: 'task-result',
-      taskId: message.taskId,
-      result
-    });
-  });
-
-  // Handle knowledge requests from peers
-  WebRTCSwarm.registerMessageHandler('knowledge-request', async (peerId, message) => {
-    logger.info(`[SwarmOrch] Knowledge request from ${peerId}`, message.query);
-    const knowledge = await queryKnowledge(message.query);
-
-    WebRTCSwarm.sendToPeer(peerId, {
-      type: 'knowledge-response',
-      requestId: message.requestId,
-      knowledge
-    });
-  });
-
-  // Handle reflection sharing from peers
-  WebRTCSwarm.registerMessageHandler('reflection-share', async (peerId, message) => {
-    logger.info(`[SwarmOrch] Reflection shared by ${peerId}`);
-    await integrateSharedReflection(peerId, message.reflection);
-  });
-
-  logger.info('[SwarmOrch] Message handlers registered');
-};
-```
-
-**Step 5: Task Delegation and Execution**
-
-Implement task delegation to capable peers and local execution:
-```javascript
-const delegateTask = async (taskType, taskData) => {
-  if (!isInitialized) {
-    logger.warn('[SwarmOrch] Not initialized, cannot delegate task');
-    return { success: false, error: 'Swarm not initialized' };
-  }
-
-  logger.info(`[SwarmOrch] Delegating ${taskType} task to swarm`);
-
-  const task = {
-    name: taskType,
-    requirements: getRequirementsForTaskType(taskType),
-    data: taskData,
-    delegator: WebRTCSwarm.getPeerId()
-  };
-
-  try {
-    const result = await WebRTCSwarm.delegateTask(task);
-    coordinationStats.tasksCompleted++;
-    logger.info(`[SwarmOrch] Task ${taskType} completed by peer`, result);
-    return result;
-  } catch (error) {
-    coordinationStats.tasksFailed++;
-    logger.error(`[SwarmOrch] Task delegation failed:`, error);
-    return { success: false, error: error.message };
-  }
-};
-
-const executeTask = async (task) => {
-  logger.info(`[SwarmOrch] Executing delegated task: ${task.name}`);
-
-  try {
-    switch (task.name) {
-      case 'python-computation': {
-        if (!window.PyodideRuntime || !window.PyodideRuntime.isReady()) {
-          throw new Error('Python runtime not available');
-        }
-
-        const result = await ToolRunner.runTool('execute_python', {
-          code: task.data.code,
-          install_packages: task.data.packages || []
-        });
-
-        return {
-          success: result.success,
-          output: result.output,
-          error: result.error
-        };
-      }
-
-      case 'code-generation': {
-        const HybridLLM = window.HybridLLMProvider;
-        if (!HybridLLM) throw new Error('LLM provider not available');
-
-        const response = await HybridLLM.complete([{
-          role: 'user',
-          content: task.data.prompt
-        }], {
-          temperature: task.data.temperature || 0.7,
-          maxOutputTokens: task.data.maxTokens || 2048
-        });
-
-        return {
-          success: true,
-          code: response.text,
-          provider: response.provider
-        };
-      }
-
-      case 'file-analysis': {
-        const content = await StateManager.getArtifactContent(task.data.path);
-        if (!content) throw new Error(`File not found: ${task.data.path}`);
-
-        return {
-          success: true,
-          analysis: {
-            length: content.length,
-            lines: content.split('\n').length,
-            type: task.data.path.split('.').pop()
-          }
-        };
-      }
-
-      default:
-        throw new Error(`Unknown task type: ${task.name}`);
-    }
-  } catch (error) {
-    logger.error(`[SwarmOrch] Task execution failed:`, error);
-    return { success: false, error: error.message };
-  }
-};
-```
-
-**Step 6: Knowledge Exchange and Reflection Sharing**
-
-Implement knowledge sharing and reflection distribution:
-```javascript
-const queryKnowledge = async (query) => {
-  // Search local reflections
-  const reflections = await ReflectionStore.searchReflections({
-    keywords: query.split(' '),
-    limit: 5
-  });
-
-  // Search artifacts
-  const artifacts = await StateManager.searchArtifacts(query);
-
-  return {
-    reflections: reflections.map(r => ({
-      description: r.description,
-      outcome: r.outcome,
-      tags: r.tags
-    })),
-    artifacts: artifacts.slice(0, 5).map(a => ({
-      path: a.path,
-      type: a.type
-    }))
-  };
-};
-
-const shareSuccessPattern = async (reflection) => {
-  if (!isInitialized) {
-    logger.warn('[SwarmOrch] Not initialized, cannot share reflection');
-    return 0;
-  }
-
-  if (reflection.outcome !== 'successful') {
-    logger.debug('[SwarmOrch] Only sharing successful reflections');
-    return 0;
-  }
-
-  logger.info('[SwarmOrch] Sharing successful pattern with swarm', {
-    category: reflection.category
-  });
-
-  const sharedCount = WebRTCSwarm.broadcast({
-    type: 'reflection-share',
-    reflection: {
-      category: reflection.category,
-      description: reflection.description,
-      outcome: reflection.outcome,
-      recommendations: reflection.recommendations,
-      tags: reflection.tags,
-      sharedBy: WebRTCSwarm.getPeerId(),
-      timestamp: Date.now()
-    }
-  });
-
-  coordinationStats.patternsShared++;
-  EventBus.emit('swarm:reflection-shared', { count: sharedCount });
-  return sharedCount;
-};
-
-const integrateSharedReflection = async (peerId, reflection) => {
-  logger.info(`[SwarmOrch] Integrating reflection from ${peerId}`);
-
-  // Store reflection with special tag for provenance
-  await ReflectionStore.addReflection({
-    ...reflection,
-    tags: [...(reflection.tags || []), `shared_from_${peerId}`],
-    source: 'swarm'
-  });
-
-  EventBus.emit('swarm:reflection-integrated', { peerId, reflection });
-};
-```
-
-**Step 7: Consensus Mechanism**
-
-Implement consensus protocol for risky modifications:
-```javascript
-const requestModificationConsensus = async (modification) => {
-  if (!isInitialized) {
-    logger.warn('[SwarmOrch] Not initialized, cannot request consensus');
-    return { consensus: true, reason: 'swarm-not-available' };
-  }
-
-  logger.info('[SwarmOrch] Requesting consensus for modification', {
-    target: modification.filePath
-  });
-
-  const proposal = {
-    type: 'code-modification',
-    content: modification.code,
-    target: modification.filePath,
-    rationale: modification.reason,
-    risk: assessModificationRisk(modification)
-  };
-
-  coordinationStats.consensusRequests++;
-
-  try {
-    const result = await WebRTCSwarm.requestConsensus(proposal, 30000);
-
-    logger.info('[SwarmOrch] Consensus result', {
-      consensus: result.consensus,
-      votes: result.votes
-    });
-
-    EventBus.emit('swarm:consensus-result', result);
-    return result;
-  } catch (error) {
-    logger.error('[SwarmOrch] Consensus request failed:', error);
-    return { consensus: false, reason: 'timeout', votes: {} };
-  }
-};
-
-const assessModificationRisk = (modification) => {
-  const coreFiles = ['agent-cycle', 'sentinel-fsm', 'tool-runner', 'state-manager'];
-  const isCoreFile = coreFiles.some(core => modification.filePath.includes(core));
-
-  if (isCoreFile) return 'high';
-  if (modification.operation === 'DELETE') return 'high';
-  if (modification.code?.includes('eval(')) return 'high';
-
-  return 'medium';
-};
-```
-
-**Step 8: Web Component Widget**
-
-The widget provides real-time swarm monitoring and control:
-```javascript
-class WebRTCCoordinatorWidget extends HTMLElement {
-  constructor() {
-    super();
-    this.attachShadow({ mode: 'open' });
-  }
-
-  set moduleApi(api) {
-    this._api = api;
-    this.render();
-  }
-
-  connectedCallback() {
-    this.render();
-    this._interval = setInterval(() => this.render(), 2000);
-  }
-
-  disconnectedCallback() {
-    if (this._interval) {
-      clearInterval(this._interval);
-      this._interval = null;
-    }
-  }
-
-  getStatus() {
-    const stats = getStats();
-    const taskSuccessRate = coordinationStats.totalTasks > 0
-      ? Math.round((coordinationStats.tasksCompleted / coordinationStats.totalTasks) * 100)
-      : 100;
-
-    return {
-      state: isInitialized ? (stats.connectedPeers > 0 ? 'active' : 'idle') : 'disabled',
-      primaryMetric: `${stats.connectedPeers} peers`,
-      secondaryMetric: `${coordinationStats.totalTasks} tasks`,
-      lastActivity: coordinationStats.lastActivity?.timestamp || null,
-      message: !isInitialized ? 'Not initialized' : (stats.connectedPeers === 0 ? 'No peers' : null)
-    };
-  }
-
-  renderPanel() {
-    const stats = getStats();
-    const taskSuccessRate = coordinationStats.totalTasks > 0
-      ? Math.round((coordinationStats.tasksCompleted / coordinationStats.totalTasks) * 100)
-      : 100;
-
-    return `
-      <div class="webrtc-coordinator-panel">
-        <!-- 3-column statistics grid -->
-        <div class="coordinator-stats" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-          <div class="stat-card">
-            <div>Tasks</div>
-            <div>${coordinationStats.totalTasks}</div>
-          </div>
-          <div class="stat-card">
-            <div>Success</div>
-            <div>${taskSuccessRate}%</div>
-          </div>
-          <div class="stat-card">
-            <div>Patterns</div>
-            <div>${coordinationStats.patternsShared}</div>
-          </div>
-        </div>
-
-        <!-- Swarm status panel -->
-        ${isInitialized ? `
-          <div class="peer-info">
-            <h4>Swarm Status</h4>
-            <div>Local Peer ID: ${stats.localPeerId || 'Unknown'}</div>
-            <div>Connected Peers: ${stats.connectedPeers} / ${stats.totalPeers}</div>
-            <div>Capabilities: ${stats.capabilities?.join(', ') || 'None'}</div>
-          </div>
-
-          <!-- Connected peers list -->
-          ${stats.peers && stats.peers.length > 0 ? `
-            <div class="peer-list">
-              <h4>Connected Peers (${stats.peers.length})</h4>
-              <div style="max-height: 200px; overflow-y: auto;">
-                ${stats.peers.map(peer => `
-                  <div class="peer-card">
-                    <div>${peer.id.substring(0, 16)}...</div>
-                    <div>Capabilities: ${peer.capabilities?.join(', ') || 'None'}</div>
-                    <div>${peer.connected ? '✓ Connected' : '○ Disconnected'}</div>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          ` : `
-            <div class="no-peers">No peers connected</div>
-          `}
-        ` : `
-          <div class="not-initialized">
-            <h3>Coordinator Not Initialized</h3>
-            <p>Click Initialize to start peer coordination</p>
-          </div>
-        `}
-
-        <!-- Activity breakdown -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-          <div>
-            <div>Consensus Requests</div>
-            <div>${coordinationStats.consensusRequests}</div>
-          </div>
-          <div>
-            <div>Knowledge Queries</div>
-            <div>${coordinationStats.knowledgeQueries}</div>
-          </div>
-        </div>
-
-        <button class="init-btn">
-          ▶ ${isInitialized ? 'Reinitialize' : 'Initialize'}
-        </button>
-      </div>
-    `;
-  }
-
-  render() {
-    this.shadowRoot.innerHTML = `
-      <style>/* Shadow DOM styles */</style>
-      <div class="widget-content">${this.renderPanel()}</div>
-    `;
-
-    // Wire up initialize button
-    const initBtn = this.shadowRoot.querySelector('.init-btn');
-    if (initBtn) {
-      initBtn.addEventListener('click', async () => {
-        try {
-          initBtn.disabled = true;
-          initBtn.textContent = '⏳ Initializing...';
-          await init();
-          EventBus.emit('toast:success', { message: 'Coordinator initialized' });
-          this.render();
-        } catch (error) {
-          logger.error('[WebRTCCoordinator] Widget: Initialization failed', error);
-          this.render();
-        }
-      });
-    }
-  }
-}
-```
-
-**Step 9: Integration Points**
-
-1. **Boot Sequence Integration**:
-   - Call `await WebRTCCoordinator.init()` during application boot
-   - Provide opt-in UI toggle (WebRTC disabled by default for security)
-   - Display warning if WebRTCSwarm dependency unavailable
-
-2. **Task Delegation from Agent Cycle**:
-   - Delegate heavy Python computations to peers with `python-execution` capability
-   - Offload code generation to peers with `local-llm` capability
-   - Query swarm knowledge before making risky decisions
-
-3. **Dashboard Integration**:
-   - Widget automatically integrates with module dashboard system
-   - Provides `getStatus()` method for dashboard summary view
-   - Updates every 2 seconds via `updateInterval: 2000`
-
-4. **Event-Driven Communication**:
-   - Emit `'swarm:reflection-shared'` when patterns broadcast to peers
-   - Emit `'swarm:reflection-integrated'` when peer reflections imported
-   - Emit `'swarm:consensus-result'` after consensus voting completes
-   - Use for UI feedback, analytics, and decision-making
-
-5. **Security Considerations**:
-   - Sanitize incoming task data; reject unsupported task types
-   - Limit file access to safe prefixes when executing remote requests
-   - Record all swarm operations via AuditLogger when available
-   - Validate peer identity before accepting high-risk task requests
-   - Use consensus mechanism for modifications to core system files
+- Register WebRTCCoordinator in `config.json` with all dependencies
+- Dependencies: WebRTCSwarm, StateManager, ReflectionStore, EventBus, Utils, ToolRunner
+- Mark as `async: true` since initialization is asynchronous
+- Enable module by default or make opt-in via persona configuration
+
+**Step 2: Define Module Structure with Closure State**
+- Create factory function receiving dependencies via DI
+- Define internal state variables accessible to widget via closure:
+  - `isInitialized`: Boolean tracking initialization status
+  - `localCapabilities`: Array of detected capabilities
+  - `coordinationStats`: Object tracking tasks, patterns, consensus, queries
+- This closure pattern eliminates need for property injection in widget
+
+**Step 3: Implement Capability Detection**
+- Create `detectCapabilities()` async function
+- Check for Python runtime: `window.PyodideRuntime?.isReady()`
+- Check for local LLM: `window.LocalLLM?.isReady()`
+- Check for Git VFS: `window.GitVFS?.isInitialized()`
+- Return array of capability strings: 'python-execution', 'local-llm', 'git-vfs', etc.
+- Map task types to requirements: 'python-computation' → ['python-execution']
+
+**Step 4: Define Web Component Class Inside Factory**
+- Create `WebRTCCoordinatorWidget` class extending `HTMLElement`
+- Attach Shadow DOM in constructor: `this.attachShadow({ mode: 'open' })`
+- Widget has direct closure access to: isInitialized, coordinationStats, getStats(), init()
+- No property injection needed - all state accessible via closure
+
+**Step 5: Implement Widget Lifecycle Methods**
+- `connectedCallback()`: Initial render + start auto-refresh
+  - Set interval to refresh every 2000ms
+  - Store interval reference in `this._interval`
+- `disconnectedCallback()`: Clean up intervals
+  - Clear `this._interval` to prevent memory leaks
+
+**Step 6: Implement Widget Status Protocol**
+- `getStatus()` as class method with ALL 5 required fields:
+  - `state`: 'disabled' if not initialized, 'active' if peers connected, 'idle' if no peers
+  - `primaryMetric`: Connected peer count
+  - `secondaryMetric`: Total tasks delegated
+  - `lastActivity`: Timestamp of last coordination activity
+  - `message`: Status message if applicable
+- Access coordinationStats and getStats() directly via closure
+
+**Step 7: Implement Widget Render Method**
+- Single `render()` method sets `this.shadowRoot.innerHTML`
+- Include `<style>` tag with `:host` selector for scoped styles
+- Render 3-column statistics grid (tasks, success rate, patterns shared)
+- Display swarm status (peer ID, connected peers, capabilities)
+- Show connected peers list with scrollable container
+- Display activity breakdown (consensus, knowledge queries)
+- Add initialize/reinitialize button
+- Wire up button click handlers after render
+
+**Step 8: Register Custom Element**
+- Use kebab-case naming: `'webrtc-coordinator-widget'`
+- Add duplicate check: `if (!customElements.get(elementName))`
+- Call `customElements.define(elementName, WebRTCCoordinatorWidget)`
+- Registration happens inside factory, after class definition
+
+**Step 9: Return Module Interface**
+- Return object with: init function, api object, widget descriptor
+- Widget descriptor: `{ element, displayName, icon, category }`
+- Remove old properties: renderPanel, getStatus, updateInterval
+- Element name is the custom element tag string
+
+**Step 10: Implement Message Handler Registration**
+- Create `registerMessageHandlers()` function
+- Register handler for 'task-execution' messages from peers
+- Register handler for 'knowledge-request' messages
+- Register handler for 'reflection-share' messages
+- Each handler executes appropriate module function and responds
+- Use WebRTCSwarm.sendToPeer() for responses with correlation IDs
+
+**Step 11: Implement Task Delegation**
+- Create `delegateTask(taskType, taskData)` function
+- Build task descriptor with: name, requirements, data, delegator peer ID
+- Call WebRTCSwarm.delegateTask() to find capable peer
+- Track delegation stats: totalTasks++, tasksCompleted++ or tasksFailed++
+- Log success/failure and emit events
+- Return result object with success flag and data/error
+
+**Step 12: Implement Task Execution**
+- Create `executeTask(task)` function to handle incoming delegated tasks
+- Switch on task.name to route to appropriate handler:
+  - 'python-computation': Execute via ToolRunner.runTool('execute_python')
+  - 'code-generation': Generate via HybridLLMProvider.complete()
+  - 'file-analysis': Analyze via StateManager.getArtifactContent()
+  - 'git-operation': Perform Git operations via GitVFS
+- Return standardized result: `{ success, output/code/analysis, error }`
+- Update coordinationStats.lastActivity on each execution
+
+**Step 13: Implement Knowledge Exchange**
+- Create `queryKnowledge(query)` function
+- Search local reflections via ReflectionStore.searchReflections()
+- Search artifacts via StateManager.searchArtifacts()
+- Return curated knowledge object with both reflections and artifacts
+- Limit results to prevent overwhelming responses (e.g., top 5 each)
+- Track knowledgeQueries++ in coordinationStats
+
+**Step 14: Implement Reflection Sharing**
+- Create `shareSuccessPattern(reflection)` function
+- Filter: only share reflections with outcome === 'successful'
+- Build broadcast message with reflection data + metadata (sharedBy, timestamp)
+- Call WebRTCSwarm.broadcast() to send to all connected peers
+- Track patternsShared++ in coordinationStats
+- Emit 'swarm:reflection-shared' event for UI feedback
+
+**Step 15: Implement Reflection Integration**
+- Create `integrateSharedReflection(peerId, reflection)` function
+- Store incoming reflection via ReflectionStore.addReflection()
+- Tag with provenance: add `shared_from_${peerId}` to tags array
+- Add source field: 'swarm'
+- Emit 'swarm:reflection-integrated' event
+- Enables tracking which insights came from peers
+
+**Step 16: Implement Consensus Mechanism**
+- Create `requestModificationConsensus(modification)` function
+- Create proposal object with: type, content, target, rationale, risk level
+- Call assessModificationRisk() to determine risk: 'high' | 'medium' | 'low'
+- Risk factors: core files, DELETE operations, eval() usage
+- Call WebRTCSwarm.requestConsensus(proposal, 30000) with 30s timeout
+- Track consensusRequests++ in coordinationStats
+- Return consensus result with votes and decision
+- Fallback to approval if swarm unavailable (document reason)
+
+**Step 17: Boot Integration**
+- Call `await WebRTCCoordinator.init()` during application boot
+- Provide opt-in UI toggle (WebRTC disabled by default for security)
+- Display warning toast if WebRTCSwarm dependency unavailable
+- Widget shows "Not initialized" state until init() called
+
+**Step 18: Dashboard Integration**
+- Widget automatically integrates with module dashboard system
+- Provides `getStatus()` for dashboard summary view
+- Updates every 2 seconds via auto-refresh interval
+- Initialize button in widget allows manual initialization
+
+**Step 19: Security Considerations**
+- Sanitize incoming task data; reject unsupported task types
+- Limit file access to safe prefixes when executing remote requests
+- Record all swarm operations via AuditLogger when available
+- Validate peer identity before accepting high-risk task requests
+- Use consensus mechanism for modifications to core system files
+
+---
 
 ### 4. Verification Checklist
 - [ ] Initialization registers handlers exactly once (no duplicates).
@@ -733,6 +402,8 @@ class WebRTCCoordinatorWidget extends HTMLElement {
 - [ ] Reflection sharing results in stored entries tagged with `shared_from_<peer>`.
 - [ ] Consensus fallback to `consensus: true` only when swarm unavailable (documented reason).
 - [ ] `getStats()` reflects real-time peer counts and capability list.
+
+---
 
 ### 5. Extension Opportunities
 - Implement workload balancing (choose peer with required capabilities and lowest queue).

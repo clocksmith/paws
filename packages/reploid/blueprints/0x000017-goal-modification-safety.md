@@ -4,7 +4,7 @@
 
 **Target Upgrade:** GMOD (`goal-modifier.js`)
 
-**Prerequisites:** `0x000005` (State Management), `0x000008` (Cognitive Cycle)
+**Prerequisites:** `0x000005` (State Management), `0x000008` (Cognitive Cycle), **0x00004E** (Module Widget Protocol)
 
 **Affected Artifacts:** `/system/state.json`, `/modules/agent-cycle.js`
 

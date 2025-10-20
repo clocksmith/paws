@@ -5,7 +5,7 @@
 **Target Upgrade:** STMT (`state-manager.js`)
 
 
-**Prerequisites:** `0x000003`, `0x000004`
+**Prerequisites:** `0x000003`, `0x000004`, **0x00004E** (Module Widget Protocol)
 
 **Affected Artifacts:** `/modules/state-manager.js`
 
@@ -114,7 +114,32 @@ const StateManager = {
       }
 
       async render() {
-        this.shadowRoot.innerHTML = `<style>...</style>${this.renderPanel()}`;
+        // Access closure variables: globalState, sessionManager, checkpoints
+        const sessions = await sessionManager.listSessions();
+        const artifactCount = Object.keys(globalState?.artifactMetadata || {}).length;
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host { display: block; font-family: monospace; font-size: 12px; }
+            .state-panel { background: rgba(255, 255, 255, 0.05); padding: 16px; }
+            .session { margin: 8px 0; padding: 8px; background: rgba(0, 255, 255, 0.1); }
+            .session.active { border-left: 3px solid #0ff; }
+            .session.archived { opacity: 0.6; }
+          </style>
+          <div class="state-panel">
+            <h4>🗂 State Manager</h4>
+            <div>Artifacts: ${artifactCount}</div>
+            <div>Checkpoints: ${checkpoints.length}</div>
+            <div class="sessions">
+              ${sessions.map(s => `
+                <div class="session ${s.status}">
+                  <strong>${s.id}</strong> (${s.turns.length} turns)
+                  <div style="font-size: 10px; color: #888;">${s.goal}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
       }
     }
 
@@ -516,14 +541,34 @@ class StateManagerWidget extends HTMLElement {
   async render() {
     // Access closure variables: globalState, sessionManager, checkpoints
     const sessions = await sessionManager.listSessions();
+    const artifactCount = Object.keys(globalState?.artifactMetadata || {}).length;
 
     this.shadowRoot.innerHTML = `
-      <style>/* Shadow DOM styles */</style>
-      <div class="state-manager-panel">
-        <!-- Session dashboard -->
-        <!-- Artifact count -->
-        <!-- Checkpoint controls -->
-        <!-- Turn history -->
+      <style>
+        :host { display: block; font-family: monospace; font-size: 12px; }
+        .state-panel { background: rgba(255, 255, 255, 0.05); padding: 16px; }
+        .session { margin: 8px 0; padding: 8px; background: rgba(0, 255, 255, 0.1); }
+        .session.active { border-left: 3px solid #0ff; }
+        .session.archived { opacity: 0.6; }
+        .checkpoint-list { margin-top: 8px; }
+      </style>
+      <div class="state-panel">
+        <h4>🗂 State Manager</h4>
+        <div>Artifacts: ${artifactCount}</div>
+        <div>Checkpoints: ${checkpoints.length}</div>
+        <div class="sessions">
+          ${sessions.map(s => `
+            <div class="session ${s.status}">
+              <strong>${s.id}</strong> (${s.turns.length} turns)
+              <div style="font-size: 10px; color: #888;">${s.goal}</div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="checkpoint-list">
+          ${checkpoints.map(cp => `
+            <div>📌 ${cp.note} (${new Date(cp.timestamp).toLocaleTimeString()})</div>
+          `).join('')}
+        </div>
       </div>
     `;
   }

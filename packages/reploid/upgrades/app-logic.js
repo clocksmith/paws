@@ -193,73 +193,38 @@ ${code}
       return result;
     };
 
-    const moduleFiles = [
-      // Pure modules (no dependencies)
-      "/upgrades/utils.js",
-      "/upgrades/event-bus.js",
-      "/upgrades/di-container.js",
-      "/upgrades/state-helpers-pure.js",
-      "/upgrades/tool-runner-pure-helpers.js",
-      "/upgrades/agent-logic-pure.js",
-      // Storage and logging (need Utils)
-      "/upgrades/storage-indexeddb.js",
-      "/upgrades/audit-logger.js",
-      "/upgrades/rate-limiter.js",
-      // State management (needs Storage, AuditLogger)
-      "/upgrades/state-manager.js",
-      // LLM providers (need StateManager)
-      "/upgrades/local-llm.js",
-      "/upgrades/hybrid-llm-provider.js",
-      // API and tools (need StateManager, ApiClient needs RateLimiter)
-      "/upgrades/api-client.js",
-      "/upgrades/tool-runner.js",
-      "/utils/diff-generator.js",
-      // Reflection and monitoring (need StateManager, EventBus)
-      "/upgrades/reflection-store.js",
-      "/upgrades/performance-monitor.js",
-      "/upgrades/toast-notifications.js",
-      // Context and streaming (need StateManager, EventBus)
-      "/upgrades/streaming-response-handler.js",
-      "/upgrades/context-manager.js",
-      // Browser features and runtimes (need StateManager, EventBus)
-      "/upgrades/browser-apis.js",
-      "/upgrades/pyodide-runtime.js",
-      // Testing and introspection (need StateManager, EventBus)
-      "/upgrades/introspector.js",
-      "/upgrades/self-tester.js",
-      // Visualizers and dashboards (need various deps)
-      "/upgrades/vfs-explorer.js",
-      "/upgrades/metrics-dashboard.js",
-      "/upgrades/agent-visualizer.js",
-      "/upgrades/ast-visualizer.js",
-      "/upgrades/module-graph-visualizer.js",
-      "/upgrades/tutorial-system.js",
-      // UI and agent cycle (need everything above)
-      "/upgrades/ui-manager.js",
-      "/upgrades/agent-cycle.js",
-      // Sentinel and orchestration modules (need most other modules)
-      "/upgrades/git-vfs.js",
-      "/upgrades/sentinel-tools.js",
-      "/upgrades/diff-viewer-ui.js",
-      "/upgrades/webrtc-swarm.js",
-      "/upgrades/webrtc-coordinator.js",
-      "/upgrades/sentinel-fsm.js",
-      "/upgrades/meta-tool-creator.js"
-    ];
+    // Load module manifest for dynamic module loading
+    logger.info("[CoreLogic] Loading module manifest...");
+    const manifestContent = await vfs.read("/module-manifest.json");
+    const manifest = JSON.parse(manifestContent);
+
+    logger.info(`[CoreLogic] Manifest version ${manifest.version} loaded with ${manifest.loadGroups.length} load groups`);
+
+    // Flatten manifest into module file list for loading
+    const moduleFiles = [];
+    for (const group of manifest.loadGroups) {
+      for (const moduleSpec of group.modules) {
+        moduleFiles.push({
+          id: moduleSpec.id,
+          path: moduleSpec.path
+        });
+      }
+    }
 
     // Load and register all modules
     logger.info("[CoreLogic] Loading and registering all application modules...");
     logger.info(`[CoreLogic] Total module files to load: ${moduleFiles.length}`);
-    logger.info(`[CoreLogic] Module list includes agent-logic-pure: ${moduleFiles.some(f => f.includes('agent-logic-pure'))}`);
+    logger.info(`[CoreLogic] Module list includes agent-logic-pure: ${moduleFiles.some(f => f.path.includes('agent-logic-pure'))}`);
 
-    const moduleContents = await Promise.all(moduleFiles.map(path => vfs.read(path)));
+    const moduleContents = await Promise.all(moduleFiles.map(spec => vfs.read(spec.path)));
 
     logger.info(`[CoreLogic] Module contents loaded: ${moduleContents.length} items`);
-    logger.info(`[CoreLogic] agent-logic-pure content length: ${moduleContents[moduleFiles.findIndex(f => f.includes('agent-logic-pure'))]?.length || 'NOT FOUND'}`);
+    logger.info(`[CoreLogic] agent-logic-pure content length: ${moduleContents[moduleFiles.findIndex(f => f.path.includes('agent-logic-pure'))]?.length || 'NOT FOUND'}`);
 
     for (let i = 0; i < moduleContents.length; i++) {
       const content = moduleContents[i];
-      const filePath = moduleFiles[i];
+      const fileSpec = moduleFiles[i];
+      const filePath = fileSpec.path;
 
       if (!content) {
         logger.warn(`[CoreLogic] No content returned for ${filePath}; skipping module registration.`);

@@ -118,7 +118,7 @@
     "hasWidgetElement": true,
     "hasOldGetStatus": false,
     "hasOldRenderPanel": false,
-    "blueprintId": null
+    "blueprintId": "0x000053"
   },
   {
     "filename": "blueprint-creator.js",
@@ -228,7 +228,7 @@
     "hasWidgetElement": true,
     "hasOldGetStatus": false,
     "hasOldRenderPanel": false,
-    "blueprintId": null
+    "blueprintId": "0x00004F"
   },
   {
     "filename": "diff-utils.js",
@@ -239,7 +239,7 @@
     "hasWidgetElement": true,
     "hasOldGetStatus": false,
     "hasOldRenderPanel": false,
-    "blueprintId": null
+    "blueprintId": "0x00004C"
   },
   {
     "filename": "diff-viewer-ui.js",
@@ -250,7 +250,7 @@
     "hasWidgetElement": true,
     "hasOldGetStatus": false,
     "hasOldRenderPanel": false,
-    "blueprintId": null
+    "blueprintId": "0x000058"
   },
   {
     "filename": "dogs-parser-browser.js",
@@ -264,17 +264,6 @@
     "blueprintId": "0x000048"
   },
   {
-    "filename": "event-bus-widget.js",
-    "status": "MIGRATED",
-    "hasCustomElement": true,
-    "hasWidgetClass": true,
-    "hasShadowRoot": true,
-    "hasWidgetElement": true,
-    "hasOldGetStatus": false,
-    "hasOldRenderPanel": false,
-    "blueprintId": null
-  },
-  {
     "filename": "event-bus.js",
     "status": "MIGRATED",
     "hasCustomElement": true,
@@ -283,7 +272,7 @@
     "hasWidgetElement": true,
     "hasOldGetStatus": false,
     "hasOldRenderPanel": false,
-    "blueprintId": null
+    "blueprintId": "0x000063"
   },
   {
     "filename": "genesis-snapshot.js",
@@ -305,7 +294,7 @@
     "hasWidgetElement": true,
     "hasOldGetStatus": false,
     "hasOldRenderPanel": false,
-    "blueprintId": null
+    "blueprintId": "0x00005D"
   },
   {
     "filename": "goal-modifier.js",
@@ -327,7 +316,7 @@
     "hasWidgetElement": true,
     "hasOldGetStatus": false,
     "hasOldRenderPanel": false,
-    "blueprintId": null
+    "blueprintId": "0x000052"
   },
   {
     "filename": "hitl-controller.js",
@@ -338,7 +327,7 @@
     "hasWidgetElement": true,
     "hasOldGetStatus": false,
     "hasOldRenderPanel": false,
-    "blueprintId": null
+    "blueprintId": "0x00005A"
   },
   {
     "filename": "hot-reload.js",
@@ -349,7 +338,7 @@
     "hasWidgetElement": true,
     "hasOldGetStatus": false,
     "hasOldRenderPanel": false,
-    "blueprintId": null
+    "blueprintId": "0x00005B"
   },
   {
     "filename": "hybrid-llm-provider.js",
@@ -426,7 +415,7 @@
     "hasWidgetElement": true,
     "hasOldGetStatus": false,
     "hasOldRenderPanel": false,
-    "blueprintId": null
+    "blueprintId": "0x00005E"
   },
   {
     "filename": "module-graph-visualizer.js",
@@ -459,7 +448,7 @@
     "hasWidgetElement": true,
     "hasOldGetStatus": false,
     "hasOldRenderPanel": false,
-    "blueprintId": null
+    "blueprintId": "0x00004E"
   },
   {
     "filename": "penteract-analytics.js",
@@ -481,7 +470,7 @@
     "hasWidgetElement": true,
     "hasOldGetStatus": false,
     "hasOldRenderPanel": false,
-    "blueprintId": null
+    "blueprintId": "0x000062"
   },
   {
     "filename": "performance-monitor.js",
@@ -525,7 +514,7 @@
     "hasWidgetElement": true,
     "hasOldGetStatus": false,
     "hasOldRenderPanel": false,
-    "blueprintId": null
+    "blueprintId": "0x000060"
   },
   {
     "filename": "python-tool.js",
@@ -613,7 +602,7 @@
     "hasWidgetElement": true,
     "hasOldGetStatus": false,
     "hasOldRenderPanel": false,
-    "blueprintId": null
+    "blueprintId": "0x000064"
   },
   {
     "filename": "sentinel-tools.js",
@@ -624,7 +613,7 @@
     "hasWidgetElement": true,
     "hasOldGetStatus": false,
     "hasOldRenderPanel": false,
-    "blueprintId": null
+    "blueprintId": "0x000055"
   },
   {
     "filename": "state-helpers-pure.js",
@@ -636,17 +625,6 @@
     "hasOldGetStatus": false,
     "hasOldRenderPanel": false,
     "blueprintId": "0x000006"
-  },
-  {
-    "filename": "state-manager-widget.js",
-    "status": "MIGRATED",
-    "hasCustomElement": true,
-    "hasWidgetClass": true,
-    "hasShadowRoot": true,
-    "hasWidgetElement": true,
-    "hasOldGetStatus": false,
-    "hasOldRenderPanel": false,
-    "blueprintId": null
   },
   {
     "filename": "state-manager.js",
@@ -756,7 +734,7 @@
     "hasWidgetElement": true,
     "hasOldGetStatus": false,
     "hasOldRenderPanel": false,
-    "blueprintId": null
+    "blueprintId": "0x000056"
   },
   {
     "filename": "tool-runner-pure-helpers.js",
@@ -833,7 +811,7 @@
     "hasWidgetElement": true,
     "hasOldGetStatus": false,
     "hasOldRenderPanel": false,
-    "blueprintId": null
+    "blueprintId": "0x00004D"
   },
   {
     "filename": "verification-worker.js",
@@ -844,18 +822,7 @@
     "hasWidgetElement": true,
     "hasOldGetStatus": false,
     "hasOldRenderPanel": false,
-    "blueprintId": null
-  },
-  {
-    "filename": "vfs-explorer-widget-conversion.js",
-    "status": "MIGRATED",
-    "hasCustomElement": true,
-    "hasWidgetClass": true,
-    "hasShadowRoot": true,
-    "hasWidgetElement": true,
-    "hasOldGetStatus": true,
-    "hasOldRenderPanel": true,
-    "blueprintId": null
+    "blueprintId": "0x000061"
   },
   {
     "filename": "vfs-explorer.js",
@@ -921,17 +888,6 @@
     "hasWidgetElement": true,
     "hasOldGetStatus": false,
     "hasOldRenderPanel": false,
-    "blueprintId": null
-  },
-  {
-    "filename": "sync-tracker.js",
-    "status": "NOT_MIGRATED",
-    "hasCustomElement": false,
-    "hasWidgetClass": false,
-    "hasShadowRoot": false,
-    "hasWidgetElement": false,
-    "hasOldGetStatus": false,
-    "hasOldRenderPanel": false,
-    "blueprintId": null
+    "blueprintId": "0x000057"
   }
 ]

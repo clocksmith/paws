@@ -5,7 +5,7 @@
 **Target Upgrade:** RFCA (`rfc-author.js`)
 
 
-**Prerequisites:** 0x000012 (Structured Self-Evaluation)
+**Prerequisites:** 0x000012 (Structured Self-Evaluation), **0x00004E** (Module Widget Protocol)
 
 **Affected Artifacts:** `/docs/rfc-*.md`, `/templates/rfc.md`
 
@@ -63,7 +63,28 @@ const RFCAuthor = {
       }
 
       render() {
-        this.shadowRoot.innerHTML = `<style>...</style>${this.renderPanel()}`;
+        // Access closure state for RFC statistics
+        const rfcCount = this._api?.getRFCCount?.() || 0;
+        const lastRFC = this._api?.getLastRFCTime?.() || null;
+        const timeSinceLast = lastRFC ? Math.floor((Date.now() - lastRFC) / 1000 / 60) : null;
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host { display: block; font-family: monospace; font-size: 12px; }
+            .rfc-panel { background: rgba(255, 255, 255, 0.05); padding: 16px; }
+            .stat { padding: 8px; background: rgba(255, 255, 255, 0.08); margin: 4px 0; }
+          </style>
+          <div class="rfc-panel">
+            <h4>✎ RFC Author</h4>
+            <div class="stat">Total RFCs: ${rfcCount}</div>
+            ${timeSinceLast !== null ? `
+              <div class="stat">Last RFC: ${timeSinceLast}m ago</div>
+            ` : '<div class="stat">No RFCs created yet</div>'}
+            <div style="margin-top: 8px; font-size: 10px; color: #888;">
+              Creates formal RFC documents for project changes
+            </div>
+          </div>
+        `;
       }
     }
 
@@ -192,16 +213,38 @@ class RFCAuthorWidget extends HTMLElement {
   }
 
   render() {
-    // Access closure variables: _rfcCount, _recentRfcs, _lastRfcTime
+    // Access closure state for RFC statistics
+    const rfcCount = this._api?.getRFCCount?.() || 0;
+    const lastRFC = this._api?.getLastRFCTime?.() || null;
+    const timeSinceLast = lastRFC ? Math.floor((Date.now() - lastRFC) / 1000 / 60) : null;
+
     this.shadowRoot.innerHTML = `
-      <style>/* Shadow DOM styles */</style>
-      ${this.renderPanel()}
+      <style>
+        :host { display: block; font-family: monospace; font-size: 12px; }
+        .rfc-panel { background: rgba(255, 255, 255, 0.05); padding: 16px; }
+        .stat { padding: 8px; background: rgba(255, 255, 255, 0.08); margin: 4px 0; }
+        .draft-btn { padding: 4px 8px; background: #0a0; color: #000; border: none; cursor: pointer; }
+      </style>
+      <div class="rfc-panel">
+        <h4>✎ RFC Author</h4>
+        <div class="stat">Total RFCs: ${rfcCount}</div>
+        ${timeSinceLast !== null ? `
+          <div class="stat">Last RFC: ${timeSinceLast}m ago</div>
+        ` : '<div class="stat">No RFCs created yet</div>'}
+        <button class="draft-btn draft-sample-btn">Draft Sample RFC</button>
+      </div>
     `;
+
     // Wire up interactive button
-    this.shadowRoot.querySelector('.draft-sample-btn')
-      .addEventListener('click', async () => {
-        await draftRFC({ title: 'Sample RFC Document', /*...*/ });
+    const btn = this.shadowRoot.querySelector('.draft-sample-btn');
+    if (btn) {
+      btn.addEventListener('click', async () => {
+        const draftRFC = this._api?.draftRFC;
+        if (draftRFC) {
+          await draftRFC({ title: 'Sample RFC Document', /*...*/ });
+        }
       });
+    }
   }
 }
 ```

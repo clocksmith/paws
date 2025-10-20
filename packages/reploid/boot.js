@@ -122,7 +122,7 @@ function setupEventListeners() {
         }
     });
 
-    // Goal input and Launch Agent button
+    // Goal input and Awaken Agent button
     if (elements.goalInput && elements.awakenBtn) {
         // Initially disable the button
         elements.awakenBtn.disabled = true;
@@ -133,8 +133,8 @@ function setupEventListeners() {
             elements.awakenBtn.disabled = !hasGoal;
         });
 
-        // Handle Launch Agent button click
-        elements.awakenBtn.addEventListener('click', launchAgent);
+        // Handle Awaken Agent button click
+        elements.awakenBtn.addEventListener('click', awakenAgent);
     }
 
     // Global auto-approve toggle (in settings modal)
@@ -362,8 +362,8 @@ function updateCurrentModeDisplay(modeName) {
     }
 }
 
-async function launchAgent() {
-    console.log('[Boot] launchAgent() called');
+async function awakenAgent() {
+    console.log('[Boot] awakenAgent() called');
     const goal = elements.goalInput?.value?.trim();
     console.log('[Boot] Goal from input:', goal);
 
@@ -372,7 +372,7 @@ async function launchAgent() {
         return;
     }
 
-    console.log('[Boot] Launching agent with goal:', goal);
+    console.log('[Boot] Awakening agent with goal:', goal);
 
     // Check if we have a valid configuration
     if (!state.detectedEnv.hasServer && !state.detectedEnv.hasWebGPU) {
@@ -390,14 +390,14 @@ async function launchAgent() {
             appRoot.style.display = 'block';
         }
 
-        // Show loading message
+        // Show awakening message
         if (appRoot) {
             appRoot.innerHTML = `
                 <div style="padding: 40px; text-align: center; color: #e0e0e0;">
-                    <h2>Agent Initialization</h2>
+                    <h2>Agent Awakening</h2>
                     <p>Goal: ${goal}</p>
                     <p style="margin-top: 20px; color: #4ec9b0;">
-                        Loading agent system...
+                        Awakening agent system...
                     </p>
                 </div>
             `;
@@ -458,10 +458,10 @@ async function launchAgent() {
         console.log('[Boot] Calling CoreLogicModule...');
         await CoreLogicModule(initialConfig, vfs);
 
-        console.log('[Boot] Agent system initialized successfully');
+        console.log('[Boot] Agent system awakened successfully');
 
     } catch (error) {
-        console.error('[Boot] Failed to launch agent:', error);
+        console.error('[Boot] Failed to awaken agent:', error);
 
         // Show error in UI
         const appRoot = document.getElementById('app-root');
@@ -469,7 +469,7 @@ async function launchAgent() {
             appRoot.style.display = 'block';
             appRoot.innerHTML = `
                 <div style="padding: 40px; color: #ff6b6b;">
-                    <h2>Agent Launch Failed</h2>
+                    <h2>Agent Awakening Failed</h2>
                     <p style="margin-top: 20px;">Error: ${error.message}</p>
                     <pre style="margin-top: 20px; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 4px; text-align: left; overflow-x: auto;">${error.stack}</pre>
                     <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #4ec9b0; color: #1e1e1e; border: none; border-radius: 4px; cursor: pointer;">

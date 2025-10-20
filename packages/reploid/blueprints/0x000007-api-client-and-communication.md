@@ -5,7 +5,7 @@
 **Target Upgrade:** APIC (`api-client.js`)
 
 
-**Prerequisites:** `0x000003`
+**Prerequisites:** `0x000003`, **0x00004E** (Module Widget Protocol)
 
 **Affected Artifacts:** `/modules/api-client.js`
 
@@ -81,7 +81,45 @@ const ApiClient = {
       }
 
       render() {
-        this.shadowRoot.innerHTML = `<style>...</style>${this.renderPanel()}`;
+        // Access closure variables: _callStats, _callHistory, useProxy, currentAbortController
+        const successRate = _callStats.total > 0
+          ? ((_callStats.success / _callStats.total) * 100).toFixed(0)
+          : 0;
+
+        const recentCalls = _callHistory.slice(-10).reverse();
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host { display: block; font-family: monospace; font-size: 12px; }
+            .api-panel { background: rgba(255, 255, 255, 0.05); padding: 16px; }
+            .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+            .stat { padding: 8px; background: rgba(255, 255, 255, 0.08); }
+            .call-item { padding: 4px; border-left: 2px solid #0a0; margin: 4px 0; }
+            .call-item.error { border-left-color: #a00; }
+            .active-indicator { color: #0f0; animation: blink 1s infinite; }
+          </style>
+          <div class="api-panel">
+            <h4>◉ API Client</h4>
+            <div class="stats-grid">
+              <div class="stat">Total: ${_callStats.total}</div>
+              <div class="stat">Success: ${_callStats.success}</div>
+              <div class="stat">Errors: ${_callStats.error}</div>
+              <div class="stat">Rate: ${successRate}%</div>
+            </div>
+            <div style="margin-top: 8px;">
+              Connection: ${useProxy ? 'Proxy' : 'Direct'}
+              ${currentAbortController ? '<span class="active-indicator">●</span>' : ''}
+            </div>
+            <div style="margin-top: 8px; max-height: 200px; overflow-y: auto;">
+              ${recentCalls.map(call => `
+                <div class="call-item ${call.success ? '' : 'error'}">
+                  ${call.success ? '✓' : '✗'} ${call.duration}ms
+                  ${call.error ? `- ${call.error}` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
       }
     }
 
@@ -429,18 +467,43 @@ class ApiClientWidget extends HTMLElement {
   }
 
   render() {
-    // Access closure variables: _callStats, _callHistory, useProxy, etc.
+    // Access closure variables: _callStats, _callHistory, useProxy, currentAbortController
     const successRate = _callStats.total > 0
       ? ((_callStats.success / _callStats.total) * 100).toFixed(0)
       : 0;
 
+    const recentCalls = _callHistory.slice(-10).reverse();
+
     this.shadowRoot.innerHTML = `
-      <style>/* Shadow DOM styles */</style>
-      <div class="api-client-panel">
-        <!-- Statistics grid -->
-        <!-- Connection info -->
-        <!-- Recent calls list -->
-        <!-- Rate limit indicator -->
+      <style>
+        :host { display: block; font-family: monospace; font-size: 12px; }
+        .api-panel { background: rgba(255, 255, 255, 0.05); padding: 16px; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .stat { padding: 8px; background: rgba(255, 255, 255, 0.08); }
+        .call-item { padding: 4px; border-left: 2px solid #0a0; margin: 4px 0; }
+        .call-item.error { border-left-color: #a00; }
+        .active-indicator { color: #0f0; animation: blink 1s infinite; }
+      </style>
+      <div class="api-panel">
+        <h4>◉ API Client</h4>
+        <div class="stats-grid">
+          <div class="stat">Total: ${_callStats.total}</div>
+          <div class="stat">Success: ${_callStats.success}</div>
+          <div class="stat">Errors: ${_callStats.error}</div>
+          <div class="stat">Rate: ${successRate}%</div>
+        </div>
+        <div style="margin-top: 8px;">
+          Connection: ${useProxy ? 'Proxy' : 'Direct'}
+          ${currentAbortController ? '<span class="active-indicator">●</span>' : ''}
+        </div>
+        <div style="margin-top: 8px; max-height: 200px; overflow-y: auto;">
+          ${recentCalls.map(call => `
+            <div class="call-item ${call.success ? '' : 'error'}">
+              ${call.success ? '✓' : '✗'} ${call.duration}ms
+              ${call.error ? `- ${call.error}` : ''}
+            </div>
+          `).join('')}
+        </div>
       </div>
     `;
   }

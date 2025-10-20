@@ -562,7 +562,7 @@ function renderOfflineConfig(env) {
                 </span>
                 <span class="setting-checkbox-text">Auto-start Ollama with the proxy server</span>
             </label>
-            <p class="setting-description">Ensures <code>ollama serve</code> runs whenever you launch Reploid locally.</p>
+            <p class="setting-description">Ensures <code>ollama serve</code> runs whenever you awaken Reploid locally.</p>
         </div>
 
         <div class="setting-item">

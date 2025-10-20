@@ -114,21 +114,54 @@ class LocalLLMWidget extends HTMLElement {
     return controls;
   }
 
-  renderPanel() {
-    // Returns HTML for:
-    // - Model status badge (✓ Ready / ⏳ Loading / ○ Not Loaded)
-    // - Current model name display
-    // - Loading progress bar (when loading)
-    // - GPU memory usage bar chart with percentage
-    // - Inference statistics grid (total inferences, tokens, avg tokens/sec, avg time)
-    // - Available models list (10 models) with "Load" buttons
-    // - Error message display (if error occurred)
-  }
-
   render() {
+    // Access closure state for model status
+    const statusBadge = isReady ? '✓ Ready' : (isLoading ? '⏳ Loading' : '○ Not Loaded');
+    const statusColor = isReady ? '#0f0' : (isLoading ? '#ff0' : '#888');
+    const modelName = currentModel ? currentModel.split('-MLC')[0] : 'None';
+    const progressPercent = Math.round(loadProgress * 100);
+
     this.shadowRoot.innerHTML = `
-      <style>/* Shadow DOM styles */</style>
-      <div class="widget-panel-content">${this.renderPanel()}</div>
+      <style>
+        :host { display: block; font-family: monospace; font-size: 12px; }
+        .llm-panel { background: rgba(255, 255, 255, 0.05); padding: 16px; }
+        .status-badge { color: ${statusColor}; font-weight: bold; }
+        .progress-bar { width: 100%; height: 8px; background: #333; margin: 8px 0; }
+        .progress-fill { height: 100%; background: #0f0; transition: width 0.3s; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+        .stat { padding: 6px; background: rgba(255, 255, 255, 0.08); }
+        .model-btn { padding: 4px 8px; background: #0a0; color: #000; border: none; cursor: pointer; margin: 2px; }
+        .error { color: #f00; padding: 8px; background: rgba(255, 0, 0, 0.1); }
+      </style>
+      <div class="llm-panel">
+        <h4>⚡ Local LLM Runtime</h4>
+        <div class="status-badge">${statusBadge}</div>
+        <div>Model: ${modelName}</div>
+        ${isLoading ? `
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${progressPercent}%"></div>
+          </div>
+          <div>${progressPercent}% loaded</div>
+        ` : ''}
+        ${isReady ? `
+          <div style="margin: 8px 0;">GPU Memory: ${gpuMemPercent}%</div>
+          <div class="stats-grid">
+            <div class="stat">Inferences: ${inferenceStats.totalInferences}</div>
+            <div class="stat">Tokens: ${inferenceStats.totalTokens}</div>
+            <div class="stat">Avg Speed: ${inferenceStats.avgTokensPerSec.toFixed(1)} tok/s</div>
+            <div class="stat">Avg Time: ${inferenceStats.avgTime.toFixed(0)}ms</div>
+          </div>
+        ` : ''}
+        ${initError ? `<div class="error">Error: ${initError}</div>` : ''}
+        <div style="margin-top: 8px;">
+          <strong>Available Models:</strong>
+          ${availableModels.map(m => `
+            <button class="model-btn model-switch-btn" data-model-id="${m.id}">
+              ${m.name}
+            </button>
+          `).join('')}
+        </div>
+      </div>
     `;
 
     // Wire up model switch buttons
@@ -157,20 +190,74 @@ customElements.define('local-llm-widget', LocalLLMWidget);
 The widget provides complete runtime visibility and control for local LLM operations, essential for monitoring GPU resource usage and model performance.
 
 ### 3. Implementation Pathway
-1. **Script Inclusion**
-   - Add `<script type="module" src="https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm"></script>` in HTML (deferred until persona needs).
-2. **Initialization UX**
-   - Provide UI panel to select model; persist choice via `StateManager`.
-   - Show progress bar while `initProgressCallback` reports download/unpack status.
-3. **Streaming Integration**
-   - When `options.stream === true`, return async iterator that yields incremental tokens with usage summary on completion.
-   - UI should consume stream and update chat in real time.
-4. **Error Recovery**
-   - Catch initialization failures, set `initError`, emit error events, show toast with remediation (e.g., “Enable chrome://flags/#enable-unsafe-webgpu”).
-   - Allow reattempt via `init`.
-5. **Resource Management**
-   - Call `unload()` on persona switch or when running in limited memory contexts.
-   - Monitor GPU memory (if available) and warn when near limits via `PerformanceMonitor`.
+
+**Step 1: Define Web Component Class**
+- Create `LocalLLMWidget` class extending `HTMLElement` inside the factory function
+- Gives widget closure access to all module state (isLoading, isReady, currentModel, etc.)
+- Attach Shadow DOM in constructor: `this.attachShadow({ mode: 'open' })`
+
+**Step 2: Implement Lifecycle Methods**
+- `connectedCallback()`: Initial render + start adaptive auto-refresh
+  - Use 500ms interval while loading (for progress updates)
+  - Use 5000ms interval when idle (for GPU memory monitoring)
+- `disconnectedCallback()`: Clean up intervals to prevent memory leaks
+  - Clear `this._interval` if exists
+
+**Step 3: Implement Status Protocol**
+- `getStatus()` as class method with ALL 5 required fields:
+  - `state`: 'disabled' | 'loading' | 'active' | 'idle' | 'error'
+  - `primaryMetric`: Current model name or 'Not loaded'
+  - `secondaryMetric`: GPU memory % or loading progress
+  - `lastActivity`: Timestamp of last inference (or null)
+  - `message`: Error message or loading status (or null)
+- Access module state directly via closure (no injection needed)
+
+**Step 4: Implement Interactive Controls**
+- `getControls()` as class method returning action buttons:
+  - "⚡ Load Model" button when not ready and not loading
+  - "⛶ Unload Model" button when ready and not generating
+- Each control executes module API methods via closure access
+
+**Step 5: Implement Render Method**
+- Single `render()` method sets `this.shadowRoot.innerHTML`
+- Include `<style>` tag with `:host` selector for scoped styles
+- Render: model status badge, progress bar, GPU memory chart, statistics, available models list
+- Wire up model switch buttons with event listeners after render
+- Call `switchModel()` directly via closure when buttons clicked
+
+**Step 6: Register Custom Element**
+- Use kebab-case naming: `'local-llm-widget'`
+- Add duplicate check: `if (!customElements.get(elementName))`
+- Call `customElements.define(elementName, LocalLLMWidget)`
+
+**Step 7: Return New Widget Format**
+- Return widget object: `{ element, displayName, icon, category }`
+- Remove old properties: renderPanel, getStatus, getControls, updateInterval
+- Element name is now the custom element tag
+
+**Step 8: Script Inclusion**
+- Add `<script type="module" src="https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm"></script>` in HTML (deferred until persona needs)
+
+**Step 9: Initialization UX**
+- Provide UI panel to select model; persist choice via `StateManager`
+- Show progress bar while `initProgressCallback` reports download/unpack status
+- Widget automatically displays progress via adaptive refresh rate
+
+**Step 10: Streaming Integration**
+- When `options.stream === true`, return async iterator that yields incremental tokens
+- UI consumes stream and updates chat in real time
+- Final message includes usage summary
+
+**Step 11: Error Recovery**
+- Catch initialization failures, set `initError`, emit error events
+- Widget displays error message via `getStatus().message`
+- Show toast with remediation (e.g., "Enable chrome://flags/#enable-unsafe-webgpu")
+- Allow reattempt via `init` button in widget controls
+
+**Step 12: Resource Management**
+- Call `unload()` on persona switch or in limited memory contexts
+- Monitor GPU memory via widget's real-time display
+- Warn when near limits via `PerformanceMonitor`
 
 ### 4. Verification Checklist
 - [ ] Initialization gracefully fails when WebGPU unavailable.

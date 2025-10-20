@@ -616,7 +616,8 @@ npm run test:e2e:ui
 
 ### Getting Started
 - **[Quick Start Guide](docs/QUICK-START.md)** - Interactive tutorial
-- **[WebRTC Quick Start](WEBRTC_QUICKSTART.md)** - P2P swarm setup in 5 minutes
+- **[WebRTC Quick Start](docs/WEBRTC_QUICKSTART.md)** - P2P swarm setup in 5 minutes
+- **[Deployment Modes](docs/DEPLOYMENT_MODES.md)** - Browser-only, Node.js server, Docker
 
 ### Configuration & Setup
 - **[Operational Modes](docs/OPERATIONAL_MODES.md)** - Client-only, Server, Local WebGPU
@@ -628,6 +629,16 @@ npm run test:e2e:ui
 - **[Personas Guide](docs/PERSONAS.md)** - Custom agent personalities
 - **[Testing](tests/README.md)** - Test suite documentation
 - **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues
+- **[Web Components Guide](docs/WEB_COMPONENTS_GUIDE.md)** - Adding new modules with Web Components
+- **[Web Components Testing Guide](docs/WEB_COMPONENTS_TESTING_GUIDE.md)** - Testing patterns for widgets
+- **[Blueprint Update Guide](docs/BLUEPRINT_UPDATE_GUIDE.md)** - Updating architectural blueprints
+
+### Architecture & Implementation
+- **[Blueprint System](docs/BLUEPRINTS_UPGRADES_MAPPING.md)** - Complete module-blueprint-test mapping
+- **[Web Components Migration Tracker](docs/WEB_COMPONENTS_MIGRATION_TRACKER.md)** - Migration status
+- **[Structured Cycle Implementation](docs/STRUCTURED_CYCLE_IMPLEMENTATION.md)** - 8-step cognitive cycle
+- **[Meta-Cognitive RSI Implementation](docs/META_COGNITIVE_RSI_IMPLEMENTATION.md)** - Self-improvement system
+- **[Upgrade Necessity Analysis](docs/UPGRADE_NECESSITY_ANALYSIS.md)** - Module criticality analysis
 
 ### Complete Index
 - **[Documentation Index](docs/INDEX.md)** - Complete guide to all documentation
