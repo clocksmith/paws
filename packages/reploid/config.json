@@ -1,4 +1,11 @@
 {
+  "_documentation": {
+    "critical_guides": [
+      "docs/MCP_TOOLS_VS_UPGRADES.md - REQUIRED reading before creating new capabilities",
+      "blueprints/0x00004E-module-widget-protocol.md - REQUIRED for all new upgrades"
+    ],
+    "upgrade_creation_rule": "All new upgrades MUST follow 1:1:1:1 pattern: Module : Blueprint : Test : Widget (widget in same file)"
+  },
   "personas": [
     {
       "id": "rsi_lab_sandbox",

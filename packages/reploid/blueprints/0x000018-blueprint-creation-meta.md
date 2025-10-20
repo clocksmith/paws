@@ -4,7 +4,10 @@
 
 **Target Upgrade:** BLPR (`blueprint-creator.js`)
 
-**Prerequisites:** TLWR upgrade, understanding of existing blueprints
+**Prerequisites:**
+- TLWR upgrade
+- Understanding of existing blueprints
+- **0x00004E** (Module Widget Protocol) - REQUIRED when creating blueprints for new upgrades
 
 **Affected Artifacts:** `/docs/0x*-*.md` (new blueprints)
 
@@ -55,8 +58,10 @@ Blueprints are **knowledge artifacts** that describe HOW to build capabilities, 
 ### 3. Blueprint Categories
 
 **Upgrade Blueprints (0x000001-0x000FFF):**
-- Describe how to build specific upgrades
+- Describe how to build specific upgrades/modules
 - Map 1:1 to upgrade files
+- **MUST reference 0x00004E (Module Widget Protocol)** in prerequisites
+- **MUST describe widget implementation** (all upgrades require widgets)
 - Example: "How to build a state manager"
 
 **Meta Blueprints (0x001000-0x001FFF):**
@@ -150,10 +155,12 @@ const createBlueprint = async (capability) => {
 
 - [ ] **Clear Objective:** States what will be built
 - [ ] **Complete Prerequisites:** Lists all dependencies
+- [ ] **Widget Protocol Reference:** References 0x00004E if creating upgrade
+- [ ] **Widget Implementation:** Describes web component widget (REQUIRED for upgrades)
 - [ ] **Step-by-Step Instructions:** Could a new agent follow?
-- [ ] **Code Examples:** Shows key implementations
+- [ ] **Code Examples:** Shows key implementations including widget
 - [ ] **Error Handling:** Describes edge cases
-- [ ] **Testing Strategy:** How to verify it works
+- [ ] **Testing Strategy:** How to verify it works (including widget tests)
 - [ ] **Extension Points:** Where to add features
 
 ### 7. Learning from Existing Blueprints
@@ -195,6 +202,35 @@ To create a blueprint about creating blueprints:
 3. **Provide examples:** Show concrete applications
 4. **Enable reproduction:** Ensure knowledge transfers
 5. **Plan for evolution:** How will this knowledge grow?
+
+### 9.5. Critical Distinction: MCP Tools vs REPLOID Upgrades
+
+**IMPORTANT**: When creating blueprints for capabilities, understand the difference:
+
+**MCP Tools (External):**
+- Provided by MCP servers (external processes)
+- NOT part of REPLOID codebase
+- CANNOT be created from within REPLOID
+- Examples: filesystem access, GitHub API, databases
+- NO blueprint required
+- NO web component widget
+
+**REPLOID Upgrades (Internal Modules):**
+- JavaScript modules in `upgrades/` directory
+- Part of REPLOID's internal codebase
+- CAN be created via self-modification
+- Examples: state-manager.js, api-client.js, tool-runner.js
+- **REQUIRES blueprint** (1:1 correspondence)
+- **REQUIRES web component widget** (see 0x00004E)
+- **REQUIRES unit test** (1:1 correspondence)
+
+**Dynamic Tools (Internal):**
+- JSON tool definitions in `/system/tools-dynamic.json`
+- Created using meta-tool-creator.js
+- See Blueprint 0x000016
+- NO widget required (tools, not modules)
+
+See **docs/MCP_TOOLS_VS_UPGRADES.md** for comprehensive guide.
 
 ### 10. The Ultimate Test
 

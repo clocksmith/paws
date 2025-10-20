@@ -26,9 +26,11 @@ const BlueprintCreatorModule = (
 
 **Objective:** To [[OBJECTIVE]]
 
-**Target Upgrade:** [[TARGET_ID]] 
+**Target Upgrade:** [[TARGET_ID]]
 
-**Prerequisites:** [[PREREQUISITES]]
+**Prerequisites:**
+- [[PREREQUISITES]]
+- **0x00004E** (Module Widget Protocol) - REQUIRED for all upgrades
 
 **Affected Artifacts:** [[ARTIFACTS]]
 
@@ -46,7 +48,71 @@ const BlueprintCreatorModule = (
 
 [[IMPLEMENTATION_SECTION]]
 
-### 4. [[CUSTOM_SECTION_TITLE]]
+### 4. Web Component Widget (REQUIRED)
+
+**Every upgrade MUST have a widget interface.** See Blueprint 0x00004E for complete protocol.
+
+The widget must:
+- Extend \`HTMLElement\` with Shadow DOM
+- Implement \`getStatus()\` returning widget status
+- Be defined **in the same file** as the module
+- Be registered as custom element
+
+\`\`\`javascript
+class [[MODULE_NAME]]Widget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+  }
+
+  disconnectedCallback() {
+    // Clean up intervals/listeners
+  }
+
+  // REQUIRED: Status protocol (see 0x00004E)
+  getStatus() {
+    return {
+      state: 'idle', // 'active' | 'idle' | 'error' | 'loading'
+      primaryMetric: '0 items',
+      secondaryMetric: 'Ready',
+      lastActivity: null,
+      message: null
+    };
+  }
+
+  render() {
+    this.shadowRoot.innerHTML = \`
+      <style>
+        :host { display: block; font-family: monospace; }
+        /* Scoped styles */
+      </style>
+      <div class="panel">
+        <h4>[[DISPLAY_NAME]]</h4>
+        <!-- Widget UI -->
+      </div>
+    \`;
+  }
+}
+
+// Register widget
+const elementName = '[[ELEMENT_NAME]]';
+if (!customElements.get(elementName)) {
+  customElements.define(elementName, [[MODULE_NAME]]Widget);
+}
+
+const widget = {
+  element: elementName,
+  displayName: '[[DISPLAY_NAME]]',
+  icon: '[[ICON]]',
+  category: '[[CATEGORY]]' // core, tools, ai, storage, ui, analytics, rsi, communication
+};
+\`\`\`
+
+### 5. [[CUSTOM_SECTION_TITLE]]
 
 [[CUSTOM_SECTION_CONTENT]]
 

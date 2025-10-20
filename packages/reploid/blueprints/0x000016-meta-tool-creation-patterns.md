@@ -1,12 +1,25 @@
 # Blueprint 0x000016: Meta-Patterns for Tool Creation
 
-**Objective:** To provide the agent with patterns and principles for designing and implementing new tools that extend its capabilities.
+**Objective:** To provide the agent with patterns and principles for designing and implementing new **dynamic tools** (NOT upgrades/modules) that extend its capabilities.
 
 **Target Upgrade:** MTCP (`meta-tool-creator.js`)
 
 **Prerequisites:** `0x000015` (Dynamic Tools), TLWR upgrade
 
-**Affected Artifacts:** Any new tool the agent creates
+**Affected Artifacts:** Any new **dynamic tool** the agent creates (stored in `/system/tools-dynamic.json`)
+
+**⚠️ IMPORTANT DISTINCTION:**
+
+This blueprint is about creating **DYNAMIC TOOLS** (JSON tool definitions), NOT **REPLOID UPGRADES** (modules).
+
+- **Dynamic Tools**: JSON definitions for new tool capabilities (stored in tools-dynamic.json)
+- **Upgrades/Modules**: JavaScript modules in `upgrades/` directory (see Blueprint 0x00004E for module creation)
+- **MCP Tools**: External tools provided by MCP servers (NOT created by REPLOID)
+
+If you want to create a new **module/upgrade**, see:
+- **Blueprint 0x00004E** (Module Widget Protocol)
+- **Blueprint 0x000018** (Blueprint Creation)
+- **docs/MCP_TOOLS_VS_UPGRADES.md**
 
 ---
 

@@ -1,6 +1,27 @@
 // @blueprint 0x000016 - Meta-patterns and principles for designing new tools.
-// Meta-Tool Creation Patterns Module
-// Provides utilities for creating, validating, and managing dynamic tools
+/**
+ * Meta-Tool Creator Module
+ *
+ * PURPOSE: Creates MCP tools (external API functions exposed to LLM)
+ * NOT FOR: Creating upgrade modules (use blueprint-creator.js instead)
+ *
+ * IMPORTANT DISTINCTIONS:
+ * - MCP Tools = JSON schema + implementation (stored in tools-*.json files)
+ *   Examples: read_artifact, search_vfs, list_modules
+ *   Created by: This module (meta-tool-creator.js)
+ *   Requirements: JSON schema definition, sandboxed execution
+ *
+ * - Upgrades/Modules = Full JavaScript modules in upgrades/ directory
+ *   Examples: state-manager.js, event-bus.js, tool-runner.js
+ *   Created by: blueprint-creator.js + manual implementation
+ *   Requirements: Metadata, factory, widget (0x00004E), tests, blueprints
+ *
+ * - Dynamic Tools = JSON definitions in /system/tools-dynamic.json
+ *   Examples: Agent-created custom tools
+ *   Created by: This module
+ *
+ * See docs/MCP_TOOLS_VS_UPGRADES.md for comprehensive guide.
+ */
 
 const MetaToolCreator = {
   metadata: {
