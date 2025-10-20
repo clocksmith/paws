@@ -1,12 +1,12 @@
-[2025-10-20T20:15:22.782Z] [LOG] [ConsoleMonitor] Browser console monitoring enabled
-[2025-10-20T20:15:22.782Z] [LOG] [LiveReload] Auto-reload enabled
-[2025-10-20T20:15:22.789Z] [LOG] [Config] Loaded settings: {
+[2025-10-20T20:46:19.687Z] [LOG] [ConsoleMonitor] Browser console monitoring enabled
+[2025-10-20T20:46:19.687Z] [LOG] [LiveReload] Auto-reload enabled
+[2025-10-20T20:46:19.693Z] [LOG] [Config] Loaded settings: {
   "selectedModel": null,
   "aiProvider": null,
   "selectedMode": null
 }
-[2025-10-20T20:15:22.789Z] [LOG] [API] Checking server status...
-[2025-10-20T20:15:22.794Z] [LOG] [API] Server online: {
+[2025-10-20T20:46:19.693Z] [LOG] [API] Checking server status...
+[2025-10-20T20:46:19.699Z] [LOG] [API] Server online: {
   "status": "ok",
   "providers": [
     "gemini",
@@ -18,19 +18,19 @@
     "endpoint": "http://localhost:11434"
   },
   "ollamaStatus": "running",
-  "timestamp": "2025-10-20T20:15:22.791Z"
+  "timestamp": "2025-10-20T20:46:19.696Z"
 }
-[2025-10-20T20:15:22.794Z] [LOG] [API] WebGPU available
-[2025-10-20T20:15:22.795Z] [LOG] [Boot] Proxy server available: true
-[2025-10-20T20:15:24.326Z] [LOG] [ConsoleMonitor] Browser console monitoring enabled
-[2025-10-20T20:15:24.326Z] [LOG] [LiveReload] Auto-reload enabled
-[2025-10-20T20:15:24.329Z] [LOG] [Config] Loaded settings: {
+[2025-10-20T20:46:19.699Z] [LOG] [API] WebGPU available
+[2025-10-20T20:46:19.701Z] [LOG] [Boot] Proxy server available: true
+[2025-10-20T20:46:21.241Z] [LOG] [ConsoleMonitor] Browser console monitoring enabled
+[2025-10-20T20:46:21.241Z] [LOG] [LiveReload] Auto-reload enabled
+[2025-10-20T20:46:21.245Z] [LOG] [Config] Loaded settings: {
   "selectedModel": null,
   "aiProvider": null,
   "selectedMode": null
 }
-[2025-10-20T20:15:24.329Z] [LOG] [API] Checking server status...
-[2025-10-20T20:15:24.332Z] [LOG] [API] Server online: {
+[2025-10-20T20:46:21.245Z] [LOG] [API] Checking server status...
+[2025-10-20T20:46:21.248Z] [LOG] [API] Server online: {
   "status": "ok",
   "providers": [
     "gemini",
@@ -42,19 +42,19 @@
     "endpoint": "http://localhost:11434"
   },
   "ollamaStatus": "running",
-  "timestamp": "2025-10-20T20:15:24.330Z"
+  "timestamp": "2025-10-20T20:46:21.246Z"
 }
-[2025-10-20T20:15:24.332Z] [LOG] [API] WebGPU available
-[2025-10-20T20:15:24.333Z] [LOG] [Boot] Proxy server available: true
-[2025-10-20T20:15:26.372Z] [LOG] [ConsoleMonitor] Browser console monitoring enabled
-[2025-10-20T20:15:26.372Z] [LOG] [LiveReload] Auto-reload enabled
-[2025-10-20T20:15:26.378Z] [LOG] [Config] Loaded settings: {
+[2025-10-20T20:46:21.249Z] [LOG] [API] WebGPU available
+[2025-10-20T20:46:21.250Z] [LOG] [Boot] Proxy server available: true
+[2025-10-20T20:46:23.351Z] [LOG] [ConsoleMonitor] Browser console monitoring enabled
+[2025-10-20T20:46:23.351Z] [LOG] [LiveReload] Auto-reload enabled
+[2025-10-20T20:46:23.357Z] [LOG] [Config] Loaded settings: {
   "selectedModel": null,
   "aiProvider": null,
   "selectedMode": null
 }
-[2025-10-20T20:15:26.378Z] [LOG] [API] Checking server status...
-[2025-10-20T20:15:26.380Z] [LOG] [API] Server online: {
+[2025-10-20T20:46:23.357Z] [LOG] [API] Checking server status...
+[2025-10-20T20:46:23.359Z] [LOG] [API] Server online: {
   "status": "ok",
   "providers": [
     "gemini",
@@ -66,125 +66,147 @@
     "endpoint": "http://localhost:11434"
   },
   "ollamaStatus": "running",
-  "timestamp": "2025-10-20T20:15:26.379Z"
+  "timestamp": "2025-10-20T20:46:23.358Z"
 }
-[2025-10-20T20:15:26.381Z] [LOG] [API] WebGPU available
-[2025-10-20T20:15:26.382Z] [LOG] [Boot] Proxy server available: true
-[2025-10-20T20:15:27.985Z] [LOG] [VFS] Reading: /upgrades/context-manager.js
-[2025-10-20T20:15:27.985Z] [LOG] [VFS] Reading: /upgrades/browser-apis.js
-[2025-10-20T20:15:27.985Z] [LOG] [VFS] Reading: /upgrades/pyodide-runtime.js
-[2025-10-20T20:15:27.985Z] [LOG] [VFS] Reading: /upgrades/introspector.js
-[2025-10-20T20:15:27.985Z] [LOG] [VFS] Reading: /upgrades/self-tester.js
-[2025-10-20T20:15:27.985Z] [LOG] [VFS] Reading: /upgrades/vfs-explorer.js
-[2025-10-20T20:15:27.985Z] [LOG] [VFS] Reading: /upgrades/metrics-dashboard.js
-[2025-10-20T20:15:27.985Z] [LOG] [VFS] Reading: /upgrades/agent-visualizer.js
-[2025-10-20T20:15:27.985Z] [LOG] [VFS] Reading: /upgrades/ast-visualizer.js
-[2025-10-20T20:15:27.985Z] [LOG] [VFS] Reading: /upgrades/module-graph-visualizer.js
-[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/tutorial-system.js
-[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/progress-tracker.js
-[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/log-panel.js
-[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/status-bar.js
-[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/goal-panel.js
-[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/thought-panel.js
-[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/ui-manager.js
-[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/agent-cycle.js
-[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/git-vfs.js
-[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/sentinel-tools.js
-[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/sentinel-panel.js
-[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/diff-viewer-ui.js
-[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/webrtc-swarm.js
-[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/webrtc-coordinator.js
-[2025-10-20T20:15:27.987Z] [LOG] [VFS] Reading: /upgrades/sentinel-fsm.js
-[2025-10-20T20:15:27.987Z] [LOG] [VFS] Reading: /upgrades/meta-tool-creator.js
-[2025-10-20T20:15:27.989Z] [LOG] [VFS] Loaded: /upgrades/utils.js (23523 bytes)
-[2025-10-20T20:15:27.990Z] [LOG] [VFS] Loaded: /upgrades/event-bus.js (10766 bytes)
-[2025-10-20T20:15:27.992Z] [LOG] [VFS] Loaded: /upgrades/tool-runner-pure-helpers.js (6293 bytes)
-[2025-10-20T20:15:27.992Z] [LOG] [VFS] Loaded: /upgrades/agent-logic-pure.js (6050 bytes)
-[2025-10-20T20:15:27.992Z] [LOG] [VFS] Loaded: /upgrades/state-helpers-pure.js (5784 bytes)
-[2025-10-20T20:15:27.993Z] [LOG] [VFS] Loaded: /upgrades/storage-indexeddb.js (13962 bytes)
-[2025-10-20T20:15:27.993Z] [LOG] [VFS] Loaded: /upgrades/di-container.js (17553 bytes)
-[2025-10-20T20:15:27.995Z] [LOG] [VFS] Loaded: /upgrades/rate-limiter.js (17640 bytes)
-[2025-10-20T20:15:27.996Z] [LOG] [VFS] Loaded: /upgrades/local-llm.js (23463 bytes)
-[2025-10-20T20:15:27.996Z] [LOG] [VFS] Loaded: /upgrades/state-manager.js (35007 bytes)
-[2025-10-20T20:15:27.997Z] [LOG] [VFS] Loaded: /upgrades/api-client.js (21290 bytes)
-[2025-10-20T20:15:27.997Z] [LOG] [VFS] Loaded: /upgrades/hybrid-llm-provider.js (25498 bytes)
-[2025-10-20T20:15:27.997Z] [LOG] [VFS] Loaded: /upgrades/audit-logger.js (20795 bytes)
-[2025-10-20T20:15:27.999Z] [LOG] [VFS] Loaded: /upgrades/tool-runner.js (39647 bytes)
-[2025-10-20T20:15:28.000Z] [LOG] [VFS] Loaded: /utils/diff-generator.js (1320 bytes)
-[2025-10-20T20:15:28.000Z] [LOG] [VFS] Loaded: /upgrades/performance-monitor.js (22514 bytes)
-[2025-10-20T20:15:28.000Z] [LOG] [VFS] Loaded: /upgrades/streaming-response-handler.js (14028 bytes)
-[2025-10-20T20:15:28.001Z] [LOG] [VFS] Loaded: /upgrades/reflection-store.js (25016 bytes)
-[2025-10-20T20:15:28.001Z] [LOG] [VFS] Loaded: /upgrades/toast-notifications.js (14884 bytes)
-[2025-10-20T20:15:28.003Z] [LOG] [VFS] Loaded: /upgrades/vfs-explorer.js (23688 bytes)
-[2025-10-20T20:15:28.004Z] [LOG] [VFS] Loaded: /upgrades/introspector.js (25697 bytes)
-[2025-10-20T20:15:28.004Z] [LOG] [VFS] Loaded: /upgrades/context-manager.js (20606 bytes)
-[2025-10-20T20:15:28.004Z] [LOG] [VFS] Loaded: /upgrades/self-tester.js (30790 bytes)
-[2025-10-20T20:15:28.005Z] [LOG] [VFS] Loaded: /upgrades/browser-apis.js (27525 bytes)
-[2025-10-20T20:15:28.005Z] [LOG] [VFS] Loaded: /upgrades/pyodide-runtime.js (19493 bytes)
-[2025-10-20T20:15:28.009Z] [LOG] [VFS] Loaded: /upgrades/metrics-dashboard.js (20024 bytes)
-[2025-10-20T20:15:28.009Z] [LOG] [VFS] Loaded: /upgrades/ast-visualizer.js (21155 bytes)
-[2025-10-20T20:15:28.009Z] [LOG] [VFS] Loaded: /upgrades/agent-visualizer.js (19658 bytes)
-[2025-10-20T20:15:28.009Z] [LOG] [VFS] Loaded: /upgrades/progress-tracker.js (10606 bytes)
-[2025-10-20T20:15:28.009Z] [LOG] [VFS] Loaded: /upgrades/tutorial-system.js (37339 bytes)
-[2025-10-20T20:15:28.009Z] [LOG] [VFS] Loaded: /upgrades/module-graph-visualizer.js (12418 bytes)
-[2025-10-20T20:15:28.010Z] [LOG] [VFS] Loaded: /upgrades/status-bar.js (13657 bytes)
-[2025-10-20T20:15:28.011Z] [LOG] [VFS] Loaded: /upgrades/goal-panel.js (18559 bytes)
-[2025-10-20T20:15:28.012Z] [LOG] [VFS] Loaded: /upgrades/log-panel.js (15770 bytes)
-[2025-10-20T20:15:28.012Z] [LOG] [VFS] Loaded: /upgrades/agent-cycle.js (14891 bytes)
-[2025-10-20T20:15:28.012Z] [LOG] [VFS] Loaded: /upgrades/thought-panel.js (15697 bytes)
-[2025-10-20T20:15:28.012Z] [LOG] [VFS] Loaded: /upgrades/ui-manager.js (113293 bytes)
-[2025-10-20T20:15:28.014Z] [LOG] [VFS] Loaded: /upgrades/git-vfs.js (24703 bytes)
-[2025-10-20T20:15:28.016Z] [LOG] [VFS] Loaded: /upgrades/sentinel-tools.js (28407 bytes)
-[2025-10-20T20:15:28.016Z] [LOG] [VFS] Loaded: /upgrades/webrtc-coordinator.js (21481 bytes)
-[2025-10-20T20:15:28.016Z] [LOG] [VFS] Loaded: /upgrades/sentinel-panel.js (20814 bytes)
-[2025-10-20T20:15:28.016Z] [LOG] [VFS] Loaded: /upgrades/webrtc-swarm.js (39937 bytes)
-[2025-10-20T20:15:28.016Z] [LOG] [VFS] Loaded: /upgrades/diff-viewer-ui.js (55603 bytes)
-[2025-10-20T20:15:28.017Z] [LOG] [VFS] Loaded: /upgrades/sentinel-fsm.js (40706 bytes)
-[2025-10-20T20:15:28.017Z] [LOG] [VFS] Loaded: /upgrades/meta-tool-creator.js (22986 bytes)
-[2025-10-20T20:15:28.017Z] [INFO] {"timestamp":"2025-10-20T20:15:28.017Z","level":"INFO","message":"[CoreLogic] Module contents loaded: 45 items","details":{}}
-[2025-10-20T20:15:28.017Z] [INFO] {"timestamp":"2025-10-20T20:15:28.017Z","level":"INFO","message":"[CoreLogic] agent-logic-pure content length: 6050","details":{}}
-[2025-10-20T20:15:28.018Z] [LOG] [CoreLogic] Loaded module from /upgrades/utils.js: Utils
-[2025-10-20T20:15:28.018Z] [INFO] {"timestamp":"2025-10-20T20:15:28.018Z","level":"INFO","message":"[DIContainer] Registered module: Utils","details":{}}
-[2025-10-20T20:15:28.018Z] [INFO] {"timestamp":"2025-10-20T20:15:28.018Z","level":"INFO","message":"[CoreLogic] Registered module: Utils from /upgrades/utils.js","details":{}}
-[2025-10-20T20:15:28.019Z] [INFO] {"timestamp":"2025-10-20T20:15:28.019Z","level":"INFO","message":"[DIContainer] Registered module: EventBus","details":{}}
-[2025-10-20T20:15:28.019Z] [INFO] {"timestamp":"2025-10-20T20:15:28.019Z","level":"INFO","message":"[CoreLogic] Registered module: EventBus from /upgrades/event-bus.js","details":{}}
-[2025-10-20T20:15:28.020Z] [LOG] [CoreLogic] Loaded module from /upgrades/di-container.js: DIContainer
-[2025-10-20T20:15:28.020Z] [INFO] {"timestamp":"2025-10-20T20:15:28.020Z","level":"INFO","message":"[DIContainer] Registered module: DIContainer","details":{}}
-[2025-10-20T20:15:28.020Z] [INFO] {"timestamp":"2025-10-20T20:15:28.020Z","level":"INFO","message":"[CoreLogic] Registered module: DIContainer from /upgrades/di-container.js","details":{}}
-[2025-10-20T20:15:28.020Z] [INFO] {"timestamp":"2025-10-20T20:15:28.020Z","level":"INFO","message":"[DIContainer] Registered module: StateHelpersPure","details":{}}
-[2025-10-20T20:15:28.020Z] [INFO] {"timestamp":"2025-10-20T20:15:28.020Z","level":"INFO","message":"[CoreLogic] Registered module: StateHelpersPure from /upgrades/state-helpers-pure.js","details":{}}
-[2025-10-20T20:15:28.021Z] [INFO] {"timestamp":"2025-10-20T20:15:28.021Z","level":"INFO","message":"[DIContainer] Registered module: ToolRunnerPureHelpers","details":{}}
-[2025-10-20T20:15:28.021Z] [INFO] {"timestamp":"2025-10-20T20:15:28.021Z","level":"INFO","message":"[CoreLogic] Registered module: ToolRunnerPureHelpers from /upgrades/tool-runner-pure-helpers.js","details":{}}
-[2025-10-20T20:15:28.021Z] [INFO] {"timestamp":"2025-10-20T20:15:28.021Z","level":"INFO","message":"[CoreLogic] Loading agent-logic-pure.js (size: 6050)","details":{}}
-[2025-10-20T20:15:28.022Z] [INFO] {"timestamp":"2025-10-20T20:15:28.022Z","level":"INFO","message":"[CoreLogic] agent-logic-pure.js loaded:","details":{"hasModule":true,"hasMetadata":true,"moduleType":"object","moduleKeys":["metadata","factory"],"metadataId":"AgentLogicPureHelpers","factoryType":"function"}}
-[2025-10-20T20:15:28.022Z] [INFO] {"timestamp":"2025-10-20T20:15:28.022Z","level":"INFO","message":"[DIContainer] Registered module: AgentLogicPureHelpers","details":{}}
-[2025-10-20T20:15:28.022Z] [INFO] {"timestamp":"2025-10-20T20:15:28.022Z","level":"INFO","message":"[CoreLogic] Registered module: AgentLogicPureHelpers from /upgrades/agent-logic-pure.js","details":{}}
-[2025-10-20T20:15:28.023Z] [INFO] {"timestamp":"2025-10-20T20:15:28.023Z","level":"INFO","message":"[DIContainer] Registered module: Storage","details":{}}
-[2025-10-20T20:15:28.023Z] [INFO] {"timestamp":"2025-10-20T20:15:28.023Z","level":"INFO","message":"[CoreLogic] Registered module: Storage from /upgrades/storage-indexeddb.js","details":{}}
-[2025-10-20T20:15:28.024Z] [INFO] {"timestamp":"2025-10-20T20:15:28.024Z","level":"INFO","message":"[DIContainer] Registered module: AuditLogger","details":{}}
-[2025-10-20T20:15:28.024Z] [INFO] {"timestamp":"2025-10-20T20:15:28.024Z","level":"INFO","message":"[CoreLogic] Registered module: AuditLogger from /upgrades/audit-logger.js","details":{}}
-[2025-10-20T20:15:28.025Z] [INFO] {"timestamp":"2025-10-20T20:15:28.025Z","level":"INFO","message":"[DIContainer] Registered module: RateLimiter","details":{}}
-[2025-10-20T20:15:28.025Z] [INFO] {"timestamp":"2025-10-20T20:15:28.025Z","level":"INFO","message":"[CoreLogic] Registered module: RateLimiter from /upgrades/rate-limiter.js","details":{}}
-[2025-10-20T20:15:28.025Z] [ERROR] [CoreLogic] Legacy evaluation failed for /upgrades/state-manager.js: SyntaxError: Unexpected token ';'
-SyntaxError: Unexpected token ';'
-    at new Function (<anonymous>)
-    at evaluateLegacyModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:152:16)
-    at loadModuleFromContent (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:193:22)
-    at CoreLogicModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:241:28)
+[2025-10-20T20:46:23.359Z] [LOG] [API] WebGPU available
+[2025-10-20T20:46:23.360Z] [LOG] [Boot] Proxy server available: true
+[2025-10-20T20:46:24.993Z] [INFO] {"timestamp":"2025-10-20T20:46:24.993Z","level":"INFO","message":"[CoreLogic] Registered module: LocalLLM from /upgrades/local-llm.js","details":{}}
+[2025-10-20T20:46:24.994Z] [INFO] {"timestamp":"2025-10-20T20:46:24.994Z","level":"INFO","message":"[DIContainer] Registered module: HybridLLMProvider","details":{}}
+[2025-10-20T20:46:24.994Z] [INFO] {"timestamp":"2025-10-20T20:46:24.994Z","level":"INFO","message":"[CoreLogic] Registered module: HybridLLMProvider from /upgrades/hybrid-llm-provider.js","details":{}}
+[2025-10-20T20:46:24.994Z] [INFO] {"timestamp":"2025-10-20T20:46:24.994Z","level":"INFO","message":"[DIContainer] Registered module: ApiClient","details":{}}
+[2025-10-20T20:46:24.994Z] [INFO] {"timestamp":"2025-10-20T20:46:24.994Z","level":"INFO","message":"[CoreLogic] Registered module: ApiClient from /upgrades/api-client.js","details":{}}
+[2025-10-20T20:46:24.995Z] [INFO] {"timestamp":"2025-10-20T20:46:24.995Z","level":"INFO","message":"[DIContainer] Registered module: ToolRunner","details":{}}
+[2025-10-20T20:46:24.995Z] [INFO] {"timestamp":"2025-10-20T20:46:24.995Z","level":"INFO","message":"[CoreLogic] Registered module: ToolRunner from /upgrades/tool-runner.js","details":{}}
+[2025-10-20T20:46:24.996Z] [INFO] {"timestamp":"2025-10-20T20:46:24.996Z","level":"INFO","message":"[DIContainer] Registered module: DiffGenerator","details":{}}
+[2025-10-20T20:46:24.996Z] [INFO] {"timestamp":"2025-10-20T20:46:24.996Z","level":"INFO","message":"[CoreLogic] Registered module: DiffGenerator from /utils/diff-generator.js","details":{}}
+[2025-10-20T20:46:24.997Z] [INFO] {"timestamp":"2025-10-20T20:46:24.997Z","level":"INFO","message":"[DIContainer] Registered module: ReflectionStore","details":{}}
+[2025-10-20T20:46:24.997Z] [INFO] {"timestamp":"2025-10-20T20:46:24.997Z","level":"INFO","message":"[CoreLogic] Registered module: ReflectionStore from /upgrades/reflection-store.js","details":{}}
+[2025-10-20T20:46:24.997Z] [INFO] {"timestamp":"2025-10-20T20:46:24.997Z","level":"INFO","message":"[DIContainer] Registered module: PerformanceMonitor","details":{}}
+[2025-10-20T20:46:24.997Z] [INFO] {"timestamp":"2025-10-20T20:46:24.997Z","level":"INFO","message":"[CoreLogic] Registered module: PerformanceMonitor from /upgrades/performance-monitor.js","details":{}}
+[2025-10-20T20:46:24.998Z] [INFO] {"timestamp":"2025-10-20T20:46:24.998Z","level":"INFO","message":"[DIContainer] Registered module: ToastNotifications","details":{}}
+[2025-10-20T20:46:24.998Z] [INFO] {"timestamp":"2025-10-20T20:46:24.998Z","level":"INFO","message":"[CoreLogic] Registered module: ToastNotifications from /upgrades/toast-notifications.js","details":{}}
+[2025-10-20T20:46:24.999Z] [INFO] {"timestamp":"2025-10-20T20:46:24.999Z","level":"INFO","message":"[DIContainer] Registered module: StreamingResponseHandler","details":{}}
+[2025-10-20T20:46:24.999Z] [INFO] {"timestamp":"2025-10-20T20:46:24.999Z","level":"INFO","message":"[CoreLogic] Registered module: StreamingResponseHandler from /upgrades/streaming-response-handler.js","details":{}}
+[2025-10-20T20:46:24.999Z] [INFO] {"timestamp":"2025-10-20T20:46:24.999Z","level":"INFO","message":"[DIContainer] Registered module: ContextManager","details":{}}
+[2025-10-20T20:46:24.999Z] [INFO] {"timestamp":"2025-10-20T20:46:24.999Z","level":"INFO","message":"[CoreLogic] Registered module: ContextManager from /upgrades/context-manager.js","details":{}}
+[2025-10-20T20:46:25.000Z] [INFO] {"timestamp":"2025-10-20T20:46:25.000Z","level":"INFO","message":"[DIContainer] Registered module: BrowserAPIs","details":{}}
+[2025-10-20T20:46:25.000Z] [INFO] {"timestamp":"2025-10-20T20:46:25.000Z","level":"INFO","message":"[CoreLogic] Registered module: BrowserAPIs from /upgrades/browser-apis.js","details":{}}
+[2025-10-20T20:46:25.000Z] [INFO] {"timestamp":"2025-10-20T20:46:25.000Z","level":"INFO","message":"[DIContainer] Registered module: PyodideRuntime","details":{}}
+[2025-10-20T20:46:25.000Z] [INFO] {"timestamp":"2025-10-20T20:46:25.000Z","level":"INFO","message":"[CoreLogic] Registered module: PyodideRuntime from /upgrades/pyodide-runtime.js","details":{}}
+[2025-10-20T20:46:25.001Z] [INFO] {"timestamp":"2025-10-20T20:46:25.001Z","level":"INFO","message":"[DIContainer] Registered module: Introspector","details":{}}
+[2025-10-20T20:46:25.001Z] [INFO] {"timestamp":"2025-10-20T20:46:25.001Z","level":"INFO","message":"[CoreLogic] Registered module: Introspector from /upgrades/introspector.js","details":{}}
+[2025-10-20T20:46:25.002Z] [INFO] {"timestamp":"2025-10-20T20:46:25.002Z","level":"INFO","message":"[DIContainer] Registered module: SelfTester","details":{}}
+[2025-10-20T20:46:25.002Z] [INFO] {"timestamp":"2025-10-20T20:46:25.002Z","level":"INFO","message":"[CoreLogic] Registered module: SelfTester from /upgrades/self-tester.js","details":{}}
+[2025-10-20T20:46:25.003Z] [INFO] {"timestamp":"2025-10-20T20:46:25.003Z","level":"INFO","message":"[DIContainer] Registered module: VerificationManager","details":{}}
+[2025-10-20T20:46:25.003Z] [INFO] {"timestamp":"2025-10-20T20:46:25.003Z","level":"INFO","message":"[CoreLogic] Registered module: VerificationManager from /upgrades/verification-manager.js","details":{}}
+[2025-10-20T20:46:25.003Z] [INFO] {"timestamp":"2025-10-20T20:46:25.003Z","level":"INFO","message":"[DIContainer] Registered module: VFSExplorer","details":{}}
+[2025-10-20T20:46:25.003Z] [INFO] {"timestamp":"2025-10-20T20:46:25.003Z","level":"INFO","message":"[CoreLogic] Registered module: VFSExplorer from /upgrades/vfs-explorer.js","details":{}}
+[2025-10-20T20:46:25.004Z] [INFO] {"timestamp":"2025-10-20T20:46:25.004Z","level":"INFO","message":"[DIContainer] Registered module: MetricsDashboard","details":{}}
+[2025-10-20T20:46:25.004Z] [INFO] {"timestamp":"2025-10-20T20:46:25.004Z","level":"INFO","message":"[CoreLogic] Registered module: MetricsDashboard from /upgrades/metrics-dashboard.js","details":{}}
+[2025-10-20T20:46:25.004Z] [INFO] {"timestamp":"2025-10-20T20:46:25.004Z","level":"INFO","message":"[DIContainer] Registered module: AgentVisualizer","details":{}}
+[2025-10-20T20:46:25.004Z] [INFO] {"timestamp":"2025-10-20T20:46:25.004Z","level":"INFO","message":"[CoreLogic] Registered module: AgentVisualizer from /upgrades/agent-visualizer.js","details":{}}
+[2025-10-20T20:46:25.005Z] [INFO] {"timestamp":"2025-10-20T20:46:25.005Z","level":"INFO","message":"[DIContainer] Registered module: ASTVisualizer","details":{}}
+[2025-10-20T20:46:25.005Z] [INFO] {"timestamp":"2025-10-20T20:46:25.005Z","level":"INFO","message":"[CoreLogic] Registered module: ASTVisualizer from /upgrades/ast-visualizer.js","details":{}}
+[2025-10-20T20:46:25.006Z] [INFO] {"timestamp":"2025-10-20T20:46:25.006Z","level":"INFO","message":"[DIContainer] Registered module: ModuleGraphVisualizer","details":{}}
+[2025-10-20T20:46:25.006Z] [INFO] {"timestamp":"2025-10-20T20:46:25.006Z","level":"INFO","message":"[CoreLogic] Registered module: ModuleGraphVisualizer from /upgrades/module-graph-visualizer.js","details":{}}
+[2025-10-20T20:46:25.007Z] [INFO] {"timestamp":"2025-10-20T20:46:25.006Z","level":"INFO","message":"[DIContainer] Registered module: TutorialSystem","details":{}}
+[2025-10-20T20:46:25.007Z] [INFO] {"timestamp":"2025-10-20T20:46:25.007Z","level":"INFO","message":"[CoreLogic] Registered module: TutorialSystem from /upgrades/tutorial-system.js","details":{}}
+[2025-10-20T20:46:25.007Z] [WARN] [CoreLogic] ESM module at /upgrades/progress-tracker.js did not expose metadata; registration may fail.
+[2025-10-20T20:46:25.007Z] [WARN] [CoreLogic] ESM module at /upgrades/progress-tracker.js did not expose metadata; attempting legacy evaluation fallback.
+[2025-10-20T20:46:25.008Z] [ERROR] {"timestamp":"2025-10-20T20:46:25.008Z","level":"ERROR","message":"[CoreLogic] Module load failed for /upgrades/progress-tracker.js:","details":{"hasModule":true,"hasMetadata":false,"moduleKeys":[]}}
+[2025-10-20T20:46:25.008Z] [WARN] {"timestamp":"2025-10-20T20:46:25.008Z","level":"WARN","message":"[CoreLogic] Module at /upgrades/progress-tracker.js missing metadata. Module:"}
+[2025-10-20T20:46:25.008Z] [WARN] [CoreLogic] ESM module at /upgrades/log-panel.js did not expose metadata; registration may fail.
+[2025-10-20T20:46:25.008Z] [WARN] [CoreLogic] ESM module at /upgrades/log-panel.js did not expose metadata; attempting legacy evaluation fallback.
+[2025-10-20T20:46:25.009Z] [ERROR] {"timestamp":"2025-10-20T20:46:25.009Z","level":"ERROR","message":"[CoreLogic] Module load failed for /upgrades/log-panel.js:","details":{"hasModule":true,"hasMetadata":false,"moduleKeys":[]}}
+[2025-10-20T20:46:25.009Z] [WARN] [LiveReload] Too many errors, disabling auto-reload to prevent loops
+[2025-10-20T20:46:25.009Z] [WARN] {"timestamp":"2025-10-20T20:46:25.009Z","level":"WARN","message":"[CoreLogic] Module at /upgrades/log-panel.js missing metadata. Module:"}
+[2025-10-20T20:46:25.009Z] [WARN] [CoreLogic] ESM module at /upgrades/status-bar.js did not expose metadata; registration may fail.
+[2025-10-20T20:46:25.009Z] [WARN] [CoreLogic] ESM module at /upgrades/status-bar.js did not expose metadata; attempting legacy evaluation fallback.
+[2025-10-20T20:46:25.010Z] [ERROR] {"timestamp":"2025-10-20T20:46:25.010Z","level":"ERROR","message":"[CoreLogic] Module load failed for /upgrades/status-bar.js:","details":{"hasModule":true,"hasMetadata":false,"moduleKeys":[]}}
+[2025-10-20T20:46:25.010Z] [WARN] [LiveReload] Too many errors, disabling auto-reload to prevent loops
+[2025-10-20T20:46:25.010Z] [WARN] {"timestamp":"2025-10-20T20:46:25.010Z","level":"WARN","message":"[CoreLogic] Module at /upgrades/status-bar.js missing metadata. Module:"}
+[2025-10-20T20:46:25.011Z] [INFO] {"timestamp":"2025-10-20T20:46:25.011Z","level":"INFO","message":"[DIContainer] Registered module: GoalPanel","details":{}}
+[2025-10-20T20:46:25.011Z] [INFO] {"timestamp":"2025-10-20T20:46:25.011Z","level":"INFO","message":"[CoreLogic] Registered module: GoalPanel from /upgrades/goal-panel.js","details":{}}
+[2025-10-20T20:46:25.011Z] [INFO] {"timestamp":"2025-10-20T20:46:25.011Z","level":"INFO","message":"[DIContainer] Registered module: ThoughtPanel","details":{}}
+[2025-10-20T20:46:25.011Z] [INFO] {"timestamp":"2025-10-20T20:46:25.011Z","level":"INFO","message":"[CoreLogic] Registered module: ThoughtPanel from /upgrades/thought-panel.js","details":{}}
+[2025-10-20T20:46:25.013Z] [LOG] [CoreLogic] Loaded module from /upgrades/ui-manager.js: UI
+[2025-10-20T20:46:25.013Z] [INFO] {"timestamp":"2025-10-20T20:46:25.013Z","level":"INFO","message":"[DIContainer] Registered module: UI","details":{}}
+[2025-10-20T20:46:25.013Z] [INFO] {"timestamp":"2025-10-20T20:46:25.013Z","level":"INFO","message":"[CoreLogic] Registered module: UI from /upgrades/ui-manager.js","details":{}}
+[2025-10-20T20:46:25.013Z] [INFO] {"timestamp":"2025-10-20T20:46:25.013Z","level":"INFO","message":"[DIContainer] Registered module: CycleLogic","details":{}}
+[2025-10-20T20:46:25.013Z] [INFO] {"timestamp":"2025-10-20T20:46:25.013Z","level":"INFO","message":"[CoreLogic] Registered module: CycleLogic from /upgrades/agent-cycle.js","details":{}}
+[2025-10-20T20:46:25.014Z] [INFO] {"timestamp":"2025-10-20T20:46:25.014Z","level":"INFO","message":"[DIContainer] Registered module: GitVFS","details":{}}
+[2025-10-20T20:46:25.014Z] [INFO] {"timestamp":"2025-10-20T20:46:25.014Z","level":"INFO","message":"[CoreLogic] Registered module: GitVFS from /upgrades/git-vfs.js","details":{}}
+[2025-10-20T20:46:25.015Z] [INFO] {"timestamp":"2025-10-20T20:46:25.015Z","level":"INFO","message":"[DIContainer] Registered module: SentinelTools","details":{}}
+[2025-10-20T20:46:25.015Z] [INFO] {"timestamp":"2025-10-20T20:46:25.015Z","level":"INFO","message":"[CoreLogic] Registered module: SentinelTools from /upgrades/sentinel-tools.js","details":{}}
+[2025-10-20T20:46:25.015Z] [INFO] {"timestamp":"2025-10-20T20:46:25.015Z","level":"INFO","message":"[DIContainer] Registered module: SentinelPanel","details":{}}
+[2025-10-20T20:46:25.015Z] [INFO] {"timestamp":"2025-10-20T20:46:25.015Z","level":"INFO","message":"[CoreLogic] Registered module: SentinelPanel from /upgrades/sentinel-panel.js","details":{}}
+[2025-10-20T20:46:25.016Z] [INFO] {"timestamp":"2025-10-20T20:46:25.016Z","level":"INFO","message":"[DIContainer] Registered module: DiffViewerUI","details":{}}
+[2025-10-20T20:46:25.016Z] [INFO] {"timestamp":"2025-10-20T20:46:25.016Z","level":"INFO","message":"[CoreLogic] Registered module: DiffViewerUI from /upgrades/diff-viewer-ui.js","details":{}}
+[2025-10-20T20:46:25.017Z] [INFO] {"timestamp":"2025-10-20T20:46:25.017Z","level":"INFO","message":"[DIContainer] Registered module: WebRTCSwarm","details":{}}
+[2025-10-20T20:46:25.017Z] [INFO] {"timestamp":"2025-10-20T20:46:25.017Z","level":"INFO","message":"[CoreLogic] Registered module: WebRTCSwarm from /upgrades/webrtc-swarm.js","details":{}}
+[2025-10-20T20:46:25.018Z] [INFO] {"timestamp":"2025-10-20T20:46:25.018Z","level":"INFO","message":"[DIContainer] Registered module: WebRTCCoordinator","details":{}}
+[2025-10-20T20:46:25.018Z] [INFO] {"timestamp":"2025-10-20T20:46:25.018Z","level":"INFO","message":"[CoreLogic] Registered module: WebRTCCoordinator from /upgrades/webrtc-coordinator.js","details":{}}
+[2025-10-20T20:46:25.019Z] [INFO] {"timestamp":"2025-10-20T20:46:25.019Z","level":"INFO","message":"[DIContainer] Registered module: SentinelFSM","details":{}}
+[2025-10-20T20:46:25.019Z] [INFO] {"timestamp":"2025-10-20T20:46:25.019Z","level":"INFO","message":"[CoreLogic] Registered module: SentinelFSM from /upgrades/sentinel-fsm.js","details":{}}
+[2025-10-20T20:46:25.020Z] [INFO] {"timestamp":"2025-10-20T20:46:25.020Z","level":"INFO","message":"[DIContainer] Registered module: MetaToolCreator","details":{}}
+[2025-10-20T20:46:25.020Z] [INFO] {"timestamp":"2025-10-20T20:46:25.020Z","level":"INFO","message":"[CoreLogic] Registered module: MetaToolCreator from /upgrades/meta-tool-creator.js","details":{}}
+[2025-10-20T20:46:25.020Z] [INFO] {"timestamp":"2025-10-20T20:46:25.020Z","level":"INFO","message":"[DIContainer] Registered module: MultiModelPaxos","details":{}}
+[2025-10-20T20:46:25.020Z] [INFO] {"timestamp":"2025-10-20T20:46:25.020Z","level":"INFO","message":"[CoreLogic] Registered module: MultiModelPaxos from /upgrades/multi-model-paxos.js","details":{}}
+[2025-10-20T20:46:25.020Z] [INFO] {"timestamp":"2025-10-20T20:46:25.020Z","level":"INFO","message":"[CoreLogic] All modules registered. Resolving main services.","details":{}}
+[2025-10-20T20:46:25.021Z] [INFO] {"timestamp":"2025-10-20T20:46:25.021Z","level":"INFO","message":"[Storage-Git] Initializing Git-powered VFS in IndexedDB...","details":{}}
+[2025-10-20T20:46:25.022Z] [WARN] {"timestamp":"2025-10-20T20:46:25.022Z","level":"WARN","message":"[Storage-Git] No Git repository found, initializing a new one.","details":{}}
+[2025-10-20T20:46:25.024Z] [INFO] {"timestamp":"2025-10-20T20:46:25.024Z","level":"INFO","message":"[AuditLogger] Audit logging system initialized","details":{}}
+[2025-10-20T20:46:25.025Z] [INFO] {"timestamp":"2025-10-20T20:46:25.025Z","level":"INFO","message":"[StateManager-Git] Initializing state...","details":{}}
+[2025-10-20T20:46:25.025Z] [WARN] {"timestamp":"2025-10-20T20:46:25.025Z","level":"WARN","message":"[StateManager-Git] No saved state found. Creating minimal state.","details":{}}
+[2025-10-20T20:46:25.025Z] [INFO] {"timestamp":"2025-10-20T20:46:25.025Z","level":"INFO","message":"[RateLimiter] Created api limiter","details":{"maxTokens":5,"refillRate":0.16666666666666666}}
+[2025-10-20T20:46:25.025Z] [INFO] {"timestamp":"2025-10-20T20:46:25.025Z","level":"INFO","message":"[RateLimiter] Created strict limiter","details":{"maxRequests":20,"windowMs":60000}}
+[2025-10-20T20:46:25.026Z] [WARN] {"timestamp":"2025-10-20T20:46:25.025Z","level":"WARN","message":"[ApiClient] Rate limiting not available - requests unlimited","details":{}}
+[2025-10-20T20:46:25.026Z] [INFO] {"timestamp":"2025-10-20T20:46:25.026Z","level":"INFO","message":"[LocalLLM] Initializing WebLLM runtime...","details":{}}
+[2025-10-20T20:46:25.027Z] [WARN] {"timestamp":"2025-10-20T20:46:25.027Z","level":"WARN","message":"[LocalLLM] WebGPU unavailable: No WebGPU adapter found","details":{}}
+[2025-10-20T20:46:25.027Z] [INFO] {"timestamp":"2025-10-20T20:46:25.027Z","level":"INFO","message":"[StreamingResponseHandler] Initializing streaming response handler...","details":{}}
+[2025-10-20T20:46:25.027Z] [INFO] {"timestamp":"2025-10-20T20:46:25.027Z","level":"INFO","message":"[StreamingResponseHandler] Module initialized successfully","details":{}}
+[2025-10-20T20:46:25.028Z] [INFO] {"timestamp":"2025-10-20T20:46:25.028Z","level":"INFO","message":"[HybridLLM] Initializing hybrid LLM provider","details":{}}
+[2025-10-20T20:46:25.028Z] [ERROR] [CoreLogic] Initialization failed: Error: [DIContainer] Failed to resolve dependency 'ToolRunner' for module 'CycleLogic'.
+Dependency chain: CycleLogic → ToolRunner
+Original error: [DIContainer] Failed to resolve dependency 'DiffUtils' for module 'ToolRunner'.
+Dependency chain: ToolRunner → DiffUtils
+Original error: [DIContainer] Service not found: DiffUtils
+Available services: config, Persona, Utils, EventBus, DIContainer, StateHelpersPure, ToolRunnerPureHelpers, AgentLogicPureHelpers, Storage, AuditLogger, RateLimiter, StateManager, LocalLLM, HybridLLMProvider, ApiClient, ToolRunner, DiffGenerator, ReflectionStore, PerformanceMonitor, ToastNotifications, StreamingResponseHandler, ContextManager, BrowserAPIs, PyodideRuntime, Introspector, SelfTester, VerificationManager, VFSExplorer, MetricsDashboard, AgentVisualizer, ASTVisualizer, ModuleGraphVisualizer, TutorialSystem, GoalPanel, ThoughtPanel, UI, CycleLogic, GitVFS, SentinelTools, SentinelPanel, DiffViewerUI, WebRTCSwarm, WebRTCCoordinator, SentinelFSM, MetaToolCreator, MultiModelPaxos
+Tip: Check module ID spelling and ensure the module is registered in config.json
+Check for circular dependencies or missing module registrations.
+Check for circular dependencies or missing module registrations.
+Error: [DIContainer] Failed to resolve dependency 'ToolRunner' for module 'CycleLogic'.
+Dependency chain: CycleLogic → ToolRunner
+Original error: [DIContainer] Failed to resolve dependency 'DiffUtils' for module 'ToolRunner'.
+Dependency chain: ToolRunner → DiffUtils
+Original error: [DIContainer] Service not found: DiffUtils
+Available services: config, Persona, Utils, EventBus, DIContainer, StateHelpersPure, ToolRunnerPureHelpers, AgentLogicPureHelpers, Storage, AuditLogger, RateLimiter, StateManager, LocalLLM, HybridLLMProvider, ApiClient, ToolRunner, DiffGenerator, ReflectionStore, PerformanceMonitor, ToastNotifications, StreamingResponseHandler, ContextManager, BrowserAPIs, PyodideRuntime, Introspector, SelfTester, VerificationManager, VFSExplorer, MetricsDashboard, AgentVisualizer, ASTVisualizer, ModuleGraphVisualizer, TutorialSystem, GoalPanel, ThoughtPanel, UI, CycleLogic, GitVFS, SentinelTools, SentinelPanel, DiffViewerUI, WebRTCSwarm, WebRTCCoordinator, SentinelFSM, MetaToolCreator, MultiModelPaxos
+Tip: Check module ID spelling and ensure the module is registered in config.json
+Check for circular dependencies or missing module registrations.
+Check for circular dependencies or missing module registrations.
+    at Object.resolve (eval at CoreLogicModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33)), <anonymous>:102:21)
+    at async CoreLogicModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:294:24)
     at async HTMLButtonElement.awakenAgent (http://localhost:8080/boot.js:459:9)
-[2025-10-20T20:15:28.026Z] [ERROR] [CoreLogic] Initialization failed: SyntaxError: Unexpected token ';'
-SyntaxError: Unexpected token ';'
-    at new Function (<anonymous>)
-    at evaluateLegacyModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:152:16)
-    at loadModuleFromContent (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:193:22)
-    at CoreLogicModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:241:28)
+[2025-10-20T20:46:25.028Z] [WARN] [LiveReload] Too many errors, disabling auto-reload to prevent loops
+[2025-10-20T20:46:25.028Z] [ERROR] [Boot] Failed to awaken agent: Error: [DIContainer] Failed to resolve dependency 'ToolRunner' for module 'CycleLogic'.
+Dependency chain: CycleLogic → ToolRunner
+Original error: [DIContainer] Failed to resolve dependency 'DiffUtils' for module 'ToolRunner'.
+Dependency chain: ToolRunner → DiffUtils
+Original error: [DIContainer] Service not found: DiffUtils
+Available services: config, Persona, Utils, EventBus, DIContainer, StateHelpersPure, ToolRunnerPureHelpers, AgentLogicPureHelpers, Storage, AuditLogger, RateLimiter, StateManager, LocalLLM, HybridLLMProvider, ApiClient, ToolRunner, DiffGenerator, ReflectionStore, PerformanceMonitor, ToastNotifications, StreamingResponseHandler, ContextManager, BrowserAPIs, PyodideRuntime, Introspector, SelfTester, VerificationManager, VFSExplorer, MetricsDashboard, AgentVisualizer, ASTVisualizer, ModuleGraphVisualizer, TutorialSystem, GoalPanel, ThoughtPanel, UI, CycleLogic, GitVFS, SentinelTools, SentinelPanel, DiffViewerUI, WebRTCSwarm, WebRTCCoordinator, SentinelFSM, MetaToolCreator, MultiModelPaxos
+Tip: Check module ID spelling and ensure the module is registered in config.json
+Check for circular dependencies or missing module registrations.
+Check for circular dependencies or missing module registrations.
+Error: [DIContainer] Failed to resolve dependency 'ToolRunner' for module 'CycleLogic'.
+Dependency chain: CycleLogic → ToolRunner
+Original error: [DIContainer] Failed to resolve dependency 'DiffUtils' for module 'ToolRunner'.
+Dependency chain: ToolRunner → DiffUtils
+Original error: [DIContainer] Service not found: DiffUtils
+Available services: config, Persona, Utils, EventBus, DIContainer, StateHelpersPure, ToolRunnerPureHelpers, AgentLogicPureHelpers, Storage, AuditLogger, RateLimiter, StateManager, LocalLLM, HybridLLMProvider, ApiClient, ToolRunner, DiffGenerator, ReflectionStore, PerformanceMonitor, ToastNotifications, StreamingResponseHandler, ContextManager, BrowserAPIs, PyodideRuntime, Introspector, SelfTester, VerificationManager, VFSExplorer, MetricsDashboard, AgentVisualizer, ASTVisualizer, ModuleGraphVisualizer, TutorialSystem, GoalPanel, ThoughtPanel, UI, CycleLogic, GitVFS, SentinelTools, SentinelPanel, DiffViewerUI, WebRTCSwarm, WebRTCCoordinator, SentinelFSM, MetaToolCreator, MultiModelPaxos
+Tip: Check module ID spelling and ensure the module is registered in config.json
+Check for circular dependencies or missing module registrations.
+Check for circular dependencies or missing module registrations.
+    at Object.resolve (eval at CoreLogicModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33)), <anonymous>:102:21)
+    at async CoreLogicModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:294:24)
     at async HTMLButtonElement.awakenAgent (http://localhost:8080/boot.js:459:9)
-[2025-10-20T20:15:28.026Z] [WARN] [LiveReload] Too many errors, disabling auto-reload to prevent loops
-[2025-10-20T20:15:28.026Z] [ERROR] [Boot] Failed to awaken agent: SyntaxError: Unexpected token ';'
-SyntaxError: Unexpected token ';'
-    at new Function (<anonymous>)
-    at evaluateLegacyModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:152:16)
-    at loadModuleFromContent (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:193:22)
-    at CoreLogicModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:241:28)
-    at async HTMLButtonElement.awakenAgent (http://localhost:8080/boot.js:459:9)
-[2025-10-20T20:15:28.026Z] [WARN] [LiveReload] Too many errors, disabling auto-reload to prevent loops
+[2025-10-20T20:46:25.028Z] [WARN] [LiveReload] Too many errors, disabling auto-reload to prevent loops

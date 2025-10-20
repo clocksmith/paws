@@ -29,6 +29,11 @@
           "id": "ToolRunnerPureHelpers",
           "path": "/modules/tool-runner-pure-helpers.js",
           "description": "Pure functions for tool execution"
+        },
+        {
+          "id": "DiffUtils",
+          "path": "/modules/diff-utils.js",
+          "description": "Diff utilities for artifact comparison"
         }
       ]
     },

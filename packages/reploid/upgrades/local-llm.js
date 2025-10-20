@@ -473,26 +473,6 @@ const LocalLLM = {
       return { used: estimatedMB, percent, total: totalMB };
     };
 
-    return {
-      init,
-      api: {
-        chat: trackedChat,
-        complete,
-        switchModel,
-        getAvailableModels,
-        getWebLLMModels,
-        getStatus,
-        getRuntimeInfo,
-        unload,
-        isReady: () => isReady,
-        isLoading: () => isLoading,
-        getProgress: () => loadProgress,
-        getCurrentModel: () => currentModel,
-        getError: () => initError,
-        checkWebGPU,
-        getInferenceStats: () => ({ ...inferenceStats })
-      },
-
     // Web Component Widget
     class LocalLLMWidget extends HTMLElement {
       constructor() {
@@ -553,9 +533,9 @@ const LocalLLM = {
             message: initError ? `Error: ${initError}` :
                     isLoading ? 'Loading model...' : null
           };
-        },
+        }
 
-        getControls: () => {
+        getControls() {
           const controls = [];
 
           // Load model button (if not ready)
@@ -581,7 +561,7 @@ const LocalLLM = {
           }
 
           return controls;
-        },
+        }
 
       renderPanel() {
         const gpuMem = getGPUMemoryEstimate();

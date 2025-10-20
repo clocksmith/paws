@@ -953,4 +953,3 @@ const StateManager = {
       };
     }
   }
-}

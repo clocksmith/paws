@@ -1,45 +1,38 @@
-# PAWS (Prepare Artifacts With SWAP)
+# PAWS (Prepare Artifacts With SWAP (Selected Write Apply PAWS))
 
-PAWS is a multi-agent AI development toolkit that combines deterministic CLI workflows with a rich browser interface (REPLOID). It focuses on **context engineering** - curating what information an AI sees rather than just how you prompt it.
+Multi-agent AI development toolkit built around **context engineering**. The core idea is that curating what information an AI sees is as important as how you prompt it.
 
-## Core Philosophy: Structured Cognitive Diversity
+## What is PAWS?
 
-PAWS operates on the principle that robust solutions emerge from managed conflict, synthesis, and resolution of multiple expert, specialized viewpoints.
+**Goal:** Generate robust solutions through structured cognitive diversity. Rather than relying on a single AI perspective, PAWS orchestrates multiple specialized agents that compete, synthesize, and reach consensus.
 
-**Key approach:**
-- `cats` bundles curated context by scoring and pruning files
-- `dogs` applies changes with interactive approval
-- Session state lives outside the model, preventing context degradation
-- `.pawsignore` and AI-assisted curation (`cats --ai-curate`) control what the model sees
+**How it works:**
+1. **`cats`** - Curate context bundles by scoring files, pruning irrelevant code, and using AI-assisted selection to create focused input.
+2. **`dogs`** - Apply changes with interactive approval and git-native safety. Every change is auditable and reversible.
+3. **Multi-agent Paxos** - Run competing agents in parallel to generate solutions. The best solution is selected through consensus and test verification.
+4. **Session state** - Maintain state outside the model to prevent context degradation across multiple turns.
 
-## Features
+This approach provides streamlined workflows for multi-agent coordination and test-driven consensus selection.
 
-- **Multi-agent Paxos** - Multiple specialized agents compete, with consensus-driven selection
-- **Git-native safety** - Changes are auditable, replayable, and easy to roll back
-- **REPLOID UI** - Visual diff reviews, WebGPU local LLM support, and multi-agent workflows
-- **Context curation** - AI-powered file selection keeps context focused and relevant
+## REPLOID: Recursive Self-Improvement in the Browser
 
-## Architecture
+**[REPLOID](packages/reploid/README.md)** is an experimental framework for LLM-driven recursive self-improvement that runs entirely in the browser. Unlike traditional AI tools that treat the browser as just an interface, REPLOID uses it as a complete development ecosystem where agents can introspect, modify, test, and evolve their own architecture.
 
-```
-paws/
-├── packages/
-│   ├── core/          # Shared resources (personas, system prompts, configs)
-│   ├── cli-js/        # JavaScript CLI tools (cats, dogs, paws-session)
-│   ├── cli-py/        # Python CLI tools (paws-cats, paws-dogs, paws-paxos)
-│   └── reploid/       # Browser interface with visual workflows
-├── integrations/
-│   ├── mcp/           # Model Context Protocol server
-│   └── vscode/        # VS Code extension
-└── pnpm-workspace.yaml
-```
+**Key capabilities:**
+- **Self-modification** - Agent reads its own source code from a virtual filesystem and proposes architectural improvements
+- **Blueprint-guided evolution** - 70+ architectural guides teach the agent implementation patterns for self-improvement
+- **Human-supervised safety** - All changes require approval, with git checkpoints and automatic rollback on test failures
+- **100% browser-native** - Runs without Node.js using IndexedDB storage, WebGPU inference, and Web Workers for isolation
+- **Multi-provider intelligence** - Supports cloud APIs (Gemini, Claude, GPT-4), local Ollama, and WebGPU models
+
+REPLOID is independently capable but shares the DOGS/CATS bundle format with PAWS CLI tools for optional interoperability.
 
 ## Packages
 
 - **[@paws/core](packages/core/README.md)** - Shared resources (personas, system prompts, configs)
 - **[@paws/cli-js](packages/cli-js/README.md)** - JavaScript CLI tools (cats, dogs, paws-session)
 - **[@paws/cli-py](packages/cli-py/README.md)** - Python CLI tools (paws-cats, paws-dogs, paws-paxos)
-- **[@paws/reploid](packages/reploid/README.md)** - Browser interface with visual workflows
+- **[@paws/reploid](packages/reploid/README.md)** - Browser-native recursive self-improvement framework
 
 ## Integrations
 
@@ -48,59 +41,20 @@ paws/
 
 ## Getting Started
 
-### Installation
-
 ```bash
-# Install dependencies
+# Install
 pnpm install
+cd packages/cli-py && pip install -e .
 
-# Install Python package
-cd packages/cli-py
-pip install -e .
+# Basic workflow
+pnpm --filter @paws/cli-js cats src/**/*.js -o context.md  # Curate context
+pnpm --filter @paws/cli-js dogs changes.md                 # Apply changes
+
+# Start browser UI
+pnpm --filter @paws/reploid start  # http://localhost:8080
 ```
 
-### Quick Start
-
-```bash
-# Create a context bundle (JavaScript)
-pnpm --filter @paws/cli-js cats src/**/*.js -o context.md
-
-# Or with Python
-pnpm --filter @paws/cli-py paws-cats src/**/*.py -o context.md
-
-# Apply changes from AI-generated bundle
-pnpm --filter @paws/cli-js dogs changes.md
-
-# Start REPLOID browser interface
-pnpm --filter @paws/reploid start
-# Open http://localhost:8080
-```
-
-### Testing
-
-```bash
-# Run all tests
-pnpm test
-
-# Test specific package
-pnpm --filter @paws/cli-js test
-pnpm --filter @paws/reploid test
-
-# Python tests
-cd packages/cli-py
-pytest
-```
-
-## Documentation
-
-Each package contains detailed documentation:
-
-- [Core Resources](packages/core/README.md) - Personas, system prompts, and configurations
-- [JavaScript CLI](packages/cli-js/README.md) - cats, dogs, and session management
-- [Python CLI](packages/cli-py/README.md) - Python implementation with Paxos orchestration
-- [REPLOID Browser](packages/reploid/README.md) - Visual interface and multi-agent workflows
-- [MCP Integration](integrations/mcp/README.md) - Claude Desktop integration
-- [VS Code Extension](integrations/vscode/README.md) - IDE integration
+See package READMEs for detailed documentation and examples.
 
 ## License
 

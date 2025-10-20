@@ -379,20 +379,8 @@ const PerformanceMonitor = {
       logger.info('[PerformanceMonitor] Metrics reset');
     };
 
-    return {
-      init,
-      api: {
-        getMetrics,
-        getToolStats,
-        getStateStats,
-        getLLMStats,
-        getMemoryStats,
-        generateReport,
-        reset
-      },
-
-      // Web Component Widget
-      class PerformanceMonitorWidget extends HTMLElement {
+    // Web Component Widget
+    class PerformanceMonitorWidget extends HTMLElement {
         constructor() {
           super();
           this.attachShadow({ mode: 'open' });
@@ -597,7 +585,20 @@ const PerformanceMonitor = {
         icon: '▤',
         category: 'analytics',
         updateInterval: 2000
-      }
+      };
+
+    return {
+      init,
+      api: {
+        getMetrics,
+        getToolStats,
+        getStateStats,
+        getLLMStats,
+        getMemoryStats,
+        generateReport,
+        reset
+      },
+      widget
     };
   }
 };

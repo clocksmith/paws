@@ -6,14 +6,14 @@ const ToolRunner = {
   metadata: {
     id: 'ToolRunner',
     version: '1.0.0',
-    dependencies: ['config', 'Storage', 'StateManager', 'ApiClient', 'Utils', 'ToolRunnerPureHelpers', 'DogsParserBrowser', 'DiffUtils'],
+    dependencies: ['config', 'Storage', 'StateManager', 'ApiClient', 'Utils', 'ToolRunnerPureHelpers', 'DiffUtils'],
     async: false,
     type: 'service'
   },
 
   factory: (deps) => {
     // Validate dependencies
-    const { config, Storage, StateManager, ApiClient, Utils, ToolRunnerPureHelpers, DogsParserBrowser, DiffUtils } = deps;
+    const { config, Storage, StateManager, ApiClient, Utils, ToolRunnerPureHelpers, DiffUtils } = deps;
     const { logger, Errors } = Utils || {};
 
     // Lazy-load MetaToolCreator to break circular dependency
@@ -206,7 +206,8 @@ const ToolRunner = {
             return { success: true, path: turn_path };
         }
 
-        case "create_dogs_bundle": {
+        // DOGS removed - case "create_dogs_bundle": {
+        case "____DISABLED_create_dogs_bundle": {
             const { changes = [], turn_path } = toolArgs;
             if (!turn_path) {
                 throw new ToolError("create_dogs_bundle requires 'turn_path'");
@@ -231,7 +232,8 @@ const ToolRunner = {
             return { success: true, path: turn_path };
         }
 
-        case "apply_dogs_bundle": {
+        // DOGS removed - case "apply_dogs_bundle": {
+        case "____DISABLED_apply_dogs_bundle": {
             const { dogs_path, verify_command } = toolArgs;
             logger.info(`[ToolRunner] Applying DOGS bundle: ${dogs_path}`);
 
@@ -595,6 +597,10 @@ const ToolRunner = {
     }
     
     throw new ToolError(`Tool '${toolName}' is not implemented.`);
+    } catch (error) {
+      trackExecutionEnd(executionId, false, error);
+      throw error;
+    }
   };
   
   // Execute dynamic tool with safe execution options

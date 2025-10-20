@@ -484,22 +484,6 @@ const HybridLLMProvider = {
       }
     });
 
-    return {
-      init,
-      api: {
-        setMode: trackedSetMode,
-        getMode,
-        isLocalAvailable,
-        complete: trackedComplete,
-        stream,
-        getStatus,
-        getAutoSwitchConfig,
-        getUsageStats: () => ({ ...usageStats }),
-        // Expose direct methods for advanced use
-        completeLocal,
-        completeCloud
-      },
-
     // Web Component Widget
     class HybridLLMProviderWidget extends HTMLElement {
       constructor() {

@@ -927,27 +927,8 @@ const WebRTCSwarm = {
       return { sent: sentKBps, received: receivedKBps, total: totalKBps };
     };
 
-    // Public API
-    return {
-      api: {
-        getPeerId: () => peerId,
-        getStats,
-        sendToPeer: trackedSendToPeer,
-        broadcast,
-        delegateTask,
-        shareKnowledge,
-        requestConsensus,
-        registerMessageHandler,
-        updateCapabilities,
-        configureSignaling,
-        getSignalingStatus,
-        disconnect,
-        getBandwidthStats: () => ({ ...bandwidthStats }),
-        getCurrentBandwidth
-      },
-
-      // Web Component Widget (INSIDE factory closure to access state)
-      class WebRTCSwarmWidget extends HTMLElement {
+    // Web Component Widget (INSIDE factory closure to access state)
+    class WebRTCSwarmWidget extends HTMLElement {
         constructor() {
           super();
           this.attachShadow({ mode: 'open' });
@@ -1204,19 +1185,18 @@ const WebRTCSwarm = {
         }
       }
 
-      // Define custom element
-      if (!customElements.get('webrtc-swarm-widget')) {
-        customElements.define('webrtc-swarm-widget', WebRTCSwarmWidget);
-      }
+    // Define custom element
+    if (!customElements.get('webrtc-swarm-widget')) {
+      customElements.define('webrtc-swarm-widget', WebRTCSwarmWidget);
+    }
 
-      widget: {
-        element: 'webrtc-swarm-widget',
-        displayName: 'WebRTC Swarm',
-        icon: '♁',
-        category: 'communication',
-        order: 40,
-        updateInterval: 2000
-      }
+    const widget = {
+      element: 'webrtc-swarm-widget',
+      displayName: 'WebRTC Swarm',
+      icon: '♁',
+      category: 'communication',
+      order: 40,
+      updateInterval: 2000
     };
 
     // Helper function
@@ -1231,6 +1211,27 @@ const WebRTCSwarm = {
       if (minutes < 60) return `${minutes}m ago`;
       return new Date(timestamp).toLocaleTimeString();
     }
+
+    // Return public API
+    return {
+      api: {
+        getPeerId: () => peerId,
+        getStats,
+        sendToPeer: trackedSendToPeer,
+        broadcast,
+        delegateTask,
+        shareKnowledge,
+        requestConsensus,
+        registerMessageHandler,
+        updateCapabilities,
+        configureSignaling,
+        getSignalingStatus,
+        disconnect,
+        getBandwidthStats: () => ({ ...bandwidthStats }),
+        getCurrentBandwidth
+      },
+      widget
+    };
   }
 };
 

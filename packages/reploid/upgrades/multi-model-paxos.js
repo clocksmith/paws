@@ -15,14 +15,21 @@ const MultiModelPaxos = {
   metadata: {
     id: 'MultiModelPaxos',
     version: '1.0.0',
-    dependencies: ['Utils', 'EventBus', 'StateManager', 'HybridLLMProvider', 'VerificationManager', 'DIContainer'],
+    dependencies: ['Utils', 'EventBus', 'StateManager', 'HybridLLMProvider', 'VerificationManager', 'DIContainer', 'Config'],
     async: true,
     type: 'rsi'
   },
 
   factory: (deps) => {
-    const { Utils, EventBus, StateManager, HybridLLMProvider, VerificationManager, DIContainer } = deps;
+    const { Utils, EventBus, StateManager, HybridLLMProvider, VerificationManager, DIContainer, Config } = deps;
     const { logger } = Utils;
+
+    // Get verified cloud models from config
+    const CLOUD_MODELS = [
+      Config.api.get('api.geminiModel') || 'gemini-2.5-flash',
+      Config.api.get('api.openaiModel') || 'gpt-5-mini-2025-08-07',
+      Config.api.get('api.anthropicModel') || 'claude-haiku-4-5'
+    ];
 
     // Competition state
     let _activeCompetition = null;
@@ -349,7 +356,7 @@ Provide a production-ready solution that will pass all tests.`;
         logger.info('[Paxos] Starting competition:', objective);
 
         // Validate configuration
-        const models = config.models || ['gemini-2.0-flash-exp', 'claude-3-5-haiku-20241022', 'gpt-4o-mini'];
+        const models = config.models || CLOUD_MODELS;
         const verifyFn = config.verificationFn || config.verifyFn || ((solution) => {
           // Default verification: check if code exists and has no syntax errors
           try {
@@ -762,7 +769,7 @@ Provide a production-ready solution that will pass all tests.`;
           demoBtn.addEventListener('click', async () => {
             try {
               await runCompetition('Create a function that calculates fibonacci numbers efficiently', {
-                models: ['gemini-2.0-flash-exp', 'claude-3-5-haiku-20241022'],
+                models: CLOUD_MODELS.slice(0, 2), // Use first 2 verified models
                 timeout: 30000
               });
             } catch (error) {

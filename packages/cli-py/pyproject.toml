@@ -35,6 +35,9 @@ paws-cats = "paws.cats:main"
 paws-dogs = "paws.dogs:main"
 paws-session = "paws.session:main"
 paws-paxos = "paws.paxos:main"
+paws-swarm = "paws.swarm:main"
+paws-benchmark = "paws.benchmark:main"
+paws-context-optimizer = "paws.context_optimizer:main"
 
 [tool.setuptools]
 packages = ["paws"]

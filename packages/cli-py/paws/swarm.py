@@ -473,7 +473,7 @@ def main():
     solution_path = orchestrator.run_swarm()
 
     print(f"\n☉ Swarm collaboration complete!")
-    print(f"Review solution: python py/dogs.py {solution_path} --interactive")
+    print(f"Review solution: paws-dogs {solution_path} --interactive")
 
     return 0
 

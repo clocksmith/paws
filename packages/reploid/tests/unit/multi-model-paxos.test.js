@@ -125,12 +125,12 @@ describe('MultiModelPaxos Module', () => {
 
       const solution = await moduleInstance.api.generateSolution(
         'Test objective',
-        'gemini-2.0-flash-exp',
+        'gemini-2.5-flash',
         {}
       );
 
       expect(solution).toBeDefined();
-      expect(solution.model).toBe('gemini-2.0-flash-exp');
+      expect(solution.model).toBe('gemini-2.5-flash');
       expect(solution.code).toContain('const test = 42');
       expect(solution.tests).toContain('assert');
       expect(solution.failed).toBe(false);
