@@ -68,7 +68,8 @@
       "description": "Testing and introspection (need StateManager, EventBus)",
       "modules": [
         { "id": "Introspector", "path": "/upgrades/introspector.js" },
-        { "id": "SelfTester", "path": "/upgrades/self-tester.js" }
+        { "id": "SelfTester", "path": "/upgrades/self-tester.js" },
+        { "id": "VerificationManager", "path": "/upgrades/verification-manager.js" }
       ]
     },
     {
@@ -109,7 +110,8 @@
         { "id": "WebRTCSwarm", "path": "/upgrades/webrtc-swarm.js" },
         { "id": "WebRTCCoordinator", "path": "/upgrades/webrtc-coordinator.js" },
         { "id": "SentinelFSM", "path": "/upgrades/sentinel-fsm.js" },
-        { "id": "MetaToolCreator", "path": "/upgrades/meta-tool-creator.js" }
+        { "id": "MetaToolCreator", "path": "/upgrades/meta-tool-creator.js" },
+        { "id": "MultiModelPaxos", "path": "/upgrades/multi-model-paxos.js" }
       ]
     }
   ]
