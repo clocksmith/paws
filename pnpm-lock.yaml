@@ -96,6 +96,9 @@ importers:
       simple-git:
         specifier: ^3.20.0
         version: 3.28.0
+      uuid:
+        specifier: ^9.0.0
+        version: 9.0.1
     devDependencies:
       chai:
         specifier: ^4.3.10
@@ -106,6 +109,16 @@ importers:
       mocha:
         specifier: ^10.2.0
         version: 10.8.2
+    optionalDependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^0.17.0
+        version: 0.17.2
+      '@google/generative-ai':
+        specifier: ^0.1.3
+        version: 0.1.3
+      openai:
+        specifier: ^4.20.0
+        version: 4.104.0(ws@8.18.3)
 
   packages/core: {}
 
@@ -173,6 +186,9 @@ packages:
 
   '@anthropic-ai/sdk@0.16.1':
     resolution: {integrity: sha512-vHgvfWEyFy5ktqam56Nrhv8MVa7EJthsRYNi+1OrFFfyrj9tR2/aji1QbVbQjYU/pPhPFaYrdCEC/MLPFrmKwA==}
+
+  '@anthropic-ai/sdk@0.17.2':
+    resolution: {integrity: sha512-xDfL/OblarYcwTSN2xBhynXJTkaTaxr8/v1fRKdT3grOZ4TrzIdrFfaTM771proR4g3uLe76PFSF3+gPjI6Gpw==}
 
   '@babel/helper-string-parser@7.27.1':
     resolution: {integrity: sha512-qMlSxKbpRlAridDExk92nSobyDdpPijUq2DW6oDnUqd0iOGxmQjyqhMIihI9+zv4LPyZdRje2cavWPbCbWm3eA==}
@@ -1956,6 +1972,10 @@ packages:
     resolution: {integrity: sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==}
     engines: {node: '>= 0.4.0'}
 
+  uuid@9.0.1:
+    resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
+    hasBin: true
+
   vary@1.1.2:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
@@ -2134,6 +2154,21 @@ snapshots:
       '@jridgewell/trace-mapping': 0.3.31
 
   '@anthropic-ai/sdk@0.16.1':
+    dependencies:
+      '@types/node': 18.19.130
+      '@types/node-fetch': 2.6.13
+      abort-controller: 3.0.0
+      agentkeepalive: 4.6.0
+      digest-fetch: 1.3.0
+      form-data-encoder: 1.7.2
+      formdata-node: 4.4.1
+      node-fetch: 2.7.0
+      web-streams-polyfill: 3.3.3
+    transitivePeerDependencies:
+      - encoding
+    optional: true
+
+  '@anthropic-ai/sdk@0.17.2':
     dependencies:
       '@types/node': 18.19.130
       '@types/node-fetch': 2.6.13
@@ -3944,6 +3979,8 @@ snapshots:
   util-deprecate@1.0.2: {}
 
   utils-merge@1.0.1: {}
+
+  uuid@9.0.1: {}
 
   vary@1.1.2: {}
 

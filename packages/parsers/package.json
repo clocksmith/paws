@@ -1,0 +1,23 @@
+{
+  "name": "@paws/parsers",
+  "version": "1.0.0",
+  "description": "Shared parsing logic for PAWS bundle formats (cats/dogs)",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "exports": {
+    ".": "./src/index.js",
+    "./dogs-parser": "./src/dogs-parser.js",
+    "./cats-generator": "./src/cats-generator.js"
+  },
+  "keywords": [
+    "paws",
+    "reploid",
+    "shared",
+    "parsers"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
