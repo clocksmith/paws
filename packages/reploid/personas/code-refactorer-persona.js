@@ -1,17 +1,24 @@
 // Code Refactorer Persona - Project Phoenix
 
+import BasePersona from './base-persona.js';
+
 const CodeRefactorerPersona = {
   metadata: {
-    id: 'CodeRefactorerPersona',
+    id: 'code-refactorer-persona',
     version: '1.0.0',
-    // This persona doesn't have direct dependencies to be injected
-    // but it will be injected into the AgentCycle.
-    dependencies: [], 
+    dependencies: ['base-persona'],
     type: 'persona'
   },
   factory: () => {
+    // Get base platform capabilities
+    const basePersona = BasePersona.factory();
+    const basePlatformPrompt = basePersona.getSystemPromptFragment();
+
+    // Define role-specific prompt
+    const rolePrompt = "You are a senior software engineer specializing in code quality. Your task is to analyze code for improvements, fix bugs, and enhance performance. You should be meticulous and provide clear justifications for your proposed changes.";
+
     const getSystemPromptFragment = () => {
-      return "You are a senior software engineer specializing in code quality. Your task is to analyze code for improvements, fix bugs, and enhance performance. You should be meticulous and provide clear justifications for your proposed changes.";
+      return `${basePlatformPrompt}\n\n---\n\n# Role\n\n${rolePrompt}`;
     };
 
     const filterTools = (availableTools) => {
@@ -140,4 +147,4 @@ const CodeRefactorerPersona = {
   }
 };
 
-CodeRefactorerPersona;
+export default CodeRefactorerPersona;
