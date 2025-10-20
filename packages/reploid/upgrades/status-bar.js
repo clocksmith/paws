@@ -1,7 +1,7 @@
 /**
  * Status Bar - Modular UI Component
  *
- * Blueprint: 0x00006B
+ * @blueprint 0x000061
  * Category: UI/Panels
  *
  * System-wide status aggregation bar displaying FSM state,

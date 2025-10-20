@@ -1,7 +1,7 @@
 /**
  * Log Panel - Modular UI Component
  *
- * Blueprint: 0x00006C
+ * @blueprint 0x000062
  * Category: UI/Panels
  *
  * Advanced logging panel with multi-level support, filtering,

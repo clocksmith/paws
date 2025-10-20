@@ -1,7 +1,7 @@
 /**
  * Progress Tracker Panel - Modular UI Component
  *
- * Blueprint: 0x00006A
+ * @blueprint 0x000060
  * Category: UI/Panels
  *
  * Tracks FSM state changes and general progress events,
