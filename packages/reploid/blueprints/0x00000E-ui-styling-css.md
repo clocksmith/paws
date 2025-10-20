@@ -2,6 +2,9 @@
 
 **Objective:** To cover the role of the `/modules/ui-style.css` artifact in defining the visual appearance of the agent's developer console interface.
 
+**Target Upgrade:** STYL (`ui-style.css`)
+
+
 **Prerequisites:** `0x00000D`
 
 **Affected Artifacts:** `/modules/ui-style.css`, `/modules/ui-manager.js`

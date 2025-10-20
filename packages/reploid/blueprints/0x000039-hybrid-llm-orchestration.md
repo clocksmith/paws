@@ -47,6 +47,82 @@ Responsibilities:
   - `getStatus()` summarises mode, availability, current local model.
   - `getAutoSwitchConfig()` placeholder for future automatic heuristics.
 
+**Widget Interface (Web Component):**
+
+The module exposes a `HybridLLMProviderWidget` custom element for dashboard visualization:
+
+```javascript
+class HybridLLMProviderWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+    this._interval = setInterval(() => this.render(), 5000);
+  }
+
+  disconnectedCallback() {
+    if (this._interval) clearInterval(this._interval);
+  }
+
+  set moduleApi(api) {
+    this._api = api;
+    this.render();
+  }
+
+  getStatus() {
+    const mode = getMode();
+    const totalTokens = usageStats.local.tokens + usageStats.cloud.tokens;
+
+    return {
+      state: isGenerating ? 'active' : 'idle',
+      primaryMetric: mode === 'local' ? '⌨ Local' : '☁️ Cloud',
+      secondaryMetric: `${totalTokens.toLocaleString()} tokens`,
+      lastActivity: usageStats.switchHistory.length > 0 ? usageStats.switchHistory[0].timestamp : null
+    };
+  }
+
+  renderPanel() {
+    // Returns HTML for:
+    // - Current provider indicator (Local/Cloud) with switch buttons
+    // - Provider comparison table (requests, tokens, avg time, errors)
+    // - Availability status (Local LLM ready, Cloud API available)
+    // - Fallback history (recent auto-fallbacks from local to cloud)
+    // - Mode switch history (manual vs automatic switches)
+  }
+
+  render() {
+    this.shadowRoot.innerHTML = `
+      <style>/* Shadow DOM styles */</style>
+      <div class="widget-content">${this.renderPanel()}</div>
+    `;
+
+    // Wire up interactive switch buttons
+    this.shadowRoot.querySelectorAll('.switch-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetMode = btn.dataset.mode;
+        trackedSetMode(targetMode);
+        this.render();
+      });
+    });
+  }
+}
+
+customElements.define('hybrid-llm-provider-widget', HybridLLMProviderWidget);
+```
+
+**Key Widget Features:**
+- **Provider Comparison Table**: Side-by-side statistics for local vs cloud (requests, tokens, average latency, error counts)
+- **Interactive Mode Switching**: Buttons to switch between local and cloud modes directly from the widget
+- **Availability Indicators**: Visual status of local LLM readiness (model name) and cloud API availability
+- **Fallback Tracking**: Displays recent auto-fallbacks with timestamps and error messages
+- **Switch History**: Shows last 5 mode switches with "Manual" vs "Auto" labels and relative timestamps
+- **Real-time Updates**: Auto-refreshes every 5 seconds to display current mode and generation activity
+
+The widget provides complete visibility into the hybrid orchestration system's behavior, enabling users to monitor performance differences and manually optimize inference routing.
+
 ### 3. Implementation Pathway
 1. **Hook into App Logic**
    - Provide UI control allowing user to switch modes.

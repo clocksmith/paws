@@ -1,3 +1,4 @@
+// @blueprint 0x000042 - Runs self-testing and validation frameworks.
 // Self-Testing & Validation Framework for Safe RSI
 // Enables the agent to validate its own integrity before and after modifications
 
@@ -720,17 +721,245 @@ const SelfTester = {
       logger.info('[SelfTester] Initialized');
     };
 
+    // Web Component Widget (INSIDE factory closure to access state)
+    class SelfTesterWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      connectedCallback() {
+        this.render();
+        // Auto-refresh every 10 seconds
+        this._interval = setInterval(() => this.render(), 10000);
+      }
+
+      disconnectedCallback() {
+        if (this._interval) {
+          clearInterval(this._interval);
+          this._interval = null;
+        }
+      }
+
+      getStatus() {
+        const lastRun = getLastResults();
+        const hasError = lastRun && lastRun.summary.failed > 0;
+
+        return {
+          state: !lastRun ? 'idle' : (hasError ? 'error' : 'active'),
+          primaryMetric: lastRun ? `${lastRun.summary.passed}/${lastRun.summary.totalTests}` : 'No tests',
+          secondaryMetric: lastRun ? `${lastRun.summary.successRate.toFixed(0)}%` : 'N/A',
+          lastActivity: lastRun ? lastRun.timestamp : null,
+          message: hasError ? `${lastRun.summary.failed} failures` : (lastRun ? 'All passed' : 'Not run')
+        };
+      }
+
+      renderPanel() {
+        const lastRun = getLastResults();
+        const history = getTestHistory();
+
+        const formatTime = (timestamp) => {
+          if (!timestamp) return 'Never';
+          const diff = Date.now() - timestamp;
+          if (diff < 60000) return `${Math.floor(diff/1000)}s ago`;
+          if (diff < 3600000) return `${Math.floor(diff/60000)}m ago`;
+          return `${Math.floor(diff/3600000)}h ago`;
+        };
+
+        const formatDuration = (ms) => {
+          if (ms < 1000) return `${ms}ms`;
+          return `${(ms / 1000).toFixed(2)}s`;
+        };
+
+        return `
+          <h3>⚗ Self Tester</h3>
+
+          ${lastRun ? `
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px;">
+              <div style="padding: 12px; background: rgba(0,200,100,0.1); border-radius: 4px;">
+                <div style="font-size: 0.85em; color: #888;">Passed</div>
+                <div style="font-size: 1.3em; font-weight: bold; color: #0c0;">${lastRun.summary.passed}</div>
+              </div>
+              <div style="padding: 12px; background: ${lastRun.summary.failed > 0 ? 'rgba(255,0,0,0.1)' : 'rgba(100,150,255,0.1)'}; border-radius: 4px;">
+                <div style="font-size: 0.85em; color: #888;">Failed</div>
+                <div style="font-size: 1.3em; font-weight: bold; color: ${lastRun.summary.failed > 0 ? '#ff6b6b' : 'inherit'};">${lastRun.summary.failed}</div>
+              </div>
+              <div style="padding: 12px; background: rgba(100,150,255,0.1); border-radius: 4px;">
+                <div style="font-size: 0.85em; color: #888;">Success Rate</div>
+                <div style="font-size: 1.3em; font-weight: bold;">${lastRun.summary.successRate.toFixed(1)}%</div>
+              </div>
+              <div style="padding: 12px; background: rgba(100,150,255,0.1); border-radius: 4px;">
+                <div style="font-size: 0.85em; color: #888;">Duration</div>
+                <div style="font-size: 1.3em; font-weight: bold;">${formatDuration(lastRun.duration)}</div>
+              </div>
+            </div>
+
+            <h4 style="margin-top: 16px;">☷ Test Suites</h4>
+            <div style="max-height: 150px; overflow-y: auto; margin-top: 8px;">
+              ${lastRun.suites.map(suite => {
+                const hasFailures = suite.failed > 0;
+                return `
+                  <div style="padding: 8px; background: ${hasFailures ? 'rgba(255,0,0,0.1)' : 'rgba(255,255,255,0.05)'}; border-left: 3px solid ${hasFailures ? '#ff6b6b' : '#0c0'}; border-radius: 3px; margin-bottom: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="font-weight: bold;">${hasFailures ? '✗' : '✓'} ${suite.name}</span>
+                      <span style="font-size: 0.9em; color: #888;">${suite.passed}/${suite.passed + suite.failed}</span>
+                    </div>
+                    ${hasFailures ? `<div style="margin-top: 4px; font-size: 0.85em; color: #ff6b6b;">${suite.failed} failures</div>` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          ` : `
+            <div style="margin-top: 12px; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 4px; text-align: center; color: #888; font-style: italic;">
+              No tests run yet. Click "Run All Tests" to begin validation.
+            </div>
+          `}
+
+          ${history.length > 1 ? `
+            <h4 style="margin-top: 16px;">☱ Test History (${history.length} runs)</h4>
+            <div style="max-height: 100px; overflow-y: auto; margin-top: 8px;">
+              ${history.slice().reverse().map((run, idx) => `
+                <div style="padding: 6px 8px; background: rgba(255,255,255,0.05); border-radius: 3px; margin-bottom: 4px; font-size: 0.85em;">
+                  <div style="display: flex; justify-content: space-between;">
+                    <span>${formatTime(run.timestamp)}</span>
+                    <span style="color: ${run.summary.successRate >= 90 ? '#0c0' : run.summary.successRate >= 70 ? '#f90' : '#ff6b6b'};">${run.summary.passed}/${run.summary.totalTests} (${run.summary.successRate.toFixed(0)}%)</span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+
+          <div style="margin-top: 16px; padding: 12px; background: rgba(100,150,255,0.1); border-left: 3px solid #6496ff; border-radius: 4px;">
+            <strong>ℹ️ Self-Testing Framework</strong>
+            <div style="margin-top: 6px; color: #aaa; font-size: 0.9em;">
+              Validates system integrity before and after modifications.<br>
+              Last run: ${lastRun ? formatTime(lastRun.timestamp) : 'Never'}
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 16px;">
+            <button class="run-tests-btn" style="padding: 10px; background: #0c0; border: none; border-radius: 4px; color: white; font-weight: bold; cursor: pointer; font-size: 0.95em;">
+              ▶️ Run All Tests
+            </button>
+            <button class="generate-report-btn" style="padding: 10px; background: #6496ff; border: none; border-radius: 4px; color: white; font-weight: bold; cursor: pointer; font-size: 0.95em;">
+              ⛿ Generate Report
+            </button>
+          </div>
+        `;
+      }
+
+      render() {
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              font-family: system-ui, -apple-system, sans-serif;
+              color: #ccc;
+            }
+
+            .widget-content {
+              background: rgba(255,255,255,0.03);
+              border-radius: 8px;
+              padding: 16px;
+            }
+
+            h3 {
+              margin: 0 0 12px 0;
+              font-size: 1.1em;
+              color: #fff;
+            }
+
+            h4 {
+              margin: 16px 0 8px 0;
+              font-size: 0.95em;
+              color: #aaa;
+            }
+
+            button {
+              transition: all 0.2s ease;
+            }
+
+            .run-tests-btn:hover {
+              background: #0e0 !important;
+              transform: translateY(-1px);
+            }
+
+            .generate-report-btn:hover {
+              background: #7ba6ff !important;
+              transform: translateY(-1px);
+            }
+
+            button:active {
+              transform: translateY(0);
+            }
+          </style>
+
+          <div class="widget-content">
+            ${this.renderPanel()}
+          </div>
+        `;
+
+        // Wire up buttons
+        const runTestsBtn = this.shadowRoot.querySelector('.run-tests-btn');
+        if (runTestsBtn) {
+          runTestsBtn.addEventListener('click', async () => {
+            try {
+              logger.info('[SelfTester] Widget: Running all tests...');
+              runTestsBtn.disabled = true;
+              runTestsBtn.textContent = '⏳ Running...';
+
+              const results = await runAllTests();
+              logger.info(`[SelfTester] Widget: Tests complete - ${results.summary.passed}/${results.summary.totalTests} passed`);
+
+              this.render(); // Refresh to show results
+            } catch (error) {
+              logger.error('[SelfTester] Widget: Tests failed', error);
+              this.render();
+            }
+          });
+        }
+
+        const generateReportBtn = this.shadowRoot.querySelector('.generate-report-btn');
+        if (generateReportBtn) {
+          generateReportBtn.addEventListener('click', () => {
+            const report = generateReport();
+            console.log(report);
+            logger.info('[SelfTester] Widget: Report generated (see console)');
+          });
+        }
+      }
+    }
+
+    // Define custom element
+    if (!customElements.get('self-tester-widget')) {
+      customElements.define('self-tester-widget', SelfTesterWidget);
+    }
+
     return {
       init,
-      testModuleLoading,
-      testToolExecution,
-      testFSMTransitions,
-      testStorageSystems,
-      testPerformanceMonitoring,
-      runAllTests,
-      getLastResults,
-      getTestHistory,
-      generateReport
+      api: {
+        testModuleLoading,
+        testToolExecution,
+        testFSMTransitions,
+        testStorageSystems,
+        testPerformanceMonitoring,
+        runAllTests,
+        getLastResults,
+        getTestHistory,
+        generateReport
+      },
+      widget: {
+        element: 'self-tester-widget',
+        displayName: 'Self Tester',
+        icon: '⚗',
+        category: 'validation',
+        updateInterval: 10000
+      }
     };
   }
 };

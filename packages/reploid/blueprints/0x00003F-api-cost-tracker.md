@@ -47,6 +47,106 @@ Key responsibilities:
   - Stores `apiCalls` and `sessionStart` in `StateManager` so data survives reload.
   - `resetSession()` resets counters; `clearAll()` wipes history.
 
+**Web Component Widget:**
+
+The widget uses a Web Component with Shadow DOM for encapsulated cost visualization:
+
+```javascript
+class CostTrackerWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+    this._interval = setInterval(() => this.render(), 2000);
+  }
+
+  disconnectedCallback() {
+    if (this._interval) {
+      clearInterval(this._interval);
+      this._interval = null;
+    }
+  }
+
+  getStatus() {
+    const totalCost = getTotalCost();
+    const sessionCost = getSessionCost();
+    const recentCalls = apiCalls.filter(c =>
+      Date.now() - c.timestamp < 300000
+    ).length;
+    const hasRecentActivity = recentCalls > 0;
+
+    return {
+      state: hasRecentActivity ? 'active' : (apiCalls.length > 0 ? 'idle' : 'disabled'),
+      primaryMetric: totalCost > 0 ? `$${totalCost.toFixed(3)}` : '$0.000',
+      secondaryMetric: `${apiCalls.length} calls`,
+      lastActivity: apiCalls.length > 0 ? apiCalls[apiCalls.length - 1].timestamp : null,
+      message: sessionCost > 0 ? `Session: $${sessionCost.toFixed(3)}` : null
+    };
+  }
+
+  getControls() {
+    return [
+      {
+        id: 'reset-session',
+        label: '🔄 Reset Session',
+        action: () => {
+          resetSession();
+          this.render();
+          return { success: true, message: 'Session reset' };
+        }
+      },
+      {
+        id: 'export-report',
+        label: '📊 Export Report',
+        action: () => {
+          const report = generateReport();
+          return { success: true, message: 'Report generated', data: report };
+        }
+      }
+    ];
+  }
+
+  render() {
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+          font-family: monospace;
+          font-size: 12px;
+        }
+        /* Cost visualization styles */
+      </style>
+      <div class="cost-tracker-panel">
+        <h4>⚯ Cost Tracker</h4>
+        <!-- Cost breakdown, provider stats, rate limits -->
+      </div>
+    `;
+  }
+}
+
+// Register custom element
+const elementName = 'cost-tracker-widget';
+if (!customElements.get(elementName)) {
+  customElements.define(elementName, CostTrackerWidget);
+}
+
+const widget = {
+  element: elementName,
+  displayName: 'Cost Tracker',
+  icon: '⚯',
+  category: 'analytics'
+};
+```
+
+**Key features:**
+- Real-time cost tracking via closure access to `apiCalls` array
+- Auto-refreshes every 2 seconds to display current spend
+- Shows total cost, session cost, and API call count
+- Interactive controls for session reset and report generation
+
 ### 3. Implementation Pathway
 1. **Event Integration**
    - Ensure API clients emit `api:complete` with provider + `usage` (prompt/completion token fields).

@@ -1,3 +1,4 @@
+// @blueprint 0x000032 - Covers rate limiting strategies for API usage.
 // Rate Limiter Module for API calls
 // Implements token bucket algorithm for rate limiting
 
@@ -267,13 +268,291 @@ const RateLimiter = {
       return false;
     };
 
+    // Web Component Widget
+    class RateLimiterWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      connectedCallback() {
+        this.render();
+        // Auto-refresh every 500ms since tokens refill over time
+        this._interval = setInterval(() => this.render(), 500);
+      }
+
+      disconnectedCallback() {
+        if (this._interval) {
+          clearInterval(this._interval);
+          this._interval = null;
+        }
+      }
+
+      getStatus() {
+        const apiLimiter = limiters.api;
+        const availableTokens = Math.floor(apiLimiter.tokens);
+        const maxTokens = apiLimiter.maxTokens;
+        const fillPercent = (availableTokens / maxTokens * 100).toFixed(0);
+
+        let state = 'idle';
+        if (availableTokens < maxTokens * 0.3) state = 'warning';
+        if (availableTokens === 0) state = 'error';
+
+        return {
+          state,
+          primaryMetric: `${availableTokens}/${maxTokens} tokens`,
+          secondaryMetric: `${fillPercent}% available`,
+          lastActivity: apiLimiter.lastRefill
+        };
+      }
+
+      getControls() {
+        return [
+          {
+            id: 'reset-limiter',
+            label: '↻ Reset',
+            action: () => {
+              Object.values(limiters).forEach(limiter => {
+                if (limiter.reset) limiter.reset();
+                if (limiter.tokens !== undefined) {
+                  limiter.tokens = limiter.maxTokens;
+                  limiter.lastRefill = Date.now();
+                }
+              });
+              this.render();
+              return { success: true, message: 'Rate limiters reset' };
+            }
+          }
+        ];
+      }
+
+      render() {
+        const apiLimiter = limiters.api;
+        const strictLimiter = limiters.strict;
+
+        const formatTime = (ms) => {
+          if (ms < 1000) return `${ms.toFixed(0)}ms`;
+          return `${(ms / 1000).toFixed(1)}s`;
+        };
+
+        // Token bucket visualization for API limiter
+        const tokenPercent = (apiLimiter.tokens / apiLimiter.maxTokens * 100).toFixed(1);
+
+        // Sliding window info for strict limiter
+        const strictPercent = strictLimiter.requests
+          ? ((strictLimiter.requests.length / strictLimiter.maxRequests) * 100).toFixed(1)
+          : 0;
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              font-family: monospace;
+              font-size: 12px;
+            }
+            .rate-limiter-panel {
+              padding: 12px;
+              color: #fff;
+            }
+            h4 {
+              margin: 0 0 12px 0;
+              font-size: 1.1em;
+              color: #0ff;
+            }
+            h5 {
+              margin: 0 0 8px 0;
+              font-size: 1em;
+              color: #0ff;
+            }
+            .limiter-section {
+              margin: 20px 0;
+              padding: 15px;
+              background: rgba(255, 255, 255, 0.05);
+              border-radius: 8px;
+            }
+            .limiter-stats {
+              margin-bottom: 15px;
+            }
+            .stat-row {
+              display: flex;
+              justify-content: space-between;
+              padding: 4px 0;
+              color: #ccc;
+            }
+            .stat-label {
+              color: #888;
+            }
+            .stat-value {
+              font-weight: bold;
+              color: #0ff;
+            }
+            .token-bucket-visual {
+              display: flex;
+              gap: 20px;
+              margin: 15px 0;
+              align-items: flex-end;
+            }
+            .bucket-container {
+              width: 80px;
+              height: 200px;
+              border: 2px solid #4fc3f7;
+              border-radius: 8px 8px 4px 4px;
+              position: relative;
+              background: rgba(79, 195, 247, 0.1);
+            }
+            .bucket-fill {
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              right: 0;
+              background: linear-gradient(to top, #4fc3f7, #64b5f6);
+              border-radius: 4px 4px 4px 4px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              transition: height 0.3s ease;
+            }
+            .bucket-label {
+              color: white;
+              font-weight: bold;
+              font-size: 14px;
+            }
+            .bucket-markers {
+              position: relative;
+              height: 200px;
+            }
+            .bucket-marker {
+              position: absolute;
+              left: 0;
+              font-size: 11px;
+              color: #888;
+            }
+            .sliding-window-visual {
+              margin: 15px 0;
+            }
+            .window-bar {
+              height: 30px;
+              background: rgba(255, 255, 255, 0.1);
+              border-radius: 4px;
+              overflow: hidden;
+            }
+            .window-fill {
+              height: 100%;
+              background: linear-gradient(to right, #4caf50, #66bb6a);
+              transition: width 0.3s ease;
+            }
+            .window-label {
+              text-align: center;
+              margin-top: 5px;
+              font-size: 12px;
+              color: #aaa;
+            }
+            .limiter-info {
+              margin-top: 20px;
+              padding: 15px;
+              background: rgba(0,0,0,0.3);
+              border-radius: 8px;
+            }
+            .limiter-info p {
+              margin: 8px 0;
+              color: #ccc;
+              font-size: 11px;
+            }
+          </style>
+          <div class="rate-limiter-panel">
+            <h4>⏲ Rate Limiter</h4>
+
+            <div class="limiter-section">
+              <h5>API Limiter (Token Bucket)</h5>
+              <div class="limiter-stats">
+                <div class="stat-row">
+                  <span class="stat-label">Available Tokens:</span>
+                  <span class="stat-value">${Math.floor(apiLimiter.tokens)} / ${apiLimiter.maxTokens}</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-label">Refill Rate:</span>
+                  <span class="stat-value">${(apiLimiter.refillRate * 60).toFixed(1)}/min</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-label">Time to Next Token:</span>
+                  <span class="stat-value">${formatTime(apiLimiter.getTimeUntilNextToken())}</span>
+                </div>
+              </div>
+
+              <div class="token-bucket-visual">
+                <div class="bucket-container">
+                  <div class="bucket-fill" style="height: ${tokenPercent}%">
+                    <span class="bucket-label">${tokenPercent}%</span>
+                  </div>
+                </div>
+                <div class="bucket-markers">
+                  ${Array.from({length: apiLimiter.maxTokens + 1}, (_, i) => `
+                    <div class="bucket-marker" style="bottom: ${(i / apiLimiter.maxTokens) * 100}%">${i}</div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+
+            <div class="limiter-section">
+              <h5>Strict Limiter (Sliding Window)</h5>
+              <div class="limiter-stats">
+                <div class="stat-row">
+                  <span class="stat-label">Requests in Window:</span>
+                  <span class="stat-value">${strictLimiter.requests?.length || 0} / ${strictLimiter.maxRequests}</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-label">Window Size:</span>
+                  <span class="stat-value">${strictLimiter.windowMs / 1000}s</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-label">Capacity:</span>
+                  <span class="stat-value">${strictPercent}% used</span>
+                </div>
+              </div>
+
+              <div class="sliding-window-visual">
+                <div class="window-bar">
+                  <div class="window-fill" style="width: ${strictPercent}%"></div>
+                </div>
+                <div class="window-label">${strictLimiter.requests?.length || 0} / ${strictLimiter.maxRequests} requests</div>
+              </div>
+            </div>
+
+            <div class="limiter-info">
+              <h5>Rate Limiting Strategy</h5>
+              <p><strong>Token Bucket:</strong> Allows bursts up to ${apiLimiter.maxTokens} requests, refills at ${(apiLimiter.refillRate * 60).toFixed(1)} tokens/min</p>
+              <p><strong>Sliding Window:</strong> Max ${strictLimiter.maxRequests} requests per ${strictLimiter.windowMs / 1000}s window</p>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // Register custom element
+    const elementName = 'rate-limiter-widget';
+    if (!customElements.get(elementName)) {
+      customElements.define(elementName, RateLimiterWidget);
+    }
+
     return {
       TokenBucketLimiter,
       SlidingWindowLimiter,
       createLimiter,
       getLimiter,
       waitForToken,
-      limiters // Expose default limiters
+      limiters, // Expose default limiters
+
+      widget: {
+        element: elementName,
+        displayName: 'Rate Limiter',
+        icon: '⏲',
+        category: 'performance'
+      }
     };
   }
 };

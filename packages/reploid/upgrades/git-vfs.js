@@ -1,5 +1,6 @@
 // Git-based Virtual File System for REPLOID
 // Provides version control, history, and rollback capabilities
+// @blueprint 0x00005D
 
 const GitVFS = {
   metadata: {
@@ -574,13 +575,256 @@ const GitVFS = {
       }
     };
 
+    // Commit tracking for widget
+    let commitStats = { totalCommits: 0, lastCommit: null };
+
+    // Wrap commitChanges to track stats
+    const originalCommitChanges = commitChanges;
+    const trackedCommitChanges = async (message) => {
+      const result = await originalCommitChanges(message);
+      commitStats.totalCommits++;
+      commitStats.lastCommit = { message, timestamp: Date.now() };
+      return result;
+    };
+
+    // Widget interface - Web Component
+    const widget = (() => {
+      class GitVFSWidget extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' });
+          this._api = null;
+        }
+
+        connectedCallback() {
+          this.render();
+        }
+
+        disconnectedCallback() {
+          // No cleanup needed for manual updates
+        }
+
+        set moduleApi(api) {
+          this._api = api;
+          this.render();
+        }
+
+        async getStatus() {
+          const status = await getStatus();
+          const checkpoints = await listCheckpoints();
+
+          return {
+            state: status.initialized ? 'idle' : 'disabled',
+            primaryMetric: `${commitStats.totalCommits} commits`,
+            secondaryMetric: `${checkpoints.length} checkpoints`,
+            lastActivity: commitStats.lastCommit?.timestamp || null,
+            message: status.initialized ? null : 'Not initialized'
+          };
+        }
+
+        async render() {
+          const status = await getStatus();
+
+          if (!status.initialized) {
+            this.shadowRoot.innerHTML = `
+              <style>
+                :host {
+                  display: block;
+                  font-family: system-ui, -apple-system, sans-serif;
+                }
+                .empty-state {
+                  padding: 20px;
+                  text-align: center;
+                }
+                .empty-state > div:first-child {
+                  font-size: 48px;
+                  margin-bottom: 20px;
+                }
+                h3 {
+                  color: #0ff;
+                  margin: 0 0 10px 0;
+                }
+                p {
+                  color: #888;
+                  margin: 0;
+                }
+              </style>
+              <div class="empty-state">
+                <div>⛝</div>
+                <h3>Git VFS Not Initialized</h3>
+                <p>Git libraries not available in this environment</p>
+              </div>
+            `;
+            return;
+          }
+
+          const history = await getHistory();
+          const checkpoints = await listCheckpoints();
+
+          this.shadowRoot.innerHTML = `
+            <style>
+              :host {
+                display: block;
+                font-family: system-ui, -apple-system, sans-serif;
+              }
+              .git-vfs-panel {
+                padding: 15px;
+                color: #e0e0e0;
+              }
+              .controls {
+                margin-bottom: 15px;
+                display: flex;
+                gap: 10px;
+              }
+              button {
+                padding: 8px 12px;
+                border: 1px solid #555;
+                background: rgba(255,255,255,0.05);
+                color: #e0e0e0;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 13px;
+                transition: all 0.2s;
+              }
+              button:hover {
+                background: rgba(255,255,255,0.1);
+                border-color: #0ff;
+              }
+              .git-stats {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+                margin-bottom: 20px;
+              }
+              .stat-card {
+                padding: 10px;
+                border-radius: 5px;
+              }
+              .stat-card > div:first-child {
+                color: #888;
+                font-size: 12px;
+              }
+              .stat-card > div:last-child {
+                font-size: 24px;
+                font-weight: bold;
+              }
+              .recent-commits, .checkpoints {
+                margin-bottom: 20px;
+              }
+              h4 {
+                color: #0ff;
+                margin: 0 0 10px 0;
+                font-size: 14px;
+              }
+              .scrollable {
+                max-height: 200px;
+                overflow-y: auto;
+              }
+              .commit-item {
+                padding: 10px;
+                background: rgba(255,255,255,0.03);
+                margin-bottom: 8px;
+                border-radius: 3px;
+              }
+              .checkpoint-item {
+                padding: 8px;
+                background: rgba(156,39,176,0.05);
+                margin-bottom: 6px;
+                border-radius: 3px;
+                border-left: 3px solid #9c27b0;
+              }
+              .empty-state {
+                color: #888;
+                padding: 20px;
+                text-align: center;
+              }
+            </style>
+            <div class="git-vfs-panel">
+              <div class="controls">
+                <button class="create-checkpoint">⛃ Checkpoint</button>
+              </div>
+
+              <div class="git-stats">
+                <div class="stat-card" style="background: rgba(0,255,255,0.1);">
+                  <div>Total Commits</div>
+                  <div style="color: #0ff;">${commitStats.totalCommits}</div>
+                </div>
+                <div class="stat-card" style="background: rgba(156,39,176,0.1);">
+                  <div>Checkpoints</div>
+                  <div style="color: #9c27b0;">${checkpoints.length}</div>
+                </div>
+              </div>
+
+              <div class="recent-commits">
+                <h4>Recent Commits (${history.length})</h4>
+                <div class="scrollable">
+                  ${history.slice(0, 10).map(commit => `
+                    <div class="commit-item">
+                      <div style="font-size: 13px; font-weight: bold; color: #ccc; margin-bottom: 4px;">${commit.message}</div>
+                      <div style="font-size: 11px; color: #666;">
+                        ${commit.author} · ${new Date(commit.timestamp).toLocaleString()}
+                      </div>
+                    </div>
+                  `).join('') || '<div class="empty-state">No commits yet</div>'}
+                </div>
+              </div>
+
+              ${checkpoints.length > 0 ? `
+                <div class="checkpoints">
+                  <h4>Checkpoints</h4>
+                  <div style="max-height: 150px; overflow-y: auto;">
+                    ${checkpoints.map(cp => `
+                      <div class="checkpoint-item">
+                        <div style="font-size: 13px; color: #ccc;">${cp.label}</div>
+                        <div style="font-size: 11px; color: #666;">${new Date(cp.timestamp).toLocaleString()}</div>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          `;
+
+          // Attach event listeners
+          this.shadowRoot.querySelector('.create-checkpoint')?.addEventListener('click', async () => {
+            try {
+              const label = prompt('Checkpoint label:');
+              if (label) {
+                await createCheckpoint(label);
+                if (typeof EventBus !== 'undefined') {
+                  EventBus.emit('toast:success', { message: 'Checkpoint created' });
+                }
+                this.render();
+              }
+            } catch (error) {
+              if (typeof EventBus !== 'undefined') {
+                EventBus.emit('toast:error', { message: error.message });
+              }
+            }
+          });
+        }
+      }
+
+      if (!customElements.get('git-vfs-widget')) {
+        customElements.define('git-vfs-widget', GitVFSWidget);
+      }
+
+      return {
+        element: 'git-vfs-widget',
+        displayName: 'Git VFS',
+        icon: '⛝',
+        category: 'storage',
+        order: 50
+      };
+    })();
+
     return {
       init,
       api: {
         writeFile,
         readFile,
         deleteFile,
-        commitChanges,
+        commitChanges: trackedCommitChanges,
         getHistory,
         getDiff,
         createCheckpoint,
@@ -588,7 +832,8 @@ const GitVFS = {
         listCheckpoints,
         getStatus,
         isInitialized: () => isInitialized
-      }
+      },
+      widget
     };
   }
 };

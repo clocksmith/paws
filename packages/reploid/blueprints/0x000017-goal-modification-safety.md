@@ -2,7 +2,7 @@
 
 **Objective:** To establish principles and mechanisms for the agent to safely modify its own goals without losing alignment or coherence.
 
-**Target Upgrade:** Meta-knowledge for goal management
+**Target Upgrade:** GMOD (`goal-modifier.js`)
 
 **Prerequisites:** `0x000005` (State Management), `0x000008` (Cognitive Cycle)
 
@@ -233,7 +233,176 @@ const emergencyReset = async () => {
 };
 ```
 
-### 9. Best Practices
+### 9. Web Component Widget
+
+The widget uses a Web Component with Shadow DOM for encapsulated rendering:
+
+```javascript
+class GoalModifierWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+  }
+
+  disconnectedCallback() {
+    // No cleanup needed (no intervals)
+  }
+
+  getStatus() {
+    const goalState = getCurrentGoalState();
+    if (!goalState) {
+      return {
+        state: 'disabled',
+        primaryMetric: 'No goal',
+        secondaryMetric: '-',
+        lastActivity: null,
+        message: null
+      };
+    }
+
+    const stats = getGoalStatistics();
+
+    return {
+      state: goalState.can_modify ? 'idle' : 'warning',
+      primaryMetric: `${stats.total_modifications} mods`,
+      secondaryMetric: `${modificationCount}/${MAX_MODIFICATIONS_PER_CYCLE} this cycle`,
+      lastActivity: goalHistory.length > 0 ? goalHistory[goalHistory.length - 1].timestamp : null,
+      message: !goalState.can_modify ? 'Modification limit reached' : null
+    };
+  }
+
+  getControls() {
+    return [
+      {
+        id: 'reset-limits',
+        label: '↻ Reset Limits',
+        action: () => {
+          modificationCount = 0;
+          logger.info('[GMOD] Modification limits reset');
+          this.render();
+          return { success: true, message: 'Modification limits reset' };
+        }
+      }
+    ];
+  }
+
+  render() {
+    const goalState = getCurrentGoalState();
+    if (!goalState) {
+      this.shadowRoot.innerHTML = `
+        <style>
+          :host {
+            display: block;
+            font-family: monospace;
+            font-size: 12px;
+          }
+          .no-goal {
+            padding: 20px;
+            text-align: center;
+            color: #888;
+          }
+        </style>
+        <div class="no-goal">No active goal</div>
+      `;
+      return;
+    }
+
+    const stats = getGoalStatistics();
+    const recentMods = goalHistory.slice(-10).reverse();
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+          font-family: monospace;
+          font-size: 12px;
+        }
+        .goal-panel { padding: 12px; color: #fff; }
+        h4 { margin: 0 0 12px 0; font-size: 1.1em; color: #0ff; }
+        .current-goal {
+          background: rgba(0,255,255,0.1);
+          padding: 15px;
+          border-radius: 5px;
+          margin-bottom: 20px;
+        }
+        .stats-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 10px;
+          margin-bottom: 20px;
+        }
+        .stat-card {
+          background: rgba(255,255,255,0.05);
+          padding: 10px;
+          border-radius: 5px;
+        }
+        .stat-value { font-size: 24px; font-weight: bold; }
+        .constraint-item {
+          padding: 6px;
+          background: rgba(244,67,54,0.1);
+          margin-bottom: 4px;
+          border-left: 3px solid #f44336;
+        }
+        .history-list { max-height: 200px; overflow-y: auto; }
+        .history-item {
+          padding: 10px;
+          background: rgba(255,255,255,0.03);
+          margin-bottom: 8px;
+        }
+      </style>
+      <div class="goal-panel">
+        <h4>⊙ Goal Modifier</h4>
+        <div class="current-goal">
+          <div class="current-goal-title">Current Goal</div>
+          <div class="current-goal-text">${goalState.current || 'No active goal'}</div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Total Mods</div>
+            <div class="stat-value">${stats.total_modifications}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">This Cycle</div>
+            <div class="stat-value">${modificationCount}/${MAX_MODIFICATIONS_PER_CYCLE}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Avg Alignment</div>
+            <div class="stat-value">${stats.average_alignment ? (stats.average_alignment * 100).toFixed(0) : 0}%</div>
+          </div>
+        </div>
+        <!-- Constraints and history sections -->
+      </div>
+    `;
+  }
+}
+
+// Register custom element
+const elementName = 'goal-modifier-widget';
+if (!customElements.get(elementName)) {
+  customElements.define(elementName, GoalModifierWidget);
+}
+
+const widget = {
+  element: elementName,
+  displayName: 'Goal Modifier',
+  icon: '⊙',
+  category: 'agent'
+};
+```
+
+**Key features:**
+- Displays current goal state and modification statistics
+- Shows immutable constraints that cannot be overridden
+- Tracks modification history with alignment scores
+- Provides control to reset modification limits
+- Uses closure access to module state (goalHistory, modificationCount)
+- Shadow DOM encapsulation for styling
+
+### 10. Best Practices
 
 1. **Preserve Intent:** Always maintain alignment with original human intent
 2. **Track Changes:** Keep complete history of all modifications

@@ -72,9 +72,9 @@ function concatenateFiles() {
 
   writeStream.end();
 
-  console.log(`\n✅ Concatenation complete!`);
-  console.log(`📄 Processed ${processedCount} files`);
-  console.log(`📁 Output saved to: ${outputFile}`);
+  console.log(`\n✓ Concatenation complete!`);
+  console.log(`⛿ Processed ${processedCount} files`);
+  console.log(`⛁ Output saved to: ${outputFile}`);
 }
 
 concatenateFiles();

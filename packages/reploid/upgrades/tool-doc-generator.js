@@ -3,6 +3,7 @@
  * Automatically generates markdown documentation from tool schemas.
  * Provides comprehensive reference docs for all available tools.
  *
+ * @blueprint 0x000041 - Generates tool documentation from schemas.
  * @module ToolDocGenerator
  * @version 1.0.0
  * @category documentation
@@ -21,11 +22,20 @@ const ToolDocGenerator = {
     const { Utils, StateManager } = deps;
     const { logger } = Utils;
 
+    // Widget tracking state
+    const _generationHistory = [];
+    let _lastGeneration = null;
+    let _cachedStats = null;
+
     /**
      * Initialize tool documentation generator
      */
     const init = async () => {
       logger.info('[ToolDocGen] Tool documentation generator ready');
+
+      // Load initial stats
+      _cachedStats = await getStats();
+
       return true;
     };
 
@@ -94,7 +104,7 @@ const ToolDocGenerator = {
       let doc = `### ${tool.name}\n\n`;
 
       // Category badge
-      const badge = category === 'read' ? '🔍 Read' : '✏️ Write';
+      const badge = category === 'read' ? '⌕ Read' : '✏️ Write';
       doc += `**Category:** ${badge}\n\n`;
 
       // Description
@@ -306,6 +316,7 @@ const ToolDocGenerator = {
      */
     const generateAndSave = async () => {
       const timestamp = new Date().toISOString().split('T')[0];
+      const generationStart = Date.now();
 
       // Generate all docs
       const fullDocs = await generateDocs();
@@ -322,6 +333,23 @@ const ToolDocGenerator = {
       ]);
 
       const success = results.every(r => r.success);
+      const duration = Date.now() - generationStart;
+
+      // Track generation
+      const generation = {
+        timestamp: Date.now(),
+        success,
+        duration,
+        filesGenerated: results.length,
+        paths: results.map(r => r.path).filter(p => p)
+      };
+
+      _lastGeneration = generation;
+      _generationHistory.push(generation);
+      if (_generationHistory.length > 20) _generationHistory.shift();
+
+      // Update cached stats
+      _cachedStats = await getStats();
 
       return {
         success,
@@ -370,6 +398,235 @@ const ToolDocGenerator = {
       return stats;
     };
 
+    // Web Component Widget (INSIDE factory closure to access state)
+    class ToolDocGeneratorWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      connectedCallback() {
+        this.render();
+      }
+
+      disconnectedCallback() {
+        // No auto-refresh for this widget
+      }
+
+      getStatus() {
+        const stats = _cachedStats || { read: { total: 0 }, write: { total: 0 } };
+        const totalTools = stats.read.total + stats.write.total;
+
+        return {
+          state: _lastGeneration ? 'idle' : 'idle',
+          primaryMetric: `${totalTools} tools`,
+          secondaryMetric: _lastGeneration ? 'Generated' : 'Ready',
+          lastActivity: _lastGeneration ? _lastGeneration.timestamp : null,
+          message: _lastGeneration ? `${_lastGeneration.filesGenerated} files` : 'No docs yet'
+        };
+      }
+
+      renderPanel() {
+        const stats = _cachedStats || { read: { total: 0, withExamples: 0, avgParams: 0 }, write: { total: 0, withExamples: 0, avgParams: 0 } };
+        const totalTools = stats.read.total + stats.write.total;
+        const totalWithExamples = stats.read.withExamples + stats.write.withExamples;
+
+        return `
+          <h3>☱ Tool Statistics</h3>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px;">
+            <div style="padding: 12px; background: rgba(100,150,255,0.1); border-radius: 4px;">
+              <div style="font-size: 0.85em; color: #888;">Total Tools</div>
+              <div style="font-size: 1.3em; font-weight: bold;">${totalTools}</div>
+            </div>
+            <div style="padding: 12px; background: rgba(0,200,100,0.1); border-radius: 4px;">
+              <div style="font-size: 0.85em; color: #888;">With Examples</div>
+              <div style="font-size: 1.3em; font-weight: bold;">${totalWithExamples}</div>
+            </div>
+          </div>
+
+          <h3 style="margin-top: 20px;">⌕ Read Tools</h3>
+          <div style="margin-top: 12px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+              <div>
+                <div style="font-size: 0.85em; color: #888;">Total</div>
+                <div style="font-weight: bold;">${stats.read.total}</div>
+              </div>
+              <div>
+                <div style="font-size: 0.85em; color: #888;">With Examples</div>
+                <div style="font-weight: bold;">${stats.read.withExamples}</div>
+              </div>
+              <div>
+                <div style="font-size: 0.85em; color: #888;">Avg Params</div>
+                <div style="font-weight: bold;">${stats.read.avgParams}</div>
+              </div>
+            </div>
+          </div>
+
+          <h3 style="margin-top: 20px;">✏️ Write Tools</h3>
+          <div style="margin-top: 12px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+              <div>
+                <div style="font-size: 0.85em; color: #888;">Total</div>
+                <div style="font-weight: bold;">${stats.write.total}</div>
+              </div>
+              <div>
+                <div style="font-size: 0.85em; color: #888;">With Examples</div>
+                <div style="font-weight: bold;">${stats.write.withExamples}</div>
+              </div>
+              <div>
+                <div style="font-size: 0.85em; color: #888;">Avg Params</div>
+                <div style="font-weight: bold;">${stats.write.avgParams}</div>
+              </div>
+            </div>
+          </div>
+
+          ${_lastGeneration ? `
+            <h3 style="margin-top: 20px;">⛿ Last Generation</h3>
+            <div style="margin-top: 12px; padding: 12px; background: ${_lastGeneration.success ? 'rgba(0,200,100,0.1)' : 'rgba(255,0,0,0.1)'}; border-radius: 4px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="font-weight: bold;">${_lastGeneration.success ? '✓ Success' : '✗ Failed'}</span>
+                <span style="color: #888; font-size: 0.85em;">${new Date(_lastGeneration.timestamp).toLocaleString()}</span>
+              </div>
+              <div style="font-size: 0.85em; color: #aaa;">
+                ${_lastGeneration.filesGenerated} files generated in ${(_lastGeneration.duration / 1000).toFixed(2)}s
+              </div>
+            </div>
+          ` : ''}
+
+          ${_generationHistory.length > 0 ? `
+            <h3 style="margin-top: 20px;">⌚ Generation History (Last 10)</h3>
+            <div style="margin-top: 12px; max-height: 200px; overflow-y: auto;">
+              ${_generationHistory.slice(-10).reverse().map(gen => {
+                const timeAgo = Math.floor((Date.now() - gen.timestamp) / 1000);
+                const durationSec = (gen.duration / 1000).toFixed(2);
+
+                return `
+                  <div style="padding: 6px 8px; background: rgba(255,255,255,0.03); border-radius: 4px; margin-bottom: 4px; font-size: 0.85em;">
+                    <div style="display: flex; justify-content: space-between;">
+                      <span style="color: ${gen.success ? '#0c0' : '#ff6b6b'};">${gen.success ? '✓' : '✗'} ${gen.filesGenerated} files</span>
+                      <span style="color: #666;">${durationSec}s</span>
+                      <span style="color: #666;">${timeAgo}s ago</span>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          ` : ''}
+
+          <div style="margin-top: 16px; padding: 12px; background: rgba(100,150,255,0.1); border-left: 3px solid #6496ff; border-radius: 4px;">
+            <strong>◰ Documentation Generator</strong>
+            <div style="margin-top: 6px; color: #aaa; font-size: 0.9em;">
+              Auto-generates markdown docs from tool schemas.<br>
+              Output: TOOL-REFERENCE.md, TOOL-SUMMARY.md, READ-TOOLS.md, WRITE-TOOLS.md
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 16px;">
+            <button class="generate-docs-btn" style="padding: 10px; background: #6496ff; border: none; border-radius: 4px; color: white; font-weight: bold; cursor: pointer; font-size: 0.95em;">
+              ⛿ Generate Docs
+            </button>
+            <button class="refresh-stats-btn" style="padding: 10px; background: #0c0; border: none; border-radius: 4px; color: white; font-weight: bold; cursor: pointer; font-size: 0.95em;">
+              ↻ Refresh Stats
+            </button>
+          </div>
+        `;
+      }
+
+      render() {
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              font-family: system-ui, -apple-system, sans-serif;
+              color: #ccc;
+            }
+
+            .widget-content {
+              background: rgba(255,255,255,0.03);
+              border-radius: 8px;
+              padding: 16px;
+            }
+
+            h3 {
+              margin: 0 0 12px 0;
+              font-size: 1.1em;
+              color: #fff;
+            }
+
+            button {
+              transition: all 0.2s ease;
+            }
+
+            .generate-docs-btn:hover {
+              background: #7ba6ff !important;
+              transform: translateY(-1px);
+            }
+
+            .refresh-stats-btn:hover {
+              background: #0e0 !important;
+              transform: translateY(-1px);
+            }
+
+            button:active {
+              transform: translateY(0);
+            }
+          </style>
+
+          <div class="widget-content">
+            ${this.renderPanel()}
+          </div>
+        `;
+
+        // Wire up buttons
+        const generateDocsBtn = this.shadowRoot.querySelector('.generate-docs-btn');
+        if (generateDocsBtn) {
+          generateDocsBtn.addEventListener('click', async () => {
+            try {
+              logger.info('[ToolDocGen] Widget: Generating documentation...');
+              generateDocsBtn.disabled = true;
+              generateDocsBtn.textContent = '⏳ Generating...';
+
+              const result = await generateAndSave();
+              logger.info('[ToolDocGen] Widget: Documentation generated', result);
+
+              this.render(); // Refresh to show new generation
+            } catch (error) {
+              logger.error('[ToolDocGen] Widget: Failed to generate docs', error);
+              this.render();
+            }
+          });
+        }
+
+        const refreshStatsBtn = this.shadowRoot.querySelector('.refresh-stats-btn');
+        if (refreshStatsBtn) {
+          refreshStatsBtn.addEventListener('click', async () => {
+            try {
+              refreshStatsBtn.disabled = true;
+              refreshStatsBtn.textContent = '⏳ Refreshing...';
+
+              _cachedStats = await getStats();
+              logger.info('[ToolDocGen] Widget: Stats refreshed');
+
+              this.render(); // Refresh to show new stats
+            } catch (error) {
+              logger.error('[ToolDocGen] Widget: Failed to refresh stats', error);
+              this.render();
+            }
+          });
+        }
+      }
+    }
+
+    // Define custom element
+    if (!customElements.get('tool-doc-generator-widget')) {
+      customElements.define('tool-doc-generator-widget', ToolDocGeneratorWidget);
+    }
+
     return {
       init,
       api: {
@@ -379,6 +636,13 @@ const ToolDocGenerator = {
         saveDocs,
         generateAndSave,
         getStats
+      },
+      widget: {
+        element: 'tool-doc-generator-widget',
+        displayName: 'Tool Doc Generator',
+        icon: '◰',
+        category: 'documentation',
+        updateInterval: null
       }
     };
   }

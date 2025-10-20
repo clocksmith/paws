@@ -1,3 +1,6 @@
+/* @blueprint 0x00000E */
+/* Covers the role of the ui-style.css artifact in defining UI appearance. */
+
 body, html { box-sizing: border-box; }
 *, *:before, *:after { box-sizing: inherit; }
 body {

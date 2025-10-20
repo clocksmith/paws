@@ -18,12 +18,50 @@ Sentinel’s approval workflow spans multiple states (context curation, proposal
 
 An accurate visualization keeps human overseers in the loop.
 
-### 2. Architectural Overview
-The visualizer instantiates once and renders a D3 force-directed graph.
+### 2. Architectural Solution
+The visualizer is implemented as a **Web Component widget** that renders a D3 force-directed graph with Shadow DOM encapsulation.
 
 ```javascript
-const fsmViz = await ModuleLoader.getModule('AgentVisualizer');
-fsmViz.init(document.getElementById('fsm-container'));
+// Web Component class pattern
+class AgentVisualizerWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+    this._updateInterval = setInterval(() => this.render(), 1000);
+    if (SentinelFSM) {
+      currentState = SentinelFSM.getCurrentState();
+      stateHistory = SentinelFSM.getStateHistory().slice();
+    }
+    EventBus.on('fsm:state:changed', onStateChange, 'AgentVisualizer');
+  }
+
+  disconnectedCallback() {
+    if (this._updateInterval) {
+      clearInterval(this._updateInterval);
+    }
+  }
+
+  getStatus() {
+    return {
+      state: currentState === 'IDLE' ? 'idle' : (isActive ? 'active' : 'idle'),
+      primaryMetric: `State: ${currentState}`,
+      secondaryMetric: `${transitionCount} transitions`,
+      lastActivity: recentTransition?.timestamp || null,
+      message: currentState !== 'IDLE' ? `FSM: ${currentState}` : null
+    };
+  }
+
+  render() {
+    // Shadow DOM rendering with inline styles
+    this.shadowRoot.innerHTML = `<style>...</style><div>...</div>`;
+    // Initialize D3 visualization in Shadow DOM container
+    initVisualization(this.shadowRoot.getElementById('viz-container'));
+  }
+}
 ```
 
 Key components:
@@ -37,28 +75,44 @@ Key components:
   - `forceSimulation` manages layout with link distance, charge repulsion, and collision.
   - Zoom behaviour enables pan/zoom without losing context.
 - **State Updates**
-  - Listens to `SentinelFSM` events (`state:change`, `state:error`) via EventBus.
+  - Listens to `SentinelFSM` events (`fsm:state:changed`) via EventBus.
   - Updates node `isActive` and link classes, re-rendering with transitions.
 - **History Trail**
   - Maintains a `stateHistory` array to track the last N transitions for analytics.
+- **Widget Protocol**
+  - Exports `widget` metadata: `{ element, displayName, icon, category, updateInterval }`
+  - Provides `getStatus()` with 5 required fields for dashboard integration.
 
 ### 3. Implementation Pathway
-1. **Initialization**
-   - Validate D3 presence; warn and bail if missing.
-   - Create SVG root with responsive `viewBox`.
-   - Append `defs` for arrow markers (default and active).
-2. **Rendering**
-   - Bind nodes to groups containing circle, icon text, and label.
-   - Bind links to lines with stroke width proportional to `transitionCount`.
-   - On simulation tick, update positions.
-3. **Event Integration**
-   - Subscribe to `SentinelFSM.onStateChange` to update `currentState` and push to history.
-   - Emit UI events or toast notifications when hitting `ERROR`.
-4. **User Interaction**
-   - Provide node tooltips summarising visit/transition counts.
-   - Allow clicking a state to focus or show additional context (e.g., queued proposals).
-5. **Cleanup**
-   - Expose `destroy()` to remove SVG and listeners when the persona disables the dashboard.
+1. **Web Component Registration**
+   - Define `AgentVisualizerWidget` extending `HTMLElement`.
+   - Register custom element: `customElements.define('agent-visualizer-widget', AgentVisualizerWidget)`.
+   - Export widget metadata with element name, displayName, icon, category, updateInterval.
+2. **Lifecycle: connectedCallback**
+   - Call `attachShadow({ mode: 'open' })` in constructor.
+   - Initialize auto-refresh interval (1000ms) for real-time FSM updates.
+   - Subscribe to `EventBus.on('fsm:state:changed', onStateChange)`.
+   - Get current FSM state and history from `SentinelFSM`.
+3. **Lifecycle: disconnectedCallback**
+   - Clear update interval to prevent memory leaks.
+   - Optionally unsubscribe from EventBus listeners.
+4. **Shadow DOM Rendering**
+   - Render inline `<style>` with cyberpunk theme and widget-specific CSS.
+   - Create controls (Reset, Export SVG, Refresh buttons) with event handlers.
+   - Display current FSM state, transition count, and recent transitions list.
+   - Embed D3 visualization container (`#viz-container`).
+5. **D3 Visualization**
+   - Validate D3 presence in `render()`; show fallback message if missing.
+   - Create SVG with responsive `viewBox`, zoom behavior, and arrow markers.
+   - Build force-directed graph with nodes (FSM states) and links (valid transitions).
+   - Update node styling based on `currentState` (active pulse animation).
+6. **getStatus() Method**
+   - Return object with `state`, `primaryMetric`, `secondaryMetric`, `lastActivity`, `message`.
+   - Determine state based on recent FSM activity (active if transition within 10s).
+7. **User Interaction**
+   - Attach button event listeners (reset history, export SVG, refresh visualization).
+   - Provide node tooltips with visit counts and current status.
+   - Emit toast notifications via EventBus for user feedback.
 
 ### 4. Verification Checklist
 - [ ] All valid transitions appear; invalid ones never render.

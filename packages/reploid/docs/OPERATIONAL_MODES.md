@@ -47,7 +47,7 @@ npx serve
 ### Cons
 - API key visible in browser memory
 - No multi-user support
-- Can't use server-side features (git worktrees, Hermes)
+- Git worktrees managed in browser via git-vfs.js
 
 ---
 
@@ -113,7 +113,7 @@ npm start
 - API keys hidden from browser
 - WebSocket streaming support
 - Git worktree isolation
-- Hermes multi-agent orchestration
+- Browser WebRTC swarm orchestration
 - Team collaboration
 - Session persistence
 
@@ -126,7 +126,7 @@ npm start
 
 - ✅ All client-side features
 - ✅ PAWS CLI integration (`cats.js`, `dogs.js`, `paws-session.js`)
-- ✅ Hermes multi-agent Paxos orchestration
+- ✅ PAWS Paxos multi-agent orchestration (via CLI)
 - ✅ Git worktree session management
 - ✅ WebSocket real-time streaming
 - ✅ Shared sessions across team members
@@ -326,6 +326,6 @@ You can change modes anytime:
 ## Next Steps
 
 - **Client-Only**: See [Quick Start Guide](QUICK-START.md)
-- **Node.js Server**: See [Installation](#) and [Hermes README](../hermes/README.md)
+- **Browser + Proxy**: See [Quick Start Guide](QUICK-START.md) for proxy setup
 - **Local WebGPU**: See [Local Models Guide](LOCAL_MODELS.md)
 - **API Reference**: See [API Documentation](API.md)

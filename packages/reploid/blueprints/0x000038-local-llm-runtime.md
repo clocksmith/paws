@@ -47,6 +47,115 @@ Key responsibilities:
   - `getStatus()` returns readiness, progress, model, error.
   - `getRuntimeInfo()` reports GPU capabilities and library availability.
 
+**Widget Interface (Web Component):**
+
+The module exposes a `LocalLLMWidget` custom element for dashboard visualization:
+
+```javascript
+class LocalLLMWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+    this.startUpdates(); // Dynamic interval: 500ms while loading, 5000ms when idle
+  }
+
+  disconnectedCallback() {
+    if (this._interval) clearInterval(this._interval);
+  }
+
+  startUpdates() {
+    // Adaptive refresh rate based on loading state
+    const interval = isLoading ? 500 : 5000;
+    this._interval = setInterval(() => {
+      this.render();
+      // Re-adjust if loading state changed
+      if ((isLoading && interval !== 500) || (!isLoading && interval !== 5000)) {
+        this.startUpdates();
+      }
+    }, interval);
+  }
+
+  set moduleApi(api) {
+    this._api = api;
+    this.render();
+  }
+
+  getStatus() {
+    let state = 'disabled';
+    if (isLoading) state = 'loading';
+    else if (isReady && isGenerating) state = 'active';
+    else if (isReady) state = 'idle';
+    else if (initError) state = 'error';
+
+    return {
+      state,
+      primaryMetric: currentModel ? currentModel.split('-MLC')[0] : 'Not loaded',
+      secondaryMetric: isReady ? `GPU: ${gpuMemPercent}%` : `${Math.round(loadProgress * 100)}% loaded`,
+      lastActivity: inferenceStats.totalInferences > 0 ? Date.now() : null,
+      message: initError ? `Error: ${initError}` : isLoading ? 'Loading model...' : null
+    };
+  }
+
+  getControls() {
+    const controls = [];
+
+    if (!isReady && !isLoading) {
+      controls.push({ id: 'load-model', label: '⚡ Load Model', action: async () => await init() });
+    }
+
+    if (isReady && !isGenerating) {
+      controls.push({ id: 'unload-model', label: '⛶ Unload Model', action: async () => await unload() });
+    }
+
+    return controls;
+  }
+
+  renderPanel() {
+    // Returns HTML for:
+    // - Model status badge (✓ Ready / ⏳ Loading / ○ Not Loaded)
+    // - Current model name display
+    // - Loading progress bar (when loading)
+    // - GPU memory usage bar chart with percentage
+    // - Inference statistics grid (total inferences, tokens, avg tokens/sec, avg time)
+    // - Available models list (10 models) with "Load" buttons
+    // - Error message display (if error occurred)
+  }
+
+  render() {
+    this.shadowRoot.innerHTML = `
+      <style>/* Shadow DOM styles */</style>
+      <div class="widget-panel-content">${this.renderPanel()}</div>
+    `;
+
+    // Wire up model switch buttons
+    this.shadowRoot.querySelectorAll('.model-switch-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await switchModel(btn.dataset.modelId);
+        this.render();
+      });
+    });
+  }
+}
+
+customElements.define('local-llm-widget', LocalLLMWidget);
+```
+
+**Key Widget Features:**
+- **Adaptive Refresh Rate**: Updates every 500ms during model loading, slows to 5000ms when idle for performance
+- **Model Status Indicator**: Visual badges showing Ready/Loading/Not Loaded states with color coding
+- **Loading Progress Bar**: Real-time progress visualization during model download (0-100%)
+- **GPU Memory Monitor**: Bar chart showing GPU memory usage percentage for active models
+- **Inference Statistics Dashboard**: Displays total inferences, tokens generated, avg tokens/sec, and avg response time
+- **Model Switcher**: List of available models (Qwen, Phi, Llama, Gemma) with one-click load buttons
+- **Interactive Controls**: Load/Unload buttons exposed via `getControls()` for dashboard integration
+- **Error Handling**: Displays initialization errors with descriptive messages (e.g., WebGPU not supported)
+
+The widget provides complete runtime visibility and control for local LLM operations, essential for monitoring GPU resource usage and model performance.
+
 ### 3. Implementation Pathway
 1. **Script Inclusion**
    - Add `<script type="module" src="https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm"></script>` in HTML (deferred until persona needs).

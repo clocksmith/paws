@@ -1,3 +1,4 @@
+// @blueprint 0x00002F - Details the AST visualization framework.
 // AST Visualizer - JavaScript Abstract Syntax Tree Visualization with D3.js
 // Provides interactive tree visualization of JavaScript code structure
 
@@ -21,6 +22,11 @@ const ASTVisualizer = {
     let container = null;
     let initialized = false;
     let currentCode = '';
+
+    // Widget tracking state
+    let _nodeCount = 0;
+    let _parseErrors = [];
+    let _lastVisualizationTime = null;
 
     // AST node type styling
     const NODE_STYLES = {
@@ -371,10 +377,24 @@ const ASTVisualizer = {
 
         if (hierarchyData) {
           updateVisualization(hierarchyData);
+          _lastVisualizationTime = Date.now();
+
+          // Count nodes
+          _nodeCount = root ? root.descendants().length : 0;
+
           logger.info('[ASTVisualizer] AST visualized successfully');
         }
       } catch (error) {
         logger.error('[ASTVisualizer] Visualization error:', error);
+
+        // Track parse error
+        _parseErrors.push({
+          message: error.message,
+          timestamp: Date.now(),
+          codeSnippet: code.substring(0, 100)
+        });
+        if (_parseErrors.length > 20) _parseErrors.shift();
+
         EventBus.emit('ast:parse:error', { error: error.message, code });
       }
     };
@@ -424,13 +444,208 @@ const ASTVisualizer = {
       renderTree(root);
     };
 
+    // Web Component Widget
+    class ASTVisualizerWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+
+      connectedCallback() {
+        this.render();
+        // Manual update - no auto-refresh needed for AST viz
+      }
+
+      disconnectedCallback() {
+        // No cleanup needed
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      getStatus() {
+        const isActive = _lastVisualizationTime && (Date.now() - _lastVisualizationTime < 3000);
+
+        return {
+          state: isActive ? 'active' : (initialized ? 'idle' : 'disabled'),
+          primaryMetric: `${_nodeCount} nodes`,
+          secondaryMetric: _parseErrors.length > 0 ? `${_parseErrors.length} errors` : 'OK',
+          lastActivity: _lastVisualizationTime,
+          message: initialized ? 'Ready to visualize' : 'Not initialized'
+        };
+      }
+
+      render() {
+        // Count node types
+        const nodeTypeCounts = {};
+        if (root) {
+          root.descendants().forEach(d => {
+            const type = d.data.nodeType || 'unknown';
+            nodeTypeCounts[type] = (nodeTypeCounts[type] || 0) + 1;
+          });
+        }
+
+        const topNodeTypes = Object.entries(nodeTypeCounts)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 10);
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              font-family: monospace;
+            }
+            .widget-panel {
+              padding: 12px;
+            }
+            h3 {
+              margin: 0 0 12px 0;
+              font-size: 1.1em;
+              color: #fff;
+            }
+            .controls {
+              display: flex;
+              gap: 8px;
+              margin-bottom: 12px;
+            }
+            button {
+              padding: 6px 12px;
+              background: rgba(100,150,255,0.2);
+              border: 1px solid rgba(100,150,255,0.4);
+              border-radius: 4px;
+              color: #fff;
+              cursor: pointer;
+              font-size: 0.9em;
+            }
+            button:hover:not(:disabled) {
+              background: rgba(100,150,255,0.3);
+            }
+            button:disabled {
+              opacity: 0.5;
+              cursor: not-allowed;
+            }
+          </style>
+
+          <div class="widget-panel">
+            <h3>♣ AST Statistics</h3>
+
+            ${initialized && root ? `
+              <div class="controls">
+                <button id="expand-btn">▽ Expand All</button>
+                <button id="collapse-btn">△ Collapse All</button>
+              </div>
+            ` : ''}
+
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px;">
+              <div style="padding: 12px; background: rgba(100,150,255,0.1); border-radius: 4px;">
+                <div style="font-size: 0.85em; color: #888;">Total Nodes</div>
+                <div style="font-size: 1.3em; font-weight: bold;">${_nodeCount}</div>
+              </div>
+              <div style="padding: 12px; background: ${_parseErrors.length > 0 ? 'rgba(255,0,0,0.1)' : 'rgba(0,200,100,0.1)'}; border-radius: 4px;">
+                <div style="font-size: 0.85em; color: #888;">Parse Errors</div>
+                <div style="font-size: 1.3em; font-weight: bold; color: ${_parseErrors.length > 0 ? '#ff6b6b' : 'inherit'};">${_parseErrors.length}</div>
+              </div>
+            </div>
+
+            ${currentCode ? `
+              <h3 style="margin-top: 20px;">⛿ Current Code</h3>
+              <div style="margin-top: 12px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #aaa; max-height: 150px; overflow-y: auto;">
+                ${currentCode.substring(0, 500).split('\n').map(line =>
+                  `<div style="white-space: pre;">${line.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`
+                ).join('')}
+                ${currentCode.length > 500 ? '<div style="color: #666; font-style: italic;">... (truncated)</div>' : ''}
+              </div>
+            ` : '<div style="margin-top: 12px; color: #888; font-style: italic;">No code visualized yet</div>'}
+
+            ${topNodeTypes.length > 0 ? `
+              <h3 style="margin-top: 20px;">☷️ Top Node Types</h3>
+              <div style="margin-top: 12px;">
+                ${topNodeTypes.map(([type, count]) => {
+                  const style = NODE_STYLES[type] || NODE_STYLES.default;
+                  return `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 4px;">
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 12px; height: 12px; background: ${style.color}; border-radius: 50%;"></div>
+                        <span style="font-size: 0.9em;">${type}</span>
+                      </div>
+                      <span style="font-weight: bold; color: ${style.color};">${count}</span>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            ` : ''}
+
+            ${_parseErrors.length > 0 ? `
+              <h3 style="margin-top: 20px;">⚠️ Recent Parse Errors</h3>
+              <div style="margin-top: 12px; max-height: 200px; overflow-y: auto;">
+                ${_parseErrors.slice(-5).reverse().map(err => {
+                  const timeAgo = Math.floor((Date.now() - err.timestamp) / 1000);
+                  return `
+                    <div style="padding: 8px; background: rgba(255,0,0,0.1); border-left: 3px solid #ff6b6b; border-radius: 4px; margin-bottom: 6px;">
+                      <div style="font-weight: bold; color: #ff6b6b; font-size: 0.9em;">${err.message}</div>
+                      <div style="color: #aaa; font-size: 0.85em; margin-top: 4px; font-family: monospace;">${err.codeSnippet}...</div>
+                      <div style="color: #666; font-size: 0.8em; margin-top: 4px;">${timeAgo}s ago</div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            ` : ''}
+
+            <div style="margin-top: 16px; padding: 12px; background: rgba(100,150,255,0.1); border-left: 3px solid #6496ff; border-radius: 4px;">
+              <strong>ℹ️ AST Visualization</strong>
+              <div style="margin-top: 6px; color: #aaa; font-size: 0.9em;">
+                Powered by Acorn parser and D3.js tree layout.<br>
+                Click nodes to expand/collapse. Zoom and pan with mouse/touch.
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Attach event listeners for control buttons
+        const expandBtn = this.shadowRoot.getElementById('expand-btn');
+        if (expandBtn) {
+          expandBtn.addEventListener('click', () => {
+            expandAll();
+            this.render();
+          });
+        }
+
+        const collapseBtn = this.shadowRoot.getElementById('collapse-btn');
+        if (collapseBtn) {
+          collapseBtn.addEventListener('click', () => {
+            collapseAll();
+            this.render();
+          });
+        }
+      }
+    }
+
+    // Register custom element
+    const elementName = 'ast-visualizer-widget';
+    if (!customElements.get(elementName)) {
+      customElements.define(elementName, ASTVisualizerWidget);
+    }
+
+    const widget = {
+      element: elementName,
+      displayName: 'AST Visualizer',
+      icon: '♣',
+      category: 'ui',
+      updateInterval: null
+    };
+
     return {
-      init,
-      destroy,
-      visualizeCode,
-      expandAll,
-      collapseAll,
-      getCurrentCode: () => currentCode
+      api: {
+        init,
+        destroy,
+        visualizeCode,
+        expandAll,
+        collapseAll,
+        getCurrentCode: () => currentCode
+      },
+      widget
     };
   }
 };

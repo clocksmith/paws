@@ -19,7 +19,7 @@ Tools are the agent’s actuators. Without analytics:
 Tool analytics provides the data to optimise tool usage and reliability.
 
 ### 2. Architectural Overview
-`ToolAnalytics` listens to EventBus tool lifecycle events.
+`ToolAnalytics` listens to EventBus tool lifecycle events and provides a Web Component widget for visualization.
 
 ```javascript
 const ToolAnalytics = await ModuleLoader.getModule('ToolAnalytics');
@@ -44,6 +44,135 @@ Key functionality:
 - `generateReport()` produces markdown summary for dashboards or docs.
 - `reset()` clears metrics for a new session.
 
+#### Web Component Widget Pattern
+
+The widget uses a Web Component with Shadow DOM for real-time analytics visualization:
+
+```javascript
+class ToolAnalyticsWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+    // Update every 5 seconds for analytics
+    this._updateInterval = setInterval(() => this.render(), 5000);
+  }
+
+  disconnectedCallback() {
+    if (this._updateInterval) {
+      clearInterval(this._updateInterval);
+      this._updateInterval = null;
+    }
+  }
+
+  set moduleApi(api) {
+    this._api = api;
+    this.render();
+  }
+
+  getStatus() {
+    const totalTools = toolMetrics.size;
+    const totalCalls = Array.from(toolMetrics.values()).reduce((sum, m) => sum + m.totalCalls, 0);
+    const totalErrors = Array.from(toolMetrics.values()).reduce((sum, m) => sum + m.failedCalls, 0);
+
+    return {
+      state: totalCalls > 0 ? 'active' : 'idle',
+      primaryMetric: `${totalTools} tools`,
+      secondaryMetric: `${totalCalls} calls`,
+      lastActivity: toolMetrics.size > 0 ? Math.max(...Array.from(toolMetrics.values()).map(m => m.lastUsed || 0)) : null,
+      message: totalErrors > 0 ? `${totalErrors} errors` : 'All OK'
+    };
+  }
+
+  render() {
+    const analytics = getAllAnalytics();
+    const topTools = getTopTools(5);
+    const slowestTools = getSlowestTools(5);
+    const problematicTools = getProblematicTools(5);
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host { display: block; font-family: monospace; }
+        .widget-panel { padding: 12px; }
+        h3 { margin: 0 0 12px 0; font-size: 1.1em; color: #fff; }
+        button { padding: 6px 12px; background: rgba(100,150,255,0.2); border: 1px solid rgba(100,150,255,0.4); }
+      </style>
+
+      <div class="widget-panel">
+        <h3>☱ Tool Analytics</h3>
+
+        <div class="controls">
+          <button id="reset-btn">↻ Reset</button>
+          <button id="report-btn">⛿ Report</button>
+        </div>
+
+        <h3>Top 5 Most Used Tools</h3>
+        <div>
+          ${topTools.map((tool, idx) => `
+            <div>
+              #${idx + 1} ${tool.name} - ${tool.totalCalls} calls - ${tool.successRate}% success
+            </div>
+          `).join('')}
+        </div>
+
+        <h3>Top 5 Slowest Tools</h3>
+        <div>
+          ${slowestTools.map((tool, idx) => `
+            <div>
+              #${idx + 1} ${tool.name} - ${tool.avgDurationMs}ms avg
+            </div>
+          `).join('')}
+        </div>
+
+        ${problematicTools.length > 0 ? `
+          <h3>Tools with Errors</h3>
+          <div>
+            ${problematicTools.map(tool => `
+              <div>${tool.name} - ${tool.errorRate}% error rate</div>
+            `).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `;
+
+    // Attach event listeners
+    this.shadowRoot.getElementById('reset-btn')?.addEventListener('click', () => {
+      reset();
+      this.render();
+    });
+
+    this.shadowRoot.getElementById('report-btn')?.addEventListener('click', () => {
+      const report = generateReport();
+      console.log(report);
+    });
+  }
+}
+
+// Register custom element
+const elementName = 'tool-analytics-widget';
+if (!customElements.get(elementName)) {
+  customElements.define(elementName, ToolAnalyticsWidget);
+}
+
+const widget = {
+  element: elementName,
+  displayName: 'Tool Analytics',
+  icon: '☱',
+  category: 'analytics',
+  updateInterval: 5000
+};
+```
+
+**Key architectural improvements:**
+- Shadow DOM provides style encapsulation
+- Lifecycle methods ensure proper cleanup
+- Closure access to `toolMetrics` Map and analytics functions
+- `getStatus()` provides all 5 required fields including error counts
+- Real-time rendering of top/slow/problematic tools
+
 ### 3. Implementation Pathway
 1. **Event Wiring**
    - Ensure Tool Runner emits `tool:start`, `tool:complete`, `tool:error` with consistent payloads (`toolName`, `args`, `error`).
@@ -57,7 +186,33 @@ Key functionality:
 4. **Retention**
    - Keep only last 10 errors per tool to prevent memory bloat.
    - Session start resets on module init; persist to `StateManager` if cross-session analytics desired.
-5. **Alerts (Future)**
+5. **Web Component Widget Implementation**
+   - **Define Web Component class** extending HTMLElement inside factory function
+   - **Add Shadow DOM** using `attachShadow({ mode: 'open' })` in constructor
+   - **Implement lifecycle methods**:
+     - `connectedCallback()`: Initial render and set up 5-second auto-refresh interval
+     - `disconnectedCallback()`: Clean up interval with `clearInterval(this._updateInterval)` to prevent memory leaks
+   - **Implement getStatus()** as class method with ALL 5 required fields:
+     - `state`: 'active' if tools have been called, 'idle' otherwise
+     - `primaryMetric`: Number of tools tracked
+     - `secondaryMetric`: Total tool calls
+     - `lastActivity`: Most recent tool usage timestamp
+     - `message`: Error count summary or 'All OK'
+   - **Implement render()** method:
+     - Set `this.shadowRoot.innerHTML` with encapsulated `<style>` tag using `:host` selector
+     - Display session overview with total calls, success rate, errors
+     - Show top 5 most used tools with call counts and success rates
+     - Show top 5 slowest tools with average durations
+     - Show problematic tools (high error rate) if any exist
+     - Wire up event listeners for reset/report buttons
+   - **Register custom element**:
+     - Use kebab-case naming: `tool-analytics-widget`
+     - Add duplicate check: `if (!customElements.get(elementName))`
+     - Call `customElements.define(elementName, ToolAnalyticsWidget)`
+   - **Return widget object** with new format:
+     - `{ element: 'tool-analytics-widget', displayName, icon, category }`
+     - No `updateInterval` in widget object (handled internally in connectedCallback)
+6. **Alerts (Future)**
    - Hook into `ToastNotifications` to warn when error rate rises above threshold.
 
 ### 4. Verification Checklist

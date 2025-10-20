@@ -2,6 +2,9 @@
 
 **Objective:** To define the role of the central application orchestrator, which is responsible for loading all composed modules and managing their dependency injection upon agent awakening.
 
+**Target Upgrade:** APPL (`app-logic.js`)
+
+
 **Prerequisites:** None
 
 **Affected Artifacts:** `/modules/app-logic.js`, `/boot.js`
@@ -14,22 +17,303 @@ A modular agent architecture requires a robust mechanism to "wire" its component
 
 ### 2. The Architectural Solution
 
-The `/modules/app-logic.js` artifact will serve as this central orchestrator. It is the first piece of the agent's own code executed by the `/boot.js` harness. Its primary function is to conduct a multi-stage loading process:
+The `/upgrades/app-logic.js` artifact serves as the central orchestrator, executed first by the `/boot.js` harness. It implements a **Dependency Injection (DI) container-based architecture** for module loading and initialization, with comprehensive boot performance tracking via a Web Component dashboard widget.
 
-1.  **Level 0 (Pure):** Load and instantiate modules with zero dependencies, such as `utils.js` and the pure helper modules (`agent-logic-pure.js`, `state-helpers-pure.js`). These provide foundational functions and types.
-2.  **Level 1 (Core Services):** Load modules that depend only on Level 0 code, such as `storage.js` and `state-manager.js`.
-3.  **Level 2 (Application Services):** Load modules that depend on core services, such as `api-client.js` and `tool-runner.js`.
-4.  **Level 3 (Top-Level Logic):** Finally, load the highest-level modules that tie everything together, `ui-manager.js` and `agent-cycle.js`.
+#### Module Structure
 
-This layered approach ensures that when a module is initialized, all of its dependencies have already been loaded and are available for injection.
+```javascript
+const AppLogic = {
+  metadata: {
+    id: 'AppLogic',
+    version: '3.0.0',
+    dependencies: [], // Loaded first, no dependencies
+    async: false,
+    type: 'orchestrator'
+  },
+  factory: (deps = {}) => {
+    // Web Component Widget (closure-based access to _bootStats)
+    class AppLogicWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      connectedCallback() {
+        this.render();
+        // No auto-refresh - boot stats are static after boot
+      }
+
+      disconnectedCallback() {
+        // No cleanup needed
+      }
+
+      getStatus() {
+        const durationSec = _bootStats.totalDuration
+          ? (_bootStats.totalDuration / 1000).toFixed(2)
+          : '—';
+
+        return {
+          state: _bootStats.status === 'ready' ? 'idle'
+            : (_bootStats.status === 'failed' ? 'error' : 'active'),
+          primaryMetric: _bootStats.status === 'ready' ? 'Ready' : _bootStats.status,
+          secondaryMetric: `${durationSec}s`,
+          lastActivity: _bootStats.endTime,
+          message: `${_bootStats.modulesLoaded.length} modules loaded`
+        };
+      }
+
+      renderPanel() {
+        // Returns HTML with boot statistics:
+        // - Status, total time, module count
+        // - Module errors (if any)
+        // - Top 10 slowest modules
+        // - Load timeline with relative timestamps
+        // - Summary with average load time
+      }
+
+      render() {
+        this.shadowRoot.innerHTML = `
+          <style>/* Shadow DOM styles */</style>
+          ${this.renderPanel()}
+        `;
+      }
+    }
+
+    const elementName = 'app-logic-widget';
+    if (!customElements.get(elementName)) {
+      customElements.define(elementName, AppLogicWidget);
+    }
+
+    return {
+      api: {
+        getBootStats: () => ({ ..._bootStats })
+      },
+      widget: {
+        element: elementName,
+        displayName: 'Boot Orchestrator',
+        icon: '⛻',
+        category: 'core',
+        updateInterval: null
+      }
+    };
+  }
+};
+```
+
+#### Boot Statistics Tracking
+
+Global `_bootStats` object tracks boot performance:
+
+```javascript
+const _bootStats = {
+  startTime: null,           // Boot start timestamp
+  endTime: null,             // Boot completion timestamp
+  totalDuration: null,       // Total boot time in ms
+  modulesLoaded: [],         // Array of {id, path, loadTime, timestamp}
+  moduleErrors: [],          // Array of {path, error}
+  status: 'not_started'      // 'not_started' | 'booting' | 'ready' | 'failed'
+};
+```
+
+#### DI Container-Based Loading
+
+The orchestrator uses a **Dependency Injection Container** for automatic dependency resolution:
+
+1.  **Foundation (Manual Load):** `utils.js` and `di-container.js` are loaded manually first
+2.  **Configuration Registration:** `config.json` and active `Persona` are registered as modules
+3.  **Automatic Dependency Resolution:** The DI container reads module manifests and resolves dependencies automatically, loading modules in topologically-sorted order
+4.  **Module Registration:** Each module is registered with the container via `container.register(moduleDefinition)`
+5.  **Widget Integration:** Modules return both `api` (business logic) and `widget` (Web Component) objects
+
+This architecture eliminates manual dependency ordering and ensures each module receives its dependencies at instantiation time.
 
 ### 3. The Implementation Pathway
 
-1.  **Harness Execution:** The `/boot.js` harness awakens the agent by fetching the content of `/modules/app-logic.js` from the VFS and executing it as a new `Function`.
-2.  **Orchestrator Logic:** The `/modules/app-logic.js` script will contain an `initializeApplication` function that performs the following:
-    a.  Reads the string content of each required module from the VFS using the injected `vfs.read()` function.
-    b.  Uses `new Function(...)` to execute each module's script content, which returns the module's factory function.
-    c.  Calls the factory function, passing in the already-loaded dependencies to get the module instance.
-    d.  Stores each initialized module instance in a local variable.
-    e.  Follows the strict, layered loading order described above.
-3.  **Finalization:** Once all modules are loaded, the orchestrator makes the final call to `UI.init()`, passing it the fully-initialized `StateManager` and `CycleLogic` modules to link the UI to the agent's core.
+#### Step 1: Initialize Boot Tracking
+
+Create a global `_bootStats` object to track the boot process:
+
+```javascript
+const _bootStats = {
+  startTime: null,
+  endTime: null,
+  totalDuration: null,
+  modulesLoaded: [],
+  moduleErrors: [],
+  status: 'not_started'
+};
+```
+
+Set `_bootStats.startTime = Date.now()` and `_bootStats.status = 'booting'` when the orchestrator begins.
+
+#### Step 2: Load Foundation Modules
+
+The `/boot.js` harness loads and executes `/upgrades/app-logic.js`. The orchestrator manually loads the two foundation modules:
+
+```javascript
+// Load Utils (zero dependencies)
+const utilsContent = await vfs.read("/upgrades/utils.js");
+const Utils = new Function(utilsContent + "\nreturn Utils;")().factory();
+
+// Load DI Container
+const diContainerContent = await vfs.read("/upgrades/di-container.js");
+const DIContainerModule = new Function(diContainerContent + "\nreturn DIContainer;");
+const container = DIContainerModule().factory({ Utils });
+
+// Expose globally for lazy resolution
+globalThis.DIContainer = container;
+```
+
+Track each load in `_bootStats.modulesLoaded` with `{id, path, loadTime, timestamp}`.
+
+#### Step 3: Register Configuration and Persona
+
+Load `config.json` and the active Persona module, registering them with the container:
+
+```javascript
+const configContent = await vfs.read("/config.json");
+const config = JSON.parse(configContent);
+container.register({
+  metadata: { id: 'config', type: 'pure' },
+  factory: () => config
+});
+
+// Load active persona
+const personaPath = `/personas/${personaModuleName}.js`;
+const personaContent = await vfs.read(personaPath);
+const PersonaModule = new Function(personaContent + `\nreturn ${personaModuleName};`)();
+container.register({ ...PersonaModule, metadata: { ...PersonaModule.metadata, id: 'Persona' } });
+```
+
+#### Step 4: Load Modules via DI Container
+
+Define the module manifest (list of all module paths) and use the DI container to load them with automatic dependency resolution:
+
+```javascript
+const moduleManifest = [
+  '/upgrades/event-bus.js',
+  '/upgrades/state-helpers-pure.js',
+  '/upgrades/storage-localstorage.js',
+  '/upgrades/state-manager.js',
+  '/upgrades/api-client.js',
+  '/upgrades/tool-runner.js',
+  '/upgrades/agent-cycle.js',
+  '/upgrades/ui-manager.js',
+  // ... all other modules
+];
+
+for (const modulePath of moduleManifest) {
+  const moduleContent = await vfs.read(modulePath);
+  const ModuleDefinition = evaluateModule(moduleContent, modulePath);
+  container.register(ModuleDefinition);
+}
+
+// Resolve all modules (DI container handles dependency order)
+const resolvedModules = container.resolveAll();
+```
+
+The DI container performs topological sorting to ensure dependencies are loaded before dependents.
+
+#### Step 5: Create AppLogic Widget
+
+Define the `AppLogicWidget` Web Component inside the factory function to allow closure-based access to `_bootStats`:
+
+```javascript
+class AppLogicWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  set moduleApi(api) {
+    this._api = api;
+    this.render();
+  }
+
+  connectedCallback() {
+    this.render();
+  }
+
+  disconnectedCallback() {
+    // No cleanup needed
+  }
+
+  getStatus() {
+    // Return dashboard status based on _bootStats
+  }
+
+  renderPanel() {
+    // Render boot statistics:
+    // - Status badge (not_started, booting, ready, failed)
+    // - Total boot time and module count
+    // - Module errors (if any)
+    // - Top 10 slowest modules
+    // - Load timeline with relative timestamps
+  }
+
+  render() {
+    this.shadowRoot.innerHTML = `
+      <style>/* Shadow DOM styles */</style>
+      ${this.renderPanel()}
+    `;
+  }
+}
+
+const elementName = 'app-logic-widget';
+if (!customElements.get(elementName)) {
+  customElements.define(elementName, AppLogicWidget);
+}
+```
+
+#### Step 6: Return API and Widget
+
+Return an object with both the API and widget:
+
+```javascript
+return {
+  api: {
+    getBootStats: () => ({ ..._bootStats })
+  },
+  widget: {
+    element: elementName,
+    displayName: 'Boot Orchestrator',
+    icon: '⛻',
+    category: 'core',
+    updateInterval: null
+  }
+};
+```
+
+#### Step 7: Finalize Boot Process
+
+After all modules are loaded:
+
+```javascript
+_bootStats.endTime = Date.now();
+_bootStats.totalDuration = _bootStats.endTime - _bootStats.startTime;
+_bootStats.status = 'ready';
+
+// Initialize UI with resolved modules
+const UI = resolvedModules.UIManager;
+UI.init();
+```
+
+#### Step 8: Error Handling
+
+Wrap module loading in try-catch blocks and track errors in `_bootStats.moduleErrors`:
+
+```javascript
+try {
+  // ... load module
+} catch (error) {
+  _bootStats.moduleErrors.push({ path: modulePath, error: error.message });
+  _bootStats.status = 'failed';
+}
+```
+
+The widget displays errors in a dedicated panel for debugging.

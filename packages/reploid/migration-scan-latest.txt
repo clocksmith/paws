@@ -1,0 +1,91 @@
+=== Web Components Migration Status ===
+
+Total files scanned: 85
+
+Status Summary:
+  ✅ MIGRATED (Full Web Component): 32
+  ⚠️  PARTIAL (New widget, no component): 0
+  📜 OLD_PATTERN (Old widget pattern): 41
+  ❌ NOT_MIGRATED (No widget): 12
+
+=== Detailed Results ===
+
+
+MIGRATED (32):
+  • agent-cycle-structured.js (0x000047)
+  • agent-cycle.js (0x000008)
+  • agent-logic-pure.js (0x000009)
+  • api-client.js (0x000007)
+  • autonomous-orchestrator.js (0x000023)
+  • boot-module-loader.js (0x000025)
+  • browser-apis.js (0x000043)
+  • context-manager.js (0x000046)
+  • di-container.js
+  • diff-utils.js
+  • dogs-parser-browser.js (0x000048)
+  • event-bus.js
+  • hitl-controller.js
+  • hybrid-llm-provider.js (0x000039)
+  • local-llm.js (0x000038)
+  • metrics-dashboard.js (0x00002D)
+  • python-tool.js (0x000037)
+  • rfc-author.js (0x00001A)
+  • self-tester.js (0x000042)
+  • state-helpers-pure.js (0x000006)
+  • state-manager.js (0x000005)
+  • storage-indexeddb.js (0x000011)
+  • storage-localstorage.js (0x000004)
+  • streaming-response-handler.js (0x000045)
+  • tab-coordinator.js (0x000040)
+  • tool-doc-generator.js (0x000041)
+  • tool-evaluator.js (0x000012)
+  • tool-runner-pure-helpers.js (0x00000B)
+  • tool-runner.js (0x00000A)
+  • utils.js (0x000003)
+  • webrtc-coordinator.js (0x00003A)
+  • webrtc-swarm.js (0x000044)
+
+OLD_PATTERN (41):
+  • agent-visualizer.js (0x00002E)
+  • api-client-multi.js (0x000027)
+  • app-logic.js (0x000002)
+  • ast-visualizer.js (0x00002F)
+  • audit-logger.js (0x000034)
+  • backup-restore.js
+  • blueprint-creator.js (0x000018)
+  • canvas-visualizer.js (0x00002A)
+  • config.js (0x000050)
+  • confirmation-modal.js (0x000028)
+  • cost-tracker.js (0x00003F)
+  • deja-vu-detector.js (0x00004A)
+  • diff-viewer-ui.js
+  • event-bus-widget.js
+  • goal-modifier.js (0x000017)
+  • hitl-control-panel.js
+  • hot-reload.js
+  • meta-cognitive-layer.js (0x00004B)
+  • meta-tool-creator.js (0x000016)
+  • module-graph-visualizer.js (0x000030)
+  • penteract-analytics.js (0x000024)
+  • penteract-visualizer.js
+  • performance-monitor.js (0x00002C)
+  • persona-manager.js (0x000051)
+  • pyodide-runtime.js (0x000036)
+  • rate-limiter.js (0x000032)
+  • reflection-search.js (0x00003D)
+  • reflection-store.js (0x00003B)
+  • sentinel-fsm.js
+  • sentinel-tools.js
+  • state-manager-widget.js
+  • toast-notifications.js (0x000031)
+  • tool-analytics.js (0x00003E)
+  • tool-execution-panel.js
+  • tutorial-system.js (0x000035)
+  • ui-manager.js (0x00000D)
+  • verification-manager.js
+  • vfs-explorer-widget-conversion.js
+  • visual-self-improvement.js (0x000019)
+  • viz-data-adapter.js (0x00002B)
+  • worker-pool.js
+
+✅ Results saved to migration-scan-results.json

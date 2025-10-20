@@ -2,6 +2,9 @@
 
 **Objective:** To explain the security and concurrency benefits of executing dynamically created tools within a sandboxed Web Worker.
 
+**Target Upgrade:** WRKR (`tool-worker.js`)
+
+
 **Prerequisites:** `0x00000A`
 
 **Affected Artifacts:** `/modules/tool-worker.js`, `/modules/tool-runner.js`

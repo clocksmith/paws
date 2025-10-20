@@ -1,6 +1,11 @@
-[
-  {
-    "name": "vfs_log",
+{
+  "_blueprint": {
+    "id": "0x000067",
+    "description": "Documents the VFS version control tools manifest."
+  },
+  "tools": [
+    {
+      "name": "vfs_log",
     "description": "Returns the commit history for a file in the Virtual File System.",
     "parameters": {
       "type": "object",
@@ -53,4 +58,5 @@
       "required": ["path", "commit_sha"]
     }
   }
-]
+  ]
+}

@@ -1,3 +1,4 @@
+// @blueprint 0x000033 - Specifies module integrity signing and verification.
 // Module Integrity Verification System
 // Provides module signing and verification for secure self-modification
 
@@ -255,13 +256,226 @@ const ModuleIntegrity = {
       }
     };
 
+    // Track signing stats for widget
+    let signatureStats = { totalSigned: 0, totalVerified: 0, verificationPassed: 0, verificationFailed: 0, lastSigned: null };
+
+    // Wrap signModule to track stats
+    const originalSignModule = signModule;
+    const trackedSignModule = async (moduleId, code, version) => {
+      const result = await originalSignModule(moduleId, code, version);
+      signatureStats.totalSigned++;
+      signatureStats.lastSigned = { moduleId, timestamp: Date.now() };
+      return result;
+    };
+
+    // Wrap verifyModule to track stats
+    const originalVerifyModule = verifyModule;
+    const trackedVerifyModule = async (code, signature) => {
+      const result = await originalVerifyModule(code, signature);
+      signatureStats.totalVerified++;
+      if (result.valid) {
+        signatureStats.verificationPassed++;
+      } else {
+        signatureStats.verificationFailed++;
+      }
+      return result;
+    };
+
+    // Widget interface - Web Component
+    const widget = (() => {
+      class ModuleIntegrityWidget extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' });
+          this._api = null;
+        }
+
+        connectedCallback() {
+          this.render();
+        }
+
+        disconnectedCallback() {
+          // No cleanup needed for manual updates
+        }
+
+        set moduleApi(api) {
+          this._api = api;
+          this.render();
+        }
+
+        async getStatus() {
+          const status = await getStatus();
+
+          return {
+            state: status.enabled ? 'idle' : 'disabled',
+            primaryMetric: `${status.signedModules} signed`,
+            secondaryMetric: signatureStats.totalVerified > 0
+              ? `${Math.round((signatureStats.verificationPassed / signatureStats.totalVerified) * 100)}% verified`
+              : 'No verifications',
+            lastActivity: signatureStats.lastSigned?.timestamp || status.lastUpdate,
+            message: status.enabled ? null : 'No signatures found'
+          };
+        }
+
+        async render() {
+          const status = await getStatus();
+
+          this.shadowRoot.innerHTML = `
+            <style>
+              :host {
+                display: block;
+                font-family: system-ui, -apple-system, sans-serif;
+              }
+              .module-integrity-panel {
+                padding: 15px;
+                color: #e0e0e0;
+              }
+              .controls {
+                margin-bottom: 15px;
+                display: flex;
+                gap: 10px;
+              }
+              button {
+                padding: 8px 12px;
+                border: 1px solid #555;
+                background: rgba(255,255,255,0.05);
+                color: #e0e0e0;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 13px;
+                transition: all 0.2s;
+              }
+              button:hover {
+                background: rgba(255,255,255,0.1);
+                border-color: #0ff;
+              }
+              .integrity-stats {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr 1fr;
+                gap: 10px;
+                margin-bottom: 20px;
+              }
+              .stat-card {
+                padding: 10px;
+                border-radius: 5px;
+              }
+              .stat-card > div:first-child {
+                color: #888;
+                font-size: 12px;
+              }
+              .stat-card > div:last-child {
+                font-size: 24px;
+                font-weight: bold;
+              }
+              .signature-info, .last-signed, .security-notes {
+                padding: 12px;
+                border-radius: 5px;
+                margin-bottom: 20px;
+              }
+              .signature-info {
+                background: rgba(0,255,255,0.1);
+                padding: 15px;
+              }
+              .last-signed {
+                background: rgba(156,39,176,0.1);
+              }
+              .security-notes {
+                background: rgba(255,193,7,0.1);
+                border-left: 3px solid #ffc107;
+              }
+              h4 {
+                color: #0ff;
+                margin: 0 0 10px 0;
+                font-size: 14px;
+              }
+            </style>
+            <div class="module-integrity-panel">
+              <div class="controls">
+                <button class="sign-all">✍️ Sign All</button>
+              </div>
+
+              <div class="integrity-stats">
+                <div class="stat-card" style="background: rgba(0,255,255,0.1);">
+                  <div>Signed</div>
+                  <div style="color: #0ff;">${signatureStats.totalSigned}</div>
+                </div>
+                <div class="stat-card" style="background: rgba(156,39,176,0.1);">
+                  <div>Verified</div>
+                  <div style="color: #9c27b0;">${signatureStats.totalVerified}</div>
+                </div>
+                <div class="stat-card" style="background: rgba(76,175,80,0.1);">
+                  <div>Passed</div>
+                  <div style="color: #4caf50;">${signatureStats.verificationPassed}</div>
+                </div>
+                <div class="stat-card" style="background: rgba(244,67,54,0.1);">
+                  <div>Failed</div>
+                  <div style="color: #f44336;">${signatureStats.verificationFailed}</div>
+                </div>
+              </div>
+
+              <div class="signature-info">
+                <h4>Signature System</h4>
+                <div style="font-size: 13px; color: #ccc; line-height: 1.8;">
+                  <div><strong>Algorithm:</strong> HMAC-SHA256</div>
+                  <div><strong>Status:</strong> ${status.enabled ? '✓ Active' : '○ Inactive'}</div>
+                  <div><strong>Signed Modules:</strong> ${status.signedModules}</div>
+                  ${status.lastUpdate ? `
+                    <div><strong>Last Update:</strong> ${new Date(status.lastUpdate).toLocaleString()}</div>
+                  ` : ''}
+                </div>
+              </div>
+
+              ${signatureStats.lastSigned ? `
+                <div class="last-signed">
+                  <div style="font-weight: bold; margin-bottom: 6px; color: #9c27b0;">Last Signed Module</div>
+                  <div style="font-size: 14px; color: #ccc;">${signatureStats.lastSigned.moduleId}</div>
+                  <div style="font-size: 11px; color: #666; margin-top: 4px;">
+                    ${new Date(signatureStats.lastSigned.timestamp).toLocaleString()}
+                  </div>
+                </div>
+              ` : ''}
+
+              <div class="security-notes">
+                <div style="font-weight: bold; margin-bottom: 6px; color: #ffc107;">⚠️ Security Notice</div>
+                <div style="font-size: 12px; color: #ccc; line-height: 1.6;">
+                  This system uses HMAC for lightweight module signing. In production environments, use asymmetric cryptography (RSA/ECDSA) with proper key management.
+                </div>
+              </div>
+            </div>
+          `;
+
+          // Attach event listeners
+          this.shadowRoot.querySelector('.sign-all')?.addEventListener('click', async () => {
+            const result = await signAllModules();
+            if (typeof EventBus !== 'undefined') {
+              EventBus.emit('toast:success', { message: `Signed ${result.signed} modules` });
+            }
+            this.render();
+          });
+        }
+      }
+
+      if (!customElements.get('module-integrity-widget')) {
+        customElements.define('module-integrity-widget', ModuleIntegrityWidget);
+      }
+
+      return {
+        element: 'module-integrity-widget',
+        displayName: 'Module Integrity',
+        icon: '⚿',
+        category: 'security',
+        order: 50
+      };
+    })();
+
     return {
       calculateHash,
-      signModule,
-      verifyModule,
+      signModule: trackedSignModule,
+      verifyModule: trackedVerifyModule,
       signAllModules,
       verifyModuleById,
-      getStatus
+      getStatus,
+      widget
     };
   }
 };

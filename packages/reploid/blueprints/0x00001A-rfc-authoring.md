@@ -2,6 +2,9 @@
 
 **Objective:** To define the structure, tone, and required components for a standard Request for Change document.
 
+**Target Upgrade:** RFCA (`rfc-author.js`)
+
+
 **Prerequisites:** 0x000012 (Structured Self-Evaluation)
 
 **Affected Artifacts:** `/docs/rfc-*.md`, `/templates/rfc.md`
@@ -20,7 +23,65 @@ The RFC process serves multiple critical functions:
 
 ## 2. The Architectural Solution
 
-An RFC is a markdown document created from a standard template. It must contain specific sections that address different stakeholder concerns. The agent's role is to analyze a proposed change and populate these sections with concise, evidence-based information.
+The RFC Author module provides both programmatic RFC generation and real-time monitoring through a Web Component-based widget. It creates markdown documents from templates while tracking RFC creation activity.
+
+### Module Architecture:
+
+**Factory Pattern with Web Component Widget:**
+```javascript
+const RFCAuthor = {
+  metadata: {
+    id: 'RFCAuthor',
+    version: '1.0.0',
+    dependencies: ['StateManager', 'Utils'],
+    type: 'service'
+  },
+  factory: (deps) => {
+    // Business logic for RFC creation
+    const draftRFC = async (options) => { /*...*/ };
+    const produceOutline = async () => { /*...*/ };
+
+    // Web Component Widget (defined inside factory to access closure state)
+    class RFCAuthorWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      connectedCallback() {
+        this.render();
+        this._interval = setInterval(() => this.render(), 10000);
+      }
+
+      disconnectedCallback() {
+        if (this._interval) clearInterval(this._interval);
+      }
+
+      render() {
+        this.shadowRoot.innerHTML = `<style>...</style>${this.renderPanel()}`;
+      }
+    }
+
+    customElements.define('rfc-author-widget', RFCAuthorWidget);
+
+    return {
+      api: { draftRFC, produceOutline },
+      widget: {
+        element: 'rfc-author-widget',
+        displayName: 'RFC Author',
+        icon: '✎',
+        category: 'service',
+        updateInterval: 10000
+      }
+    };
+  }
+};
+```
 
 ### Core RFC Structure:
 
@@ -33,6 +94,15 @@ An RFC is a markdown document created from a standard template. It must contain 
 7. **Risks & Mitigations**: Potential issues and prevention strategies
 8. **Approval**: Review and sign-off requirements
 
+### Web Component Widget Features:
+
+The `RFCAuthorWidget` provides real-time visibility into RFC creation:
+- **Statistics Dashboard**: Shows total RFCs created and time since last RFC
+- **Recent RFCs List**: Displays the last 10 RFCs with titles, paths, and timestamps
+- **RFC Structure Reference**: Lists all standard RFC sections
+- **Interactive Actions**: "Draft Sample RFC" button for quick RFC creation
+- **Auto-refresh**: Updates every 10 seconds to reflect new RFC creation
+
 ### Tone Guidelines:
 
 - **Professional**: Use formal but accessible language
@@ -42,27 +112,108 @@ An RFC is a markdown document created from a standard template. It must contain 
 
 ## 3. The Implementation Pathway
 
-### 3.1 RFC Creation Workflow:
+### 3.1 Module Implementation Steps:
 
-1. **Initiate**: Use the `create_rfc` tool with a descriptive title
-2. **Read**: Load the newly created RFC draft file
-3. **Analyze**: Gather context from:
-   - Project state and recent changes
-   - User requirements or feature requests
-   - Existing blueprints and documentation
-   - Current system architecture
-4. **Populate**: Systematically fill each section:
-   - Background: Analyze current state and identify gaps
-   - Goals: Extract from user input or infer from analysis
-   - Technical Scope: List specific files, modules, and changes
-   - Deliverables: Define measurable outputs
-   - Risks: Consider performance, security, compatibility
-5. **Review**: Use the `self_evaluate` tool to assess:
-   - Clarity and completeness
-   - Technical accuracy
-   - Alignment with project standards
-6. **Refine**: Incorporate evaluation feedback
-7. **Present**: Save final version and notify user
+**Step 1: Module Registration**
+```javascript
+// In config.json, ensure RFCAuthor is registered with dependencies
+{
+  "modules": {
+    "RFCAuthor": {
+      "dependencies": ["StateManager", "Utils"],
+      "enabled": true
+    }
+  }
+}
+```
+
+**Step 2: Factory Function Implementation**
+
+The factory receives dependencies and creates the RFC authoring logic:
+```javascript
+factory: (deps) => {
+  const { StateManager, Utils } = deps;
+  const { logger } = Utils;
+
+  // Internal state (accessible to widget via closure)
+  let _rfcCount = 0;
+  let _lastRfcTime = null;
+  let _recentRfcs = [];
+
+  // Core API functions
+  const draftRFC = async (options = {}) => {
+    // Build RFC data structure
+    // Load template or use default
+    // Create artifact via StateManager
+    // Track creation in internal state
+    return { path, content, title };
+  };
+
+  // Web Component defined here to access closure variables
+  class RFCAuthorWidget extends HTMLElement { /*...*/ }
+  customElements.define('rfc-author-widget', RFCAuthorWidget);
+
+  return { api, widget };
+}
+```
+
+**Step 3: RFC Creation Logic**
+
+The `draftRFC` function implements the full workflow:
+1. **Data Preparation**: Coalesce options with defaults using helper functions
+2. **Template Loading**: Attempt to load `/templates/rfc.md` from StateManager
+3. **Content Generation**: Either fill template or use `buildDefaultContent()`
+4. **Path Generation**: Create unique path using `sanitizeFileName()` and `ensureUniquePath()`
+5. **Artifact Creation**: Save RFC via `StateManager.createArtifact()`
+6. **State Tracking**: Update `_rfcCount`, `_lastRfcTime`, and `_recentRfcs` for widget display
+
+**Step 4: Web Component Widget**
+
+The widget provides real-time monitoring inside factory closure:
+```javascript
+class RFCAuthorWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  set moduleApi(api) {
+    this._api = api;  // Receives { draftRFC, produceOutline }
+    this.render();
+  }
+
+  connectedCallback() {
+    this.render();
+    this._interval = setInterval(() => this.render(), 10000);
+  }
+
+  disconnectedCallback() {
+    if (this._interval) clearInterval(this._interval);
+  }
+
+  render() {
+    // Access closure variables: _rfcCount, _recentRfcs, _lastRfcTime
+    this.shadowRoot.innerHTML = `
+      <style>/* Shadow DOM styles */</style>
+      ${this.renderPanel()}
+    `;
+    // Wire up interactive button
+    this.shadowRoot.querySelector('.draft-sample-btn')
+      .addEventListener('click', async () => {
+        await draftRFC({ title: 'Sample RFC Document', /*...*/ });
+      });
+  }
+}
+```
+
+**Step 5: Shadow DOM Rendering**
+
+The widget renders encapsulated UI:
+- **Statistics Grid**: 2-column layout showing RFC count and last creation time
+- **Recent RFCs**: Scrollable list (max-height: 150px) of last 10 RFCs
+- **Structure Reference**: Informational panel listing RFC sections
+- **Action Button**: Interactive "Draft Sample RFC" button
+- **Auto-refresh**: Updates display every 10 seconds
 
 ### 3.2 Quality Checklist:
 
@@ -94,16 +245,39 @@ Before finalizing an RFC, verify:
 
 ## 4. Integration Points
 
-### Tools Integration:
-- `create_rfc`: Initializes RFC from template
-- `read_artifact`: Analyzes existing code and documentation
-- `write_artifact`: Saves completed RFC
-- `self_evaluate`: Reviews RFC quality
+### Module Dependencies:
+- **StateManager**: For artifact creation and retrieval
+  - `createArtifact(path, type, content, note)`: Saves RFC documents
+  - `getArtifactContent(path)`: Loads RFC templates
+  - `getArtifactMetadata(path)`: Checks for existing RFCs
+  - `getAllArtifactMetadata()`: Gathers context for recent artifacts section
+- **Utils**: For logging and common utilities
+  - `logger`: For tracking RFC creation events
+  - Helper functions for string sanitization and validation
+
+### Widget Integration:
+The RFCAuthor widget integrates with the module dashboard system:
+```javascript
+widget: {
+  element: 'rfc-author-widget',        // Custom element tag name
+  displayName: 'RFC Author',            // Dashboard display name
+  icon: '✎',                            // Visual identifier
+  category: 'service',                  // Dashboard grouping
+  updateInterval: 10000                 // 10-second refresh rate
+}
+```
+
+**Dashboard Communication:**
+- Widget accesses module API via `.moduleApi` property setter
+- Widget uses closure variables for real-time state display
+- Interactive buttons call API functions directly from Shadow DOM
 
 ### Blueprint Dependencies:
 - 0x000012: Provides self-evaluation framework
 - 0x000018: Offers meta-blueprint creation patterns
 - 0x000009: Supplies pure logic for analysis
+- 0x000005: StateManager for artifact persistence
+- 0x000003: Utils for common functionality
 
 ### Persona Compatibility:
 - **RFC Author**: Primary persona for this blueprint

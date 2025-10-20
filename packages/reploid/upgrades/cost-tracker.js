@@ -3,6 +3,7 @@
  * Tracks API usage costs across providers and enforces rate limits.
  * Displays spending metrics in dashboard and warns on budget overruns.
  *
+ * @blueprint 0x00003F - Tracks API cost and rate governance.
  * @module CostTracker
  * @version 1.0.0
  * @category analytics
@@ -365,6 +366,298 @@ const CostTracker = {
       logger.info('[CostTracker] All tracking data cleared');
     };
 
+    // Web Component Widget
+    class CostTrackerWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      connectedCallback() {
+        this.render();
+        // Auto-refresh every 5 seconds
+        this._interval = setInterval(() => this.render(), 5000);
+      }
+
+      disconnectedCallback() {
+        if (this._interval) {
+          clearInterval(this._interval);
+          this._interval = null;
+        }
+      }
+
+      getStatus() {
+        const totalCost = getTotalCost();
+        const sessionCost = getSessionCost();
+        const recentCalls = apiCalls.filter(c => Date.now() - c.timestamp < 300000).length; // Last 5 min
+        const hasRecentActivity = recentCalls > 0;
+
+        return {
+          state: hasRecentActivity ? 'active' : (apiCalls.length > 0 ? 'idle' : 'disabled'),
+          primaryMetric: totalCost > 0 ? `$${totalCost.toFixed(3)}` : '$0.000',
+          secondaryMetric: `${apiCalls.length} calls`,
+          lastActivity: apiCalls.length > 0 ? apiCalls[apiCalls.length - 1].timestamp : null,
+          message: sessionCost > 0 ? `Session: $${sessionCost.toFixed(3)}` : null
+        };
+      }
+
+      getControls() {
+        return [
+          {
+            id: 'generate-report',
+            label: '☱ Generate Report',
+            action: () => {
+              const report = generateReport();
+              console.log(report);
+              logger.info('[CostTracker] Report generated');
+              return { success: true, message: 'Report generated (check console)' };
+            }
+          },
+          {
+            id: 'show-breakdown',
+            label: '⤊ Cost Breakdown',
+            action: () => {
+              const breakdown = getCostByProvider();
+              console.table(Object.entries(breakdown).map(([provider, data]) => ({
+                Provider: data.name,
+                Calls: data.count,
+                Cost: `$${data.totalCost.toFixed(4)}`,
+                'Input Tokens': data.inputTokens.toLocaleString(),
+                'Output Tokens': data.outputTokens.toLocaleString()
+              })));
+              return { success: true, message: 'Breakdown shown in console' };
+            }
+          },
+          {
+            id: 'reset-session',
+            label: '↻ Reset Session',
+            action: () => {
+              resetSession();
+              this.render();
+              return { success: true, message: 'Session reset' };
+            }
+          }
+        ];
+      }
+
+      render() {
+        const totalCost = getTotalCost();
+        const sessionCost = getSessionCost();
+        const sessionDuration = ((Date.now() - sessionStart) / 1000 / 60).toFixed(1);
+        const stats24h = getCostStats(86400000);
+        const breakdown = getCostByProvider();
+        const rateLimits = getRateLimitStatus();
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              font-family: monospace;
+              font-size: 12px;
+            }
+            .cost-panel {
+              padding: 12px;
+              color: #fff;
+            }
+            h4 {
+              margin: 0 0 12px 0;
+              font-size: 1.1em;
+              color: #0ff;
+            }
+            .summary {
+              margin-bottom: 12px;
+            }
+            .summary-title {
+              color: #0ff;
+              font-weight: bold;
+              margin-bottom: 8px;
+            }
+            .summary-item {
+              color: #e0e0e0;
+            }
+            .summary-item .value-gold {
+              color: #ffd700;
+              font-weight: bold;
+            }
+            .summary-item .value-cyan {
+              color: #0ff;
+            }
+            .summary-duration {
+              color: #aaa;
+              font-size: 10px;
+            }
+            .stats-box {
+              margin-bottom: 12px;
+              padding: 8px;
+              background: rgba(0,255,255,0.05);
+              border: 1px solid rgba(0,255,255,0.2);
+            }
+            .stats-box-title {
+              color: #0ff;
+              font-weight: bold;
+              margin-bottom: 4px;
+            }
+            .stats-box-item {
+              color: #aaa;
+            }
+            .stats-box-item .value-white {
+              color: #fff;
+            }
+            .stats-box-item .value-gold {
+              color: #ffd700;
+            }
+            .stats-box-item .value-gray {
+              color: #888;
+            }
+            .provider-section {
+              margin-bottom: 12px;
+            }
+            .provider-title {
+              color: #0ff;
+              font-weight: bold;
+              margin-bottom: 8px;
+            }
+            .provider-list {
+              max-height: 100px;
+              overflow-y: auto;
+            }
+            .provider-item {
+              padding: 3px 0;
+              border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+            .provider-name {
+              color: #fff;
+              font-size: 11px;
+            }
+            .provider-stats {
+              color: #888;
+              font-size: 10px;
+            }
+            .rate-limits-box {
+              margin-bottom: 12px;
+              padding: 8px;
+              background: rgba(0,0,0,0.3);
+              border: 1px solid rgba(255,255,255,0.1);
+            }
+            .rate-limits-title {
+              color: #888;
+              font-weight: bold;
+              margin-bottom: 4px;
+              font-size: 10px;
+            }
+            .rate-limit-item {
+              color: #aaa;
+              font-size: 10px;
+              padding: 2px 0;
+            }
+            .rate-limit-reset {
+              color: #666;
+            }
+            .warning-box {
+              margin-top: 12px;
+              padding: 8px;
+              background: rgba(255,255,0,0.1);
+              border: 1px solid rgba(255,255,0,0.3);
+            }
+            .warning-text {
+              color: #ff0;
+              font-weight: bold;
+              text-align: center;
+            }
+            .warning-cost {
+              color: #888;
+              font-size: 10px;
+              text-align: center;
+            }
+            .no-calls {
+              color: #888;
+              text-align: center;
+              margin-top: 20px;
+            }
+          </style>
+          <div class="cost-panel">
+            <h4>⚯ Cost Tracker</h4>
+
+            <div class="summary">
+              <div class="summary-title">Cost Summary</div>
+              <div class="summary-item">Total Cost: <span class="value-gold">$${totalCost.toFixed(4)}</span></div>
+              <div class="summary-item">Session Cost: <span class="value-cyan">$${sessionCost.toFixed(4)}</span></div>
+              <div class="summary-item">Total Calls: <span class="value-cyan">${apiCalls.length}</span></div>
+              <div class="summary-duration">Session: ${sessionDuration} min</div>
+            </div>
+
+            ${stats24h.callCount > 0 ? `
+              <div class="stats-box">
+                <div class="stats-box-title">Last 24 Hours</div>
+                <div class="stats-box-item">Calls: <span class="value-white">${stats24h.callCount}</span></div>
+                <div class="stats-box-item">Cost: <span class="value-gold">$${stats24h.totalCost.toFixed(4)}</span></div>
+                <div class="stats-box-item">Avg/Call: <span class="value-gray">$${stats24h.avgCostPerCall.toFixed(4)}</span></div>
+              </div>
+            ` : ''}
+
+            ${Object.keys(breakdown).length > 0 ? `
+              <div class="provider-section">
+                <div class="provider-title">By Provider</div>
+                <div class="provider-list">
+                  ${Object.entries(breakdown).map(([provider, data]) => {
+                    const percentage = totalCost > 0 ? ((data.totalCost / totalCost) * 100).toFixed(1) : 0;
+                    return `
+                      <div class="provider-item">
+                        <div class="provider-name">${data.name}</div>
+                        <div class="provider-stats">${data.count} calls • $${data.totalCost.toFixed(4)} (${percentage}%)</div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            ` : ''}
+
+            ${(() => {
+              const hasLimits = Object.values(rateLimits).some(s => s.limit !== null && s.used > 0);
+              if (!hasLimits) return '';
+
+              return `
+                <div class="rate-limits-box">
+                  <div class="rate-limits-title">Rate Limits</div>
+                  ${Object.entries(rateLimits).map(([provider, status]) => {
+                    if (status.limit === null || status.used === 0) return '';
+                    const percentage = (status.used / status.limit) * 100;
+                    const color = percentage > 80 ? '#f00' : percentage > 50 ? '#ff0' : '#0f0';
+                    return `
+                      <div class="rate-limit-item">
+                        ${provider}: <span style="color: ${color};">${status.used}/${status.limit}</span>
+                        ${status.resetIn > 0 ? `<span class="rate-limit-reset">(reset: ${status.resetIn}s)</span>` : ''}
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              `;
+            })()}
+
+            ${sessionCost > 0.10 ? `
+              <div class="warning-box">
+                <div class="warning-text">⚠️ High Session Cost</div>
+                <div class="warning-cost">$${sessionCost.toFixed(4)}</div>
+              </div>
+            ` : ''}
+
+            ${apiCalls.length === 0 ? '<div class="no-calls">No API calls tracked yet</div>' : ''}
+          </div>
+        `;
+      }
+    }
+
+    // Register custom element
+    const elementName = 'cost-tracker-widget';
+    if (!customElements.get(elementName)) {
+      customElements.define(elementName, CostTrackerWidget);
+    }
+
     return {
       init,
       api: {
@@ -381,6 +674,13 @@ const CostTracker = {
         getApiCalls: () => [...apiCalls],
         getPricing: () => ({ ...PRICING }),
         getRateLimits: () => ({ ...RATE_LIMITS })
+      },
+
+      widget: {
+        element: elementName,
+        displayName: 'Cost Tracker',
+        icon: '⚯',
+        category: 'analytics'
       }
     };
   }

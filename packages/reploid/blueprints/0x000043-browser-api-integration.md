@@ -52,6 +52,79 @@ Key features:
 - **State Exposure**
   - `getCapabilities()`, `getDirectoryHandle()` allow other modules to adapt behaviour.
 
+**Widget Interface (Web Component):**
+
+The module exposes a `BrowserAPIsWidget` custom element for dashboard visualization:
+
+```javascript
+class BrowserAPIsWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+    // No auto-refresh needed - capabilities are static once detected
+  }
+
+  set moduleApi(api) {
+    this._api = api;
+    this.render();
+  }
+
+  getStatus() {
+    const state = this._api.getState();
+    const availableCount = Object.values(state.capabilities).filter(Boolean).length;
+    const hasRecentOp = state.operationStats.lastOperation &&
+      (Date.now() - state.operationStats.lastOperation.timestamp < 60000);
+
+    return {
+      state: availableCount > 0 ? (hasRecentOp ? 'active' : 'idle') : 'disabled',
+      primaryMetric: `${availableCount}/${totalCount} APIs`,
+      secondaryMetric: state.fileSystemHandle ? `⛁ ${state.fileSystemHandle.name}` : 'No FS access',
+      lastActivity: state.operationStats.lastOperation ? state.operationStats.lastOperation.timestamp : null
+    };
+  }
+
+  render() {
+    const state = this._api.getState();
+
+    this.shadowRoot.innerHTML = `
+      <style>/* Shadow DOM styles */</style>
+      <div class="browser-apis-panel">
+        <!-- API availability checklist (✓/✗ for each capability) -->
+        <!-- Operation stats (file reads/writes, notifications, clipboard, shares) -->
+        <!-- File system access status with directory name -->
+        <!-- Notification permission status -->
+        <!-- Last operation timestamp and type -->
+        <!-- Interactive buttons: Request FS, Check Storage, Request Notifications, Generate Report -->
+      </div>
+    `;
+
+    // Attach event listeners to interactive buttons
+    this.shadowRoot.getElementById('request-fs').addEventListener('click', async () => {
+      await this._api.requestDirectoryAccess();
+    });
+
+    this.shadowRoot.getElementById('check-storage').addEventListener('click', async () => {
+      await this._api.getStorageEstimate();
+    });
+  }
+}
+
+customElements.define('browser-apis-widget', BrowserAPIsWidget);
+```
+
+**Key Widget Features:**
+- **API Capability Checklist**: Visual display of all detected browser APIs (✓ available, ✗ unavailable)
+- **Operation Statistics**: Tracks and displays file reads/writes, notifications shown, clipboard operations, shares
+- **Permission States**: Shows file system directory access and notification permission status
+- **Interactive Controls**: Buttons to request permissions, check storage, generate capability reports
+- **Real-time Activity**: Highlights recent operations (< 1 minute) and updates state from 'idle' to 'active'
+
+The widget provides a complete dashboard for monitoring browser API availability and usage without requiring external UI code.
+
 ### 3. Implementation Pathway
 1. **Permissions UX**
    - Pair direct API requests with confirmation modals so the user understands consequences (e.g., enabling filesystem sync).

@@ -1,3 +1,4 @@
+// @blueprint 0x00002C - Outlines the performance monitoring metrics stack.
 // Performance Monitor Module for REPLOID - RSI-5
 // Tracks tool runtime, state changes, memory, and LLM API usage for data-driven self-optimization
 
@@ -388,6 +389,214 @@ const PerformanceMonitor = {
         getMemoryStats,
         generateReport,
         reset
+      },
+
+      // Web Component Widget
+      class PerformanceMonitorWidget extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' });
+        }
+
+        connectedCallback() {
+          this.render();
+          // Update every 2 seconds for real-time monitoring
+          this._updateInterval = setInterval(() => this.render(), 2000);
+        }
+
+        disconnectedCallback() {
+          if (this._updateInterval) {
+            clearInterval(this._updateInterval);
+            this._updateInterval = null;
+          }
+        }
+
+        set moduleApi(api) {
+          this._api = api;
+          this.render();
+        }
+
+        getStatus() {
+          const memStats = getMemoryStats();
+          const llmStats = getLLMStats();
+
+          const currentMem = memStats.current
+            ? (memStats.current.usedJSHeapSize / 1024 / 1024).toFixed(0)
+            : 0;
+
+          let state = 'idle';
+          if (activeTimers.size > 0) state = 'active';
+          if (memStats.current && memStats.current.usedJSHeapSize > memStats.current.jsHeapSizeLimit * 0.9) {
+            state = 'warning';
+          }
+
+          return {
+            state,
+            primaryMetric: `${currentMem} MB`,
+            secondaryMetric: `${llmStats.calls} LLM calls`,
+            lastActivity: llmStats.lastCall
+          };
+        }
+
+        render() {
+          const allMetrics = getMetrics();
+          const memStats = getMemoryStats();
+          const llmStats = getLLMStats();
+          const toolStats = getToolStats();
+
+          const formatBytes = (bytes) => {
+            if (!bytes) return '0 B';
+            const mb = bytes / 1024 / 1024;
+            return `${mb.toFixed(2)} MB`;
+          };
+
+          const formatMs = (ms) => {
+            if (!ms) return '0ms';
+            return `${ms.toFixed(0)}ms`;
+          };
+
+          const sessionDuration = ((Date.now() - allMetrics.session.startTime) / 1000 / 60).toFixed(1);
+
+          // Top tools by execution count
+          const topTools = Object.entries(toolStats)
+            .sort((a, b) => b[1].count - a[1].count)
+            .slice(0, 5);
+
+          this.shadowRoot.innerHTML = `
+            <style>
+              :host { display: block; font-family: monospace; font-size: 12px; }
+              .widget-panel { padding: 12px; }
+              h3 { margin: 0 0 12px 0; font-size: 1.1em; color: #fff; }
+              h5 { margin: 16px 0 8px 0; font-size: 1em; color: #aaa; }
+              .controls { display: flex; gap: 8px; margin-bottom: 12px; }
+              button { padding: 6px 12px; background: rgba(100,150,255,0.2); border: 1px solid rgba(100,150,255,0.4); border-radius: 4px; color: #fff; cursor: pointer; font-size: 0.9em; }
+              button:hover { background: rgba(100,150,255,0.3); }
+              .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+              .stat-card { padding: 8px; background: rgba(100,150,255,0.1); border-radius: 4px; }
+              .stat-label { font-size: 0.85em; color: #888; }
+              .stat-value { font-size: 1.2em; font-weight: bold; margin-top: 4px; }
+              .stat-row { display: flex; justify-content: space-between; padding: 4px 0; }
+              table { width: 100%; border-collapse: collapse; }
+              th, td { text-align: left; padding: 4px; }
+              th { color: #888; font-size: 0.85em; }
+              .memory-chart { display: flex; gap: 2px; height: 60px; align-items: flex-end; }
+              .memory-bar { flex: 1; background: #6496ff; }
+            </style>
+
+            <div class="widget-panel">
+              <h3>▤ Performance Monitor</h3>
+
+              <div class="controls">
+                <button id="reset-btn">↻ Reset</button>
+                <button id="export-btn">▤ Export</button>
+              </div>
+
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <div class="stat-label">Memory Used</div>
+                  <div class="stat-value">${formatBytes(memStats.current?.usedJSHeapSize)}</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-label">Memory Peak</div>
+                  <div class="stat-value">${formatBytes(memStats.max)}</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-label">LLM Calls</div>
+                  <div class="stat-value">${llmStats.calls}</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-label">Session Time</div>
+                  <div class="stat-value">${sessionDuration}m</div>
+                </div>
+              </div>
+
+              <h5>LLM Statistics</h5>
+              <div class="llm-stats">
+                <div class="stat-row"><span class="stat-label">Total Tokens:</span> <span class="stat-value">${llmStats.tokens.total.toLocaleString()}</span></div>
+                <div class="stat-row"><span class="stat-label">Input Tokens:</span> <span class="stat-value">${llmStats.tokens.input.toLocaleString()}</span></div>
+                <div class="stat-row"><span class="stat-label">Output Tokens:</span> <span class="stat-value">${llmStats.tokens.output.toLocaleString()}</span></div>
+                <div class="stat-row"><span class="stat-label">Avg Latency:</span> <span class="stat-value">${formatMs(llmStats.avgLatency)}</span></div>
+                <div class="stat-row"><span class="stat-label">Errors:</span> <span class="stat-value">${llmStats.errors}</span></div>
+              </div>
+
+              <h5>Memory Trend</h5>
+              <div class="memory-trend">
+                ${memStats.history && memStats.history.length > 0 ? `
+                  <div class="memory-chart">
+                    ${memStats.history.slice(-20).map((snapshot, i) => {
+                      const height = (snapshot.usedJSHeapSize / memStats.max) * 100;
+                      return `<div class="memory-bar" style="height: ${height}%" title="${formatBytes(snapshot.usedJSHeapSize)}"></div>`;
+                    }).join('')}
+                  </div>
+                  <div class="memory-stats">
+                    <span>Min: ${formatBytes(memStats.min)}</span>
+                    <span>Avg: ${formatBytes(memStats.avg)}</span>
+                    <span>Max: ${formatBytes(memStats.max)}</span>
+                  </div>
+                ` : '<p>No memory data yet</p>'}
+              </div>
+
+              <h5>Most Used Tools</h5>
+              <div class="tool-stats-table">
+                <table>
+                  <thead><tr><th>Tool</th><th>Count</th><th>Avg Time</th></tr></thead>
+                  <tbody>
+                    ${topTools.map(([tool, stats]) => `
+                      <tr>
+                        <td>${tool}</td>
+                        <td>${stats.count}</td>
+                        <td>${formatMs(stats.avgTime)}</td>
+                      </tr>
+                    `).join('') || '<tr><td colspan="3">No tool data yet</td></tr>'}
+                  </tbody>
+                </table>
+              </div>
+
+              <h5>Session Stats</h5>
+              <div class="session-stats">
+                <div class="stat-row"><span class="stat-label">Cycles:</span> <span class="stat-value">${allMetrics.session.cycles}</span></div>
+                <div class="stat-row"><span class="stat-label">Artifacts Created:</span> <span class="stat-value">${allMetrics.session.artifacts.created}</span></div>
+                <div class="stat-row"><span class="stat-label">Artifacts Modified:</span> <span class="stat-value">${allMetrics.session.artifacts.modified}</span></div>
+                <div class="stat-row"><span class="stat-label">Active Timers:</span> <span class="stat-value">${activeTimers.size}</span></div>
+              </div>
+            </div>
+          `;
+
+          // Attach event listeners
+          this.shadowRoot.getElementById('reset-btn')?.addEventListener('click', () => {
+            reset();
+            const ToastNotifications = window.DIContainer?.resolve('ToastNotifications');
+            ToastNotifications?.show('Performance metrics reset', 'success');
+            this.render();
+          });
+
+          this.shadowRoot.getElementById('export-btn')?.addEventListener('click', () => {
+            const report = generateReport();
+            const blob = new Blob([report], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `performance-report-${Date.now()}.md`;
+            a.click();
+            URL.revokeObjectURL(url);
+            const ToastNotifications = window.DIContainer?.resolve('ToastNotifications');
+            ToastNotifications?.show('Performance report exported', 'success');
+          });
+        }
+      }
+
+      // Register custom element
+      const elementName = 'performance-monitor-widget';
+      if (!customElements.get(elementName)) {
+        customElements.define(elementName, PerformanceMonitorWidget);
+      }
+
+      const widget = {
+        element: elementName,
+        displayName: 'Performance Monitor',
+        icon: '▤',
+        category: 'analytics',
+        updateInterval: 2000
       }
     };
   }

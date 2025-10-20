@@ -2,6 +2,9 @@
 
 **Objective:** To explain how to isolate complex prompt assembly and other deterministic reasoning logic into a testable, pure helper module.
 
+**Target Upgrade:** AGLP (`agent-logic-pure.js`)
+
+
 **Prerequisites:** `0x000001`
 
 **Affected Artifacts:** `/modules/agent-logic-pure.js`, `/modules/agent-cycle.js`
@@ -20,6 +23,62 @@ The `/modules/agent-logic-pure.js` module will export a collection of pure funct
 -   `getArtifactListSummaryPure(allMetaMap)`: Takes a map of artifact metadata and returns a formatted markdown string listing the artifacts.
 -   `getToolListSummaryPure(staticTools, dynamicTools, truncFn)`: Takes tool definitions and returns a formatted markdown string summarizing them.
 -   `assembleCorePromptPure(template, state, goal, ...)`: The main function. It takes the prompt template string and all the necessary data components and returns the final, fully-populated prompt string ready for the API.
+
+**Widget Interface (Web Component):**
+
+The module exposes a `AgentLogicPureHelpersWidget` custom element for dashboard visualization:
+
+```javascript
+class AgentLogicPureHelpersWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+    // No auto-refresh needed - pure module has no changing state
+  }
+
+  disconnectedCallback() {
+    // No cleanup needed
+  }
+
+  set moduleApi(api) {
+    this._api = api;
+    this.render();
+  }
+
+  getStatus() {
+    return {
+      state: 'idle',
+      primaryMetric: 'Pure helpers',
+      secondaryMetric: 'Stateless',
+      message: 'Pure functions for agent prompt assembly'
+    };
+  }
+
+  renderPanel() {
+    // Returns documentation of available pure functions
+  }
+
+  render() {
+    this.shadowRoot.innerHTML = `
+      <style>/* Shadow DOM styles */</style>
+      <div class="widget-content">${this.renderPanel()}</div>
+    `;
+  }
+}
+
+customElements.define('agent-logic-pure-helpers-widget', AgentLogicPureHelpersWidget);
+```
+
+This provides a static documentation panel listing:
+- Available pure functions (getArtifactListSummaryPure, getToolListSummaryPure, assembleCorePromptPure)
+- Function signatures and descriptions
+- Pure module badge (no side effects, deterministic)
+
+Since this is a pure module with no internal state, the widget does not need auto-refresh and always displays status as 'idle'.
 
 ### 3. The Implementation Pathway
 

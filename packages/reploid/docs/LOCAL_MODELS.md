@@ -113,14 +113,31 @@ Edit `config.json` to set default models for each provider:
 ```json
 "providers": {
   "default": "local",
-  "fallbackProviders": ["gemini", "openai"],
+  "fallbackProviders": ["gemini", "openai", "anthropic"],
   "localEndpoint": "http://localhost:11434",
   "localModel": "llama2",
-  "geminiModel": "gemini-1.5-flash-latest",
-  "openaiModel": "gpt-4-turbo-preview",
-  "anthropicModel": "claude-3-opus-20240229"
+  "geminiModel": "gemini-2.5-flash",
+  "openaiModel": "gpt-5-mini-2025-08-07",
+  "anthropicModel": "claude-haiku-4-5"
 }
 ```
+
+### Latest October 2025 Cloud Models
+
+**Google Gemini:**
+- `gemini-2.5-flash-lite` - Fast & cheap
+- `gemini-2.5-flash` - Balanced (default)
+- `gemini-2.5-pro` - Most powerful
+
+**OpenAI GPT:**
+- `gpt-5-mini-2025-08-07` - Fast (default)
+- `gpt-5-2025-08-07` - Advanced reasoning
+- `gpt-4.1`, `gpt-4.1-mini` - Long context (1M tokens)
+
+**Anthropic Claude:**
+- `claude-haiku-4-5` - Fast & cheap (default, released Oct 15, 2025)
+- `claude-sonnet-4-5` - Balanced (released Sept 29, 2025)
+- `claude-opus-4-1` - Most powerful (released Aug 5, 2025)
 
 ## Testing Your Setup
 
@@ -176,11 +193,11 @@ curl http://localhost:8000/api/local/api/generate -H "Content-Type: application/
 
 ### Recommended Local Models
 
-For best performance with REPLOID:
+### Via Ollama (Requires Local Server)
 
-1. **Llama 2 7B** - Good balance of capability and speed
+1. **Llama 3.2 7B** - Latest Llama, good balance of capability and speed
    ```bash
-   ollama pull llama2
+   ollama pull llama3.2
    ```
 
 2. **Mistral 7B** - Fast and capable
@@ -188,10 +205,31 @@ For best performance with REPLOID:
    ollama pull mistral
    ```
 
-3. **Phi-2** - Very fast, smaller model
+3. **Phi-3** - Very fast, smaller model
    ```bash
-   ollama pull phi
+   ollama pull phi3
    ```
+
+4. **Qwen 2.5** - Excellent for coding
+   ```bash
+   ollama pull qwen2.5
+   ```
+
+### Via WebLLM (Browser-Only, No Server Needed)
+
+WebLLM runs entirely in your browser using WebGPU. No installation required!
+
+**Supported Models (October 2025):**
+- `Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC` - Best for coding (default)
+- `Phi-3.5-mini-instruct-q4f16_1-MLC` - Fast general-purpose
+- `Llama-3.2-1B-Instruct-q4f16_1-MLC` - Latest Llama variant
+- `gemma-2-2b-it-q4f16_1-MLC` - Google's Gemma 2
+
+**Requirements:**
+- Chrome/Edge with WebGPU enabled (chrome://flags/#enable-unsafe-webgpu)
+- Or Safari 17+ on macOS/iOS (WebGPU enabled by default)
+
+**First Run:** Models download to browser cache (~1-2GB), subsequent runs are instant.
 
 ## Architecture Overview
 

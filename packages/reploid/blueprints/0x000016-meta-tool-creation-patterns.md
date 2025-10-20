@@ -2,7 +2,7 @@
 
 **Objective:** To provide the agent with patterns and principles for designing and implementing new tools that extend its capabilities.
 
-**Target Upgrade:** Meta-knowledge (no specific upgrade - this is knowledge for RSI)
+**Target Upgrade:** MTCP (`meta-tool-creator.js`)
 
 **Prerequisites:** `0x000015` (Dynamic Tools), TLWR upgrade
 
@@ -189,7 +189,126 @@ for (const test of testCases) {
 - **Brittle Tools:** Tools that break with slight input changes
 - **Synchronous Blockers:** Tools that hang the system
 
-### 8. Tool Composition Principles
+### 8. Web Component Widget
+
+The widget uses a Web Component with Shadow DOM for encapsulated rendering:
+
+```javascript
+class MetaToolCreatorWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+  }
+
+  disconnectedCallback() {
+    // No cleanup needed (no intervals)
+  }
+
+  getStatus() {
+    return {
+      state: toolCreationStats.totalCreated > 0 ? 'idle' : 'disabled',
+      primaryMetric: `${toolCreationStats.totalCreated} tools created`,
+      secondaryMetric: `${Object.keys(TOOL_TEMPLATES).length} templates`,
+      lastActivity: toolCreationStats.lastCreated?.timestamp || null,
+      message: null
+    };
+  }
+
+  getControls() {
+    return [
+      {
+        id: 'analyze-patterns',
+        label: '⌕ Analyze Patterns',
+        action: async () => {
+          const analysis = await analyzeToolPatterns();
+          console.log('[MetaToolCreator] Pattern analysis:', analysis);
+          logger.info('[MetaToolCreator] Pattern analysis complete');
+          return { success: true, message: 'Pattern analysis complete (check console)' };
+        }
+      }
+    ];
+  }
+
+  render() {
+    const templateList = Object.entries(TOOL_TEMPLATES);
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+          font-family: monospace;
+          font-size: 12px;
+        }
+        .meta-tool-panel { padding: 12px; color: #fff; }
+        h4 { margin: 0 0 12px 0; font-size: 1.1em; color: #0ff; }
+        .stats-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 10px;
+          margin-bottom: 20px;
+        }
+        .stat-card { padding: 10px; border-radius: 5px; }
+        .stat-card.created { background: rgba(0,255,255,0.1); }
+        .stat-card.validated { background: rgba(76,175,80,0.1); }
+        .stat-card.tested { background: rgba(156,39,176,0.1); }
+        .stat-value { font-size: 24px; font-weight: bold; }
+        .template-list { max-height: 300px; overflow-y: auto; }
+        .template-item {
+          padding: 12px;
+          background: rgba(255,255,255,0.03);
+          margin-bottom: 10px;
+          border-left: 3px solid #0ff;
+        }
+      </style>
+      <div class="meta-tool-panel">
+        <h4>⚒️ Meta-Tool Creator</h4>
+        <div class="stats-grid">
+          <div class="stat-card created">
+            <div class="stat-label">Created</div>
+            <div class="stat-value cyan">${toolCreationStats.totalCreated}</div>
+          </div>
+          <div class="stat-card validated">
+            <div class="stat-label">Validated</div>
+            <div class="stat-value green">${toolCreationStats.totalValidated}</div>
+          </div>
+          <div class="stat-card tested">
+            <div class="stat-label">Tested</div>
+            <div class="stat-value purple">${toolCreationStats.totalTested}</div>
+          </div>
+        </div>
+        <!-- Last created tool and templates sections -->
+      </div>
+    `;
+  }
+}
+
+// Register custom element
+const elementName = 'meta-tool-creator-widget';
+if (!customElements.get(elementName)) {
+  customElements.define(elementName, MetaToolCreatorWidget);
+}
+
+const widget = {
+  element: elementName,
+  displayName: 'Meta-Tool Creator',
+  icon: '⚒️',
+  category: 'rsi'
+};
+```
+
+**Key features:**
+- Displays tool creation statistics (created, validated, tested)
+- Shows available tool templates (analyzer, transformer, validator, aggregator)
+- Tracks last created tool with timestamp
+- Provides control to analyze patterns across existing tools
+- Uses closure access to module state (toolCreationStats, TOOL_TEMPLATES)
+- Shadow DOM encapsulation for styling
+
+### 9. Tool Composition Principles
 
 1. **Build small, focused tools**
 2. **Compose complex operations from simple tools**

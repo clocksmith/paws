@@ -123,7 +123,7 @@ The table below provides a machine-auditable cross-reference between blueprint a
 | `0x000037` | `0x000037-python-tool-interface.md` | `PYTH` | `python-tool.js` |
 | `0x000038` | `0x000038-local-llm-runtime.md` | `LLMR` | `local-llm.js` |
 | `0x000039` | `0x000039-hybrid-llm-orchestration.md` | `HYBR` | `hybrid-llm-provider.js` |
-| `0x00003A` | `0x00003A-swarm-orchestration.md` | `SWRM` | `swarm-orchestrator.js` |
+| `0x00003A` | `0x00003A-swarm-orchestration.md` | `WRTC` | `webrtc-coordinator.js` |
 | `0x00003B` | `0x00003B-reflection-store-architecture.md` | `REFL` | `reflection-store.js` |
 | `0x00003C` | `0x00003C-reflection-analysis-engine.md` | `REAN` | `reflection-analyzer.js` |
 | `0x00003D` | `0x00003D-reflection-semantic-search.md` | `RESRCH` | `reflection-search.js` |

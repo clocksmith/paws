@@ -1,3 +1,4 @@
+// @blueprint 0x000062 - Penteract multi-agent analytics visualizer
 // PenteractVisualizer - Stub module for multi-agent analytics & visualization
 
 const PenteractVisualizer = {
@@ -167,7 +168,194 @@ const PenteractVisualizer = {
     return {
       init,
       dispose,
-      getLatestSnapshot: () => latestSnapshot
+      getLatestSnapshot: () => latestSnapshot,
+
+      // Widget interface
+      widget: (() => {
+        class PenteractVisualizerWidget extends HTMLElement {
+          constructor() {
+            super();
+            this.attachShadow({ mode: 'open' });
+          }
+
+          connectedCallback() {
+            this.render();
+            this._updateListener = () => this.render();
+            EventBus.on('paxos:analytics:processed', this._updateListener, 'PenteractVisualizerWidget');
+          }
+
+          disconnectedCallback() {
+            if (this._updateListener) {
+              EventBus.off('paxos:analytics:processed', this._updateListener);
+            }
+          }
+
+          set moduleApi(api) {
+            this._api = api;
+            this.render();
+          }
+
+          getStatus() {
+            const hasData = !!latestSnapshot;
+            const isSuccess = latestSnapshot?.consensus?.status === 'success';
+
+            return {
+              state: hasData ? (isSuccess ? 'active' : 'warning') : 'idle',
+              primaryMetric: hasData ? 'Visualizing' : 'No data',
+              secondaryMetric: latestSnapshot ? `${latestSnapshot.metrics?.totals?.total || 0} agents` : 'Waiting',
+              lastActivity: latestSnapshot?.timestamp ? new Date(latestSnapshot.timestamp).getTime() : null
+            };
+          }
+
+          render() {
+            const formatTime = (timestamp) => {
+              if (!timestamp) return 'Never';
+              return new Date(timestamp).toLocaleString();
+            };
+
+            this.shadowRoot.innerHTML = `
+              <style>
+                :host {
+                  display: block;
+                  font-family: monospace;
+                  color: #e0e0e0;
+                }
+                .penteract-visualizer-panel {
+                  padding: 12px;
+                  background: #1a1a1a;
+                  border-radius: 4px;
+                }
+                h4 {
+                  margin: 0 0 12px 0;
+                  font-size: 14px;
+                  color: #4fc3f7;
+                }
+                .controls {
+                  margin-bottom: 12px;
+                  display: flex;
+                  gap: 8px;
+                }
+                button {
+                  padding: 6px 12px;
+                  background: #333;
+                  color: #e0e0e0;
+                  border: 1px solid #555;
+                  border-radius: 3px;
+                  cursor: pointer;
+                  font-family: monospace;
+                  font-size: 11px;
+                }
+                button:hover {
+                  background: #444;
+                }
+                .viz-info {
+                  display: grid;
+                  gap: 8px;
+                  margin-bottom: 12px;
+                }
+                .viz-stat {
+                  display: flex;
+                  justify-content: space-between;
+                  padding: 6px;
+                  background: #252525;
+                  border-radius: 3px;
+                  border: 1px solid #333;
+                  font-size: 12px;
+                }
+                .stat-label {
+                  color: #888;
+                }
+                .stat-value {
+                  color: #e0e0e0;
+                  font-weight: bold;
+                }
+                .viz-info-box {
+                  margin-top: 16px;
+                  padding: 12px;
+                  background: rgba(100,150,255,0.1);
+                  border-left: 3px solid #6496ff;
+                  border-radius: 4px;
+                }
+                .viz-info-box strong {
+                  color: #6496ff;
+                }
+                .viz-info-box div {
+                  margin-top: 6px;
+                  color: #aaa;
+                  font-size: 11px;
+                }
+                p {
+                  margin: 8px 0;
+                  font-size: 12px;
+                }
+              </style>
+              <div class="penteract-visualizer-panel">
+                <h4>◎ Penteract Visualizer</h4>
+
+                <div class="controls">
+                  <button class="refresh-viz">↻ Refresh</button>
+                </div>
+
+                ${latestSnapshot ? `
+                  <div class="viz-info">
+                    <div class="viz-stat">
+                      <span class="stat-label">Last Updated:</span>
+                      <span class="stat-value">${formatTime(latestSnapshot.timestamp)}</span>
+                    </div>
+                    <div class="viz-stat">
+                      <span class="stat-label">Status:</span>
+                      <span class="stat-value" style="color: ${latestSnapshot.consensus?.status === 'success' ? '#0c0' : '#f66'};">
+                        ${latestSnapshot.consensus?.status || 'unknown'}
+                      </span>
+                    </div>
+                    <div class="viz-stat">
+                      <span class="stat-label">Agents Visualized:</span>
+                      <span class="stat-value">${latestSnapshot.metrics?.totals?.total || 0}</span>
+                    </div>
+                    <div class="viz-stat">
+                      <span class="stat-label">Pass Rate:</span>
+                      <span class="stat-value">
+                        ${latestSnapshot.metrics?.totals?.pass || 0}/${latestSnapshot.metrics?.totals?.total || 0}
+                        (${latestSnapshot.metrics?.totals?.total > 0 ? Math.round((latestSnapshot.metrics.totals.pass / latestSnapshot.metrics.totals.total) * 100) : 0}%)
+                      </span>
+                    </div>
+                  </div>
+                ` : `
+                  <p style="color: #888; font-style: italic;">No visualization data available</p>
+                  <p style="color: #888; font-size: 11px;">Waiting for Penteract analytics snapshot...</p>
+                `}
+
+                <div class="viz-info-box">
+                  <strong>ⓘ Visualizer Info</strong>
+                  <div>
+                    This module provides visual representation of Penteract consensus test results.
+                    Visualizations appear in the main UI when test data is available.
+                  </div>
+                </div>
+              </div>
+            `;
+
+            // Attach event listeners
+            this.shadowRoot.querySelector('.refresh-viz')?.addEventListener('click', () => {
+              refreshFromStore();
+              const ToastNotifications = window.DIContainer?.resolve('ToastNotifications');
+              ToastNotifications?.show?.('Visualizer refreshed', 'success');
+            });
+          }
+        }
+
+        if (!customElements.get('penteract-visualizer-widget')) {
+          customElements.define('penteract-visualizer-widget', PenteractVisualizerWidget);
+        }
+
+        return {
+          element: 'penteract-visualizer-widget',
+          displayName: 'Penteract Visualizer',
+          icon: '◎',
+          category: 'paxos',
+          order: 90
+        };
+      })()
     };
   }
 };

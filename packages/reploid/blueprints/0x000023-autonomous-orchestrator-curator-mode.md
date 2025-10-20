@@ -437,6 +437,98 @@ AutonomousOrchestrator.updateConfig({
 
 ## 8. UI Integration Patterns
 
+### 8.0 Widget Interface (Web Component)
+
+The module exposes a `AutonomousOrchestratorWidget` custom element for dashboard visualization:
+
+```javascript
+class AutonomousOrchestratorWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+
+    // Subscribe to EventBus for real-time updates
+    this._eventBus.on('curator:started', this._updateHandler);
+    this._eventBus.on('curator:stopped', this._updateHandler);
+    this._eventBus.on('curator:iteration:start', this._updateHandler);
+    this._eventBus.on('curator:iteration:complete', this._updateHandler);
+
+    // Auto-refresh interval
+    this._interval = setInterval(() => this.render(), 3000);
+  }
+
+  disconnectedCallback() {
+    // Clean up EventBus listeners
+    this._eventBus.off('curator:started', this._updateHandler);
+    this._eventBus.off('curator:stopped', this._updateHandler);
+    this._eventBus.off('curator:iteration:start', this._updateHandler);
+    this._eventBus.off('curator:iteration:complete', this._updateHandler);
+
+    if (this._interval) clearInterval(this._interval);
+  }
+
+  set moduleApi(api) {
+    this._api = api;
+    this.render();
+  }
+
+  getStatus() {
+    const state = this._api.getState();
+    return {
+      state: state.isRunning ? 'active' : 'idle',
+      primaryMetric: state.isRunning ? `Iteration ${state.currentIteration}` : 'Stopped',
+      secondaryMetric: state.isRunning ? `Goal ${state.currentGoalIndex + 1}/${state.config.goals.length}` : '',
+      lastActivity: state.sessionHistory.length > 0 ? state.sessionHistory[state.sessionHistory.length - 1].startTime : null
+    };
+  }
+
+  render() {
+    const state = this._api.getState();
+
+    this.shadowRoot.innerHTML = `
+      <style>/* Shadow DOM styles with animations, status indicators, progress bars */</style>
+      <div class="orchestrator-panel">
+        <!-- Status header with running/stopped indicator -->
+        <!-- Stats grid: iterations, proposals, errors, success rate -->
+        <!-- Current goal with progress bar -->
+        <!-- Goals list with completion status -->
+        <!-- Recent iterations timeline -->
+        <!-- Control buttons: Start Curator, Start Meta-Curator, Stop -->
+      </div>
+    `;
+
+    // Attach event listeners to buttons
+    this.shadowRoot.getElementById('start-curator').addEventListener('click', async () => {
+      await this._api.startCuratorMode();
+    });
+
+    this.shadowRoot.getElementById('start-meta').addEventListener('click', async () => {
+      await this._api.startMetaCuratorMode();
+    });
+
+    this.shadowRoot.getElementById('stop-curator').addEventListener('click', () => {
+      this._api.stopCuratorMode();
+    });
+  }
+}
+
+customElements.define('autonomous-orchestrator-widget', AutonomousOrchestratorWidget);
+```
+
+**Key Widget Features:**
+- **Real-time EventBus Integration**: Subscribes to curator lifecycle events for instant UI updates
+- **Live Progress Tracking**: Displays current iteration, goal progress, and success rate
+- **Interactive Controls**: Start/stop curator mode directly from widget
+- **Visual Status Indicators**: Animated status dots, progress bars, color-coded completion states
+- **Session History**: Recent iterations timeline with error highlighting
+- **Meta-Curator Support**: Separate button for meta-cognitive goal execution
+
+The widget provides a complete dashboard interface for monitoring and controlling autonomous proposal generation without requiring external UI code.
+
 ### 8.1 Dashboard Controls
 
 **Recommended UI:**
@@ -605,7 +697,7 @@ describe('AutonomousOrchestrator', () => {
 **4. Multi-Agent Swarm:**
 - Parallel proposal generation
 - Each goal assigned to different agent instance
-- Coordinate via `swarm-orchestrator.js`
+- Coordinate via `webrtc-coordinator.js`
 
 ### 10.2 Configuration Extensions
 

@@ -31,11 +31,11 @@ AUTO_START_OLLAMA=true  # Optional: auto-start Ollama
 ```
 
 **What you get:**
-- ✅ Full VFS persistence via proxy server
-- ✅ Local model inference (no API costs)
-- ✅ WebRTC signaling support
-- ✅ No data sent to cloud providers
-- ✅ Fast iteration with auto-reload
+- ✓ Full VFS persistence via proxy server
+- ✓ Local model inference (no API costs)
+- ✓ WebRTC signaling support
+- ✓ No data sent to cloud providers
+- ✓ Fast iteration with auto-reload
 
 **Best for:** Development, privacy-conscious users, unlimited usage without API costs
 
@@ -73,11 +73,11 @@ ANTHROPIC_API_KEY=sk-ant-...
 4. Save Configuration
 
 **What you get:**
-- ✅ VFS persistence via proxy server
-- ✅ Cloud model capabilities (vision, large context)
-- ✅ Faster inference than local models
-- ❌ API costs apply
-- ❌ Data sent to cloud provider
+- ✓ VFS persistence via proxy server
+- ✓ Cloud model capabilities (vision, large context)
+- ✓ Faster inference than local models
+- ✗ API costs apply
+- ✗ Data sent to cloud provider
 
 **Best for:** Production use, when you need advanced model capabilities
 
@@ -101,16 +101,16 @@ python3 -m http.server 8080
 ```
 
 **Limitations:**
-- ❌ No VFS persistence to disk
-- ❌ No WebRTC signaling server
-- ❌ Can't use Ollama directly (would need CORS-enabled Ollama)
-- ✅ Can use cloud APIs (with browser CORS)
-- ✅ Can use Web LLM (browser-based inference)
+- ✗ No VFS persistence to disk
+- ✗ No WebRTC signaling server
+- ✗ Can't use Ollama directly (would need CORS-enabled Ollama)
+- ✓ Can use cloud APIs (with browser CORS)
+- ✓ Can use Web LLM (browser-based inference)
 
 **What you get:**
-- ✅ Simple deployment (just HTML/JS/CSS)
-- ✅ Can deploy to GitHub Pages, Netlify, Vercel
-- ✅ No server maintenance
+- ✓ Simple deployment (just HTML/JS/CSS)
+- ✓ Can deploy to GitHub Pages, Netlify, Vercel
+- ✓ No server maintenance
 - ⚠️ Limited functionality
 
 **Best for:** Demos, public showcases, minimal deployments
@@ -142,11 +142,11 @@ npm start
 - Optionally enable Web LLM for browser-based inference
 
 **What you get:**
-- ✅ Complete privacy (no network traffic)
-- ✅ Works in secure/airgapped environments
-- ✅ Unlimited usage
-- ✅ VFS persistence
-- ❌ Limited to local model capabilities
+- ✓ Complete privacy (no network traffic)
+- ✓ Works in secure/airgapped environments
+- ✓ Unlimited usage
+- ✓ VFS persistence
+- ✗ Limited to local model capabilities
 
 **Best for:** Security-sensitive environments, privacy-focused users
 
@@ -168,13 +168,13 @@ npm start
 4. Browser will download model on first use
 
 **What you get:**
-- ✅ Runs entirely in browser
-- ✅ No API costs
-- ✅ No server needed
-- ✅ Privacy-preserving
-- ❌ Limited to smaller models (3B-7B)
-- ❌ Slower than native inference
-- ❌ Large initial download
+- ✓ Runs entirely in browser
+- ✓ No API costs
+- ✓ No server needed
+- ✓ Privacy-preserving
+- ✗ Limited to smaller models (3B-7B)
+- ✗ Slower than native inference
+- ✗ Large initial download
 
 **Best for:** Demos, educational use, when no backend is available
 
@@ -204,10 +204,10 @@ Strategy: Fastest First
 ```
 
 **What you get:**
-- ✅ Fault tolerance (automatic failover)
-- ✅ Best-of-N sampling for quality
-- ✅ Load balancing across providers
-- ❌ Higher API costs (multiple calls)
+- ✓ Fault tolerance (automatic failover)
+- ✓ Best-of-N sampling for quality
+- ✓ Load balancing across providers
+- ✗ Higher API costs (multiple calls)
 - ⚠️ Requires PAXA module to be loaded
 
 **Best for:** Production systems requiring high availability
@@ -229,9 +229,9 @@ Strategy: Fastest First
 4. (Optional) Enter API key if required
 
 **What you get:**
-- ✅ Use your own infrastructure
-- ✅ Custom models not supported by default
-- ✅ Enterprise setups (Azure, AWS, etc.)
+- ✓ Use your own infrastructure
+- ✓ Custom models not supported by default
+- ✓ Enterprise setups (Azure, AWS, etc.)
 - ⚠️ Must implement compatible API format
 
 **Best for:** Enterprise deployments, custom infrastructure
@@ -262,10 +262,10 @@ Strategy: Fastest First
 ```
 
 **What you get:**
-- ✅ Best of both worlds
-- ✅ Cost optimization
-- ✅ Automatic failover
-- ✅ Load balancing
+- ✓ Best of both worlds
+- ✓ Cost optimization
+- ✓ Automatic failover
+- ✓ Load balancing
 
 **Best for:** Power users, production with budget constraints
 
@@ -275,14 +275,14 @@ Strategy: Fastest First
 
 | Mode | Server | Ollama | Cloud API | Internet | VFS Persist | Cost |
 |------|--------|--------|-----------|----------|-------------|------|
-| **Full Local** | ✅ | ✅ | ❌ | ❌ | ✅ | Free |
-| **Cloud via Proxy** | ✅ | ❌ | ✅ | ✅ | ✅ | $$ |
-| **Browser-Only** | ❌ | ❌ | ⚠️ | ⚠️ | ❌ | Free/$ |
-| **Fully Offline** | ✅ | ✅ | ❌ | ❌ | ✅ | Free |
-| **Web LLM** | ❌ | ❌ | ❌ | ⚠️* | ❌ | Free |
-| **Paxos Multi** | ✅ | ⚠️ | ✅ | ✅ | ✅ | $$$ |
-| **Custom Proxy** | ❌ | ❌ | ✅ | ✅ | ❌ | Varies |
-| **Hybrid Switch** | ✅ | ✅ | ✅ | ⚠️ | ✅ | $ |
+| **Full Local** | ✓ | ✓ | ✗ | ✗ | ✓ | Free |
+| **Cloud via Proxy** | ✓ | ✗ | ✓ | ✓ | ✓ | $$ |
+| **Browser-Only** | ✗ | ✗ | ⚠️ | ⚠️ | ✗ | Free/$ |
+| **Fully Offline** | ✓ | ✓ | ✗ | ✗ | ✓ | Free |
+| **Web LLM** | ✗ | ✗ | ✗ | ⚠️* | ✗ | Free |
+| **Paxos Multi** | ✓ | ⚠️ | ✓ | ✓ | ✓ | $$$ |
+| **Custom Proxy** | ✗ | ✗ | ✓ | ✓ | ✗ | Varies |
+| **Hybrid Switch** | ✓ | ✓ | ✓ | ⚠️ | ✓ | $ |
 
 *Only for initial model download
 

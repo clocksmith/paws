@@ -38,6 +38,75 @@ Utility functions:
 - `getToolDeclarations()` provides schema to `tools-write.json`.
 - `executeTool(name, args)` dispatches to the appropriate helper.
 
+**Widget Interface (Web Component):**
+
+The module exposes a `PythonToolWidget` custom element for dashboard visualization:
+
+```javascript
+class PythonToolWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+    this._interval = setInterval(() => this.render(), this.updateInterval || 2000);
+  }
+
+  disconnectedCallback() {
+    if (this._interval) clearInterval(this._interval);
+  }
+
+  set moduleApi(api) {
+    this._api = api;
+    this._pyodideRuntime = window.DIContainer?.resolve('PyodideRuntime');
+    this.render();
+  }
+
+  getStatus() {
+    const stats = this._api.getStats();
+    const isReady = this._pyodideRuntime?.isReady?.() || false;
+
+    return {
+      state: isReady ? (stats.executionCount > 0 ? 'active' : 'idle') : 'warning',
+      primaryMetric: `${stats.executionCount} executions`,
+      secondaryMetric: isReady ? 'Ready' : 'Initializing',
+      lastActivity: stats.lastExecutionTime
+    };
+  }
+
+  render() {
+    const stats = this._api.getStats();
+    const isReady = this._pyodideRuntime?.isReady?.() || false;
+    const pyodideState = this._pyodideRuntime?.getState?.() || {};
+
+    this.shadowRoot.innerHTML = `
+      <style>/* Shadow DOM styles */</style>
+      <div class="widget-content">
+        <!-- Statistics grid (executions, success rate, avg time, errors) -->
+        <!-- Available tools list (execute_python, install_package, list_packages) -->
+        <!-- Installed packages list (scrollable) -->
+        <!-- Pyodide runtime status (ready/initializing/error) -->
+        <!-- Last execution timestamp -->
+      </div>
+    `;
+  }
+}
+
+customElements.define('python-tool-widget', PythonToolWidget);
+```
+
+**Key Widget Features:**
+- **Execution Statistics Grid**: Displays execution count, success rate, average execution time, and error count
+- **Tool Catalog**: Lists available Python tools (execute_python, install_python_package, list_python_packages)
+- **Package Manager**: Scrollable list of installed Pyodide packages with version numbers
+- **Runtime Status Indicator**: Shows Pyodide readiness state (Ready/Initializing/Error) with color coding
+- **Activity Tracking**: Displays time since last execution with relative timestamps (e.g., "2m ago")
+- **Auto-refresh**: Updates every 2 seconds to reflect current execution state
+
+The widget provides visibility into Python execution activity and Pyodide runtime health, essential for debugging tool calls and package dependencies.
+
 ### 3. Implementation Pathway
 1. **Initialization**
    - Ensure `PyodideRuntime.init()` runs during persona boot; tool should check `isReady()` before usage.

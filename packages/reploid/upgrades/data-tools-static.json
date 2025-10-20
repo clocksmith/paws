@@ -1,6 +1,11 @@
-[
-  {
-    "name": "read_artifact",
+{
+  "_blueprint": {
+    "id": "0x000010",
+    "description": "Explains the JSON artifact that defines the agent's built-in static toolset."
+  },
+  "tools": [
+    {
+      "name": "read_artifact",
     "description": "Reads and returns the full content of a specific artifact from the Virtual File System (VFS). Can optionally specify a version.",
     "inputSchema": {
       "type": "object",
@@ -113,4 +118,5 @@
       "required": ["path", "content"]
     }
   }
-]
+  ]
+}

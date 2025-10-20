@@ -32,11 +32,110 @@ const CodeRefactorerPersona = {
       console.log("CodeRefactorer Persona: Cycle started. Analyzing goal...");
     };
 
+    // Widget tracking
+    let _cycleCount = 0;
+    let _lastActivation = null;
+
+    // Wrap onCycleStart to track activations
+    const trackedOnCycleStart = (cycleContext) => {
+      _cycleCount++;
+      _lastActivation = Date.now();
+      onCycleStart(cycleContext);
+    };
+
     return {
       // The public API of the persona module
       getSystemPromptFragment,
       filterTools,
-      onCycleStart
+      onCycleStart: trackedOnCycleStart,
+
+      // Widget interface for module dashboard
+      widget: {
+        getStatus: () => ({
+          state: _cycleCount > 0 ? 'active' : 'idle',
+          primaryMetric: `${_cycleCount} cycles`,
+          secondaryMetric: 'Code Quality Focus',
+          lastActivity: _lastActivation
+        }),
+
+        getControls: () => [
+          {
+            id: 'reset-stats',
+            label: 'Reset Stats',
+            icon: '↻',
+            action: () => {
+              _cycleCount = 0;
+              _lastActivation = null;
+              const ToastNotifications = window.DIContainer?.resolve('ToastNotifications');
+              ToastNotifications?.show?.('Persona stats reset', 'success');
+            }
+          }
+        ],
+
+        renderPanel: (container) => {
+          const formatTime = (timestamp) => {
+            if (!timestamp) return 'Never';
+            return new Date(timestamp).toLocaleString();
+          };
+
+          const promptFragment = getSystemPromptFragment();
+          const prioritizedTools = ['search_vfs', 'read_artifact', 'write_artifact', 'diff_artifacts'];
+
+          container.innerHTML = `
+            <div class="persona-panel">
+              <h4>⊙ Code Refactorer Persona</h4>
+
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <div class="stat-label">Cycles</div>
+                  <div class="stat-value">${_cycleCount}</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-label">Last Active</div>
+                  <div class="stat-value" style="font-size: 0.9em;">${formatTime(_lastActivation)}</div>
+                </div>
+              </div>
+
+              <h5>Persona Identity</h5>
+              <div class="persona-identity">
+                <p style="color: #aaa; font-style: italic;">"${promptFragment}"</p>
+              </div>
+
+              <h5>Tool Prioritization</h5>
+              <div class="tool-priorities">
+                <p style="color: #aaa; margin-bottom: 8px;">Prioritizes code analysis and modification tools:</p>
+                ${prioritizedTools.map((tool, idx) => `
+                  <div class="priority-item">
+                    <span class="priority-rank">${idx + 1}.</span>
+                    <span class="priority-tool">${tool}</span>
+                  </div>
+                `).join('')}
+              </div>
+
+              <h5>Lifecycle Hooks</h5>
+              <div class="lifecycle-hooks">
+                <div class="hook-item">
+                  <strong>onCycleStart:</strong> Analyzes goal and logs analysis
+                </div>
+              </div>
+
+              <div style="margin-top: 16px; padding: 12px; background: rgba(100,150,255,0.1); border-left: 3px solid #6496ff; border-radius: 4px;">
+                <strong>ⓘ Persona Purpose</strong>
+                <div style="margin-top: 6px; color: #aaa; font-size: 0.9em;">
+                  This persona specializes in code quality, bug fixing, and performance enhancement.
+                  It's optimized for refactoring tasks and code improvement workflows.
+                </div>
+              </div>
+            </div>
+          `;
+        },
+
+        onUpdate: (callback) => {
+          // Personas are relatively static, update less frequently
+          const intervalId = setInterval(callback, 3000);
+          return () => clearInterval(intervalId);
+        }
+      }
     };
   }
 };

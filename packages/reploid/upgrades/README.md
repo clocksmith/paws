@@ -60,7 +60,7 @@ The following is a high-level catalog of the core upgrades available for composi
 *   **`DICN`** (`di-container.js`): Dependency injection container for module composition
 *   **`EVTB`** (`event-bus.js`): Event pub/sub system for loose coupling
 
-### RSI Core Modules (12/12 Complete - ✅ 100% RSI Capability)
+### RSI Core Modules (15/15 Complete - ✓ 100% RSI Capability)
 *   **`INTR`** (`introspector.js`): Self-analysis - architecture, dependencies, complexity metrics
 *   **`REFL`** (`reflection-store.js`): Meta-learning - persistent learning across sessions
 *   **`REAN`** (`reflection-analyzer.js`): Pattern recognition - learning from reflection history
@@ -71,8 +71,11 @@ The following is a high-level catalog of the core upgrades available for composi
 *   **`BAPI`** (`browser-apis.js`): Browser-native - File System Access, Notifications, Storage
 *   **`COST`** (`cost-tracker.js`): Cost tracking - API usage monitoring and rate limiting
 *   **`TOAN`** (`tool-analytics.js`): Tool analytics - usage patterns and performance tracking
-*   **`SWRM`** (`swarm-orchestrator.js`): Multi-agent - distributed task delegation and coordination
+*   **`WRTC`** (`webrtc-coordinator.js`): P2P coordination - browser-to-browser task delegation via WebRTC
 *   **`TDOC`** (`tool-doc-generator.js`): Auto-docs - automatic markdown documentation generator
+*   **`STCY`** (`agent-cycle-structured.js`): Structured 8-step cycle - explicit deliberation, self-assessment, confidence scoring
+*   **`DGPR`** (`dogs-parser-browser.js`): Browser-native DOGS/CATS parser - self-contained bundle handling with zero external dependencies
+*   **`GENS`** (`genesis-snapshot.js`): Genesis snapshot system - saves initial boot state for RSI evolution tracking
 
 ---
 
@@ -81,9 +84,9 @@ The following is a high-level catalog of the core upgrades available for composi
 All core modules are tested with Vitest. See `tests/README.md` for details.
 
 **Test Coverage:**
-- `utils.js`: 98.85% lines, 85.36% functions ✅
-- `event-bus.js`: 100% coverage ✅
-- `state-manager.js`: Full mocked coverage ✅
+- `utils.js`: 98.85% lines, 85.36% functions ✓
+- `event-bus.js`: 100% coverage ✓
+- `state-manager.js`: Full mocked coverage ✓
 
 **Run tests:**
 ```bash
@@ -100,8 +103,8 @@ npm run test:coverage # Coverage report
 
 - **API Reference:** `docs/API.md` - Complete module API documentation with examples
 - **Testing Guide:** `tests/README.md` - Testing best practices and guidelines
-- **Roadmap:** `docs/ROADMAP.md` - Development priorities (53/53 complete ✅)
-- **Enhancements:** `docs/TODO-ENHANCEMENTS.md` - Post-roadmap enhancements (18/18 complete ✅)
+- **Roadmap:** `docs/ROADMAP.md` - Development priorities (53/53 complete ✓)
+- **Enhancements:** `docs/TODO-ENHANCEMENTS.md` - Post-roadmap enhancements (18/18 complete ✓)
 - **Completion Summary:** `docs/FINAL-COMPLETION.md` - Final 100% completion report
 
 ---

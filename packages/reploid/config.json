@@ -39,6 +39,8 @@
         "TSTN",
         "INTR",
         "REFL",
+        "DEJA",
+        "MTCG",
         "TEST",
         "BAPI",
         "VRSI",
@@ -47,7 +49,9 @@
       "blueprints": [
         "0x000016",
         "0x000017",
-        "0x000018"
+        "0x000018",
+        "0x00004A",
+        "0x00004B"
       ],
       "lessons": [
         {
@@ -163,6 +167,8 @@
         "TSTN",
         "INTR",
         "REFL",
+        "DEJA",
+        "MTCG",
         "TEST",
         "BAPI",
         "VRSI",
@@ -171,7 +177,9 @@
       "blueprints": [
         "0x000009",
         "0x000003",
-        "0x000012"
+        "0x000012",
+        "0x00004A",
+        "0x00004B"
       ],
       "lessons": [
         {
@@ -257,6 +265,70 @@
       ],
       "blueprints": [],
       "previewTarget": "/vfs/preview/document.html"
+    },
+    {
+      "id": "multi_mind_architect",
+      "name": "Multi-Mind Architect",
+      "type": "lab",
+      "description": "Advanced multi-perspective agent synthesizing 50+ expert profiles using structured 8-step cycle with self-assessment and confidence scoring.",
+      "upgrades": [
+        "APPL",
+        "UTIL",
+        "STMT",
+        "IDXB",
+        "APIC",
+        "STCY",
+        "PRMT",
+        "AGLP",
+        "STHP",
+        "TRUN",
+        "TLRD",
+        "TLWR",
+        "TRHP",
+        "UIMN",
+        "STYL",
+        "BODY",
+        "EVAL",
+        "PMON",
+        "MDSH",
+        "AVIS",
+        "ASTV",
+        "MGRV",
+        "INTR",
+        "REFL",
+        "REAN",
+        "RESRCH",
+        "DEJA",
+        "MTCG",
+        "TEST",
+        "BAPI",
+        "HYBR"
+      ],
+      "blueprints": [
+        "0x000001",
+        "0x000008",
+        "0x000009",
+        "0x000012",
+        "0x00001B",
+        "0x000047",
+        "0x00004A",
+        "0x00004B"
+      ],
+      "persona": "MultiMindSynthesisPersona",
+      "lessons": [
+        {
+          "name": "Multi-Perspective Analysis",
+          "goal": "Analyze the agent-cycle.js module from multiple expert perspectives (Scientist, Engineer, Designer, Auditor) and propose improvements."
+        },
+        {
+          "name": "Self-Assessment Practice",
+          "goal": "Execute a structured cycle to refactor state-manager.js. Pay attention to your self-assessment and confidence scoring."
+        },
+        {
+          "name": "Cross-Domain Synthesis",
+          "goal": "Design a new visualization feature that combines insights from Graph Theory, Color Theory, and Browser Performance Optimization."
+        }
+      ]
     }
   ],
   "minimalRSICore": [
@@ -293,7 +365,18 @@
     "defaultGoals": [
       "Analyze all modules for performance optimization opportunities",
       "Generate test cases for untested functions in core modules",
-      "Create RFC proposals for missing blueprint documentation"
+      "Create RFC proposals for missing blueprint documentation",
+      "Analyze tool creation patterns from reflection history and create factory tools where beneficial",
+      "Detect repeated tool execution sequences and propose composite tools to automate workflows",
+      "Review frequently modified files and suggest refactorings to reduce code churn",
+      "Identify recurring failure patterns and propose avoidance strategies"
+    ],
+    "metaGoals": [
+      "Trigger ReflectionAnalyzer meta-analysis and review detected improvement opportunities",
+      "Analyze DejaVuDetector patterns and propose meta-improvements for high-confidence patterns",
+      "Review MetaCognitiveLayer improvement history and assess effectiveness of past improvements",
+      "Detect inefficient tool usage patterns and propose optimizations",
+      "Identify opportunities for creating meta-tools (tools that create other tools)"
     ]
   },
   "defaultCore": [
@@ -453,9 +536,9 @@
     ],
     "localEndpoint": "http://localhost:11434",
     "localModel": "gpt-oss:120b",
-    "geminiModel": "gemini-2.5-flash-lite-preview-09-2025",
-    "openaiModel": "gpt-5-mini",
-    "anthropicModel": "claude-4.5-haiku"
+    "geminiModel": "gemini-2.5-flash",
+    "openaiModel": "gpt-5-mini-2025-08-07",
+    "anthropicModel": "claude-haiku-4-5"
   },
   "webrtc": {
     "signalingServer": "ws://localhost:8000/signaling",
@@ -806,9 +889,9 @@
       "blueprint": "0x000039"
     },
     {
-      "id": "SWRM",
-      "path": "swarm-orchestrator.js",
-      "description": "Multi-agent swarm intelligence orchestrator for distributed task execution",
+      "id": "WRTC",
+      "path": "webrtc-coordinator.js",
+      "description": "P2P coordination - browser-to-browser task delegation via WebRTC",
       "category": "service",
       "blueprint": "0x00003A"
     },
@@ -897,7 +980,7 @@
       "blueprint": "0x000023"
     },
     {
-      "id": "WRTC",
+      "id": "WRTS",
       "path": "webrtc-swarm.js",
       "description": "WebRTC peer-to-peer swarm communication (disabled by default for security)",
       "category": "service",
@@ -924,6 +1007,55 @@
       "description": "Intelligent context window management and pruning",
       "category": "intelligence",
       "blueprint": "0x000046"
+    },
+    {
+      "id": "STCY",
+      "path": "agent-cycle-structured.js",
+      "description": "8-step structured agent cycle with explicit deliberation, self-assessment, and confidence scoring",
+      "category": "agent",
+      "blueprint": "0x000047"
+    },
+    {
+      "id": "DGPR",
+      "path": "dogs-parser-browser.js",
+      "description": "Browser-native DOGS/CATS parser for self-contained bundle handling",
+      "category": "pure",
+      "blueprint": "0x000048"
+    },
+    {
+      "id": "GENS",
+      "path": "genesis-snapshot.js",
+      "description": "Genesis snapshot system - saves initial boot state for RSI tracking",
+      "category": "rsi",
+      "blueprint": "0x000049"
+    },
+    {
+      "id": "DIFF",
+      "path": "diff-utils.js",
+      "description": "Line-based diff comparison without external dependencies",
+      "category": "pure",
+      "blueprint": "0x00004C"
+    },
+    {
+      "id": "VRFY",
+      "path": "verification-manager.js",
+      "description": "Web Worker-based verification execution manager for safe command running",
+      "category": "service",
+      "blueprint": "0x00004D"
+    },
+    {
+      "id": "DEJA",
+      "path": "deja-vu-detector.js",
+      "description": "Pattern recognition for repetitive actions to identify automation opportunities",
+      "category": "meta-cognitive",
+      "blueprint": "0x00004A"
+    },
+    {
+      "id": "MTCG",
+      "path": "meta-cognitive-layer.js",
+      "description": "Autonomous meta-cognitive decision-making and self-improvement coordination",
+      "category": "meta-cognitive",
+      "blueprint": "0x00004B"
     }
   ],
   "blueprints": [
@@ -1246,6 +1378,53 @@
       "id": "0x000046",
       "path": "0x000046-context-management.md",
       "description": "Intelligent context window management and pruning for optimal LLM performance."
+    },
+    {
+      "id": "0x000047",
+      "path": "0x000047-structured-agent-cycle.md",
+      "description": "8-step structured agent cycle with explicit deliberation, self-assessment, and confidence scoring."
+    },
+    {
+      "id": "0x000048",
+      "path": "0x000048-dogs-cats-browser-parser.md",
+      "description": "Browser-native DOGS/CATS parser for zero-dependency bundle handling in REPLOID."
+    },
+    {
+      "id": "0x000049",
+      "path": "0x000049-genesis-snapshot-system.md",
+      "description": "Genesis snapshot system for RSI evolution tracking and self-awareness."
+    },
+    {
+      "id": "0x00004A",
+      "path": "0x00004A-deja-vu-pattern-detection.md",
+      "description": "Déjà Vu pattern detection for identifying repetitive actions and automation opportunities."
+    },
+    {
+      "id": "0x00004B",
+      "path": "0x00004B-meta-cognitive-coordination.md",
+      "description": "Meta-cognitive coordination layer for autonomous self-improvement decision-making."
+    },
+    {
+      "id": "0x00004C",
+      "path": "0x00004C-diff-utilities.md",
+      "description": "Browser-native line-based diff comparison for tracking code changes during self-modification."
+    },
+    {
+      "id": "0x00004D",
+      "path": "0x00004D-verification-manager.md",
+      "description": "Web Worker-based verification system for safe test execution and code validation."
     }
-  ]
+  ],
+  "structuredCycle": {
+    "enabled": true,
+    "defaultPersona": "MultiMindSynthesisPersona",
+    "confidenceThresholds": {
+      "autoApply": 0.85,
+      "showWarning": 0.5,
+      "requireApproval": 0.3
+    },
+    "enabledPersonas": [
+      "multi_mind_architect"
+    ]
+  }
 }

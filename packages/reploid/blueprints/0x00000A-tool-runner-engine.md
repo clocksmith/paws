@@ -2,6 +2,9 @@
 
 **Objective:** To describe the architecture of the engine responsible for executing the agent's static and dynamic tools, providing a bridge between the LLM's intent and tangible actions.
 
+**Target Upgrade:** TRUN (`tool-runner.js`)
+
+
 **Prerequisites:** `0x000003`, `0x000004`, `0x000005`, `0x00000B`, `0x00000C`
 
 **Affected Artifacts:** `/modules/tool-runner.js`
@@ -31,3 +34,77 @@ The `/modules/tool-runner.js` will export a primary `runTool` function. This fun
     d.  The default case for the switch will throw a `ToolError` indicating the tool was not found.
 3.  **Implement Gemini Conversion:** Include a `convertToGeminiFunctionDeclaration` function. This function will delegate directly to the `ToolRunnerPureHelpers` module to translate the agent's internal tool format into the schema required by the Google Gemini API's function-calling feature.
 4.  **Integration:** The `agent-cycle.js` module will call `ToolRunner.runTool` whenever it receives a `functionCall` response from the `ApiClient`.
+
+**Widget Interface (Web Component):**
+
+The module exposes a `ToolRunnerWidget` custom element for dashboard visualization:
+
+```javascript
+class ToolRunnerWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+    // Fast refresh - 500ms for real-time execution tracking
+    this._interval = setInterval(() => this.render(), this.updateInterval || 500);
+  }
+
+  disconnectedCallback() {
+    if (this._interval) clearInterval(this._interval);
+  }
+
+  set moduleApi(api) {
+    this._api = api;
+    this.render();
+  }
+
+  getStatus() {
+    const stats = this._api.getStats();
+    const activeCount = stats.activeExecutions.size;
+    const successRate = stats.executionStats.total > 0
+      ? ((stats.executionStats.success / stats.executionStats.total) * 100).toFixed(0)
+      : 0;
+
+    let state = 'idle';
+    if (activeCount > 0) state = 'active';
+    if (stats.executionStats.error > stats.executionStats.success) state = 'warning';
+
+    return {
+      state,
+      primaryMetric: `${stats.executionStats.total} executed`,
+      secondaryMetric: `${successRate}% success`,
+      lastActivity: stats.lastExecutionTime
+    };
+  }
+
+  render() {
+    const stats = this._api.getStats();
+
+    this.shadowRoot.innerHTML = `
+      <style>/* Shadow DOM styles */</style>
+      <div class="widget-content">
+        <!-- Statistics grid (total executions, success rate, active count, errors) -->
+        <!-- Active executions list with real-time status -->
+        <!-- Top 10 most-used tools chart -->
+        <!-- Recent execution history with outcomes -->
+      </div>
+    `;
+  }
+}
+
+customElements.define('tool-runner-widget', ToolRunnerWidget);
+```
+
+**Key Widget Features:**
+- **High-Frequency Updates**: 500ms refresh rate for real-time tracking of active tool executions
+- **Execution Statistics Grid**: Total executions, success rate, active execution count, error count
+- **Active Executions Monitor**: Live display of currently running tools with elapsed time
+- **Tool Usage Analytics**: Top 10 most-used tools ranked by execution count
+- **Execution History**: Recent tool calls with success/failure outcomes and execution times
+- **State Detection**: Widget state changes from 'idle' to 'active' when tools execute, 'warning' if errors exceed successes
+- **Performance Metrics**: Displays execution duration for each tool call (ms/s formatting)
+
+The widget provides critical runtime visibility into tool execution, essential for debugging tool calls, monitoring performance, and identifying frequently-used capabilities.

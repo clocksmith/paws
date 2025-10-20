@@ -11,9 +11,8 @@
   "scripts": {
     "start": "node server/proxy.js",
     "cli": "node bin/reploid-cli.js",
-    "dev": "concurrently \"npm run dev:proxy\" \"npm run dev:hermes\" \"npm run dev:browser\"",
+    "dev": "concurrently \"npm run dev:proxy\" \"npm run dev:browser\"",
     "dev:proxy": "nodemon server/proxy.js",
-    "dev:hermes": "cd hermes && npm run dev",
     "dev:browser": "python3 -m http.server 8080 || python -m http.server 8080",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -35,8 +34,6 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@paws/cli-js": "workspace:*",
-    "@paws/core": "workspace:*",
     "express": "^4.18.2",
     "ws": "^8.18.3",
     "dotenv": "^16.3.1",

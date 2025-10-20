@@ -1,5 +1,5 @@
-[
-  {
+{
+  "0": {
     "name": "read_artifact",
     "description": "Reads and returns the full content of a specific artifact from the Virtual File System (VFS). Can optionally specify a version.",
     "inputSchema": {
@@ -14,10 +14,12 @@
           "description": "Optional: A specific version identifier to read (e.g., 'c123'). If omitted, reads the latest version."
         }
       },
-      "required": ["path"]
+      "required": [
+        "path"
+      ]
     }
   },
-  {
+  "1": {
     "name": "list_artifacts",
     "description": "Lists all available artifacts in the VFS, optionally filtered by a directory path.",
     "inputSchema": {
@@ -31,7 +33,7 @@
       "required": []
     }
   },
-  {
+  "2": {
     "name": "diff_artifacts",
     "description": "Compares two versions of an artifact and returns the differences.",
     "inputSchema": {
@@ -50,10 +52,14 @@
           "description": "The second version identifier (e.g., 'c12')."
         }
       },
-      "required": ["path", "version_a", "version_b"]
+      "required": [
+        "path",
+        "version_a",
+        "version_b"
+      ]
     }
   },
-  {
+  "3": {
     "name": "get_artifact_history",
     "description": "Retrieves the modification history for a specific artifact.",
     "inputSchema": {
@@ -64,10 +70,12 @@
           "description": "The VFS path of the artifact."
         }
       },
-      "required": ["path"]
+      "required": [
+        "path"
+      ]
     }
   },
-  {
+  "4": {
     "name": "search_vfs",
     "description": "Searches the content of all artifacts in the VFS for a specific string or regular expression.",
     "inputSchema": {
@@ -82,7 +90,13 @@
           "description": "Set to true if the query is a regular expression. Defaults to false."
         }
       },
-      "required": ["query"]
+      "required": [
+        "query"
+      ]
     }
+  },
+  "_blueprint": {
+    "id": "0x000010",
+    "description": "Explains the JSON artifact that defines the agent's built-in static toolset."
   }
-]
+}

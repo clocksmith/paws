@@ -1,3 +1,4 @@
+// @blueprint 0x000043 - Integrates browser-native APIs for capabilities.
 // Browser-Native Web API Integration for REPLOID
 // Validates thesis that browser environment is superior to CLI for RSI
 
@@ -451,14 +452,14 @@ const BrowserAPIs = {
 
       md += '## Available APIs\n\n';
       for (const [api, available] of Object.entries(capabilities)) {
-        const icon = available ? '✅' : '❌';
+        const icon = available ? '✓' : '✗';
         md += `- ${icon} **${api}**: ${available ? 'Available' : 'Not Available'}\n`;
       }
       md += '\n';
 
       if (capabilities.fileSystemAccess) {
         md += '## File System Access\n\n';
-        md += `- **Directory Handle:** ${fileSystemHandle ? `✅ ${fileSystemHandle.name}` : '❌ Not granted'}\n`;
+        md += `- **Directory Handle:** ${fileSystemHandle ? `✓ ${fileSystemHandle.name}` : '✗ Not granted'}\n`;
         md += '- **Mode:** Read/Write\n\n';
       }
 
@@ -471,34 +472,379 @@ const BrowserAPIs = {
       return md;
     };
 
+    // Operation tracking for widget
+    const operationStats = {
+      fileWrites: 0,
+      fileReads: 0,
+      notificationsShown: 0,
+      clipboardWrites: 0,
+      shares: 0,
+      lastOperation: null
+    };
+
+    // Wrap writeFile to track stats
+    const wrappedWriteFile = async (path, content) => {
+      const result = await writeFile(path, content);
+      if (result) {
+        operationStats.fileWrites++;
+        operationStats.lastOperation = { type: 'file-write', timestamp: Date.now(), path };
+      }
+      return result;
+    };
+
+    // Wrap readFile to track stats
+    const wrappedReadFile = async (path) => {
+      const result = await readFile(path);
+      if (result) {
+        operationStats.fileReads++;
+        operationStats.lastOperation = { type: 'file-read', timestamp: Date.now(), path };
+      }
+      return result;
+    };
+
+    // Wrap showNotification to track stats
+    const wrappedShowNotification = async (title, options) => {
+      const result = await showNotification(title, options);
+      if (result) {
+        operationStats.notificationsShown++;
+        operationStats.lastOperation = { type: 'notification', timestamp: Date.now(), title };
+      }
+      return result;
+    };
+
+    // Wrap writeToClipboard to track stats
+    const wrappedWriteToClipboard = async (text) => {
+      const result = await writeToClipboard(text);
+      if (result) {
+        operationStats.clipboardWrites++;
+        operationStats.lastOperation = { type: 'clipboard', timestamp: Date.now(), length: text.length };
+      }
+      return result;
+    };
+
+    // Wrap share to track stats
+    const wrappedShare = async (data) => {
+      const result = await share(data);
+      if (result) {
+        operationStats.shares++;
+        operationStats.lastOperation = { type: 'share', timestamp: Date.now() };
+      }
+      return result;
+    };
+
+    // Expose state for widget
+    const getState = () => ({
+      capabilities,
+      fileSystemHandle,
+      notificationPermission,
+      operationStats
+    });
+
     return {
       init,
-      getCapabilities,
-      // File System Access
-      requestDirectoryAccess,
-      getDirectoryHandle,
-      writeFile,
-      readFile,
-      syncArtifactToFilesystem,
-      // Notifications
-      requestNotificationPermission,
-      showNotification,
-      // Clipboard
-      writeToClipboard,
-      readFromClipboard,
-      // Web Share
-      share,
-      // Storage
-      getStorageEstimate,
-      requestPersistentStorage,
-      // Wake Lock
-      requestWakeLock,
-      releaseWakeLock,
-      // Reporting
-      generateReport
+      api: {
+        getCapabilities,
+        getState,
+        // File System Access
+        requestDirectoryAccess,
+        getDirectoryHandle,
+        writeFile: wrappedWriteFile,
+        readFile: wrappedReadFile,
+        syncArtifactToFilesystem,
+        // Notifications
+        requestNotificationPermission,
+        showNotification: wrappedShowNotification,
+        // Clipboard
+        writeToClipboard: wrappedWriteToClipboard,
+        readFromClipboard,
+        // Web Share
+        share: wrappedShare,
+        // Storage
+        getStorageEstimate,
+        requestPersistentStorage,
+        // Wake Lock
+        requestWakeLock,
+        releaseWakeLock,
+        // Reporting
+        generateReport
+      },
+
+      widget: {
+        element: 'browser-apis-widget',
+        displayName: 'Browser APIs',
+        icon: '♁',
+        category: 'core',
+        updateInterval: null
+      }
     };
   }
 };
+
+// Web Component for Browser APIs Widget
+class BrowserAPIsWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+  }
+
+  set moduleApi(api) {
+    this._api = api;
+    this.render();
+  }
+
+  getStatus() {
+    if (!this._api) return { state: 'idle', primaryMetric: 'Loading...', secondaryMetric: '' };
+
+    const state = this._api.getState();
+    const availableCount = Object.values(state.capabilities).filter(Boolean).length;
+    const totalCount = Object.keys(state.capabilities).length;
+    const hasRecentOp = state.operationStats.lastOperation &&
+      (Date.now() - state.operationStats.lastOperation.timestamp < 60000);
+
+    return {
+      state: availableCount > 0 ? (hasRecentOp ? 'active' : 'idle') : 'disabled',
+      primaryMetric: `${availableCount}/${totalCount} APIs`,
+      secondaryMetric: state.fileSystemHandle ? `⛁ ${state.fileSystemHandle.name}` : 'No FS access',
+      lastActivity: state.operationStats.lastOperation ? state.operationStats.lastOperation.timestamp : null,
+      message: hasRecentOp ? `Last: ${state.operationStats.lastOperation.type}` : null
+    };
+  }
+
+  render() {
+    if (!this._api) {
+      this.shadowRoot.innerHTML = '<div>Loading...</div>';
+      return;
+    }
+
+    const state = this._api.getState();
+    const { capabilities, fileSystemHandle, notificationPermission, operationStats } = state;
+
+    const totalOps = operationStats.fileWrites + operationStats.fileReads +
+                    operationStats.notificationsShown + operationStats.clipboardWrites +
+                    operationStats.shares;
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+          background: rgba(255,255,255,0.05);
+          border-radius: 8px;
+          padding: 16px;
+          color: #fff;
+          font-family: monospace;
+          font-size: 12px;
+        }
+
+        h4 {
+          margin: 0 0 16px 0;
+          font-size: 1.2em;
+          color: #0ff;
+        }
+
+        h5 {
+          margin: 16px 0 8px 0;
+          font-size: 1em;
+          color: #0ff;
+          font-weight: bold;
+        }
+
+        .api-item {
+          padding: 2px 0;
+        }
+
+        .api-item.available {
+          color: #0f0;
+        }
+
+        .api-item.unavailable {
+          color: #666;
+        }
+
+        .stats-box {
+          margin-bottom: 12px;
+          padding: 8px;
+          background: rgba(0,255,255,0.05);
+          border: 1px solid rgba(0,255,255,0.2);
+          border-radius: 4px;
+        }
+
+        .fs-box {
+          margin-bottom: 12px;
+          padding: 8px;
+          border-radius: 4px;
+        }
+
+        .fs-box.granted {
+          background: rgba(0,255,0,0.05);
+          border: 1px solid rgba(0,255,0,0.2);
+        }
+
+        .fs-box.pending {
+          background: rgba(255,255,0,0.05);
+          border: 1px solid rgba(255,255,0,0.2);
+        }
+
+        .notification-box {
+          margin-bottom: 12px;
+          padding: 8px;
+          background: rgba(0,0,0,0.3);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 4px;
+        }
+
+        .last-op-box {
+          margin-top: 12px;
+          padding: 8px;
+          background: rgba(0,0,0,0.3);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 4px;
+        }
+
+        .stat-label {
+          color: #aaa;
+        }
+
+        .stat-value {
+          color: #0ff;
+        }
+
+        button {
+          background: rgba(100,150,255,0.3);
+          border: none;
+          border-radius: 4px;
+          color: #fff;
+          cursor: pointer;
+          padding: 6px 12px;
+          font-size: 0.9em;
+          margin: 4px 4px 4px 0;
+        }
+
+        button:hover {
+          background: rgba(100,150,255,0.5);
+        }
+      </style>
+
+      <div class="browser-apis-panel">
+        <h4>♁ Browser APIs</h4>
+
+        <div>
+          <h5>API Availability</h5>
+          ${Object.entries(capabilities).map(([api, available]) => {
+            const icon = available ? '✓' : '✗';
+            const className = available ? 'available' : 'unavailable';
+            return `<div class="api-item ${className}">${icon} ${api.replace(/([A-Z])/g, ' $1').trim()}</div>`;
+          }).join('')}
+        </div>
+
+        ${totalOps > 0 ? `
+          <div class="stats-box">
+            <h5 style="margin-top: 0;">Operation Stats</h5>
+            ${operationStats.fileWrites > 0 ? `<div class="stat-label">File Writes: <span class="stat-value">${operationStats.fileWrites}</span></div>` : ''}
+            ${operationStats.fileReads > 0 ? `<div class="stat-label">File Reads: <span class="stat-value">${operationStats.fileReads}</span></div>` : ''}
+            ${operationStats.notificationsShown > 0 ? `<div class="stat-label">Notifications: <span class="stat-value">${operationStats.notificationsShown}</span></div>` : ''}
+            ${operationStats.clipboardWrites > 0 ? `<div class="stat-label">Clipboard Writes: <span class="stat-value">${operationStats.clipboardWrites}</span></div>` : ''}
+            ${operationStats.shares > 0 ? `<div class="stat-label">Shares: <span class="stat-value">${operationStats.shares}</span></div>` : ''}
+          </div>
+        ` : ''}
+
+        ${fileSystemHandle ? `
+          <div class="fs-box granted">
+            <h5 style="margin-top: 0; color: #0f0;">File System Access</h5>
+            <div style="color: #aaa;">Directory: <span style="color: #fff;">${fileSystemHandle.name}</span></div>
+            <div style="color: #888; font-size: 10px;">✓ Read/Write access granted</div>
+          </div>
+        ` : capabilities.fileSystemAccess ? `
+          <div class="fs-box pending">
+            <h5 style="margin-top: 0; color: #ff0;">File System Access</h5>
+            <div style="color: #888; font-size: 11px;">Available but not granted. Use "Request Directory Access" button.</div>
+          </div>
+        ` : ''}
+
+        ${capabilities.notifications ? `
+          <div class="notification-box">
+            <div style="color: #888; font-weight: bold; margin-bottom: 4px; font-size: 10px;">Notifications</div>
+            <div style="color: ${notificationPermission === 'granted' ? '#0f0' : notificationPermission === 'denied' ? '#f00' : '#ff0'}; font-size: 11px;">
+              Permission: ${notificationPermission}
+            </div>
+          </div>
+        ` : ''}
+
+        ${operationStats.lastOperation ? `
+          <div class="last-op-box">
+            <div style="color: #888; font-weight: bold; margin-bottom: 4px; font-size: 10px;">Last Operation</div>
+            <div style="color: #aaa; font-size: 11px;">
+              ${operationStats.lastOperation.type} - ${new Date(operationStats.lastOperation.timestamp).toLocaleTimeString()}
+            </div>
+          </div>
+        ` : ''}
+
+        <div style="margin-top: 16px;">
+          ${capabilities.fileSystemAccess ? '<button id="request-fs">⛁ Request Directory Access</button>' : ''}
+          ${capabilities.storageEstimation ? '<button id="check-storage">⛃ Check Storage</button>' : ''}
+          ${capabilities.notifications ? '<button id="request-notif">⚏ Request Notifications</button>' : ''}
+          <button id="generate-report">☱ Generate Report</button>
+        </div>
+      </div>
+    `;
+
+    // Attach event listeners
+    const requestFsBtn = this.shadowRoot.getElementById('request-fs');
+    if (requestFsBtn) {
+      requestFsBtn.addEventListener('click', async () => {
+        const handle = await this._api.requestDirectoryAccess();
+        const ToastNotifications = window.DIContainer?.resolve('ToastNotifications');
+        if (handle) {
+          ToastNotifications?.show?.(`Access granted: ${handle.name}`, 'success');
+        } else {
+          ToastNotifications?.show?.('Access denied or cancelled', 'warning');
+        }
+        this.render();
+      });
+    }
+
+    const checkStorageBtn = this.shadowRoot.getElementById('check-storage');
+    if (checkStorageBtn) {
+      checkStorageBtn.addEventListener('click', async () => {
+        const estimate = await this._api.getStorageEstimate();
+        const ToastNotifications = window.DIContainer?.resolve('ToastNotifications');
+        if (estimate) {
+          ToastNotifications?.show?.(`${estimate.usageMB}MB / ${estimate.quotaMB}MB (${estimate.usagePercent.toFixed(1)}%)`, 'info');
+        } else {
+          ToastNotifications?.show?.('Failed to get storage estimate', 'error');
+        }
+      });
+    }
+
+    const requestNotifBtn = this.shadowRoot.getElementById('request-notif');
+    if (requestNotifBtn) {
+      requestNotifBtn.addEventListener('click', async () => {
+        const permission = await this._api.requestNotificationPermission();
+        const ToastNotifications = window.DIContainer?.resolve('ToastNotifications');
+        ToastNotifications?.show?.(`Permission: ${permission}`, permission === 'granted' ? 'success' : 'warning');
+        this.render();
+      });
+    }
+
+    const reportBtn = this.shadowRoot.getElementById('generate-report');
+    if (reportBtn) {
+      reportBtn.addEventListener('click', () => {
+        const report = this._api.generateReport();
+        console.log(report);
+        const ToastNotifications = window.DIContainer?.resolve('ToastNotifications');
+        ToastNotifications?.show?.('Report generated (check console)', 'success');
+      });
+    }
+  }
+}
+
+// Define the custom element
+if (!customElements.get('browser-apis-widget')) {
+  customElements.define('browser-apis-widget', BrowserAPIsWidget);
+}
 
 // Export
 export default BrowserAPIs;

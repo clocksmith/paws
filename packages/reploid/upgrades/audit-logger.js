@@ -3,6 +3,7 @@
  * Provides comprehensive audit logging for security-sensitive operations.
  * Tracks module loads, VFS operations, API calls, and security events.
  *
+ * @blueprint 0x000034 - Documents the audit logging policy.
  * @module AuditLogger
  * @version 1.0.0
  * @category security
@@ -338,6 +339,298 @@ const AuditLogger = {
       return logs.map(entry => JSON.stringify(entry)).join('\n');
     };
 
+    // Web Component Widget
+    class AuditLoggerWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      connectedCallback() {
+        this.render();
+        // Auto-refresh every 2 seconds
+        this._interval = setInterval(() => this.render(), 2000);
+      }
+
+      disconnectedCallback() {
+        if (this._interval) {
+          clearInterval(this._interval);
+          this._interval = null;
+        }
+      }
+
+      getStatus() {
+        const totalEvents = recentLogs.length;
+        const securityViolations = recentLogs.filter(e => e.eventType === AuditEventType.SECURITY_VIOLATION).length;
+        const errors = recentLogs.filter(e => e.severity === 'error').length;
+        const lastEvent = recentLogs.length > 0 ? recentLogs[recentLogs.length - 1].timestamp : null;
+
+        let state = 'idle';
+        if (totalEvents > 0 && lastEvent && Date.now() - new Date(lastEvent).getTime() < 5000) state = 'active';
+        if (securityViolations > 0) state = 'warning';
+        if (errors > 0) state = 'error';
+
+        return {
+          state,
+          primaryMetric: `${totalEvents} events`,
+          secondaryMetric: `${errors} errors`,
+          lastActivity: lastEvent ? new Date(lastEvent).getTime() : null
+        };
+      }
+
+      getControls() {
+        return [
+          {
+            id: 'export-logs',
+            label: '↓ Export',
+            action: async () => {
+              const today = new Date().toISOString().split('T')[0];
+              const logs = await exportLogs(today, today);
+              const blob = new Blob([logs], { type: 'text/plain' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `audit-log-${today}.txt`;
+              a.click();
+              URL.revokeObjectURL(url);
+              const ToastNotifications = window.DIContainer?.resolve('ToastNotifications');
+              ToastNotifications?.show?.('Audit log exported', 'success');
+            }
+          },
+          {
+            id: 'clear-recent',
+            label: '⌦ Clear',
+            action: () => {
+              recentLogs.length = 0;
+              this.render();
+              const ToastNotifications = window.DIContainer?.resolve('ToastNotifications');
+              ToastNotifications?.show?.('Recent logs cleared', 'success');
+            }
+          }
+        ];
+      }
+
+      render() {
+        const formatTime = (isoString) => {
+          if (!isoString) return 'Never';
+          return new Date(isoString).toLocaleTimeString();
+        };
+
+        // Count by event type
+        const eventTypeCounts = {};
+        const severityCounts = { info: 0, warn: 0, error: 0 };
+        recentLogs.forEach(entry => {
+          eventTypeCounts[entry.eventType] = (eventTypeCounts[entry.eventType] || 0) + 1;
+          severityCounts[entry.severity] = (severityCounts[entry.severity] || 0) + 1;
+        });
+
+        const topEventTypes = Object.entries(eventTypeCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5);
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              font-family: monospace;
+            }
+            .audit-logger-panel {
+              padding: 12px;
+              color: #fff;
+            }
+            h4 {
+              margin: 0 0 12px 0;
+              font-size: 1.1em;
+            }
+            h5 {
+              margin: 16px 0 8px 0;
+              font-size: 0.9em;
+              color: #aaa;
+            }
+            .stats-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 10px;
+              margin-bottom: 16px;
+            }
+            .stat-card {
+              background: rgba(255, 255, 255, 0.05);
+              padding: 12px;
+              border-radius: 6px;
+            }
+            .stat-label {
+              font-size: 0.8em;
+              color: #888;
+              margin-bottom: 4px;
+            }
+            .stat-value {
+              font-size: 1.5em;
+              font-weight: bold;
+              color: #4fc3f7;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 0.9em;
+            }
+            th {
+              text-align: left;
+              padding: 8px;
+              border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+              color: #888;
+            }
+            td {
+              padding: 6px 8px;
+            }
+            .event-type-name {
+              color: #4fc3f7;
+            }
+            .event-type-count {
+              text-align: right;
+              font-weight: bold;
+            }
+            .audit-event-stream {
+              max-height: 400px;
+              overflow-y: auto;
+              margin-top: 8px;
+            }
+            .audit-event-entry {
+              padding: 8px;
+              margin: 4px 0;
+              background: rgba(255, 255, 255, 0.05);
+              border-radius: 4px;
+              display: flex;
+              gap: 10px;
+              align-items: center;
+              font-size: 12px;
+            }
+            .audit-event-entry.severity-error {
+              border-left: 3px solid #f48771;
+            }
+            .audit-event-entry.severity-warn {
+              border-left: 3px solid #ffb74d;
+            }
+            .event-time {
+              font-family: monospace;
+              color: #888;
+            }
+            .event-type {
+              font-weight: bold;
+              min-width: 120px;
+            }
+            .event-severity {
+              padding: 2px 6px;
+              border-radius: 3px;
+              font-size: 11px;
+            }
+            .severity-badge-info {
+              background: rgba(79, 195, 247, 0.2);
+              color: #4fc3f7;
+            }
+            .severity-badge-warn {
+              background: rgba(255, 183, 77, 0.2);
+              color: #ffb74d;
+            }
+            .severity-badge-error {
+              background: rgba(244, 135, 113, 0.2);
+              color: #f48771;
+            }
+            .event-path {
+              color: #4fc3f7;
+              font-family: monospace;
+            }
+            .event-message {
+              flex: 1;
+              color: #aaa;
+            }
+            .audit-info {
+              margin-top: 16px;
+              padding: 12px;
+              background: rgba(255, 255, 255, 0.03);
+              border-radius: 6px;
+            }
+            .audit-info p {
+              margin: 4px 0;
+              font-size: 0.85em;
+              color: #888;
+            }
+          </style>
+          <div class="audit-logger-panel">
+            <h4>⊠ Audit Logger</h4>
+
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-label">Total Events</div>
+                <div class="stat-value">${recentLogs.length}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Errors</div>
+                <div class="stat-value">${severityCounts.error}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Warnings</div>
+                <div class="stat-value">${severityCounts.warn}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Security Violations</div>
+                <div class="stat-value">${eventTypeCounts[AuditEventType.SECURITY_VIOLATION] || 0}</div>
+              </div>
+            </div>
+
+            <h5>Events by Type</h5>
+            <div class="event-type-breakdown">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Event Type</th>
+                    <th>Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${topEventTypes.map(([type, count]) => `
+                    <tr>
+                      <td class="event-type-name">${type}</td>
+                      <td class="event-type-count">${count}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+
+            <h5>Recent Audit Events</h5>
+            <div class="audit-event-stream">
+              ${recentLogs.length > 0 ? recentLogs.slice(-20).reverse().map(entry => `
+                <div class="audit-event-entry severity-${entry.severity}">
+                  <span class="event-time">${formatTime(entry.timestamp)}</span>
+                  <span class="event-type">${entry.eventType}</span>
+                  <span class="event-severity severity-badge-${entry.severity}">${entry.severity}</span>
+                  ${entry.details.path ? `<span class="event-path">${entry.details.path}</span>` : ''}
+                  ${entry.details.message ? `<span class="event-message">${entry.details.message}</span>` : ''}
+                </div>
+              `).join('') : '<p>No audit events yet</p>'}
+            </div>
+
+            <div class="audit-info">
+              <h5>Audit Coverage</h5>
+              <p>Logging: Module loads, VFS operations, API calls, security events</p>
+              <p>Retention: Last ${MAX_RECENT_LOGS} events in memory, persistent logs in IndexedDB</p>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // Register custom element
+    const elementName = 'audit-logger-widget';
+    if (!customElements.get(elementName)) {
+      customElements.define(elementName, AuditLoggerWidget);
+    }
+
     return {
       init: async () => {
         logger.info('[AuditLogger] Audit logging system initialized');
@@ -369,6 +662,15 @@ const AuditLogger = {
 
         // Direct access to recent logs
         getRecentLogs: () => [...recentLogs]
+      },
+
+      // Web Component widget
+      widget: {
+        element: elementName,
+        displayName: 'Audit Logger',
+        icon: '⊠',
+        category: 'security',
+        updateInterval: 2000
       }
     };
   }

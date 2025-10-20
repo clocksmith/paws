@@ -1,3 +1,4 @@
+// @blueprint 0x00001B - Details the introspector for deep code self-analysis.
 // Introspector Module for REPLOID - RSI-1
 // Enables the agent to understand its own architecture and capabilities
 
@@ -532,6 +533,202 @@ const Introspector = {
       logger.info('[Introspector] Caches cleared');
     };
 
+    // Widget interface
+    const widget = (() => {
+      class IntrospectorWidget extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' });
+        }
+
+        connectedCallback() {
+          this.render();
+        }
+
+        disconnectedCallback() {
+          // No cleanup needed for manual updates
+        }
+
+        set moduleApi(api) {
+          this._api = api;
+          this.render();
+        }
+
+        async getStatus() {
+          const graph = await getModuleGraph();
+          const catalog = await getToolCatalog();
+
+          return {
+            state: 'idle',
+            primaryMetric: `${graph.modules.length} modules`,
+            secondaryMetric: `${catalog.tools.length} tools`,
+            lastActivity: null,
+            message: null
+          };
+        }
+
+        async render() {
+          const graph = await getModuleGraph();
+          const catalog = await getToolCatalog();
+          const capabilities = await getCapabilities();
+
+          const categoryStats = Object.entries(graph.statistics.byCategory || {})
+            .sort((a, b) => b[1] - a[1]);
+
+          this.shadowRoot.innerHTML = `
+            <style>
+              :host {
+                display: block;
+                font-family: monospace;
+                color: #e0e0e0;
+              }
+              .introspector-panel {
+                padding: 12px;
+                background: #1a1a1a;
+                border-radius: 4px;
+              }
+              .controls {
+                margin-bottom: 12px;
+                display: flex;
+                gap: 8px;
+              }
+              button {
+                padding: 6px 12px;
+                background: #333;
+                color: #e0e0e0;
+                border: 1px solid #555;
+                border-radius: 3px;
+                cursor: pointer;
+                font-family: monospace;
+                font-size: 11px;
+              }
+              button:hover {
+                background: #444;
+              }
+              h4 {
+                color: #0ff;
+                margin: 0 0 10px 0;
+                font-size: 14px;
+              }
+              .intro-stats {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 10px;
+                margin-bottom: 20px;
+              }
+              .stat-card {
+                padding: 10px;
+                border-radius: 5px;
+              }
+              .stat-card div:first-child {
+                color: #888;
+                font-size: 11px;
+              }
+              .stat-card div:last-child {
+                font-size: 20px;
+                font-weight: bold;
+              }
+              .categories, .capabilities {
+                margin-bottom: 20px;
+              }
+              .category-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+              }
+              .category-item {
+                padding: 8px;
+                background: rgba(255,255,255,0.03);
+                border-radius: 3px;
+                display: flex;
+                justify-content: space-between;
+                font-size: 12px;
+              }
+              .capability-list {
+                font-size: 12px;
+                line-height: 1.8;
+              }
+              .capability-item {
+                padding: 4px;
+              }
+            </style>
+            <div class="introspector-panel">
+              <div class="controls">
+                <button class="generate-report">☷ Generate Report</button>
+                <button class="clear-cache">⛶ Clear Cache</button>
+              </div>
+
+              <div class="intro-stats">
+                <div class="stat-card" style="background: rgba(0,255,255,0.1);">
+                  <div>Modules</div>
+                  <div style="color: #0ff;">${graph.modules.length}</div>
+                </div>
+                <div class="stat-card" style="background: rgba(156,39,176,0.1);">
+                  <div>Tools</div>
+                  <div style="color: #9c27b0;">${catalog.tools.length}</div>
+                </div>
+                <div class="stat-card" style="background: rgba(76,175,80,0.1);">
+                  <div>Dependencies</div>
+                  <div style="color: #4caf50;">${graph.edges.length}</div>
+                </div>
+              </div>
+
+              <div class="categories">
+                <h4>Module Categories</h4>
+                <div class="category-grid">
+                  ${categoryStats.map(([cat, count]) => `
+                    <div class="category-item">
+                      <span style="color: #ccc;">${cat}</span>
+                      <span style="font-weight: bold; color: #0ff;">${count}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+
+              <div class="capabilities">
+                <h4>System Capabilities</h4>
+                <div class="capability-list">
+                  ${Object.entries(capabilities).map(([cap, enabled]) => `
+                    <div class="capability-item" style="color: ${enabled ? '#4caf50' : '#666'};">
+                      ${enabled ? '✓' : '○'} ${cap}
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          `;
+
+          // Attach event listeners
+          this.shadowRoot.querySelector('.generate-report')?.addEventListener('click', async () => {
+            const report = await generateSelfReport();
+            console.log('[Introspector] Self-report:', report);
+            if (typeof EventBus !== 'undefined') {
+              EventBus.emit('toast:success', { message: 'Self-report generated (see console)' });
+            }
+          });
+
+          this.shadowRoot.querySelector('.clear-cache')?.addEventListener('click', () => {
+            clearCache();
+            if (typeof EventBus !== 'undefined') {
+              EventBus.emit('toast:success', { message: 'Cache cleared' });
+            }
+          });
+        }
+      }
+
+      if (!customElements.get('introspector-widget')) {
+        customElements.define('introspector-widget', IntrospectorWidget);
+      }
+
+      return {
+        element: 'introspector-widget',
+        displayName: 'Introspector',
+        icon: '⌕',
+        category: 'rsi',
+        order: 80
+      };
+    })();
+
     return {
       init,
       api: {
@@ -541,7 +738,8 @@ const Introspector = {
         getCapabilities,
         generateSelfReport,
         clearCache
-      }
+      },
+      widget
     };
   }
 };

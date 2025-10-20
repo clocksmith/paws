@@ -277,30 +277,31 @@ Draft release notes for version 2.0 of REPLOID
 
 ### CLI Mode (cats/dogs)
 
+Use the PAWS CLI tools from `@paws/cli-js`:
+
 ```bash
 # Create context bundle
-bin/cats "upgrades/*.js" -o context.cats.md
+npx cats "upgrades/*.js" -o context.cats.md
 
 # Validate bundle
-bin/cats validate context.cats.md
+npx cats validate context.cats.md
 
 # Apply changes
-bin/dogs changes.dogs.md
+npx dogs changes.dogs.md
 
 # Dry-run with diff
-bin/dogs diff changes.dogs.md
+npx dogs diff changes.dogs.md
 
 # Run with verification
-bin/dogs changes.dogs.md --verify "npm test"
+npx dogs changes.dogs.md --verify "npm test"
 ```
 
-### Server Mode (Hermes)
+### Browser Mode (Standalone)
 
 ```bash
-cd hermes
-npm install
-npm start
-# Navigate to http://localhost:3000
+# Start proxy for LLM access
+node server/proxy.js
+# Navigate to http://localhost:8080
 ```
 
 Server mode provides:

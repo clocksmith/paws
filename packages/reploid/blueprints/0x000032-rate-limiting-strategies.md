@@ -63,9 +63,167 @@ if (!globalLimiter.tryConsume()) {
 - [ ] Logging levels appropriate (info on creation, warn on limit).
 - [ ] Works in offline/browser contexts without Node globals.
 
-### 5. Extension Ideas
+### 5. Web Component Widget
+
+The widget uses a Web Component with Shadow DOM for encapsulated rendering:
+
+```javascript
+class RateLimiterWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+    // Auto-refresh every 500ms since tokens refill over time
+    this._interval = setInterval(() => this.render(), 500);
+  }
+
+  disconnectedCallback() {
+    if (this._interval) {
+      clearInterval(this._interval);
+      this._interval = null;
+    }
+  }
+
+  getStatus() {
+    const apiLimiter = limiters.api;
+    const availableTokens = Math.floor(apiLimiter.tokens);
+    const maxTokens = apiLimiter.maxTokens;
+    const fillPercent = (availableTokens / maxTokens * 100).toFixed(0);
+
+    let state = 'idle';
+    if (availableTokens < maxTokens * 0.3) state = 'warning';
+    if (availableTokens === 0) state = 'error';
+
+    return {
+      state,
+      primaryMetric: `${availableTokens}/${maxTokens} tokens`,
+      secondaryMetric: `${fillPercent}% available`,
+      lastActivity: apiLimiter.lastRefill,
+      message: null
+    };
+  }
+
+  getControls() {
+    return [
+      {
+        id: 'reset-limiter',
+        label: '↻ Reset',
+        action: () => {
+          Object.values(limiters).forEach(limiter => limiter.reset());
+          this.render();
+          return { success: true, message: 'Rate limiters reset' };
+        }
+      }
+    ];
+  }
+
+  render() {
+    const apiLimiter = limiters.api;
+    const strictLimiter = limiters.strict;
+
+    // Token bucket visualization for API limiter
+    const tokenPercent = (apiLimiter.tokens / apiLimiter.maxTokens * 100).toFixed(1);
+
+    // Sliding window info for strict limiter
+    const strictPercent = ((strictLimiter.requests.length / strictLimiter.maxRequests) * 100).toFixed(1);
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+          font-family: monospace;
+          font-size: 12px;
+        }
+        .rate-limiter-panel { padding: 12px; color: #fff; }
+        h4 { margin: 0 0 12px 0; font-size: 1.1em; color: #0ff; }
+        .limiter-section {
+          margin: 20px 0;
+          padding: 15px;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 8px;
+        }
+        .bucket-container {
+          width: 80px;
+          height: 200px;
+          border: 2px solid #4fc3f7;
+          border-radius: 8px;
+          position: relative;
+          background: rgba(79, 195, 247, 0.1);
+        }
+        .bucket-fill {
+          position: absolute;
+          bottom: 0;
+          background: linear-gradient(to top, #4fc3f7, #64b5f6);
+          transition: height 0.3s ease;
+        }
+        .window-bar {
+          height: 30px;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 4px;
+          overflow: hidden;
+        }
+        .window-fill {
+          height: 100%;
+          background: linear-gradient(to right, #4caf50, #66bb6a);
+          transition: width 0.3s ease;
+        }
+      </style>
+      <div class="rate-limiter-panel">
+        <h4>⏲ Rate Limiter</h4>
+        <div class="limiter-section">
+          <h5>API Limiter (Token Bucket)</h5>
+          <div class="token-bucket-visual">
+            <div class="bucket-container">
+              <div class="bucket-fill" style="height: ${tokenPercent}%">
+                <span>${tokenPercent}%</span>
+              </div>
+            </div>
+          </div>
+          <div>Available: ${Math.floor(apiLimiter.tokens)} / ${apiLimiter.maxTokens}</div>
+        </div>
+        <div class="limiter-section">
+          <h5>Strict Limiter (Sliding Window)</h5>
+          <div class="sliding-window-visual">
+            <div class="window-bar">
+              <div class="window-fill" style="width: ${strictPercent}%"></div>
+            </div>
+          </div>
+          <div>Requests: ${strictLimiter.requests.length} / ${strictLimiter.maxRequests}</div>
+        </div>
+      </div>
+    `;
+  }
+}
+
+// Register custom element
+const elementName = 'rate-limiter-widget';
+if (!customElements.get(elementName)) {
+  customElements.define(elementName, RateLimiterWidget);
+}
+
+const widget = {
+  element: elementName,
+  displayName: 'Rate Limiter',
+  icon: '⏲',
+  category: 'performance'
+};
+```
+
+**Key features:**
+- Real-time visual display of token bucket fill level
+- Sliding window request count visualization
+- Auto-refresh every 500ms to show token refill
+- Color-coded status (idle/warning/error based on token availability)
+- Control to reset all limiters
+- Uses closure access to module state (limiters)
+- Shadow DOM encapsulation for styling
+
+### 6. Extension Ideas
 - Persist rate limiter state in `StateManager` to survive reloads.
 - Support distributed coordination (share counts across tabs via `TabCoordinator`, 0x000040).
-- Provide policy DSL (e.g., “3 requests per 10s and 60 requests per hour”).
+- Provide policy DSL (e.g., "3 requests per 10s and 60 requests per hour").
 
 Keep this blueprint updated when adding limiter variants or integrating with new providers.

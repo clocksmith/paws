@@ -4,11 +4,40 @@ import { loadStoredKeys } from './boot/config.js';
 import { checkAPIStatus } from './boot/api.js';
 import { closeHelpPopover } from './boot/ui.js';
 
+// Detect if proxy server is available
+async function detectProxyServer() {
+    try {
+        const response = await fetch('http://localhost:8000/health', {
+            method: 'GET',
+            signal: AbortSignal.timeout(2000)
+        });
+        return response.ok;
+    } catch (error) {
+        console.log('[Boot] Proxy server not detected:', error.message);
+        return false;
+    }
+}
+
 // This is the main entry point for the application.
 async function main() {
     // Initial setup
     loadStoredKeys();
     await checkAPIStatus();
+
+    // Check proxy server availability
+    const proxyAvailable = await detectProxyServer();
+    state.proxyAvailable = proxyAvailable;
+    console.log('[Boot] Proxy server available:', proxyAvailable);
+
+    // Show/hide proxy warning banner
+    const proxyWarning = document.getElementById('proxy-warning');
+    if (proxyWarning) {
+        if (!proxyAvailable) {
+            proxyWarning.classList.remove('hidden');
+        } else {
+            proxyWarning.classList.add('hidden');
+        }
+    }
 
     // Load stored mode or set default
     const storedMode = localStorage.getItem('DEPLOYMENT_MODE');
@@ -43,6 +72,27 @@ function setupEventListeners() {
 
             const modeName = card.dataset.mode;
             console.log('[Boot] Mode selected:', modeName);
+
+            // Special handling for proxy-based mode - show sub-options
+            if (modeName === 'proxy-based') {
+                // Hide mode cards section
+                const modeCardsContainer = document.querySelector('.mode-cards');
+                if (modeCardsContainer) {
+                    modeCardsContainer.style.display = 'none';
+                }
+
+                // Show proxy-based options
+                const proxyOptions = document.getElementById('proxy-based-options');
+                if (proxyOptions) {
+                    proxyOptions.classList.remove('hidden');
+                }
+
+                // Update UI to show selected state
+                document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+
+                return; // Don't close modal or save mode yet
+            }
 
             // Save the selected mode
             localStorage.setItem('DEPLOYMENT_MODE', modeName);
@@ -137,13 +187,166 @@ function setupEventListeners() {
             console.log('[Boot] Session auto-approve:', enabled);
         });
     }
+
+    // Proxy-based mode checkbox handlers (multi-select support)
+    const proxyOllamaCheckbox = document.getElementById('proxy-ollama');
+    const proxyHuggingFaceCheckbox = document.getElementById('proxy-huggingface');
+    const proxyCloudCheckbox = document.getElementById('proxy-cloud');
+
+    // Helper function to update save button visibility
+    function updateProxySaveButton() {
+        const saveSection = document.getElementById('proxy-save-section');
+        const anyChecked = proxyOllamaCheckbox?.checked ||
+                          proxyHuggingFaceCheckbox?.checked ||
+                          proxyCloudCheckbox?.checked;
+
+        if (saveSection) {
+            if (anyChecked) {
+                saveSection.classList.remove('hidden');
+            } else {
+                saveSection.classList.add('hidden');
+            }
+        }
+    }
+
+    if (proxyOllamaCheckbox) {
+        proxyOllamaCheckbox.addEventListener('change', (e) => {
+            const ollamaConfig = document.getElementById('ollama-config');
+
+            if (e.target.checked) {
+                if (ollamaConfig) ollamaConfig.classList.remove('hidden');
+                console.log('[Boot] Ollama enabled');
+            } else {
+                if (ollamaConfig) ollamaConfig.classList.add('hidden');
+                console.log('[Boot] Ollama disabled');
+            }
+
+            updateProxySaveButton();
+        });
+    }
+
+    if (proxyHuggingFaceCheckbox) {
+        proxyHuggingFaceCheckbox.addEventListener('change', (e) => {
+            const huggingfaceConfig = document.getElementById('huggingface-config');
+
+            if (e.target.checked) {
+                if (huggingfaceConfig) huggingfaceConfig.classList.remove('hidden');
+                console.log('[Boot] HuggingFace enabled');
+            } else {
+                if (huggingfaceConfig) huggingfaceConfig.classList.add('hidden');
+                console.log('[Boot] HuggingFace disabled');
+            }
+
+            updateProxySaveButton();
+        });
+    }
+
+    if (proxyCloudCheckbox) {
+        proxyCloudCheckbox.addEventListener('change', (e) => {
+            const cloudConfig = document.getElementById('cloud-proxy-config');
+
+            if (e.target.checked) {
+                if (cloudConfig) cloudConfig.classList.remove('hidden');
+                console.log('[Boot] Cloud via proxy enabled');
+            } else {
+                if (cloudConfig) cloudConfig.classList.add('hidden');
+                console.log('[Boot] Cloud via proxy disabled');
+            }
+
+            updateProxySaveButton();
+        });
+    }
+
+    // Save proxy configuration button
+    const saveProxyConfigBtn = document.getElementById('save-proxy-config');
+    if (saveProxyConfigBtn) {
+        saveProxyConfigBtn.addEventListener('click', () => {
+            const multiModelConfig = {
+                models: []
+            };
+
+            // Collect Ollama configuration if selected
+            if (proxyOllamaCheckbox?.checked) {
+                const ollamaEndpoint = document.getElementById('ollama-endpoint')?.value || 'http://localhost:11434';
+                const ollamaModel = document.getElementById('ollama-model')?.value;
+
+                multiModelConfig.models.push({
+                    type: 'ollama',
+                    endpoint: ollamaEndpoint,
+                    model: ollamaModel,
+                    enabled: true
+                });
+            }
+
+            // Collect HuggingFace configuration if selected
+            if (proxyHuggingFaceCheckbox?.checked) {
+                const hfModel = document.getElementById('huggingface-model')?.value;
+                const hfKey = document.getElementById('huggingface-key')?.value;
+
+                multiModelConfig.models.push({
+                    type: 'huggingface',
+                    model: hfModel,
+                    apiKey: hfKey,
+                    enabled: true
+                });
+            }
+
+            // Collect Cloud configuration if selected
+            if (proxyCloudCheckbox?.checked) {
+                const cloudProvider = document.getElementById('cloud-proxy-provider')?.value;
+                const cloudKey = document.getElementById('cloud-proxy-key')?.value;
+
+                multiModelConfig.models.push({
+                    type: 'cloud-proxy',
+                    provider: cloudProvider,
+                    apiKey: cloudKey,
+                    enabled: true
+                });
+            }
+
+            // Save multi-model configuration to localStorage
+            localStorage.setItem('MULTI_MODEL_CONFIG', JSON.stringify(multiModelConfig));
+            localStorage.setItem('DEPLOYMENT_MODE', 'proxy-based');
+            state.selectedMode = 'proxy-based';
+
+            console.log('[Boot] Multi-model configuration saved:', multiModelConfig);
+
+            // Update display
+            updateCurrentModeDisplay('proxy-based');
+
+            // Close modal
+            if (elements.configModal) {
+                elements.configModal.classList.add('hidden');
+            }
+        });
+    }
+
+    // Back to modes button (if it exists in proxy-based options)
+    const backToModesBtn = document.getElementById('back-to-modes');
+    if (backToModesBtn) {
+        backToModesBtn.addEventListener('click', () => {
+            // Hide proxy-based options
+            const proxyOptions = document.getElementById('proxy-based-options');
+            if (proxyOptions) {
+                proxyOptions.classList.add('hidden');
+            }
+
+            // Show mode cards again
+            const modeCardsContainer = document.querySelector('.mode-cards');
+            if (modeCardsContainer) {
+                modeCardsContainer.style.display = '';
+            }
+        });
+    }
 }
 
 function updateCurrentModeDisplay(modeName) {
     const modeInfo = {
+        'cloud-direct': { icon: '▲', title: 'Cloud Models (Browser)' },
         cloud: { icon: '▲', title: 'Cloud Provider' },
+        'proxy-based': { icon: '■', title: 'Local & Private (Proxy)' },
         local: { icon: '■', title: 'Local (Ollama)' },
-        'web-llm': { icon: '◆', title: 'Web LLM (WebGPU)' },
+        'web-llm': { icon: '◆', title: 'Browser-Only (WebLLM)' },
         hybrid: { icon: '◐', title: 'Hybrid (Auto)' },
         multi: { icon: '◈', title: 'High Availability' },
         custom: { icon: '⬢', title: 'Custom Endpoint' }

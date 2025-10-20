@@ -2,6 +2,9 @@
 
 **Objective:** To define the structure and philosophy of the agent's core identity prompt, enabling dynamic context injection for state-aware reasoning.
 
+**Target Upgrade:** PRMT (`prompt-system.md`)
+
+
 **Prerequisites:** None
 
 **Affected Artifacts:** `/modules/prompt-system.md`, `/modules/agent-cycle.js`, `/modules/agent-logic-pure.js`

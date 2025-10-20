@@ -1,3 +1,4 @@
+// @blueprint 0x00000A - Describes the engine for executing the agent's static and dynamic tools.
 // Standardized Tool Runner Module for REPLOID
 // Executes static and dynamic tools within the agent
 
@@ -5,14 +6,14 @@ const ToolRunner = {
   metadata: {
     id: 'ToolRunner',
     version: '1.0.0',
-    dependencies: ['config', 'Storage', 'StateManager', 'ApiClient', 'Utils', 'ToolRunnerPureHelpers'],
+    dependencies: ['config', 'Storage', 'StateManager', 'ApiClient', 'Utils', 'ToolRunnerPureHelpers', 'DogsParserBrowser', 'DiffUtils'],
     async: false,
     type: 'service'
   },
 
   factory: (deps) => {
     // Validate dependencies
-    const { config, Storage, StateManager, ApiClient, Utils, ToolRunnerPureHelpers } = deps;
+    const { config, Storage, StateManager, ApiClient, Utils, ToolRunnerPureHelpers, DogsParserBrowser, DiffUtils } = deps;
     const { logger, Errors } = Utils || {};
 
     // Lazy-load MetaToolCreator to break circular dependency
@@ -38,8 +39,53 @@ const ToolRunner = {
     if (missing.length > 0) {
       throw new Error(`ToolRunner: Missing required dependencies: ${missing.join(', ')}`);
     }
-    
+
     const { ToolError, ArtifactError } = Errors;
+
+    // Execution tracking for widget
+    const _executionHistory = [];
+    const MAX_HISTORY = 50;
+    let _activeExecutions = new Map(); // toolExecutionId -> { toolName, startTime, args }
+    let _lastExecutionTime = null;
+    let _executionStats = { total: 0, success: 0, error: 0 };
+
+    const trackExecutionStart = (toolName, args) => {
+      const executionId = `${toolName}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const startTime = Date.now();
+      _activeExecutions.set(executionId, { toolName, args, startTime });
+      return executionId;
+    };
+
+    const trackExecutionEnd = (executionId, success = true, error = null) => {
+      const execution = _activeExecutions.get(executionId);
+      if (!execution) return;
+
+      const endTime = Date.now();
+      const duration = endTime - execution.startTime;
+
+      _lastExecutionTime = endTime;
+      _executionStats.total++;
+      if (success) {
+        _executionStats.success++;
+      } else {
+        _executionStats.error++;
+      }
+
+      // Add to history
+      _executionHistory.push({
+        toolName: execution.toolName,
+        startTime: execution.startTime,
+        endTime,
+        duration,
+        success,
+        error: error?.message || null
+      });
+      if (_executionHistory.length > MAX_HISTORY) {
+        _executionHistory.shift();
+      }
+
+      _activeExecutions.delete(executionId);
+    };
 
   const runTool = async (
     toolName,
@@ -47,15 +93,20 @@ const ToolRunner = {
     injectedStaticTools,
     injectedDynamicTools
   ) => {
-    logger.logEvent("info", `Run tool: ${toolName}`, toolArgs || {});
-    UI.logToAdvanced(`Running tool: ${toolName} with args: ${JSON.stringify(toolArgs)}`);
-    const allTools = [...injectedStaticTools, ...injectedDynamicTools.map(t=>t.declaration)];
-    const toolDef = allTools.find((t) => t.name === toolName);
-    
-    if (!toolDef) {
-        const available = allTools.map(t => t.name).join(', ');
-        throw new ToolError(`Tool '${toolName}' not found. Available tools: ${available}`);
-    }
+    // Track execution start
+    const executionId = trackExecutionStart(toolName, toolArgs);
+
+    try {
+      logger.logEvent("info", `Run tool: ${toolName}`, toolArgs || {});
+      UI.logToAdvanced(`Running tool: ${toolName} with args: ${JSON.stringify(toolArgs)}`);
+      const allTools = [...injectedStaticTools, ...injectedDynamicTools.map(t=>t.declaration)];
+      const toolDef = allTools.find((t) => t.name === toolName);
+
+      if (!toolDef) {
+          const available = allTools.map(t => t.name).join(', ');
+          trackExecutionEnd(executionId, false, new Error(`Tool not found: ${toolName}`));
+          throw new ToolError(`Tool '${toolName}' not found. Available tools: ${available}`);
+      }
 
     if (injectedStaticTools.some(t => t.name === toolName)) {
       switch (toolName) {
@@ -99,8 +150,23 @@ const ToolRunner = {
                   `Tip: Use get_artifact_history tool to see available versions.`
                 );
             }
-            // Basic diff for now, a proper library would be better.
-            return { diff: `(Basic diff not implemented. Len A: ${contentA.length}, Len B: ${contentB.length})`, differences: contentA !== contentB };
+
+            // Use DiffUtils for proper diff computation
+            const diffOptions = {
+                format: toolArgs.format || 'unified',
+                contextLines: toolArgs.context || 3,
+                ignoreWhitespace: toolArgs.ignore_whitespace || false
+            };
+
+            const diffResult = DiffUtils.diff(contentA, contentB, diffOptions);
+
+            return {
+                diff: diffResult.formatted,
+                differences: !diffResult.identical,
+                stats: diffResult.stats,
+                version_a: toolArgs.version_a,
+                version_b: toolArgs.version_b
+            };
         }
 
         case "get_artifact_history": {
@@ -166,16 +232,110 @@ const ToolRunner = {
         }
 
         case "apply_dogs_bundle": {
-            const { dogs_path } = toolArgs;
-            logger.warn('[ToolRunner] apply_dogs_bundle is a stub. Verification and rollback are not yet implemented.');
+            const { dogs_path, verify_command } = toolArgs;
+            logger.info(`[ToolRunner] Applying DOGS bundle: ${dogs_path}`);
 
             const dogsContent = await StateManager.getArtifactContent(dogs_path);
             if (!dogsContent) {
                 throw new ArtifactError(`dogs bundle not found at ${dogs_path}`);
             }
 
-            // TODO: parse dogsContent into actionable changes.
-            return { success: true, message: 'Changes applied (stubbed).' };
+            // Validate bundle format
+            const validation = DogsParserBrowser.validateDogs(dogsContent);
+            if (!validation.valid) {
+                throw new ToolError(`Invalid DOGS bundle:\n${validation.errors.join('\n')}`);
+            }
+
+            // Parse the bundle
+            const changeSet = DogsParserBrowser.parseDogs(dogsContent);
+            if (changeSet.total === 0) {
+                return { success: false, message: "No valid changes found in bundle" };
+            }
+
+            logger.info(`[ToolRunner] Parsed ${changeSet.total} changes (${changeSet.creates} creates, ${changeSet.modifies} modifies, ${changeSet.deletes} deletes)`);
+
+            // Create checkpoint before applying changes
+            const checkpoint = await StateManager.createCheckpoint(`Before applying ${dogs_path}`);
+            logger.info(`[ToolRunner] Created checkpoint: ${checkpoint.id}`);
+
+            const appliedChanges = [];
+            try {
+                // Apply each change
+                for (const change of changeSet.changes) {
+                    logger.info(`[ToolRunner] Applying ${change.operation} to ${change.file_path}`);
+
+                    if (change.operation === 'CREATE') {
+                        const existing = await StateManager.getArtifactContent(change.file_path);
+                        if (existing !== null) {
+                            throw new ToolError(`Cannot CREATE ${change.file_path}: file already exists`);
+                        }
+                        await StateManager.createArtifact(
+                            change.file_path,
+                            'text',
+                            change.new_content,
+                            change.reason
+                        );
+                        appliedChanges.push(change);
+
+                    } else if (change.operation === 'MODIFY') {
+                        const existing = await StateManager.getArtifactContent(change.file_path);
+                        if (existing === null) {
+                            throw new ToolError(`Cannot MODIFY ${change.file_path}: file not found`);
+                        }
+                        await StateManager.updateArtifact(change.file_path, change.new_content);
+                        appliedChanges.push(change);
+
+                    } else if (change.operation === 'DELETE') {
+                        await StateManager.deleteArtifact(change.file_path);
+                        appliedChanges.push(change);
+                    }
+                }
+
+                // Run verification if provided
+                if (verify_command) {
+                    try {
+                        // Lazy-load VerificationManager
+                        const VerificationManager = globalThis.DIContainer?.resolve('VerificationManager');
+
+                        if (VerificationManager) {
+                            logger.info(`[ToolRunner] Running verification: ${verify_command}`);
+                            const verifyResult = await VerificationManager.runVerification(verify_command);
+
+                            if (!verifyResult.success) {
+                                logger.error(`[ToolRunner] Verification failed: ${verifyResult.error || 'Unknown error'}`);
+                                // Rollback changes
+                                await StateManager.restoreCheckpoint(checkpoint.id);
+                                throw new ToolError(`Verification failed: ${verifyResult.error || 'Tests did not pass'}`);
+                            }
+
+                            logger.info(`[ToolRunner] Verification passed`);
+                        } else {
+                            logger.warn("[ToolRunner] VerificationManager not available - skipping verification");
+                        }
+                    } catch (verifyError) {
+                        logger.error(`[ToolRunner] Verification error:`, verifyError.message);
+                        // Rollback on verification error
+                        await StateManager.restoreCheckpoint(checkpoint.id);
+                        throw new ToolError(`Verification failed: ${verifyError.message}`);
+                    }
+                }
+
+                return {
+                    success: true,
+                    message: `Successfully applied ${appliedChanges.length} changes`,
+                    changes_applied: appliedChanges.length,
+                    creates: changeSet.creates,
+                    modifies: changeSet.modifies,
+                    deletes: changeSet.deletes,
+                    checkpoint: checkpoint.id
+                };
+
+            } catch (error) {
+                // Rollback on error
+                logger.error(`[ToolRunner] Error applying changes, rolling back to checkpoint ${checkpoint.id}`);
+                await StateManager.restoreCheckpoint(checkpoint.id);
+                throw new ToolError(`Failed to apply dogs bundle: ${error.message}`);
+            }
         }
 
         case "vfs_revert": {
@@ -561,15 +721,368 @@ const ToolRunner = {
       return ToolRunnerPureHelpers.convertToGeminiFunctionDeclarationPure(mcpToolDefinition);
   };
 
+    // Expose stats for widget
+    const getStats = () => ({
+      executionHistory: _executionHistory,
+      activeExecutions: _activeExecutions,
+      executionStats: _executionStats,
+      lastExecutionTime: _lastExecutionTime
+    });
+
+    const clearHistory = () => {
+      _executionHistory.length = 0;
+      _executionStats = { total: 0, success: 0, error: 0 };
+    };
+
     // Public API
     return {
       api: {
         runTool,
-        convertToGeminiFunctionDeclaration
+        convertToGeminiFunctionDeclaration,
+        getStats,
+        clearHistory
+      },
+
+      widget: {
+        element: 'tool-runner-widget',
+        displayName: 'Tool Runner',
+        icon: '⚒',
+        category: 'tools',
+        updateInterval: 500
       }
     };
   }
 };
+
+// Web Component for Tool Runner Widget
+class ToolRunnerWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+
+    // Auto-refresh
+    if (this.updateInterval) {
+      this._interval = setInterval(() => this.render(), this.updateInterval);
+    }
+  }
+
+  disconnectedCallback() {
+    if (this._interval) clearInterval(this._interval);
+  }
+
+  set moduleApi(api) {
+    this._api = api;
+    this.render();
+  }
+
+  set updateInterval(interval) {
+    this._updateInterval = interval;
+  }
+
+  get updateInterval() {
+    return this._updateInterval || 500;
+  }
+
+  getStatus() {
+    if (!this._api) return { state: 'idle', primaryMetric: 'Loading...', secondaryMetric: '' };
+
+    const stats = this._api.getStats();
+    const activeCount = stats.activeExecutions.size;
+    const successRate = stats.executionStats.total > 0
+      ? ((stats.executionStats.success / stats.executionStats.total) * 100).toFixed(0)
+      : 0;
+
+    let state = 'idle';
+    if (activeCount > 0) state = 'active';
+    if (stats.executionStats.error > stats.executionStats.success) state = 'warning';
+
+    return {
+      state,
+      primaryMetric: `${stats.executionStats.total} executed`,
+      secondaryMetric: `${successRate}% success`,
+      lastActivity: stats.lastExecutionTime
+    };
+  }
+
+  render() {
+    if (!this._api) {
+      this.shadowRoot.innerHTML = '<div>Loading...</div>';
+      return;
+    }
+
+    const stats = this._api.getStats();
+    const formatDuration = (ms) => {
+      if (ms < 1000) return `${ms}ms`;
+      return `${(ms/1000).toFixed(1)}s`;
+    };
+
+    const formatTimeAgo = (timestamp) => {
+      if (!timestamp) return 'Never';
+      const diff = Date.now() - timestamp;
+      if (diff < 1000) return 'Just now';
+      if (diff < 60000) return `${Math.floor(diff/1000)}s ago`;
+      if (diff < 3600000) return `${Math.floor(diff/60000)}m ago`;
+      return `${Math.floor(diff/3600000)}h ago`;
+    };
+
+    // Tool usage counts
+    const toolCounts = {};
+    stats.executionHistory.forEach(exec => {
+      toolCounts[exec.toolName] = (toolCounts[exec.toolName] || 0) + 1;
+    });
+
+    const topTools = Object.entries(toolCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+          background: rgba(255,255,255,0.05);
+          border-radius: 8px;
+          padding: 16px;
+          color: #fff;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        h4 {
+          margin: 0 0 16px 0;
+          font-size: 1.2em;
+          color: #4fc3f7;
+        }
+
+        h5 {
+          margin: 16px 0 8px 0;
+          font-size: 1em;
+          color: #aaa;
+        }
+
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+
+        .stat-card {
+          background: rgba(255,255,255,0.05);
+          border-radius: 6px;
+          padding: 12px;
+        }
+
+        .stat-label {
+          font-size: 0.85em;
+          color: #888;
+          margin-bottom: 4px;
+        }
+
+        .stat-value {
+          font-size: 1.5em;
+          font-weight: bold;
+          color: #4fc3f7;
+        }
+
+        .active-executions {
+          margin-bottom: 16px;
+        }
+
+        .active-execution {
+          display: flex;
+          justify-content: space-between;
+          padding: 8px;
+          background: rgba(255,255,255,0.03);
+          border-radius: 4px;
+          margin-bottom: 4px;
+        }
+
+        .tool-name {
+          color: #4fc3f7;
+          font-weight: 500;
+        }
+
+        .running-duration {
+          color: #fc0;
+        }
+
+        .tool-usage-table {
+          margin-bottom: 16px;
+        }
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+
+        th {
+          text-align: left;
+          padding: 8px;
+          background: rgba(255,255,255,0.1);
+          color: #aaa;
+          font-size: 0.9em;
+        }
+
+        td {
+          padding: 8px;
+          border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .execution-count {
+          text-align: right;
+          color: #4fc3f7;
+          font-weight: 500;
+        }
+
+        .execution-history {
+          max-height: 300px;
+          overflow-y: auto;
+        }
+
+        .execution-entry {
+          display: grid;
+          grid-template-columns: 80px 1fr 60px 30px;
+          gap: 8px;
+          padding: 6px 8px;
+          background: rgba(255,255,255,0.03);
+          border-radius: 4px;
+          margin-bottom: 4px;
+          font-size: 0.9em;
+        }
+
+        .execution-entry.execution-error {
+          background: rgba(255,100,100,0.1);
+          border-left: 3px solid #f66;
+        }
+
+        .execution-time {
+          color: #888;
+        }
+
+        .execution-tool {
+          color: #fff;
+        }
+
+        .execution-duration {
+          color: #aaa;
+          text-align: right;
+        }
+
+        .execution-status {
+          text-align: center;
+          color: #0c0;
+        }
+
+        .execution-error-icon {
+          color: #f66;
+        }
+
+        button {
+          background: rgba(100,150,255,0.3);
+          border: none;
+          border-radius: 4px;
+          color: #fff;
+          cursor: pointer;
+          padding: 6px 12px;
+          font-size: 0.9em;
+          margin-top: 12px;
+        }
+
+        button:hover {
+          background: rgba(100,150,255,0.5);
+        }
+      </style>
+
+      <div class="tool-runner-panel">
+        <h4>⚒ Tool Runner</h4>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Total Executions</div>
+            <div class="stat-value">${stats.executionStats.total}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Active</div>
+            <div class="stat-value">${stats.activeExecutions.size}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Success</div>
+            <div class="stat-value">${stats.executionStats.success}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Errors</div>
+            <div class="stat-value">${stats.executionStats.error}</div>
+          </div>
+        </div>
+
+        ${stats.activeExecutions.size > 0 ? `
+          <h5>Active Executions</h5>
+          <div class="active-executions">
+            ${Array.from(stats.activeExecutions.values()).map(exec => `
+              <div class="active-execution">
+                <span class="tool-name">${exec.toolName}</span>
+                <span class="running-duration">${formatDuration(Date.now() - exec.startTime)}</span>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+
+        <h5>Most Used Tools</h5>
+        <div class="tool-usage-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Tool</th>
+                <th>Executions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${topTools.map(([tool, count]) => `
+                <tr>
+                  <td class="tool-name">${tool}</td>
+                  <td class="execution-count">${count}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <h5>Recent Executions</h5>
+        <div class="execution-history">
+          ${stats.executionHistory.slice(-20).reverse().map(exec => `
+            <div class="execution-entry ${exec.success ? '' : 'execution-error'}">
+              <span class="execution-time">${formatTimeAgo(exec.endTime)}</span>
+              <span class="execution-tool">${exec.toolName}</span>
+              <span class="execution-duration">${formatDuration(exec.duration)}</span>
+              ${exec.success ? '<span class="execution-status">✓</span>' : `<span class="execution-status execution-error-icon">✗</span>`}
+            </div>
+          `).join('') || '<p>No executions yet</p>'}
+        </div>
+
+        <button id="clear-history">⌦ Clear History</button>
+      </div>
+    `;
+
+    // Attach event listeners
+    const clearBtn = this.shadowRoot.getElementById('clear-history');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        this._api.clearHistory();
+        const ToastNotifications = window.DIContainer?.resolve('ToastNotifications');
+        ToastNotifications?.show?.('Execution history cleared', 'success');
+        this.render();
+      });
+    }
+  }
+}
+
+// Define the custom element
+if (!customElements.get('tool-runner-widget')) {
+  customElements.define('tool-runner-widget', ToolRunnerWidget);
+}
 
 // Export standardized module
 export default ToolRunner;

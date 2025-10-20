@@ -2,6 +2,7 @@
  * @fileoverview Metrics Dashboard - Visual performance metrics with Chart.js
  * Extends PerformanceMonitor with interactive charts and visualizations
  *
+ * @blueprint 0x00002D - Explains the metrics dashboard charting layer.
  * @module MetricsDashboard
  * @version 1.0.0
  * @category ui
@@ -332,7 +333,284 @@ ${Object.entries(metrics.tools)
     api.destroy = destroy;
     api.generateSummary = generateSummary;
 
-    return { api };
+    // Web Component Widget (INSIDE factory closure to access state)
+    class MetricsDashboardWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+        this._charts = [];
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      connectedCallback() {
+        this.render();
+        // Auto-refresh every 5 seconds
+        this._interval = setInterval(() => this.render(), 5000);
+      }
+
+      disconnectedCallback() {
+        if (this._interval) {
+          clearInterval(this._interval);
+          this._interval = null;
+        }
+        // Destroy all charts
+        this._charts.forEach(chart => chart.destroy());
+        this._charts = [];
+      }
+
+      getStatus() {
+        const memStats = PerformanceMonitor.getMemoryStats();
+        const llmStats = PerformanceMonitor.getLLMStats();
+        const memoryMB = memStats?.current ? (memStats.current.usedJSHeapSize / 1024 / 1024).toFixed(0) : 0;
+        const cpuUsage = memStats?.current ? Math.min(100, (memStats.current.usedJSHeapSize / memStats.current.jsHeapSizeLimit * 100).toFixed(0)) : 0;
+
+        const isActive = llmStats?.calls > 0 || (memoryMB > 100);
+
+        return {
+          state: isActive ? 'active' : 'idle',
+          primaryMetric: `Mem: ${memoryMB} MB`,
+          secondaryMetric: `CPU: ${cpuUsage}%`,
+          lastActivity: llmStats?.calls > 0 ? Date.now() : null,
+          message: llmStats ? `${llmStats.calls} LLM calls` : null
+        };
+      }
+
+      renderPanel() {
+        return `
+          <div class="metrics-dashboard-panel" style="padding: 10px;">
+            <div class="charts-grid" style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+              <div class="chart-container" style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 5px;">
+                <h4 style="color: #0ff; margin-bottom: 10px; font-size: 14px;">Memory Usage Over Time</h4>
+                <canvas class="memory-chart" style="max-height: 200px;"></canvas>
+              </div>
+              <div class="chart-container" style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 5px;">
+                <h4 style="color: #0ff; margin-bottom: 10px; font-size: 14px;">Tool Usage</h4>
+                <canvas class="tools-chart" style="max-height: 200px;"></canvas>
+              </div>
+              <div class="chart-container" style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 5px;">
+                <h4 style="color: #0ff; margin-bottom: 10px; font-size: 14px;">LLM Token Usage</h4>
+                <canvas class="tokens-chart" style="max-height: 200px;"></canvas>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px;">
+              <button class="pause-btn" style="padding: 10px; background: #f90; border: none; border-radius: 4px; color: white; font-weight: bold; cursor: pointer; font-size: 0.95em;">
+                ⏸ Pause
+              </button>
+              <button class="export-btn" style="padding: 10px; background: #6496ff; border: none; border-radius: 4px; color: white; font-weight: bold; cursor: pointer; font-size: 0.95em;">
+                ⇓ Export
+              </button>
+              <button class="refresh-btn" style="padding: 10px; background: #0c0; border: none; border-radius: 4px; color: white; font-weight: bold; cursor: pointer; font-size: 0.95em;">
+                ↻ Refresh
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      render() {
+        // Destroy old charts before re-render
+        this._charts.forEach(chart => chart.destroy());
+        this._charts = [];
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              font-family: system-ui, -apple-system, sans-serif;
+              color: #ccc;
+            }
+
+            .widget-content {
+              background: rgba(255,255,255,0.03);
+              border-radius: 8px;
+              padding: 16px;
+            }
+
+            h4 {
+              margin: 16px 0 8px 0;
+              font-size: 0.95em;
+              color: #aaa;
+            }
+
+            button {
+              transition: all 0.2s ease;
+            }
+
+            .pause-btn:hover {
+              background: #fa0 !important;
+              transform: translateY(-1px);
+            }
+
+            .export-btn:hover {
+              background: #7ba6ff !important;
+              transform: translateY(-1px);
+            }
+
+            .refresh-btn:hover {
+              background: #0e0 !important;
+              transform: translateY(-1px);
+            }
+
+            button:active {
+              transform: translateY(0);
+            }
+          </style>
+
+          <div class="widget-content">
+            ${this.renderPanel()}
+          </div>
+        `;
+
+        // Wire up buttons
+        const pauseBtn = this.shadowRoot.querySelector('.pause-btn');
+        if (pauseBtn) {
+          pauseBtn.addEventListener('click', () => {
+            EventBus.emit('toast:info', { message: 'Monitoring paused' });
+          });
+        }
+
+        const exportBtn = this.shadowRoot.querySelector('.export-btn');
+        if (exportBtn) {
+          exportBtn.addEventListener('click', () => {
+            const summary = generateSummary();
+            navigator.clipboard.writeText(summary);
+            EventBus.emit('toast:success', { message: 'Summary copied to clipboard' });
+          });
+        }
+
+        const refreshBtn = this.shadowRoot.querySelector('.refresh-btn');
+        if (refreshBtn) {
+          refreshBtn.addEventListener('click', () => {
+            updateCharts();
+            EventBus.emit('toast:success', { message: 'Charts refreshed' });
+            this.render(); // Re-render
+          });
+        }
+
+        // Initialize charts if Chart.js is available
+        if (typeof Chart !== 'undefined') {
+          setTimeout(() => {
+            this.initializeCharts();
+          }, 100);
+        }
+      }
+
+      initializeCharts() {
+        // Memory chart
+        const memCanvas = this.shadowRoot.querySelector('.memory-chart');
+        if (memCanvas) {
+          const memStats = PerformanceMonitor.getMemoryStats();
+          if (memStats?.history) {
+            const labels = memStats.history.map((_, i) => `${i * 30}s`);
+            const data = memStats.history.map(s => (s.usedJSHeapSize / 1024 / 1024).toFixed(2));
+
+            const memChart = new Chart(memCanvas.getContext('2d'), {
+              type: 'line',
+              data: {
+                labels,
+                datasets: [{
+                  label: 'Memory (MB)',
+                  data,
+                  borderColor: 'rgba(0, 255, 255, 0.8)',
+                  backgroundColor: 'rgba(0, 255, 255, 0.1)',
+                  tension: 0.4,
+                  fill: true
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { legend: { labels: { color: '#e0e0e0' } } },
+                scales: {
+                  y: { beginAtZero: true, ticks: { color: '#aaa' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } },
+                  x: { ticks: { color: '#aaa' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } }
+                }
+              }
+            });
+            this._charts.push(memChart);
+          }
+        }
+
+        // Tools chart
+        const toolsCanvas = this.shadowRoot.querySelector('.tools-chart');
+        if (toolsCanvas) {
+          const metrics = PerformanceMonitor.getMetrics();
+          const toolData = Object.entries(metrics.tools)
+            .map(([name, data]) => ({ name: name.substring(0, 15), calls: data.calls }))
+            .sort((a, b) => b.calls - a.calls)
+            .slice(0, 10);
+
+          const toolsChart = new Chart(toolsCanvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+              labels: toolData.map(t => t.name),
+              datasets: [{
+                label: 'Calls',
+                data: toolData.map(t => t.calls),
+                backgroundColor: 'rgba(0, 255, 255, 0.6)',
+                borderColor: 'rgba(0, 255, 255, 1)',
+                borderWidth: 1
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: true,
+              plugins: { legend: { labels: { color: '#e0e0e0' } } },
+              scales: {
+                y: { beginAtZero: true, ticks: { color: '#aaa' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } },
+                x: { ticks: { color: '#aaa', maxRotation: 45 }, grid: { color: 'rgba(255, 255, 255, 0.1)' } }
+              }
+            }
+          });
+          this._charts.push(toolsChart);
+        }
+
+        // Tokens chart
+        const tokensCanvas = this.shadowRoot.querySelector('.tokens-chart');
+        if (tokensCanvas) {
+          const llmStats = PerformanceMonitor.getLLMStats();
+
+          const tokensChart = new Chart(tokensCanvas.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+              labels: ['Input Tokens', 'Output Tokens'],
+              datasets: [{
+                data: [llmStats.tokens.input, llmStats.tokens.output],
+                backgroundColor: ['rgba(0, 255, 255, 0.6)', 'rgba(255, 0, 255, 0.6)'],
+                borderColor: ['rgba(0, 255, 255, 1)', 'rgba(255, 0, 255, 1)'],
+                borderWidth: 1
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: true,
+              plugins: { legend: { position: 'bottom', labels: { color: '#e0e0e0' } } }
+            }
+          });
+          this._charts.push(tokensChart);
+        }
+      }
+    }
+
+    // Define custom element
+    if (!customElements.get('metrics-dashboard-widget')) {
+      customElements.define('metrics-dashboard-widget', MetricsDashboardWidget);
+    }
+
+    const widget = {
+      element: 'metrics-dashboard-widget',
+      displayName: 'Metrics Dashboard',
+      icon: '☱',
+      category: 'analytics',
+      updateInterval: 5000
+    };
+
+    return { api, widget };
   }
 };
 

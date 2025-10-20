@@ -3,6 +3,11 @@
  * Provides in-browser LLM inference via WebLLM with WebGPU acceleration.
  * Enables privacy-preserving, offline-first AI capabilities.
  *
+ * Uses WebLLM v0.2.79+ from mlc-ai: https://github.com/mlc-ai/web-llm
+ * Model library version: v0_2_48
+ * Access full model catalog: window.webllm.prebuiltAppConfig.model_list
+ *
+ * @blueprint 0x000038 - Documents the local LLM runtime.
  * @module LocalLLM
  * @version 1.0.0
  * @category runtime
@@ -29,6 +34,8 @@ const LocalLLM = {
     let loadProgress = 0;
 
     // Default model configuration
+    // Note: These are fallback models. For the full catalog, use getWebLLMModels()
+    // or access window.webllm.prebuiltAppConfig.model_list directly
     const DEFAULT_MODEL = 'Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC';
     const ALTERNATIVE_MODELS = [
       'Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC',
@@ -305,9 +312,47 @@ const LocalLLM = {
     };
 
     /**
-     * Get available models
+     * Query WebLLM's prebuilt model catalog dynamically
+     * @returns {Array} List of models from webllm.prebuiltAppConfig.model_list
+     */
+    const getWebLLMModels = () => {
+      if (typeof window.webllm === 'undefined') {
+        logger.debug('[LocalLLM] WebLLM not loaded, cannot query model catalog');
+        return [];
+      }
+
+      try {
+        const modelList = window.webllm.prebuiltAppConfig?.model_list;
+        if (!modelList || !Array.isArray(modelList)) {
+          logger.warn('[LocalLLM] prebuiltAppConfig.model_list not available');
+          return [];
+        }
+
+        return modelList.map(model => ({
+          id: model.model_id,
+          vram: model.vram_required_MB ? `${model.vram_required_MB}MB` : 'Unknown',
+          context: model.overrides?.context_window_size || model.context_window_size || 'Unknown',
+          modelUrl: model.model || 'Unknown'
+        }));
+      } catch (error) {
+        logger.error('[LocalLLM] Error querying WebLLM model catalog:', error);
+        return [];
+      }
+    };
+
+    /**
+     * Get available models (prefers dynamic catalog, falls back to hard-coded list)
      */
     const getAvailableModels = () => {
+      // Try dynamic model discovery first
+      const dynamicModels = getWebLLMModels();
+      if (dynamicModels.length > 0) {
+        logger.debug(`[LocalLLM] Found ${dynamicModels.length} models in WebLLM catalog`);
+        return dynamicModels;
+      }
+
+      // Fallback to hard-coded list
+      logger.debug('[LocalLLM] Using hard-coded model list (WebLLM catalog unavailable)');
       return ALTERNATIVE_MODELS.map(id => ({
         id,
         name: id.split('-MLC')[0],
@@ -367,13 +412,75 @@ const LocalLLM = {
       };
     };
 
+    // Track inference statistics
+    const inferenceStats = {
+      totalInferences: 0,
+      totalTokens: 0,
+      totalTime: 0,
+      lastInferenceTime: null,
+      lastTokensPerSecond: 0,
+      errors: 0
+    };
+
+    let isGenerating = false;
+
+    // Wrap chat to track stats
+    const originalChat = chat;
+    const trackedChat = async (messages, options = {}) => {
+      isGenerating = true;
+      const startTime = Date.now();
+
+      try {
+        const result = await originalChat(messages, options);
+        const elapsed = Date.now() - startTime;
+
+        // Track stats
+        inferenceStats.totalInferences++;
+        inferenceStats.totalTime += elapsed;
+        inferenceStats.lastInferenceTime = elapsed;
+
+        // Extract token info
+        if (result.usage) {
+          const tokens = result.usage.completion_tokens || result.usage.total_tokens || 0;
+          inferenceStats.totalTokens += tokens;
+          inferenceStats.lastTokensPerSecond = result.tokensPerSecond || (tokens / (elapsed / 1000));
+        }
+
+        isGenerating = false;
+        return result;
+      } catch (error) {
+        inferenceStats.errors++;
+        isGenerating = false;
+        throw error;
+      }
+    };
+
+    // Get GPU memory estimate (rough approximation)
+    const getGPUMemoryEstimate = () => {
+      if (!currentModel || !isReady) return { used: 0, percent: 0 };
+
+      // Estimate VRAM usage based on model name
+      let estimatedMB = 0;
+      if (currentModel.includes('1.5B')) estimatedMB = 900;
+      else if (currentModel.includes('2b')) estimatedMB = 1200;
+      else if (currentModel.includes('3.5')) estimatedMB = 2100;
+      else estimatedMB = 1500; // Default estimate
+
+      // Assume 8GB total GPU memory (conservative)
+      const totalMB = 8000;
+      const percent = Math.round((estimatedMB / totalMB) * 100);
+
+      return { used: estimatedMB, percent, total: totalMB };
+    };
+
     return {
       init,
       api: {
-        chat,
+        chat: trackedChat,
         complete,
         switchModel,
         getAvailableModels,
+        getWebLLMModels,
         getStatus,
         getRuntimeInfo,
         unload,
@@ -382,8 +489,279 @@ const LocalLLM = {
         getProgress: () => loadProgress,
         getCurrentModel: () => currentModel,
         getError: () => initError,
-        checkWebGPU
+        checkWebGPU,
+        getInferenceStats: () => ({ ...inferenceStats })
+      },
+
+    // Web Component Widget
+    class LocalLLMWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
       }
+
+      connectedCallback() {
+        this.render();
+
+        // Dynamic update interval based on loading state
+        this.startUpdates();
+      }
+
+      disconnectedCallback() {
+        if (this._interval) clearInterval(this._interval);
+      }
+
+      startUpdates() {
+        if (this._interval) clearInterval(this._interval);
+
+        // Fast updates while loading, slower when idle
+        const interval = isLoading ? 500 : 5000;
+        this._interval = setInterval(() => {
+          this.render();
+
+          // Adjust update speed if loading state changed
+          if ((isLoading && interval !== 500) || (!isLoading && interval !== 5000)) {
+            this.startUpdates();
+          }
+        }, interval);
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      getStatus() {
+          const gpuMem = getGPUMemoryEstimate();
+          const avgTokensPerSec = inferenceStats.totalInferences > 0
+            ? Math.round((inferenceStats.totalTokens / inferenceStats.totalTime) * 1000)
+            : 0;
+
+          let state = 'disabled';
+          if (isLoading) state = 'loading';
+          else if (isReady && isGenerating) state = 'active';
+          else if (isReady) state = 'idle';
+          else if (initError) state = 'error';
+
+          return {
+            state,
+            primaryMetric: currentModel ? currentModel.split('-MLC')[0] : 'Not loaded',
+            secondaryMetric: isReady ? `GPU: ${gpuMem.percent}%` :
+                            isLoading ? `${Math.round(loadProgress * 100)}% loaded` :
+                            'Not ready',
+            lastActivity: inferenceStats.totalInferences > 0 ? Date.now() : null,
+            message: initError ? `Error: ${initError}` :
+                    isLoading ? 'Loading model...' : null
+          };
+        },
+
+        getControls: () => {
+          const controls = [];
+
+          // Load model button (if not ready)
+          if (!isReady && !isLoading) {
+            controls.push({
+              id: 'load-model',
+              label: '⚡ Load Model',
+              action: async () => {
+                await init();
+              }
+            });
+          }
+
+          // Unload model button (if ready)
+          if (isReady && !isGenerating) {
+            controls.push({
+              id: 'unload-model',
+              label: '⛶️ Unload Model',
+              action: async () => {
+                await unload();
+              }
+            });
+          }
+
+          return controls;
+        },
+
+      renderPanel() {
+        const gpuMem = getGPUMemoryEstimate();
+        const models = getAvailableModels();
+        const avgTime = inferenceStats.totalInferences > 0
+          ? Math.round(inferenceStats.totalTime / inferenceStats.totalInferences)
+          : 0;
+        const avgTokensPerSec = inferenceStats.totalInferences > 0 && inferenceStats.totalTime > 0
+          ? Math.round((inferenceStats.totalTokens / inferenceStats.totalTime) * 1000)
+          : 0;
+
+        return `
+            <div class="widget-panel-content">
+              <!-- Model Status -->
+              <div class="model-status">
+                <div class="status-badge ${isReady ? 'ready' : isLoading ? 'loading' : 'not-ready'}">
+                  ${isReady ? '✓ Ready' : isLoading ? '⏳ Loading' : '○ Not Loaded'}
+                </div>
+                ${currentModel ? `
+                  <div class="current-model">
+                    <strong>Current Model:</strong> ${currentModel}
+                  </div>
+                ` : ''}
+              </div>
+
+              <!-- Loading Progress -->
+              ${isLoading ? `
+                <div class="loading-progress">
+                  <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${loadProgress * 100}%"></div>
+                  </div>
+                  <div class="progress-text">${Math.round(loadProgress * 100)}%</div>
+                </div>
+              ` : ''}
+
+              <!-- GPU Memory -->
+              ${isReady ? `
+                <div class="gpu-memory">
+                  <h4>GPU Memory Usage</h4>
+                  <div class="memory-stats">
+                    <div class="memory-bar">
+                      <div class="memory-fill" style="width: ${gpuMem.percent}%"></div>
+                    </div>
+                    <div class="memory-text">
+                      ${gpuMem.used}MB / ${gpuMem.total}MB (${gpuMem.percent}%)
+                    </div>
+                  </div>
+                </div>
+              ` : ''}
+
+              <!-- Inference Statistics -->
+              ${inferenceStats.totalInferences > 0 ? `
+                <div class="inference-stats">
+                  <h4>Inference Statistics</h4>
+                  <div class="stats-grid">
+                    <div class="stat-item">
+                      <div class="stat-number">${inferenceStats.totalInferences}</div>
+                      <div class="stat-name">Total Inferences</div>
+                    </div>
+                    <div class="stat-item">
+                      <div class="stat-number">${inferenceStats.totalTokens.toLocaleString()}</div>
+                      <div class="stat-name">Tokens Generated</div>
+                    </div>
+                    <div class="stat-item">
+                      <div class="stat-number">${avgTokensPerSec}</div>
+                      <div class="stat-name">Avg Tokens/sec</div>
+                    </div>
+                    <div class="stat-item">
+                      <div class="stat-number">${avgTime}ms</div>
+                      <div class="stat-name">Avg Time</div>
+                    </div>
+                  </div>
+                </div>
+              ` : ''}
+
+              <!-- Available Models -->
+              <div class="available-models">
+                <h4>Available Models (${models.length})</h4>
+                <div class="model-list">
+                  ${models.slice(0, 10).map(model => `
+                    <div class="model-item ${model.id === currentModel ? 'current' : ''}">
+                      <div class="model-name">${model.id || model.name || 'Unknown'}</div>
+                      ${model.vram ? `<div class="model-size">VRAM: ${model.vram}</div>` : ''}
+                      ${model.id === currentModel ? '<span class="model-badge">Current</span>' : ''}
+                      ${!isLoading && model.id !== currentModel ? `
+                        <button class="model-switch-btn" data-model-id="${model.id}">Load</button>
+                      ` : ''}
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+
+              <!-- Error Display -->
+              ${initError ? `
+                <div class="error-message">
+                  <strong>Error:</strong> ${initError}
+                </div>
+              ` : ''}
+            </div>
+        `;
+      }
+
+      render() {
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              background: rgba(255,255,255,0.03);
+              border-radius: 8px;
+              padding: 16px;
+              color: #ccc;
+              font-family: system-ui, -apple-system, sans-serif;
+            }
+
+            .model-switch-btn {
+              padding: 4px 12px;
+              background: rgba(100,150,255,0.2);
+              border: 1px solid #6496ff;
+              color: #6496ff;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 0.85em;
+            }
+
+            .model-switch-btn:hover {
+              opacity: 0.8;
+            }
+          </style>
+
+          <div class="widget-content">
+            ${this.renderPanel()}
+          </div>
+        `;
+
+        // Wire up model switch buttons
+        this.shadowRoot.querySelectorAll('.model-switch-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const modelId = btn.dataset.modelId;
+            await switchModel(modelId);
+            this.render();
+          });
+        });
+      }
+    }
+
+    // Define custom element
+    if (!customElements.get('local-llm-widget')) {
+      customElements.define('local-llm-widget', LocalLLMWidget);
+    }
+
+    // Widget metadata
+    const widget = {
+      element: 'local-llm-widget',
+      displayName: 'Local LLM (WebLLM)',
+      icon: '⌨',
+      category: 'ai',
+      order: 35,
+      updateInterval: 5000 // Base interval, widget will self-adjust
+    };
+
+    return {
+      init,
+      api: {
+        chat: trackedChat,
+        complete,
+        switchModel,
+        getAvailableModels,
+        getWebLLMModels,
+        getStatus,
+        getRuntimeInfo,
+        unload,
+        isReady: () => isReady,
+        isLoading: () => isLoading,
+        getProgress: () => loadProgress,
+        getCurrentModel: () => currentModel,
+        getError: () => initError,
+        checkWebGPU,
+        getInferenceStats: () => ({ ...inferenceStats })
+      },
+      widget
     };
   }
 };

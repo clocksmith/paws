@@ -143,6 +143,122 @@ Wraps an existing API client to add streaming support.
 | `stream:aborted` | `{ partialText }` | User canceled stream |
 | `stream:error` | `{ error }` | Stream failed |
 
+## Web Component Widget
+
+The module includes a `StreamingHandlerWidget` custom element for real-time monitoring of streaming operations:
+
+```javascript
+class StreamingHandlerWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+    // Auto-refresh every second for live streaming updates
+    this._interval = setInterval(() => this.render(), 1000);
+  }
+
+  disconnectedCallback() {
+    if (this._interval) {
+      clearInterval(this._interval);
+      this._interval = null;
+    }
+  }
+
+  getStatus() {
+    return {
+      state: activeStream ? 'active' : (_streamCount > 0 ? 'idle' : 'idle'),
+      primaryMetric: `${_streamCount} streams`,
+      secondaryMetric: activeStream ? 'Streaming' : 'Idle',
+      lastActivity: _lastStreamTime,
+      message: activeStream ? `${currentChunks.length} chunks` : `${_completedCount} completed`
+    };
+  }
+
+  render() {
+    this.shadowRoot.innerHTML = `
+      <style>
+        /* Shadow DOM styling for widget */
+        :host { display: block; font-family: system-ui; }
+        .widget-content { padding: 16px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .stat-card { padding: 12px; background: rgba(100,150,255,0.1); border-radius: 4px; }
+        .abort-stream-btn {
+          width: 100%;
+          padding: 10px;
+          background: #f00;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+      </style>
+      <div class="widget-content">
+        <h3>⏃ Streaming Handler</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div>Total Streams</div>
+            <div>${_streamCount}</div>
+          </div>
+          <div class="stat-card">
+            <div>Status</div>
+            <div>${activeStream ? '🟢 Active' : 'Idle'}</div>
+          </div>
+          <div class="stat-card">
+            <div>Completed</div>
+            <div>${_completedCount}</div>
+          </div>
+          <div class="stat-card">
+            <div>Aborted</div>
+            <div>${_abortedCount}</div>
+          </div>
+        </div>
+        ${activeStream ? `
+          <div style="margin-top: 16px;">
+            <strong>Active Stream</strong>
+            <div>${currentChunks.length} chunks received</div>
+            <div>Total processed: ${_totalChunksProcessed}</div>
+            <button class="abort-stream-btn">⏹️ Abort Stream</button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+
+    // Wire up abort button
+    const abortBtn = this.shadowRoot.querySelector('.abort-stream-btn');
+    if (abortBtn) {
+      abortBtn.addEventListener('click', () => {
+        abortStream();
+        this.render(); // Refresh immediately
+      });
+    }
+  }
+}
+
+// Register custom element
+if (!customElements.get('streaming-handler-widget')) {
+  customElements.define('streaming-handler-widget', StreamingHandlerWidget);
+}
+
+const widget = {
+  element: 'streaming-handler-widget',
+  displayName: 'Streaming Handler',
+  icon: '⏃',
+  category: 'service',
+  updateInterval: 1000
+};
+```
+
+**Widget Features:**
+- Real-time stream status monitoring with 1-second refresh
+- Live chunk count during active streaming
+- Statistics for total streams, completed, and aborted operations
+- Interactive abort button that appears only during active streaming
+- Visual indicators for stream state (active/idle)
+- Shadow DOM encapsulation for style isolation
+
 ## Dependencies
 
 - **Utils**: Logging and error handling

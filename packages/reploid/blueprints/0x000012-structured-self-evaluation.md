@@ -2,6 +2,9 @@
 
 **Objective:** To propose a framework for a structured, LLM-driven self-evaluation tool and its integration into the agent's cognitive cycle.
 
+**Target Upgrade:** EVAL (`tool-evaluator.js`)
+
+
 **Prerequisites:** `0x00000A`
 
 **Affected Artifacts:** `/upgrades/tool-evaluator.js`, `/modules/data-tools-static.json`, `/modules/agent-cycle.js`
@@ -21,6 +24,87 @@ The solution is to create a dedicated `run_self_evaluation` tool. This tool will
     -   `prompt`: A string containing a "meta-prompt" template. This prompt will instruct an LLM to act as an objective evaluator, taking the provided content, criteria, and context, and returning a structured JSON response with a score and a report (e.g., `{"evaluation_score": 0.9, "evaluation_report": "The plan is well-aligned..."}`).
 
 2.  **`ToolRunner` Implementation:** The `ToolRunner` will need to be upgraded to handle this new type of packaged tool. When `run_self_evaluation` is called, it will read the `prompt` from the package, populate it with the arguments, and make its own call to the `ApiClient` to get the evaluation.
+
+**Widget Interface (Web Component):**
+
+The module exposes a `ToolEvaluatorWidget` custom element for dashboard visualization:
+
+```javascript
+class ToolEvaluatorWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    // Get EventBus reference for real-time updates
+    this._eventBus = window.DIContainer?.resolve('EventBus');
+    this.render();
+
+    // Subscribe to EventBus evaluation events
+    if (this._eventBus) {
+      this._updateHandler = () => this.render();
+      this._eventBus.on('tool-evaluator:evaluation-executed', this._updateHandler);
+      this._eventBus.on('tool-evaluator:result-recorded', this._updateHandler);
+    }
+
+    // Auto-refresh every 3 seconds
+    this._interval = setInterval(() => this.render(), this.updateInterval || 3000);
+  }
+
+  disconnectedCallback() {
+    // Clean up EventBus listeners
+    if (this._eventBus && this._updateHandler) {
+      this._eventBus.off('tool-evaluator:evaluation-executed', this._updateHandler);
+      this._eventBus.off('tool-evaluator:result-recorded', this._updateHandler);
+    }
+    if (this._interval) clearInterval(this._interval);
+  }
+
+  set moduleApi(api) {
+    this._api = api;
+    this.render();
+  }
+
+  getStatus() {
+    const stats = this._api.getStats();
+    return {
+      state: stats.totalEvaluations > 0 ? 'active' : 'idle',
+      primaryMetric: `${stats.totalEvaluations} evaluations`,
+      secondaryMetric: stats.averageScore > 0 ? `Avg: ${stats.averageScore.toFixed(2)}` : 'No scores yet',
+      lastActivity: stats.lastEvaluation?.timestamp
+    };
+  }
+
+  render() {
+    const stats = this._api.getStats();
+    const recentHistory = this._api.getHistory(5);
+
+    this.shadowRoot.innerHTML = `
+      <style>/* Shadow DOM styles */</style>
+      <div class="widget-content">
+        <!-- Statistics grid (total evaluations, average score, success rate) -->
+        <!-- Latest evaluation display with score and report -->
+        <!-- Evaluation history (last 5 evaluations with color-coded scores) -->
+        <!-- Score distribution chart -->
+      </div>
+    `;
+  }
+}
+
+customElements.define('tool-evaluator-widget', ToolEvaluatorWidget);
+```
+
+**Key Widget Features:**
+- **Real-time EventBus Integration**: Subscribes to evaluation events for instant UI updates when evaluations complete
+- **Statistics Grid**: Displays total evaluations, average score, and success rate (scores ≥0.8)
+- **Latest Evaluation Display**: Shows most recent evaluation with score, report, and timestamp
+- **Evaluation History**: Lists last 5 evaluations with color-coded scores (green ≥0.8, orange ≥0.6, red <0.6)
+- **Score Color Coding**: Visual feedback on evaluation quality using traffic light colors
+- **Activity Tracking**: Displays formatted timestamps for all evaluations
+- **Auto-refresh**: Updates every 3 seconds to reflect current evaluation state
+
+The widget provides complete visibility into the self-evaluation system's performance, essential for monitoring meta-cognitive feedback quality and tuning evaluation criteria.
 
 ### 3. The Implementation Pathway
 

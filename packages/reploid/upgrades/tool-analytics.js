@@ -2,6 +2,7 @@
  * @fileoverview Tool Usage Analytics for REPLOID
  * Tracks tool execution patterns, performance, and errors for optimization.
  *
+ * @blueprint 0x00003E - Summarizes tool usage analytics.
  * @module ToolAnalytics
  * @version 1.0.0
  * @category analytics
@@ -237,6 +238,199 @@ const ToolAnalytics = {
       logger.info('[ToolAnalytics] Analytics reset');
     };
 
+    // Web Component Widget
+    class ToolAnalyticsWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+
+      connectedCallback() {
+        this.render();
+        // Update every 5 seconds for analytics
+        this._updateInterval = setInterval(() => this.render(), 5000);
+      }
+
+      disconnectedCallback() {
+        if (this._updateInterval) {
+          clearInterval(this._updateInterval);
+          this._updateInterval = null;
+        }
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      getStatus() {
+        const totalTools = toolMetrics.size;
+        const totalCalls = Array.from(toolMetrics.values()).reduce((sum, m) => sum + m.totalCalls, 0);
+        const totalErrors = Array.from(toolMetrics.values()).reduce((sum, m) => sum + m.failedCalls, 0);
+
+        return {
+          state: totalCalls > 0 ? 'active' : 'idle',
+          primaryMetric: `${totalTools} tools`,
+          secondaryMetric: `${totalCalls} calls`,
+          lastActivity: toolMetrics.size > 0 ? Math.max(...Array.from(toolMetrics.values()).map(m => m.lastUsed || 0)) : null,
+          message: totalErrors > 0 ? `${totalErrors} errors` : 'All OK'
+        };
+      }
+
+      render() {
+        const analytics = getAllAnalytics();
+        const sessionMins = (analytics.sessionDuration / 1000 / 60).toFixed(1);
+        const topTools = getTopTools(5);
+        const slowestTools = getSlowestTools(5);
+        const problematicTools = getProblematicTools(5);
+
+        const totalCalls = analytics.tools.reduce((sum, t) => sum + t.totalCalls, 0);
+        const totalSuccess = analytics.tools.reduce((sum, t) => sum + t.successfulCalls, 0);
+        const totalErrors = analytics.tools.reduce((sum, t) => sum + t.failedCalls, 0);
+        const overallSuccessRate = totalCalls > 0 ? ((totalSuccess / totalCalls) * 100).toFixed(1) : '0.0';
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host { display: block; font-family: monospace; }
+            .widget-panel { padding: 12px; }
+            h3 { margin: 0 0 12px 0; font-size: 1.1em; color: #fff; }
+            .controls { display: flex; gap: 8px; margin-bottom: 12px; }
+            button { padding: 6px 12px; background: rgba(100,150,255,0.2); border: 1px solid rgba(100,150,255,0.4); border-radius: 4px; color: #fff; cursor: pointer; font-size: 0.9em; }
+            button:hover { background: rgba(100,150,255,0.3); }
+          </style>
+
+          <div class="widget-panel">
+            <h3>☱ Tool Analytics</h3>
+
+            <div class="controls">
+              <button id="reset-btn">↻ Reset</button>
+              <button id="report-btn">⛿ Report</button>
+            </div>
+
+            <h3>Session Overview</h3>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px;">
+              <div style="padding: 12px; background: rgba(100,150,255,0.1); border-radius: 4px;">
+                <div style="font-size: 0.85em; color: #888;">Total Calls</div>
+                <div style="font-size: 1.3em; font-weight: bold;">${totalCalls}</div>
+              </div>
+              <div style="padding: 12px; background: rgba(0,200,100,0.1); border-radius: 4px;">
+                <div style="font-size: 0.85em; color: #888;">Success Rate</div>
+                <div style="font-size: 1.3em; font-weight: bold;">${overallSuccessRate}%</div>
+              </div>
+              <div style="padding: 12px; background: ${totalErrors > 0 ? 'rgba(255,0,0,0.1)' : 'rgba(255,255,255,0.05)'}; border-radius: 4px;">
+                <div style="font-size: 0.85em; color: #888;">Errors</div>
+                <div style="font-size: 1.3em; font-weight: bold; color: ${totalErrors > 0 ? '#ff6b6b' : 'inherit'};">${totalErrors}</div>
+              </div>
+            </div>
+
+            <h3 style="margin-top: 20px;">☄ Top 5 Most Used Tools</h3>
+            <div style="margin-top: 12px;">
+              ${topTools.length > 0 ? topTools.map((tool, idx) => {
+                const successRate = parseFloat(tool.successRate);
+                const successColor = successRate >= 90 ? '#0c0' : successRate >= 70 ? '#ffa500' : '#ff6b6b';
+                return `
+                  <div style="padding: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="color: #666; font-size: 0.85em;">#${idx + 1}</span>
+                        <strong>${tool.name}</strong>
+                      </div>
+                      <span style="font-size: 0.85em; color: #888;">${tool.totalCalls} calls</span>
+                    </div>
+                    <div style="display: flex; gap: 12px; font-size: 0.85em;">
+                      <span style="color: ${successColor};">Success: ${tool.successRate}%</span>
+                      <span style="color: #aaa;">Avg: ${tool.avgDurationMs}ms</span>
+                    </div>
+                  </div>
+                `;
+              }).join('') : '<div style="color: #888; font-style: italic;">No tools used yet</div>'}
+            </div>
+
+            <h3 style="margin-top: 20px;">⌇ Top 5 Slowest Tools</h3>
+            <div style="margin-top: 12px;">
+              ${slowestTools.length > 0 ? slowestTools.map((tool, idx) => {
+                const avgDuration = parseFloat(tool.avgDurationMs);
+                const durationColor = avgDuration > 1000 ? '#ff6b6b' : avgDuration > 500 ? '#ffa500' : '#0c0';
+                return `
+                  <div style="padding: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <div style="flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                          <span style="color: #666; font-size: 0.85em;">#${idx + 1}</span>
+                          <strong>${tool.name}</strong>
+                        </div>
+                      </div>
+                      <div style="text-align: right;">
+                        <div style="font-weight: bold; color: ${durationColor};">${tool.avgDurationMs}ms</div>
+                        <div style="font-size: 0.8em; color: #666;">max: ${tool.maxDuration}ms</div>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('') : '<div style="color: #888; font-style: italic;">No data available</div>'}
+            </div>
+
+            ${problematicTools.length > 0 ? `
+              <h3 style="margin-top: 20px;">⚠️ Tools with Errors</h3>
+              <div style="margin-top: 12px;">
+                ${problematicTools.map(tool => {
+                  const recentError = tool.errors[tool.errors.length - 1];
+                  const errorMsg = recentError ? recentError.message : 'No error details';
+                  return `
+                    <div style="padding: 8px; background: rgba(255,0,0,0.1); border-left: 3px solid #ff6b6b; border-radius: 4px; margin-bottom: 6px;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <strong style="color: #ff6b6b;">${tool.name}</strong>
+                        <span style="font-size: 0.85em; color: #ff6b6b;">${tool.errorRate}% error rate</span>
+                      </div>
+                      <div style="font-size: 0.85em; color: #888;">
+                        ${tool.failedCalls} failures • Last: ${errorMsg.substring(0, 60)}${errorMsg.length > 60 ? '...' : ''}
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            ` : ''}
+
+            <div style="margin-top: 16px; padding: 12px; background: rgba(100,150,255,0.1); border-left: 3px solid #6496ff; border-radius: 4px;">
+              <strong>☱ Session Info</strong>
+              <div style="margin-top: 6px; color: #aaa; font-size: 0.9em;">
+                Duration: ${sessionMins} minutes<br>
+                Tools tracked: ${analytics.totalTools}<br>
+                Total executions: ${totalCalls}
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Attach event listeners
+        this.shadowRoot.getElementById('reset-btn')?.addEventListener('click', () => {
+          reset();
+          logger.info('[ToolAnalytics] Widget: Analytics reset');
+          this.render();
+        });
+
+        this.shadowRoot.getElementById('report-btn')?.addEventListener('click', () => {
+          const report = generateReport();
+          console.log(report);
+          logger.info('[ToolAnalytics] Widget: Report generated (see console)');
+        });
+      }
+    }
+
+    // Register custom element
+    const elementName = 'tool-analytics-widget';
+    if (!customElements.get(elementName)) {
+      customElements.define(elementName, ToolAnalyticsWidget);
+    }
+
+    const widget = {
+      element: elementName,
+      displayName: 'Tool Analytics',
+      icon: '☱',
+      category: 'analytics',
+      updateInterval: 5000
+    };
+
     return {
       init,
       api: {
@@ -247,7 +441,8 @@ const ToolAnalytics = {
         getProblematicTools,
         generateReport,
         reset
-      }
+      },
+      widget
     };
   }
 };

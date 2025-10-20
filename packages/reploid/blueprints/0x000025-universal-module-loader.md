@@ -40,11 +40,115 @@ The loader is the choke point between configuration intent and executable code. 
   ```
   - Resolves dependency graph (including config, VFS, logger/Errors from Utils).
   - Instantiates once, caching the instance for future calls.
-  - Legacy modules route through `instantiateLegacyModule` with curated dependency bundles so they cannot “reach around” the container.
+  - Legacy modules route through `instantiateLegacyModule` with curated dependency bundles so they cannot "reach around" the container.
 
 - **Lifecycle Hooks**
   - Maintains `loadOrder` for reverse iteration during teardown.
   - Offers `unloadModule` and `reset` to clear caches when hot-reloading or switching personas.
+
+- **Web Component Dashboard Widget**
+  The module includes a `ModuleLoaderWidget` custom element for real-time visualization:
+  ```javascript
+  class ModuleLoaderWidget extends HTMLElement {
+    constructor() {
+      super();
+      this.attachShadow({ mode: 'open' });
+    }
+
+    set moduleApi(api) {
+      this._api = api;
+      this.render();
+    }
+
+    connectedCallback() {
+      this.render();
+    }
+
+    disconnectedCallback() {
+      // No cleanup needed
+    }
+
+    getStatus() {
+      const totalModules = ModuleLoader.modules.size;
+      const instantiatedCount = Array.from(ModuleLoader.modules.values())
+        .filter(m => m.instance !== null).length;
+      const legacyCount = Array.from(ModuleLoader.modules.values())
+        .filter(m => m.isLegacy).length;
+
+      return {
+        state: totalModules > 0 ? 'active' : 'disabled',
+        primaryMetric: `${totalModules} module${totalModules !== 1 ? 's' : ''}`,
+        secondaryMetric: `${instantiatedCount} loaded`,
+        lastActivity: totalModules > 0 ? Date.now() : null,
+        message: legacyCount > 0 ? `${legacyCount} legacy` : null
+      };
+    }
+
+    getControls() {
+      return [
+        {
+          id: 'list-modules',
+          label: '☷ List Modules',
+          action: () => {
+            const modules = ModuleLoader.getLoadedModules();
+            console.log('Loaded Modules:', modules);
+            console.table(modules.map(id => {
+              const entry = ModuleLoader.modules.get(id);
+              return {
+                ID: id,
+                Type: entry.isLegacy ? 'Legacy' : 'Modern',
+                Instantiated: entry.instance ? 'Yes' : 'No',
+                Path: entry.vfsPath
+              };
+            }));
+            return { success: true, message: `${modules.length} modules (check console)` };
+          }
+        },
+        {
+          id: 'show-load-order',
+          label: '⚎ Show Load Order',
+          action: () => {
+            console.log('Module Load Order:', ModuleLoader.loadOrder);
+            return { success: true, message: `${ModuleLoader.loadOrder.length} modules in order` };
+          }
+        }
+      ];
+    }
+
+    render() {
+      // Calculates module statistics
+      const totalModules = ModuleLoader.modules.size;
+      const instantiatedCount = Array.from(ModuleLoader.modules.values())
+        .filter(m => m.instance !== null).length;
+      const legacyCount = Array.from(ModuleLoader.modules.values())
+        .filter(m => m.isLegacy).length;
+      const modernCount = totalModules - legacyCount;
+
+      // Renders comprehensive module dashboard with:
+      // - Module summary (total, instantiated, pending)
+      // - Module types breakdown (modern vs legacy)
+      // - Load order (first 10 modules with status icons)
+      // - Dependency graph (top 5 modules with dependencies)
+      // - Shadow DOM styles for visual presentation
+      this.shadowRoot.innerHTML = `<style>/* ... */</style><div>/* ... */</div>`;
+    }
+  }
+
+  if (!customElements.get('module-loader-widget')) {
+    customElements.define('module-loader-widget', ModuleLoaderWidget);
+  }
+  ```
+
+  **Widget Features:**
+  - **Module Summary**: Total modules, instantiated count, pending count
+  - **Module Types**: Breakdown of modern (metadata/factory) vs legacy (function) formats
+  - **Load Order**: Shows first 10 modules in load sequence with status indicators (✓ = loaded, ⏳ = pending) and type indicators (⛝ = modern, ⚒ = legacy)
+  - **Dependency Graph**: Displays top 5 modules with their dependency chains
+  - **Interactive Controls**:
+    - "☷ List Modules" - Logs module table to console with ID, type, instantiation status, and path
+    - "⚎ Show Load Order" - Logs complete load order array to console
+  - **Real-time Status**: Dashboard status shows total modules, loaded count, and legacy count
+  - **Shadow DOM Styling**: Encapsulated styles with color-coded indicators (#0ff for active, #0f0 for success, #ff0 for legacy/pending)
 
 ### 3. Implementation Pathway
 1. **Normalize Modules**
@@ -60,8 +164,20 @@ The loader is the choke point between configuration intent and executable code. 
 4. **Handle Failures**
    - Wrap load/instantiate in try/catch, propagate errors with descriptive context.
    - Bubble load errors to the boot UI so users can retry or switch configurations.
-5. **Expose Diagnostics**
+5. **Implement Web Component Widget**
+   - Create `ModuleLoaderWidget` class extending `HTMLElement`
+   - Implement Shadow DOM in constructor
+   - Implement `getStatus()` to return loader state (total modules, loaded count, legacy count)
+   - Implement `render()` to display module list with metadata, load order, and status
+   - Add controls for listing modules and inspecting statistics
+   - Register custom element as `boot-module-loader-widget`
+6. **Return Widget in Factory**
+   - Return standardized object with:
+     - `api`: ModuleLoader API (init, loadModule, getModule, etc.)
+     - `widget`: Widget configuration (element, displayName, icon, category)
+7. **Expose Diagnostics**
    - Provide `ModuleLoader.getStatus()` to report active modules, unresolved deps, and legacy compatibility usage.
+   - Widget automatically displays this information in real-time
 
 ### 4. Operational Safeguards & Quality Gates
 - **Static Analysis**: before committing a new module, ensure it declares the right dependencies and avoids direct globals.

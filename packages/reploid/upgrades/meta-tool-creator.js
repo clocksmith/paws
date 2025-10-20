@@ -1,3 +1,4 @@
+// @blueprint 0x000016 - Meta-patterns and principles for designing new tools.
 // Meta-Tool Creation Patterns Module
 // Provides utilities for creating, validating, and managing dynamic tools
 
@@ -416,14 +417,241 @@ const MetaToolCreator = {
 
     logger.info("[MTCP] Meta-Tool Creator Module initialized successfully");
 
+    // Track tool creation stats for widget
+    let toolCreationStats = { totalCreated: 0, totalValidated: 0, totalTested: 0, lastCreated: null };
+
+    // Wrap createDynamicTool to track stats
+    const originalCreateDynamicTool = createDynamicTool;
+    const trackedCreateDynamicTool = async (name, description, inputSchema, implementation, metadata = {}) => {
+      const result = await originalCreateDynamicTool(name, description, inputSchema, implementation, metadata);
+      toolCreationStats.totalCreated++;
+      toolCreationStats.lastCreated = { name, timestamp: Date.now() };
+      return result;
+    };
+
+    // Web Component Widget
+    class MetaToolCreatorWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      connectedCallback() {
+        this.render();
+      }
+
+      disconnectedCallback() {
+        // No cleanup needed
+      }
+
+      getStatus() {
+        return {
+          state: toolCreationStats.totalCreated > 0 ? 'idle' : 'disabled',
+          primaryMetric: `${toolCreationStats.totalCreated} tools created`,
+          secondaryMetric: `${Object.keys(TOOL_TEMPLATES).length} templates`,
+          lastActivity: toolCreationStats.lastCreated?.timestamp || null,
+          message: null
+        };
+      }
+
+      getControls() {
+        return [
+          {
+            id: 'analyze-patterns',
+            label: '⌕ Analyze Patterns',
+            action: async () => {
+              const analysis = await analyzeToolPatterns();
+              console.log('[MetaToolCreator] Pattern analysis:', analysis);
+              logger.info('[MetaToolCreator] Pattern analysis complete');
+              return { success: true, message: 'Pattern analysis complete (check console)' };
+            }
+          }
+        ];
+      }
+
+      render() {
+        const templateList = Object.entries(TOOL_TEMPLATES);
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              font-family: monospace;
+              font-size: 12px;
+            }
+            .meta-tool-panel {
+              padding: 12px;
+              color: #fff;
+            }
+            h4 {
+              margin: 0 0 12px 0;
+              font-size: 1.1em;
+              color: #0ff;
+            }
+            .stats-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr 1fr;
+              gap: 10px;
+              margin-bottom: 20px;
+            }
+            .stat-card {
+              padding: 10px;
+              border-radius: 5px;
+            }
+            .stat-card.created {
+              background: rgba(0,255,255,0.1);
+            }
+            .stat-card.validated {
+              background: rgba(76,175,80,0.1);
+            }
+            .stat-card.tested {
+              background: rgba(156,39,176,0.1);
+            }
+            .stat-label {
+              color: #888;
+              font-size: 12px;
+            }
+            .stat-value {
+              font-size: 24px;
+              font-weight: bold;
+            }
+            .stat-value.cyan {
+              color: #0ff;
+            }
+            .stat-value.green {
+              color: #4caf50;
+            }
+            .stat-value.purple {
+              color: #9c27b0;
+            }
+            .last-created {
+              background: rgba(0,255,255,0.1);
+              padding: 12px;
+              border-radius: 5px;
+              margin-bottom: 20px;
+            }
+            .last-created-title {
+              font-weight: bold;
+              margin-bottom: 6px;
+              color: #0ff;
+            }
+            .last-created-name {
+              font-size: 14px;
+              color: #ccc;
+            }
+            .last-created-time {
+              font-size: 11px;
+              color: #666;
+              margin-top: 4px;
+            }
+            .templates-section {
+              margin-top: 20px;
+            }
+            .template-list {
+              max-height: 300px;
+              overflow-y: auto;
+            }
+            .template-item {
+              padding: 12px;
+              background: rgba(255,255,255,0.03);
+              margin-bottom: 10px;
+              border-radius: 5px;
+              border-left: 3px solid #0ff;
+            }
+            .template-name {
+              font-weight: bold;
+              margin-bottom: 6px;
+              color: #ccc;
+            }
+            .template-pattern {
+              font-size: 12px;
+              color: #888;
+              margin-bottom: 8px;
+            }
+            .template-pattern code {
+              background: rgba(0,0,0,0.3);
+              padding: 2px 6px;
+              border-radius: 3px;
+            }
+            .template-required {
+              font-size: 11px;
+              color: #666;
+            }
+          </style>
+          <div class="meta-tool-panel">
+            <h4>⚒️ Meta-Tool Creator</h4>
+
+            <div class="stats-grid">
+              <div class="stat-card created">
+                <div class="stat-label">Created</div>
+                <div class="stat-value cyan">${toolCreationStats.totalCreated}</div>
+              </div>
+              <div class="stat-card validated">
+                <div class="stat-label">Validated</div>
+                <div class="stat-value green">${toolCreationStats.totalValidated}</div>
+              </div>
+              <div class="stat-card tested">
+                <div class="stat-label">Tested</div>
+                <div class="stat-value purple">${toolCreationStats.totalTested}</div>
+              </div>
+            </div>
+
+            ${toolCreationStats.lastCreated ? `
+              <div class="last-created">
+                <div class="last-created-title">Last Created Tool</div>
+                <div class="last-created-name">${toolCreationStats.lastCreated.name}</div>
+                <div class="last-created-time">
+                  ${new Date(toolCreationStats.lastCreated.timestamp).toLocaleString()}
+                </div>
+              </div>
+            ` : ''}
+
+            <div class="templates-section">
+              <h4>Tool Templates (${templateList.length})</h4>
+              <div class="template-list">
+                ${templateList.map(([name, template]) => `
+                  <div class="template-item">
+                    <div class="template-name">${name}</div>
+                    <div class="template-pattern">
+                      Pattern: <code>${template.name_pattern}</code>
+                    </div>
+                    <div class="template-required">
+                      Required: ${template.schema_template.required.join(', ')}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // Register custom element
+    const elementName = 'meta-tool-creator-widget';
+    if (!customElements.get(elementName)) {
+      customElements.define(elementName, MetaToolCreatorWidget);
+    }
+
     return {
       validateToolDefinition,
-      createDynamicTool,
+      createDynamicTool: trackedCreateDynamicTool,
       generateToolFromTemplate,
       testToolImplementation,
       analyzeToolPatterns,
       suggestToolImprovements,
-      TOOL_TEMPLATES
+      TOOL_TEMPLATES,
+      widget: {
+        element: elementName,
+        displayName: 'Meta-Tool Creator',
+        icon: '⚒️',
+        category: 'rsi'
+      }
     };
   }
 };

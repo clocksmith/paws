@@ -2,7 +2,7 @@
 
 **Objective:** To teach the agent how to document architectural patterns and create new blueprints that enable future capabilities.
 
-**Target Upgrade:** Meta-knowledge for knowledge creation
+**Target Upgrade:** BLPR (`blueprint-creator.js`)
 
 **Prerequisites:** TLWR upgrade, understanding of existing blueprints
 
@@ -205,3 +205,92 @@ A well-written blueprint should enable:
 - Teaching other agents
 
 Remember: Blueprints are the agent's way of teaching itself. They transform tacit knowledge into explicit instructions, enabling capabilities to be rebuilt, shared, and evolved. The ability to create blueprints is the ability to create knowledge itself.
+
+### 11. Web Component Widget
+
+The blueprint creator module includes a Web Component widget for tracking blueprint creation activity:
+
+```javascript
+class BlueprintCreatorWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+    this._interval = setInterval(() => this.render(), 3000);
+  }
+
+  disconnectedCallback() {
+    if (this._interval) {
+      clearInterval(this._interval);
+      this._interval = null;
+    }
+  }
+
+  getStatus() {
+    const hasRecentCreation = creationStats.lastCreated &&
+      (Date.now() - creationStats.lastCreated.timestamp < 60000);
+
+    return {
+      state: hasRecentCreation ? 'active' : creationStats.totalCreated > 0 ? 'idle' : 'disabled',
+      primaryMetric: creationStats.totalCreated > 0
+        ? `${creationStats.totalCreated} created`
+        : 'No blueprints',
+      secondaryMetric: `${Object.keys(creationStats.byCategory).length} categories`,
+      lastActivity: creationStats.lastCreated ? creationStats.lastCreated.timestamp : null,
+      message: hasRecentCreation ? `Created: ${creationStats.lastCreated.id}` : null
+    };
+  }
+
+  getControls() {
+    return [
+      {
+        id: 'view-stats',
+        label: '📊 View Stats',
+        action: () => {
+          // Display creation statistics
+          return { success: true, message: 'Stats displayed' };
+        }
+      }
+    ];
+  }
+
+  render() {
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+          font-family: monospace;
+          font-size: 12px;
+        }
+        /* Additional styles for blueprint creation stats */
+      </style>
+      <div class="blueprint-creator-panel">
+        <h4>📘 Blueprint Creator</h4>
+        <!-- Blueprint creation stats and recent activity -->
+      </div>
+    `;
+  }
+}
+
+// Register custom element
+const elementName = 'blueprint-creator-widget';
+if (!customElements.get(elementName)) {
+  customElements.define(elementName, BlueprintCreatorWidget);
+}
+
+const widget = {
+  element: elementName,
+  displayName: 'Blueprint Creator',
+  icon: '📘',
+  category: 'rsi'
+};
+```
+
+**Key features:**
+- Tracks blueprint creation statistics via closure access to `creationStats`
+- Auto-refreshes every 3 seconds to show recent activity
+- Displays total blueprints created and categories used
+- Shadow DOM encapsulation for clean styling

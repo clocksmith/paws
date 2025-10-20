@@ -3,6 +3,7 @@
  * Core utilities, error classes, and helper functions used across the system.
  * This is a pure module with no dependencies - safe for any module to import.
  *
+ * @blueprint 0x000003 - Explains the central utils.js module for shared functions and errors.
  * @module Utils
  * @version 1.0.0
  * @category core
@@ -18,6 +19,16 @@ const Utils = {
   },
 
   factory: (deps = {}) => {
+    // Widget tracking state
+    const _loggerStats = {
+      debug: 0,
+      info: 0,
+      warn: 0,
+      error: 0
+    };
+    const _errorStats = {};
+    const _recentErrors = [];
+
     /**
      * Base error class for all REPLOID application errors.
      * Extends Error with additional details object for structured error data.
@@ -40,6 +51,14 @@ const Utils = {
         if (details !== undefined) {
           this.details = details;
         }
+        // Track error creation
+        _errorStats[this.constructor.name] = (_errorStats[this.constructor.name] || 0) + 1;
+        _recentErrors.push({
+          type: this.constructor.name,
+          message,
+          timestamp: Date.now()
+        });
+        if (_recentErrors.length > 50) _recentErrors.shift();
       }
     }
 
@@ -115,6 +134,11 @@ const Utils = {
        * @param {Object} [details={}] - Additional structured data
        */
       logEvent: (level, message, details = {}) => {
+        // Track logger usage
+        if (_loggerStats[level] !== undefined) {
+          _loggerStats[level]++;
+        }
+
         const logObject = {
           timestamp: new Date().toISOString(),
           level: level.toUpperCase(),
@@ -352,7 +376,7 @@ const Utils = {
      * @param {number} [duration=2000] - Duration in milliseconds
      *
      * @example
-     * showButtonSuccess(exportBtn, '💾 Export Report', '✓ Exported!');
+     * showButtonSuccess(exportBtn, '⛃ Export Report', '✓ Exported!');
      * // Button shows "✓ Exported!" for 2 seconds, then restores original text
      */
     const showButtonSuccess = (button, originalText, successText = '✓', duration = 2000) => {
@@ -397,7 +421,7 @@ const Utils = {
     };
 
     // Public API
-    return {
+    const api = {
       Errors,
       logger,
       kabobToCamel,
@@ -410,6 +434,295 @@ const Utils = {
       exportAsMarkdown,
       generateId
     };
+
+    // Web Component widget
+    class UtilsWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      connectedCallback() {
+        this.render();
+      }
+
+      disconnectedCallback() {
+        // No cleanup needed
+      }
+
+      getStatus() {
+        const totalLogs = _loggerStats.debug + _loggerStats.info + _loggerStats.warn + _loggerStats.error;
+        const totalErrors = Object.values(_errorStats).reduce((a, b) => a + b, 0);
+        const utilities = ['logger', 'Errors', 'kabobToCamel', 'trunc', 'escapeHtml', 'sanitizeLlmJsonRespPure',
+                          'post', 'createSubscriptionTracker', 'showButtonSuccess', 'exportAsMarkdown', 'generateId'];
+
+        return {
+          state: totalLogs > 0 ? 'active' : 'idle',
+          primaryMetric: `${utilities.length} utilities`,
+          secondaryMetric: `${totalLogs} logs`,
+          lastActivity: totalLogs > 0 ? Date.now() : null,
+          message: `${totalErrors} errors created`
+        };
+      }
+
+      getControls() {
+        return [
+          {
+            id: 'reset-stats',
+            label: '↻ Reset Stats',
+            action: () => {
+              _loggerStats.debug = 0;
+              _loggerStats.info = 0;
+              _loggerStats.warn = 0;
+              _loggerStats.error = 0;
+              Object.keys(_errorStats).forEach(k => delete _errorStats[k]);
+              _recentErrors.length = 0;
+              this.render();
+              logger.info('[Utils] Widget statistics reset');
+            }
+          }
+        ];
+      }
+
+      render() {
+        const totalLogs = _loggerStats.debug + _loggerStats.info + _loggerStats.warn + _loggerStats.error;
+        const totalErrors = Object.values(_errorStats).reduce((a, b) => a + b, 0);
+
+        const utilities = [
+          { name: 'logger', desc: 'Structured logging with timestamps and levels' },
+          { name: 'Errors', desc: 'Error classes (ApplicationError, ApiError, ToolError, etc.)' },
+          { name: 'kabobToCamel', desc: 'Convert kebab-case to camelCase' },
+          { name: 'trunc', desc: 'Truncate strings with ellipsis' },
+          { name: 'escapeHtml', desc: 'Escape HTML for safe display' },
+          { name: 'sanitizeLlmJsonRespPure', desc: 'Extract JSON from LLM responses' },
+          { name: 'post', desc: 'HTTP POST helper with JSON handling' },
+          { name: 'createSubscriptionTracker', desc: 'EventBus subscription management' },
+          { name: 'showButtonSuccess', desc: 'Button success feedback animation' },
+          { name: 'exportAsMarkdown', desc: 'Export content as .md file' },
+          { name: 'generateId', desc: 'Generate unique IDs' }
+        ];
+
+        const recentErrorsHtml = _recentErrors.slice(-10).reverse().map(err => {
+          const timeAgo = Math.floor((Date.now() - err.timestamp) / 1000);
+          return `
+            <div class="error-item">
+              <strong>${err.type}</strong>
+              <div class="error-msg">${err.message.substring(0, 80)}${err.message.length > 80 ? '...' : ''}</div>
+              <div class="error-time">${timeAgo}s ago</div>
+            </div>
+          `;
+        }).join('');
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              font-family: monospace;
+            }
+
+            .widget-panel {
+              padding: 12px;
+            }
+
+            h3 {
+              margin: 0 0 12px 0;
+              font-size: 1.1em;
+              color: #fff;
+            }
+
+            h3.section-header {
+              margin-top: 20px;
+            }
+
+            .stats-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 8px;
+              margin-top: 12px;
+            }
+
+            .stat-box {
+              padding: 8px;
+              border-radius: 4px;
+            }
+
+            .stat-box.debug { background: rgba(100,150,255,0.1); }
+            .stat-box.info { background: rgba(0,200,100,0.1); }
+            .stat-box.warn { background: rgba(255,165,0,0.1); }
+            .stat-box.error { background: rgba(255,0,0,0.1); }
+
+            .stat-label {
+              font-size: 0.85em;
+              color: #888;
+            }
+
+            .stat-value {
+              font-size: 1.2em;
+              font-weight: bold;
+            }
+
+            .error-stat {
+              padding: 6px;
+              background: rgba(255,255,255,0.05);
+              border-radius: 4px;
+              margin-bottom: 4px;
+              display: flex;
+              justify-content: space-between;
+            }
+
+            .error-stat-count {
+              color: #ff6b6b;
+              font-weight: bold;
+            }
+
+            .error-item {
+              padding: 6px;
+              background: rgba(255,0,0,0.1);
+              border-radius: 4px;
+              margin-bottom: 4px;
+              font-size: 0.85em;
+            }
+
+            .error-item strong {
+              color: #ff6b6b;
+            }
+
+            .error-msg {
+              color: #aaa;
+              margin-top: 2px;
+            }
+
+            .error-time {
+              color: #666;
+              font-size: 0.85em;
+              margin-top: 2px;
+            }
+
+            .empty-state {
+              color: #888;
+              font-style: italic;
+            }
+
+            .utility-item {
+              padding: 8px;
+              background: rgba(255,255,255,0.05);
+              border-radius: 4px;
+              margin-bottom: 8px;
+            }
+
+            .utility-item strong {
+              color: #fff;
+            }
+
+            .utility-desc {
+              color: #888;
+              font-size: 0.9em;
+              margin-top: 4px;
+            }
+
+            .info-box {
+              margin-top: 16px;
+              padding: 12px;
+              background: rgba(100,150,255,0.1);
+              border-left: 3px solid #6496ff;
+              border-radius: 4px;
+            }
+
+            .info-box strong {
+              color: #fff;
+            }
+
+            .info-text {
+              margin-top: 6px;
+              color: #aaa;
+              font-size: 0.9em;
+            }
+
+            .scrollable {
+              max-height: 300px;
+              overflow-y: auto;
+            }
+          </style>
+
+          <div class="widget-panel">
+            <h3>▤ Logger Statistics</h3>
+            <div class="stats-grid">
+              <div class="stat-box debug">
+                <div class="stat-label">DEBUG</div>
+                <div class="stat-value">${_loggerStats.debug}</div>
+              </div>
+              <div class="stat-box info">
+                <div class="stat-label">INFO</div>
+                <div class="stat-value">${_loggerStats.info}</div>
+              </div>
+              <div class="stat-box warn">
+                <div class="stat-label">WARN</div>
+                <div class="stat-value">${_loggerStats.warn}</div>
+              </div>
+              <div class="stat-box error">
+                <div class="stat-label">ERROR</div>
+                <div class="stat-value">${_loggerStats.error}</div>
+              </div>
+            </div>
+
+            <h3 class="section-header">△ Error Statistics</h3>
+            <div style="margin-top: 12px;">
+              ${Object.entries(_errorStats).map(([type, count]) => `
+                <div class="error-stat">
+                  <span>${type}</span>
+                  <span class="error-stat-count">${count}</span>
+                </div>
+              `).join('') || '<div class="empty-state">No errors created yet</div>'}
+            </div>
+
+            ${_recentErrors.length > 0 ? `
+              <h3 class="section-header">⏲ Recent Errors (Last 10)</h3>
+              <div class="scrollable" style="margin-top: 12px;">
+                ${recentErrorsHtml}
+              </div>
+            ` : ''}
+
+            <h3 class="section-header">⚒ Available Utilities (${utilities.length})</h3>
+            <div style="margin-top: 12px;">
+              ${utilities.map(util => `
+                <div class="utility-item">
+                  <strong>${util.name}</strong>
+                  <div class="utility-desc">${util.desc}</div>
+                </div>
+              `).join('')}
+            </div>
+
+            <div class="info-box">
+              <strong>▤ Total Activity</strong>
+              <div class="info-text">
+                ${totalLogs} total log calls • ${totalErrors} total errors created
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // Define custom element
+    if (!customElements.get('utils-widget')) {
+      customElements.define('utils-widget', UtilsWidget);
+    }
+
+    // Widget interface
+    const widget = {
+      element: 'utils-widget',
+      displayName: 'Utilities',
+      icon: '⚒',
+      category: 'core',
+      updateInterval: null
+    };
+
+    return { ...api, widget };
   }
 };
 

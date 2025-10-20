@@ -70,7 +70,7 @@ These RSI-critical upgrades lack blueprint documentation:
 | **HYBR** | hybrid-llm-provider.js | Hybrid Local/Cloud LLM Switching | **0x000024** | 🟡 High |
 | **PYOD** | pyodide-runtime.js | Python Execution via Pyodide | **0x000025** | 🟡 High |
 | **PYTH** | python-tool.js | Python Tool Interface | **0x000026** | 🟢 Medium |
-| **SWRM** | swarm-orchestrator.js | Multi-Agent Swarm Intelligence | **0x000027** | 🟡 High |
+| **WRTC** | webrtc-coordinator.js | Multi-Agent Swarm Intelligence | **0x000027** | 🟡 High |
 | **COST** | cost-tracker.js | API Cost Tracking & Budget Management | **0x000028** | 🟢 Medium |
 | **TDOC** | tool-doc-generator.js | Auto-Generated Tool Documentation | **0x000029** | 🟢 Medium |
 

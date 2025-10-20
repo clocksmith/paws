@@ -1,3 +1,4 @@
+// @blueprint 0x000044 - Implements WebRTC swarm transport.
 // WebRTC Swarm Module for REPLOID
 // Enables peer-to-peer communication between multiple agent instances
 
@@ -853,12 +854,85 @@ const WebRTCSwarm = {
       };
     };
 
+    // Track bandwidth and message statistics
+    const bandwidthStats = {
+      messagesSent: 0,
+      messagesReceived: 0,
+      bytesSent: 0,
+      bytesReceived: 0,
+      startTime: Date.now(),
+      recentActivity: []
+    };
+
+    // Wrap sendToPeer to track stats
+    const originalSendToPeer = sendToPeer;
+    const trackedSendToPeer = (remotePeerId, message) => {
+      const result = originalSendToPeer(remotePeerId, message);
+      if (result) {
+        const messageSize = JSON.stringify(message).length;
+        bandwidthStats.messagesSent++;
+        bandwidthStats.bytesSent += messageSize;
+
+        bandwidthStats.recentActivity.unshift({
+          type: 'sent',
+          peer: remotePeerId,
+          messageType: message.type,
+          size: messageSize,
+          timestamp: Date.now()
+        });
+
+        // Keep last 50 activities
+        if (bandwidthStats.recentActivity.length > 50) {
+          bandwidthStats.recentActivity = bandwidthStats.recentActivity.slice(0, 50);
+        }
+      }
+      return result;
+    };
+
+    // Track received messages
+    const trackReceivedMessage = (remotePeerId, message) => {
+      const messageSize = JSON.stringify(message).length;
+      bandwidthStats.messagesReceived++;
+      bandwidthStats.bytesReceived += messageSize;
+
+      bandwidthStats.recentActivity.unshift({
+        type: 'received',
+        peer: remotePeerId,
+        messageType: message.type,
+        size: messageSize,
+        timestamp: Date.now()
+      });
+
+      if (bandwidthStats.recentActivity.length > 50) {
+        bandwidthStats.recentActivity = bandwidthStats.recentActivity.slice(0, 50);
+      }
+    };
+
+    // Calculate current bandwidth
+    const getCurrentBandwidth = () => {
+      const now = Date.now();
+      const windowMs = 10000; // 10 second window
+      const recentActivity = bandwidthStats.recentActivity.filter(
+        a => now - a.timestamp < windowMs
+      );
+
+      const sent = recentActivity.filter(a => a.type === 'sent').reduce((sum, a) => sum + a.size, 0);
+      const received = recentActivity.filter(a => a.type === 'received').reduce((sum, a) => sum + a.size, 0);
+
+      // Convert to KB/s
+      const sentKBps = Math.round((sent / windowMs) * 1000 / 1024 * 10) / 10;
+      const receivedKBps = Math.round((received / windowMs) * 1000 / 1024 * 10) / 10;
+      const totalKBps = Math.round((sentKBps + receivedKBps) * 10) / 10;
+
+      return { sent: sentKBps, received: receivedKBps, total: totalKBps };
+    };
+
     // Public API
     return {
       api: {
         getPeerId: () => peerId,
         getStats,
-        sendToPeer,
+        sendToPeer: trackedSendToPeer,
         broadcast,
         delegateTask,
         shareKnowledge,
@@ -867,9 +941,296 @@ const WebRTCSwarm = {
         updateCapabilities,
         configureSignaling,
         getSignalingStatus,
-        disconnect
+        disconnect,
+        getBandwidthStats: () => ({ ...bandwidthStats }),
+        getCurrentBandwidth
+      },
+
+      // Web Component Widget (INSIDE factory closure to access state)
+      class WebRTCSwarmWidget extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' });
+        }
+
+        set moduleApi(api) {
+          this._api = api;
+          this.render();
+        }
+
+        connectedCallback() {
+          this.render();
+          // Auto-refresh every 2 seconds for real-time bandwidth
+          this._interval = setInterval(() => this.render(), 2000);
+        }
+
+        disconnectedCallback() {
+          if (this._interval) {
+            clearInterval(this._interval);
+            this._interval = null;
+          }
+        }
+
+        getStatus() {
+          const connectedPeers = Array.from(peers.values()).filter(p => p.status === 'connected').length;
+          const bandwidth = getCurrentBandwidth();
+
+          let state = 'disabled';
+          if (!signalingConnected) state = 'error';
+          else if (connectedPeers > 0) state = 'active';
+          else state = 'idle';
+
+          return {
+            state,
+            primaryMetric: `${connectedPeers} peer${connectedPeers !== 1 ? 's' : ''}`,
+            secondaryMetric: bandwidth.total > 0 ? `${bandwidth.total} KB/s` : 'Idle',
+            lastActivity: bandwidthStats.recentActivity.length > 0 ? bandwidthStats.recentActivity[0].timestamp : null,
+            message: !signalingConnected ? 'Not connected to signaling server' : null
+          };
+        }
+
+        renderPanel() {
+          const stats = getStats();
+          const bandwidth = getCurrentBandwidth();
+          const uptimeSeconds = Math.floor((Date.now() - bandwidthStats.startTime) / 1000);
+          const uptimeMinutes = Math.floor(uptimeSeconds / 60);
+          const uptimeHours = Math.floor(uptimeMinutes / 60);
+
+          return `
+            <div class="widget-panel-content">
+              <!-- Connection Status -->
+              <div class="connection-status">
+                <div class="status-row">
+                  <span class="status-label">Signaling Server:</span>
+                  <span class="status-value ${signalingConnected ? 'connected' : 'disconnected'}">
+                    ${signalingConnected ? '✓ Connected' : '✗ Disconnected'}
+                  </span>
+                </div>
+                <div class="status-row">
+                  <span class="status-label">Room ID:</span>
+                  <span class="status-value">${CONFIG.roomId}</span>
+                </div>
+                <div class="status-row">
+                  <span class="status-label">Peer ID:</span>
+                  <span class="status-value">${peerId}</span>
+                </div>
+                <div class="status-row">
+                  <span class="status-label">Uptime:</span>
+                  <span class="status-value">${uptimeHours}h ${uptimeMinutes % 60}m ${uptimeSeconds % 60}s</span>
+                </div>
+              </div>
+
+              <!-- Bandwidth Stats -->
+              <div class="bandwidth-section">
+                <h4>Bandwidth</h4>
+                <div class="bandwidth-stats">
+                  <div class="bandwidth-item">
+                    <span class="bandwidth-label">↑ Upload:</span>
+                    <span class="bandwidth-value">${bandwidth.sent} KB/s</span>
+                  </div>
+                  <div class="bandwidth-item">
+                    <span class="bandwidth-label">↓ Download:</span>
+                    <span class="bandwidth-value">${bandwidth.received} KB/s</span>
+                  </div>
+                  <div class="bandwidth-item total">
+                    <span class="bandwidth-label">Total:</span>
+                    <span class="bandwidth-value">${bandwidth.total} KB/s</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Message Stats -->
+              <div class="message-stats">
+                <h4>Message Statistics</h4>
+                <div class="stats-grid">
+                  <div class="stat-item">
+                    <div class="stat-number">${bandwidthStats.messagesSent}</div>
+                    <div class="stat-name">Sent</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-number">${bandwidthStats.messagesReceived}</div>
+                    <div class="stat-name">Received</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-number">${Math.round(bandwidthStats.bytesSent / 1024)} KB</div>
+                    <div class="stat-name">Data Sent</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-number">${Math.round(bandwidthStats.bytesReceived / 1024)} KB</div>
+                    <div class="stat-name">Data Received</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Connected Peers -->
+              <div class="peers-section">
+                <h4>Connected Peers (${stats.connectedPeers})</h4>
+                ${stats.peers.length === 0 ? `
+                  <div class="no-peers">No peers connected</div>
+                ` : `
+                  <div class="peer-list">
+                    ${stats.peers.map(peer => {
+                      const timeSinceLastSeen = Math.floor((Date.now() - peer.lastSeen) / 1000);
+                      return `
+                        <div class="peer-item ${peer.status}">
+                          <div class="peer-header">
+                            <span class="peer-icon">${peer.status === 'connected' ? '○' : '○'}</span>
+                            <span class="peer-id">${peer.id.substring(0, 12)}...</span>
+                            <span class="peer-status">${peer.status}</span>
+                          </div>
+                          <div class="peer-details">
+                            <span class="peer-detail">Last seen: ${timeSinceLastSeen}s ago</span>
+                            ${peer.capabilities.length > 0 ? `
+                              <span class="peer-detail">Capabilities: ${peer.capabilities.join(', ')}</span>
+                            ` : ''}
+                          </div>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                `}
+              </div>
+
+              <!-- Recent Activity -->
+              ${bandwidthStats.recentActivity.length > 0 ? `
+                <div class="activity-section">
+                  <h4>Recent Activity</h4>
+                  <div class="activity-list">
+                    ${bandwidthStats.recentActivity.slice(0, 10).map(activity => `
+                      <div class="activity-item ${activity.type}">
+                        <span class="activity-icon">${activity.type === 'sent' ? '↑' : '↓'}</span>
+                        <span class="activity-type">${activity.messageType}</span>
+                        <span class="activity-peer">${activity.peer.substring(0, 8)}...</span>
+                        <span class="activity-time">${formatActivityTime(activity.timestamp)}</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+
+              <!-- Control Buttons -->
+              <div style="display: grid; grid-template-columns: repeat(${signalingConnected ? '2' : '1'}, 1fr); gap: 8px; margin-top: 16px;">
+                ${!signalingConnected ? `
+                  <button class="reconnect-btn" style="padding: 10px; background: #0c0; border: none; border-radius: 4px; color: white; font-weight: bold; cursor: pointer; font-size: 0.95em;">
+                    ↻ Reconnect
+                  </button>
+                ` : ''}
+                ${signalingConnected ? `
+                  <button class="disconnect-btn" style="padding: 10px; background: #f00; border: none; border-radius: 4px; color: white; font-weight: bold; cursor: pointer; font-size: 0.95em;">
+                    ⏹️ Disconnect
+                  </button>
+                  <button class="announce-btn" style="padding: 10px; background: #f90; border: none; border-radius: 4px; color: white; font-weight: bold; cursor: pointer; font-size: 0.95em;">
+                    ⚠ Announce Presence
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+          `;
+        }
+
+        render() {
+          this.shadowRoot.innerHTML = `
+            <style>
+              :host {
+                display: block;
+                font-family: system-ui, -apple-system, sans-serif;
+                color: #ccc;
+              }
+
+              .widget-content {
+                background: rgba(255,255,255,0.03);
+                border-radius: 8px;
+                padding: 16px;
+              }
+
+              h4 {
+                margin: 16px 0 8px 0;
+                font-size: 0.95em;
+                color: #aaa;
+              }
+
+              button {
+                transition: all 0.2s ease;
+              }
+
+              .reconnect-btn:hover {
+                background: #0e0 !important;
+                transform: translateY(-1px);
+              }
+
+              .disconnect-btn:hover {
+                background: #ff3333 !important;
+                transform: translateY(-1px);
+              }
+
+              .announce-btn:hover {
+                background: #fa0 !important;
+                transform: translateY(-1px);
+              }
+
+              button:active {
+                transform: translateY(0);
+              }
+            </style>
+
+            <div class="widget-content">
+              ${this.renderPanel()}
+            </div>
+          `;
+
+          // Wire up buttons
+          const reconnectBtn = this.shadowRoot.querySelector('.reconnect-btn');
+          if (reconnectBtn) {
+            reconnectBtn.addEventListener('click', () => {
+              connectToSignalingServer();
+              this.render();
+            });
+          }
+
+          const disconnectBtn = this.shadowRoot.querySelector('.disconnect-btn');
+          if (disconnectBtn) {
+            disconnectBtn.addEventListener('click', () => {
+              disconnect();
+              this.render();
+            });
+          }
+
+          const announceBtn = this.shadowRoot.querySelector('.announce-btn');
+          if (announceBtn) {
+            announceBtn.addEventListener('click', () => {
+              announcePresence();
+            });
+          }
+        }
+      }
+
+      // Define custom element
+      if (!customElements.get('webrtc-swarm-widget')) {
+        customElements.define('webrtc-swarm-widget', WebRTCSwarmWidget);
+      }
+
+      widget: {
+        element: 'webrtc-swarm-widget',
+        displayName: 'WebRTC Swarm',
+        icon: '♁',
+        category: 'communication',
+        order: 40,
+        updateInterval: 2000
       }
     };
+
+    // Helper function
+    function formatActivityTime(timestamp) {
+      const now = Date.now();
+      const diff = now - timestamp;
+      const seconds = Math.floor(diff / 1000);
+
+      if (seconds < 1) return 'just now';
+      if (seconds < 60) return `${seconds}s ago`;
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return `${minutes}m ago`;
+      return new Date(timestamp).toLocaleTimeString();
+    }
   }
 };
 

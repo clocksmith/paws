@@ -1,5 +1,5 @@
-[
-  {
+{
+  "0": {
     "name": "execute_python",
     "description": "Execute Python code using the in-browser Pyodide runtime. Supports NumPy, SciPy, pandas, matplotlib, and other scientific libraries. Use this for mathematical computations, data analysis, algorithm implementation, or tasks requiring Python's scientific computing ecosystem.",
     "inputSchema": {
@@ -21,10 +21,12 @@
           "description": "Whether to sync the VFS workspace to Pyodide filesystem before execution, allowing Python code to read/write VFS artifacts."
         }
       },
-      "required": ["code"]
+      "required": [
+        "code"
+      ]
     }
   },
-  {
+  "1": {
     "name": "write_artifact",
     "description": "Creates or updates an artifact in the Virtual File System. This enables self-modification and evolution. Use responsibly.",
     "inputSchema": {
@@ -49,10 +51,13 @@
           }
         }
       },
-      "required": ["path", "content"]
+      "required": [
+        "path",
+        "content"
+      ]
     }
   },
-  {
+  "2": {
     "name": "delete_artifact",
     "description": "Deletes an artifact from the Virtual File System. Use with extreme caution.",
     "inputSchema": {
@@ -67,7 +72,14 @@
           "description": "Required: Explanation of why this artifact is being deleted."
         }
       },
-      "required": ["path", "reason"]
+      "required": [
+        "path",
+        "reason"
+      ]
     }
+  },
+  "_blueprint": {
+    "id": "0x000022",
+    "description": "Documents the write tools manifest and RSI tool catalog."
   }
-]
+}

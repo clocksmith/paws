@@ -1,3 +1,4 @@
+// @blueprint 0x000018 - Meta-blueprint: How to create new blueprints for knowledge transfer.
 // Blueprint Creation Module
 // Provides utilities for creating and managing blueprint documentation
 const BlueprintCreatorModule = (
@@ -421,16 +422,366 @@ const BlueprintCreatorModule = (
 
   logger.info("[BLPR] Blueprint Creator Module initialized successfully");
 
+  // Blueprint creation tracking for widget
+  const creationStats = {
+    totalCreated: 0,
+    byCategory: {},
+    recentCreations: [],
+    lastCreated: null
+  };
+
+  // Wrap createBlueprint to track stats
+  const wrappedCreateBlueprint = async (title, category, content) => {
+    const result = await createBlueprint(title, category, content);
+
+    creationStats.totalCreated++;
+    creationStats.byCategory[category] = (creationStats.byCategory[category] || 0) + 1;
+    creationStats.lastCreated = {
+      ...result,
+      timestamp: Date.now()
+    };
+    creationStats.recentCreations.unshift({
+      ...result,
+      timestamp: Date.now()
+    });
+    if (creationStats.recentCreations.length > 10) {
+      creationStats.recentCreations = creationStats.recentCreations.slice(0, 10);
+    }
+
+    return result;
+  };
+
+  // Wrap generateBlueprintFromTemplate to track stats
+  const wrappedGenerateBlueprintFromTemplate = async (params) => {
+    const result = await generateBlueprintFromTemplate(params);
+
+    creationStats.totalCreated++;
+    creationStats.byCategory[params.category || 'meta'] = (creationStats.byCategory[params.category || 'meta'] || 0) + 1;
+    creationStats.lastCreated = {
+      ...result,
+      timestamp: Date.now()
+    };
+    creationStats.recentCreations.unshift({
+      ...result,
+      timestamp: Date.now()
+    });
+    if (creationStats.recentCreations.length > 10) {
+      creationStats.recentCreations = creationStats.recentCreations.slice(0, 10);
+    }
+
+    return result;
+  };
+
+  // Wrap createBlueprintFromUpgrade to track stats
+  const wrappedCreateBlueprintFromUpgrade = async (upgradePath) => {
+    const result = await createBlueprintFromUpgrade(upgradePath);
+
+    creationStats.totalCreated++;
+    creationStats.byCategory[result.category] = (creationStats.byCategory[result.category] || 0) + 1;
+    creationStats.lastCreated = {
+      ...result,
+      timestamp: Date.now()
+    };
+    creationStats.recentCreations.unshift({
+      ...result,
+      timestamp: Date.now()
+    });
+    if (creationStats.recentCreations.length > 10) {
+      creationStats.recentCreations = creationStats.recentCreations.slice(0, 10);
+    }
+
+    return result;
+  };
+
+  // Web Component Widget
+  class BlueprintCreatorWidget extends HTMLElement {
+    constructor() {
+      super();
+      this.attachShadow({ mode: 'open' });
+    }
+
+    set moduleApi(api) {
+      this._api = api;
+      this.render();
+    }
+
+    connectedCallback() {
+      this.render();
+    }
+
+    disconnectedCallback() {
+      // No cleanup needed
+    }
+
+    getStatus() {
+      const hasRecentCreation = creationStats.lastCreated &&
+        (Date.now() - creationStats.lastCreated.timestamp < 60000);
+
+      return {
+        state: hasRecentCreation ? 'active' : creationStats.totalCreated > 0 ? 'idle' : 'disabled',
+        primaryMetric: creationStats.totalCreated > 0
+          ? `${creationStats.totalCreated} created`
+          : 'No blueprints',
+        secondaryMetric: Object.keys(creationStats.byCategory).length > 0
+          ? `${Object.keys(creationStats.byCategory).length} categories`
+          : 'Ready',
+        lastActivity: creationStats.lastCreated ? creationStats.lastCreated.timestamp : null,
+        message: hasRecentCreation
+          ? `Created: ${creationStats.lastCreated.title}`
+          : null
+      };
+    }
+
+    getControls() {
+      return [
+        {
+          id: 'list-blueprints',
+          label: '☷ List All Blueprints',
+          action: async () => {
+            try {
+              const blueprints = await listBlueprints();
+              logger.info(`[Widget] Found ${blueprints.length} blueprints`);
+              console.table(blueprints.map(bp => ({
+                Number: bp.number,
+                Category: bp.category,
+                Title: bp.title
+              })));
+              return { success: true, message: `Found ${blueprints.length} blueprints (check console)` };
+            } catch (error) {
+              logger.error(`[Widget] List blueprints failed: ${error.message}`);
+              return { success: false, message: error.message };
+            }
+          }
+        },
+        {
+          id: 'show-stats',
+          label: '☱ Show Statistics',
+          action: async () => {
+            try {
+              const stats = await getBlueprintStatistics();
+              logger.info('[Widget] Blueprint statistics:', stats);
+              console.log('Blueprint Statistics:', stats);
+              return { success: true, message: `${stats.total} total blueprints` };
+            } catch (error) {
+              logger.error(`[Widget] Stats failed: ${error.message}`);
+              return { success: false, message: error.message };
+            }
+          }
+        }
+      ];
+    }
+
+    render() {
+      this.shadowRoot.innerHTML = `
+        <style>
+          :host {
+            display: block;
+            font-family: monospace;
+            font-size: 12px;
+          }
+          .blueprint-panel {
+            padding: 12px;
+            color: #fff;
+          }
+          h4 {
+            margin: 0 0 12px 0;
+            font-size: 1.1em;
+            color: #0ff;
+          }
+          .summary {
+            margin-bottom: 12px;
+          }
+          .summary-title {
+            color: #0ff;
+            font-weight: bold;
+            margin-bottom: 8px;
+          }
+          .summary-value {
+            color: #e0e0e0;
+          }
+          .summary-value .highlight {
+            color: #0ff;
+          }
+          .info-box {
+            margin-bottom: 12px;
+            padding: 8px;
+            background: rgba(0,255,255,0.05);
+            border: 1px solid rgba(0,255,255,0.2);
+          }
+          .info-box-title {
+            color: #0ff;
+            font-weight: bold;
+            margin-bottom: 4px;
+          }
+          .info-box-item {
+            color: #aaa;
+            padding: 2px 0;
+          }
+          .info-box-item .value {
+            color: #fff;
+          }
+          .info-box-item .range {
+            color: #888;
+            font-size: 10px;
+          }
+          .last-created-box {
+            margin-bottom: 12px;
+            padding: 8px;
+            background: rgba(0,255,255,0.05);
+            border: 1px solid rgba(0,255,255,0.2);
+          }
+          .last-created-title {
+            color: #0ff;
+            font-weight: bold;
+            margin-bottom: 4px;
+          }
+          .last-created-number {
+            color: #fff;
+            margin-bottom: 4px;
+          }
+          .last-created-meta {
+            color: #aaa;
+            font-size: 10px;
+          }
+          .last-created-timestamp {
+            color: #888;
+            font-size: 10px;
+          }
+          .recent-section {
+            margin-top: 12px;
+          }
+          .recent-title {
+            color: #0ff;
+            font-weight: bold;
+            margin-bottom: 8px;
+          }
+          .recent-list {
+            max-height: 150px;
+            overflow-y: auto;
+          }
+          .recent-item {
+            padding: 4px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+          }
+          .recent-item-number {
+            color: #0ff;
+          }
+          .recent-item-title {
+            color: #fff;
+          }
+          .recent-item-category {
+            color: #888;
+            font-size: 10px;
+          }
+          .ranges-reference {
+            margin-top: 12px;
+            padding: 8px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+          }
+          .ranges-title {
+            color: #888;
+            font-weight: bold;
+            margin-bottom: 4px;
+            font-size: 10px;
+          }
+          .range-item {
+            color: #666;
+            font-size: 10px;
+            padding: 1px 0;
+          }
+          .no-blueprints {
+            color: #888;
+            text-align: center;
+            margin-top: 20px;
+          }
+        </style>
+        <div class="blueprint-panel">
+          <h4>◧ Blueprint Creator</h4>
+
+          <div class="summary">
+            <div class="summary-title">Creation Summary</div>
+            <div class="summary-value">Total Created: <span class="highlight">${creationStats.totalCreated}</span></div>
+          </div>
+
+          ${Object.keys(creationStats.byCategory).length > 0 ? `
+            <div class="info-box">
+              <div class="info-box-title">By Category</div>
+              ${Object.entries(creationStats.byCategory).map(([category, count]) => {
+                const range = BLUEPRINT_RANGES[category];
+                return `
+                  <div class="info-box-item">
+                    <span class="value">${category}</span>: ${count}
+                    <span class="range">(${range.start.toString(16)}-${range.end.toString(16)})</span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          ` : ''}
+
+          ${creationStats.lastCreated ? `
+            <div class="last-created-box">
+              <div class="last-created-title">Last Created</div>
+              <div class="last-created-number">${creationStats.lastCreated.number}: ${creationStats.lastCreated.title}</div>
+              <div class="last-created-meta">Category: ${creationStats.lastCreated.category}</div>
+              <div class="last-created-meta">Path: ${creationStats.lastCreated.path}</div>
+              <div class="last-created-timestamp">${new Date(creationStats.lastCreated.timestamp).toLocaleString()}</div>
+            </div>
+          ` : ''}
+
+          ${creationStats.recentCreations.length > 0 ? `
+            <div class="recent-section">
+              <div class="recent-title">Recent Creations</div>
+              <div class="recent-list">
+                ${creationStats.recentCreations.slice(0, 5).map(bp => `
+                  <div class="recent-item">
+                    <span class="recent-item-number">${bp.number}</span> -
+                    <span class="recent-item-title">${bp.title}</span>
+                    <span class="recent-item-category">(${bp.category})</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <div class="ranges-reference">
+            <div class="ranges-title">Blueprint Ranges</div>
+            ${Object.entries(BLUEPRINT_RANGES).map(([category, range]) => `
+              <div class="range-item">
+                ${category}: 0x${range.start.toString(16).toUpperCase()} - 0x${range.end.toString(16).toUpperCase()}
+              </div>
+            `).join('')}
+          </div>
+
+          ${creationStats.totalCreated === 0 ? '<div class="no-blueprints">No blueprints created yet</div>' : ''}
+        </div>
+      `;
+    }
+  }
+
+  // Register custom element
+  const elementName = 'blueprint-creator-widget';
+  if (!customElements.get(elementName)) {
+    customElements.define(elementName, BlueprintCreatorWidget);
+  }
+
   return {
-    createBlueprint,
-    generateBlueprintFromTemplate,
-    createBlueprintFromUpgrade,
+    createBlueprint: wrappedCreateBlueprint,
+    generateBlueprintFromTemplate: wrappedGenerateBlueprintFromTemplate,
+    createBlueprintFromUpgrade: wrappedCreateBlueprintFromUpgrade,
     validateBlueprint,
     listBlueprints,
     getBlueprintStatistics,
     getNextBlueprintNumber,
     BLUEPRINT_RANGES,
-    BLUEPRINT_TEMPLATE
+    BLUEPRINT_TEMPLATE,
+
+    widget: {
+      element: elementName,
+      displayName: 'Blueprint Creator',
+      icon: '◧',
+      category: 'rsi'
+    }
   };
 };
 

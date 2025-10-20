@@ -1,5 +1,6 @@
 // Backup and Restore functionality for REPLOID system
 // Handles exporting/importing agent state, artifacts, and configuration
+// @blueprint 0x000053
 
 export class BackupRestore {
   constructor(storage, stateManager, logger) {
@@ -364,20 +365,306 @@ export const BackupRestoreModule = {
   
   factory: (deps) => {
     const { Storage, StateManager, logger } = deps;
-    
+
     if (!Storage || !StateManager || !logger) {
       throw new Error('BackupRestore: Missing required dependencies');
     }
-    
+
     const backupRestore = new BackupRestore(Storage, StateManager, logger);
     const ui = new BackupRestoreUI(backupRestore);
-    
+
+    // Operation tracking for widget
+    const operationStats = {
+      totalBackups: 0,
+      totalRestores: 0,
+      lastBackup: null,
+      lastRestore: null,
+      lastOperation: null,
+      history: []
+    };
+
+    // Wrap createBackup to track stats
+    const wrappedCreateBackup = async () => {
+      const backup = await backupRestore.createBackup();
+      operationStats.totalBackups++;
+      operationStats.lastBackup = {
+        timestamp: Date.now(),
+        artifactCount: backup.metadata.totalArtifacts,
+        size: backup.metadata.totalSize
+      };
+      operationStats.lastOperation = { type: 'backup', timestamp: Date.now() };
+      operationStats.history.unshift({
+        type: 'backup',
+        timestamp: Date.now(),
+        artifactCount: backup.metadata.totalArtifacts,
+        size: backup.metadata.totalSize
+      });
+      if (operationStats.history.length > 10) {
+        operationStats.history = operationStats.history.slice(0, 10);
+      }
+      return backup;
+    };
+
+    // Wrap restoreBackup to track stats
+    const wrappedRestoreBackup = async (data) => {
+      const result = await backupRestore.restoreBackup(data);
+      operationStats.totalRestores++;
+      operationStats.lastRestore = {
+        timestamp: Date.now(),
+        artifactCount: result.artifactsRestored
+      };
+      operationStats.lastOperation = { type: 'restore', timestamp: Date.now() };
+      operationStats.history.unshift({
+        type: 'restore',
+        timestamp: Date.now(),
+        artifactCount: result.artifactsRestored
+      });
+      if (operationStats.history.length > 10) {
+        operationStats.history = operationStats.history.slice(0, 10);
+      }
+      return result;
+    };
+
+    // Wrap exportToFile to track stats
+    const wrappedExportToFile = (data) => {
+      backupRestore.exportToFile(data);
+      if (operationStats.lastBackup) {
+        operationStats.lastBackup.exported = true;
+      }
+    };
+
+    // Web Component Widget
+    class BackupRestoreWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      connectedCallback() {
+        this.render();
+      }
+
+      disconnectedCallback() {
+        // No cleanup needed
+      }
+
+      getStatus() {
+        const hasRecentOperation = operationStats.lastOperation &&
+          (Date.now() - operationStats.lastOperation.timestamp < 60000);
+        const totalOps = operationStats.totalBackups + operationStats.totalRestores;
+
+        return {
+          state: hasRecentOperation ? 'active' : totalOps > 0 ? 'idle' : 'disabled',
+          primaryMetric: totalOps > 0
+            ? `${operationStats.totalBackups} backup${operationStats.totalBackups !== 1 ? 's' : ''}`
+            : 'No backups',
+          secondaryMetric: operationStats.totalRestores > 0
+            ? `${operationStats.totalRestores} restore${operationStats.totalRestores !== 1 ? 's' : ''}`
+            : 'Ready',
+          lastActivity: operationStats.lastOperation ? operationStats.lastOperation.timestamp : null,
+          message: hasRecentOperation
+            ? `Last: ${operationStats.lastOperation.type}`
+            : null
+        };
+      }
+
+      getControls() {
+        return [
+          {
+            id: 'create-backup',
+            label: '⛃ Create Backup',
+            action: async () => {
+              try {
+                const backup = await wrappedCreateBackup();
+                wrappedExportToFile(backup);
+                this.render();
+                logger.logEvent('info', 'Backup created and exported via widget');
+                return { success: true, message: 'Backup created successfully' };
+              } catch (error) {
+                logger.logEvent('error', `Widget backup failed: ${error.message}`);
+                return { success: false, message: error.message };
+              }
+            }
+          },
+          {
+            id: 'restore-backup',
+            label: '⇓ Restore from File',
+            action: () => {
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = '.json';
+              input.onchange = async (e) => {
+                if (e.target.files.length > 0) {
+                  try {
+                    await backupRestore.importFromFile(e.target.files[0]);
+                    this.render();
+                    logger.logEvent('info', 'Restore completed via widget');
+                  } catch (error) {
+                    logger.logEvent('error', `Widget restore failed: ${error.message}`);
+                  }
+                }
+              };
+              input.click();
+              return { success: true, message: 'File picker opened' };
+            }
+          }
+        ];
+      }
+
+      render() {
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              font-family: monospace;
+              font-size: 12px;
+            }
+            .backup-panel {
+              padding: 12px;
+              color: #fff;
+            }
+            h4 {
+              margin: 0 0 12px 0;
+              color: #0ff;
+              font-size: 1.1em;
+            }
+            .summary {
+              margin-bottom: 12px;
+            }
+            .summary-title {
+              color: #0ff;
+              font-weight: bold;
+              margin-bottom: 8px;
+            }
+            .summary-item {
+              color: #e0e0e0;
+              margin: 4px 0;
+            }
+            .summary-item .value {
+              color: #0ff;
+            }
+            .info-box {
+              margin-bottom: 12px;
+              padding: 8px;
+              border-radius: 4px;
+            }
+            .info-box-backup {
+              background: rgba(0,255,255,0.05);
+              border: 1px solid rgba(0,255,255,0.2);
+            }
+            .info-box-restore {
+              background: rgba(255,255,0,0.05);
+              border: 1px solid rgba(255,255,0,0.2);
+            }
+            .info-box-title {
+              font-weight: bold;
+              margin-bottom: 4px;
+            }
+            .info-box-backup .info-box-title {
+              color: #0ff;
+            }
+            .info-box-restore .info-box-title {
+              color: #ff0;
+            }
+            .info-box-item {
+              color: #aaa;
+              margin: 2px 0;
+            }
+            .history {
+              margin-top: 12px;
+            }
+            .history-title {
+              color: #0ff;
+              font-weight: bold;
+              margin-bottom: 8px;
+            }
+            .history-list {
+              max-height: 150px;
+              overflow-y: auto;
+            }
+            .history-item {
+              padding: 4px;
+              border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+            .no-operations {
+              color: #888;
+              text-align: center;
+              margin-top: 20px;
+            }
+          </style>
+          <div class="backup-panel">
+            <h4>⛃ Backup & Restore</h4>
+
+            <div class="summary">
+              <div class="summary-title">Operation Summary</div>
+              <div class="summary-item">Total Backups: <span class="value">${operationStats.totalBackups}</span></div>
+              <div class="summary-item">Total Restores: <span class="value" style="color: #ff0;">${operationStats.totalRestores}</span></div>
+            </div>
+
+            ${operationStats.lastBackup ? `
+              <div class="info-box info-box-backup">
+                <div class="info-box-title">Last Backup</div>
+                <div class="info-box-item">Time: ${new Date(operationStats.lastBackup.timestamp).toLocaleString()}</div>
+                <div class="info-box-item">Artifacts: ${operationStats.lastBackup.artifactCount}</div>
+                <div class="info-box-item">Size: ${(operationStats.lastBackup.size / 1024).toFixed(2)} KB</div>
+              </div>
+            ` : ''}
+
+            ${operationStats.lastRestore ? `
+              <div class="info-box info-box-restore">
+                <div class="info-box-title">Last Restore</div>
+                <div class="info-box-item">Time: ${new Date(operationStats.lastRestore.timestamp).toLocaleString()}</div>
+                <div class="info-box-item">Artifacts: ${operationStats.lastRestore.artifactCount}</div>
+              </div>
+            ` : ''}
+
+            ${operationStats.history.length > 0 ? `
+              <div class="history">
+                <div class="history-title">Recent Operations</div>
+                <div class="history-list">
+                  ${operationStats.history.slice(0, 5).map(op => {
+                    const color = op.type === 'backup' ? '#0ff' : '#ff0';
+                    const icon = op.type === 'backup' ? '⛃' : '⇓';
+                    return `
+                      <div class="history-item">
+                        <span style="color: ${color};">${icon} ${op.type}</span> -
+                        <span style="color: #aaa;">${new Date(op.timestamp).toLocaleTimeString()}</span>
+                        <span style="color: #888;">(${op.artifactCount} artifacts)</span>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            ` : '<div class="no-operations">No operations yet</div>'}
+          </div>
+        `;
+      }
+    }
+
+    // Register custom element
+    const elementName = 'backup-restore-widget';
+    if (!customElements.get(elementName)) {
+      customElements.define(elementName, BackupRestoreWidget);
+    }
+
     return {
-      createBackup: () => backupRestore.createBackup(),
-      restoreBackup: (data) => backupRestore.restoreBackup(data),
-      exportToFile: (data) => backupRestore.exportToFile(data),
+      createBackup: wrappedCreateBackup,
+      restoreBackup: wrappedRestoreBackup,
+      exportToFile: wrappedExportToFile,
       importFromFile: (file) => backupRestore.importFromFile(file),
-      renderUI: () => ui.render()
+      renderUI: () => ui.render(),
+
+      widget: {
+        element: elementName,
+        displayName: 'Backup & Restore',
+        icon: '⛃',
+        category: 'storage'
+      }
     };
   }
 };

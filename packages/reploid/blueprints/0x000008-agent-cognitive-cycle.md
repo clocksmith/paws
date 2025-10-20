@@ -2,6 +2,9 @@
 
 **Objective:** To provide the architectural model for the agent's primary "think-act" loop, which orchestrates the entire process of receiving a goal, reasoning, and executing a plan.
 
+**Target Upgrade:** CYCL (`agent-cycle.js`)
+
+
 **Prerequisites:** `0x000001`, `0x000005`, `0x000007`, `0x00000A`
 
 **Affected Artifacts:** `/modules/agent-cycle.js`
@@ -14,13 +17,60 @@ The agent's "mind" is not a single function but a structured, cyclical process. 
 
 ### 2. The Architectural Solution
 
-The `executeCycle` function within `/modules/agent-cycle.js` will implement a clear, multi-step cognitive process. While future blueprints will add more steps, the primordial version includes:
+The agent-cycle module implements a finite state machine (FSM) with human-in-the-loop approval gates. The cycle follows these states:
 
-1.  **Goal Ingestion:** The cycle begins by getting the current goal from the `StateManager`.
-2.  **Context Assembly (Think):** It gathers all necessary information to form a coherent prompt. This involves calling `AgentLogicPureHelpers.assembleCorePromptPure` with the goal, a list of VFS artifacts, and a list of available tools.
-3.  **LLM Interaction (Reason):** It passes the assembled prompt to the `ApiClient` to get a plan from the LLM. This phase may involve multiple back-and-forth calls if the LLM decides to use tools. The cycle is responsible for managing this "tool loop," calling the `ToolRunner` and feeding the results back to the LLM.
-4.  **Plan Execution (Act):** Once the LLM returns a final plan containing `artifact_changes`, the cycle passes these changes to the `StateManager` to be applied to the VFS. This is the step that makes the agent's self-modification tangible.
-5.  **State Finalization:** The cycle concludes by incrementing the cycle count in the `StateManager` and updating the UI to reflect the new state.
+**FSM States:**
+```
+IDLE → CURATING_CONTEXT → AWAITING_CONTEXT_APPROVAL
+  → PLANNING_WITH_CONTEXT → AWAITING_PROPOSAL_APPROVAL
+  → APPLYING_CHANGESET → (back to IDLE)
+```
+
+**Core Implementation:**
+
+1.  **Event-Driven Transitions:** State transitions are triggered by EventBus events (`user:approve:context`, `user:approve:proposal`, etc.)
+2.  **Context Assembly:** Gathers VFS artifacts and blueprints relevant to the goal
+3.  **LLM Interaction:** Uses `ApiClient` with tool-loop support for multi-turn reasoning
+4.  **Changeset Application:** Applies approved changes via `StateManager`
+5.  **Reflection:** Stores cycle outcomes in `ReflectionStore` for learning
+
+**Widget Interface (Web Component):**
+
+The module exposes a `AgentCycleFSMWidget` custom element for dashboard visualization:
+
+```javascript
+class AgentCycleFSMWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+    this._interval = setInterval(() => this.render(), 3000);
+  }
+
+  disconnectedCallback() {
+    if (this._interval) clearInterval(this._interval);
+  }
+
+  set moduleApi(api) {
+    this._api = api;
+    this.render();
+  }
+
+  render() {
+    this.shadowRoot.innerHTML = `
+      <style>/* Shadow DOM styles */</style>
+      <div>/* FSM state, transitions, context */</div>
+    `;
+  }
+}
+
+customElements.define('agent-cycle-fsm-widget', AgentCycleFSMWidget);
+```
+
+This provides real-time FSM state visualization, transition history, and current goal context.
 
 ### 3. The Implementation Pathway
 

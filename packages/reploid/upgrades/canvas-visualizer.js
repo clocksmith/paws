@@ -1,3 +1,4 @@
+// @blueprint 0x00002A - Blueprint for the canvas visualization engine.
 // Canvas Visualizer Module for REPLOID
 // Provides 2D visualization of agent architecture, cognitive processes, and RSI activities
 
@@ -631,10 +632,55 @@ const CanvasVisualizer = {
       ctx = null;
     };
 
+    // Visualization statistics for widget
+    const vizStats = {
+      startTime: null,
+      framesRendered: 0,
+      particlesSpawned: 0,
+      nodesRendered: 0,
+      edgesRendered: 0,
+      modeChanges: 0,
+      lastActivity: null
+    };
+
+    // Track statistics
+    const trackStats = () => {
+      if (!vizStats.startTime) {
+        vizStats.startTime = Date.now();
+      }
+      vizStats.framesRendered++;
+      vizStats.nodesRendered = vizState.nodes.size;
+      vizStats.edgesRendered = vizState.edges.length;
+      vizStats.lastActivity = Date.now();
+    };
+
+    // Wrap startAnimation to track stats
+    const originalStartAnimation = startAnimation;
+    startAnimation = () => {
+      vizStats.startTime = Date.now();
+      return originalStartAnimation();
+    };
+
+    // Wrap addParticle to track stats
+    const originalAddParticle = addParticle;
+    addParticle = (x, y, color) => {
+      vizStats.particlesSpawned++;
+      vizStats.lastActivity = Date.now();
+      return originalAddParticle(x, y, color);
+    };
+
+    // Wrap setMode to track stats
+    const originalSetMode = setMode;
+    setMode = (mode) => {
+      vizStats.modeChanges++;
+      vizStats.lastActivity = Date.now();
+      return originalSetMode(mode);
+    };
+
     // Initialize and return public interface
     const init = async () => {
       await initCanvas();
-      
+
       return {
         startAnimation,
         stopAnimation,
@@ -648,7 +694,167 @@ const CanvasVisualizer = {
       };
     };
 
-    return { init };
+    // Web Component Widget
+    class CanvasVisualizerWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+
+      connectedCallback() {
+        this.render();
+        // Update every 2 seconds for FPS and stats
+        this._updateInterval = setInterval(() => this.render(), 2000);
+      }
+
+      disconnectedCallback() {
+        if (this._updateInterval) {
+          clearInterval(this._updateInterval);
+          this._updateInterval = null;
+        }
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      getStatus() {
+        const isRunning = animationId !== null;
+        const hasRecentActivity = vizStats.lastActivity &&
+          (Date.now() - vizStats.lastActivity < 5000);
+
+        return {
+          state: isRunning ? (hasRecentActivity ? 'active' : 'idle') : 'disabled',
+          primaryMetric: isRunning ? `${vizState.nodes.size} nodes` : 'Not running',
+          secondaryMetric: isRunning ? `${vizState.mode} mode` : 'Idle',
+          lastActivity: vizStats.lastActivity,
+          message: isRunning ? `${vizState.edges.length} edges` : null
+        };
+      }
+
+      render() {
+        const isRunning = animationId !== null;
+        const uptime = vizStats.startTime ? Date.now() - vizStats.startTime : 0;
+        const uptimeSeconds = Math.floor(uptime / 1000);
+        const fps = vizStats.framesRendered > 0 && uptime > 0
+          ? Math.round((vizStats.framesRendered / uptime) * 1000)
+          : 0;
+        const modes = ['dependency', 'cognitive', 'memory', 'goals', 'tools'];
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              font-family: monospace;
+              font-size: 12px;
+            }
+            .widget-panel { padding: 12px; }
+            h3 { margin: 0 0 12px 0; font-size: 1.1em; color: #fff; }
+            .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+            button {
+              padding: 6px 12px;
+              background: rgba(0,255,255,0.2);
+              border: 1px solid rgba(0,255,255,0.4);
+              border-radius: 4px;
+              color: #0ff;
+              cursor: pointer;
+              font-size: 0.9em;
+            }
+            button:hover { background: rgba(0,255,255,0.3); }
+            button.active { background: rgba(0,255,255,0.4); border-color: #0ff; }
+          </style>
+
+          <div class="widget-panel">
+            <h3>⛉ Canvas Visualizer</h3>
+
+            <div class="controls">
+              ${modes.map(mode => `
+                <button class="${vizState.mode === mode ? 'active' : ''}" data-mode="${mode}">
+                  ☱ ${mode.charAt(0).toUpperCase() + mode.slice(1)}
+                </button>
+              `).join('')}
+              <button id="toggle-anim">${animationId ? '⏸️ Pause' : '▶️ Resume'}</button>
+            </div>
+
+            <div style="margin-bottom: 12px;">
+              <div style="color: #0ff; font-weight: bold; margin-bottom: 8px;">Visualization Status</div>
+              <div style="color: #e0e0e0;">Status: <span style="color: ${isRunning ? '#0f0' : '#666'};">${isRunning ? 'Running' : 'Stopped'}</span></div>
+              <div style="color: #e0e0e0;">Mode: <span style="color: #0ff;">${vizState.mode}</span></div>
+              <div style="color: #e0e0e0;">Zoom: <span style="color: #aaa;">${vizState.zoom.toFixed(2)}x</span></div>
+            </div>
+
+            ${isRunning ? `
+              <div style="margin-bottom: 12px; padding: 8px; background: rgba(0,255,255,0.05); border: 1px solid rgba(0,255,255,0.2);">
+                <div style="color: #0ff; font-weight: bold; margin-bottom: 4px;">Rendering Stats</div>
+                <div style="color: #aaa;">Nodes: <span style="color: #0ff;">${vizStats.nodesRendered}</span></div>
+                <div style="color: #aaa;">Edges: <span style="color: #0ff;">${vizStats.edgesRendered}</span></div>
+                <div style="color: #aaa;">Particles: <span style="color: #0ff;">${vizState.particles.length}</span></div>
+                <div style="color: #aaa;">Animations: <span style="color: #0ff;">${vizState.animations.length}</span></div>
+                <div style="color: #aaa;">FPS: <span style="color: ${fps > 30 ? '#0f0' : '#ff0'};">${fps}</span></div>
+              </div>
+            ` : ''}
+
+            ${vizStats.startTime ? `
+              <div style="margin-bottom: 12px; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);">
+                <div style="color: #888; font-weight: bold; margin-bottom: 4px; font-size: 10px;">Session Statistics</div>
+                <div style="color: #aaa; font-size: 11px;">Uptime: ${uptimeSeconds}s</div>
+                <div style="color: #aaa; font-size: 11px;">Frames Rendered: ${vizStats.framesRendered.toLocaleString()}</div>
+                <div style="color: #aaa; font-size: 11px;">Particles Spawned: ${vizStats.particlesSpawned}</div>
+                <div style="color: #aaa; font-size: 11px;">Mode Changes: ${vizStats.modeChanges}</div>
+              </div>
+            ` : ''}
+
+            ${canvas ? `
+              <div style="margin-top: 12px; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);">
+                <div style="color: #888; font-weight: bold; margin-bottom: 4px; font-size: 10px;">Canvas Info</div>
+                <div style="color: #666; font-size: 10px;">Size: ${canvas.width}x${canvas.height}px</div>
+                <div style="color: #666; font-size: 10px;">Pan: (${Math.round(vizState.panX)}, ${Math.round(vizState.panY)})</div>
+                ${vizState.selectedNode ? `<div style="color: #0ff; font-size: 10px;">Selected: ${vizState.selectedNode}</div>` : ''}
+              </div>
+            ` : ''}
+
+            ${!isRunning ? '<div style="color: #888; text-align: center; margin-top: 20px;">Visualizer not initialized</div>' : ''}
+          </div>
+        `;
+
+        // Attach event listeners
+        this.shadowRoot.querySelectorAll('[data-mode]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            setMode(btn.dataset.mode);
+            this.render();
+          });
+        });
+
+        this.shadowRoot.getElementById('toggle-anim')?.addEventListener('click', () => {
+          if (animationId) {
+            stopAnimation();
+          } else {
+            startAnimation();
+          }
+          this.render();
+        });
+      }
+    }
+
+    // Register custom element
+    const elementName = 'canvas-visualizer-widget';
+    if (!customElements.get(elementName)) {
+      customElements.define(elementName, CanvasVisualizerWidget);
+    }
+
+    const widget = {
+      element: elementName,
+      displayName: 'Canvas Visualizer',
+      icon: '⛉',
+      category: 'ui',
+      updateInterval: 2000
+    };
+
+    return {
+      init,
+      widget
+    };
   }
 };
 

@@ -3,6 +3,7 @@
  * Provides unified interface for local WebLLM and cloud API providers.
  * Enables seamless switching between local-first and cloud-based inference.
  *
+ * @blueprint 0x000039 - Explains hybrid LLM orchestration.
  * @module HybridLLMProvider
  * @version 1.0.0
  * @category agent
@@ -295,20 +296,344 @@ const HybridLLMProvider = {
       };
     };
 
+    // Track usage statistics
+    const usageStats = {
+      local: { requests: 0, tokens: 0, errors: 0, totalTime: 0 },
+      cloud: { requests: 0, tokens: 0, errors: 0, totalTime: 0 },
+      fallbacks: [],
+      switchHistory: []
+    };
+
+    let isGenerating = false;
+
+    // Wrap complete to track stats
+    const originalComplete = complete;
+    const trackedComplete = async (messages, options) => {
+      isGenerating = true;
+      const mode = getMode();
+      const startTime = Date.now();
+
+      try {
+        const result = await originalComplete(messages, options);
+        const elapsed = Date.now() - startTime;
+
+        // Track successful completion
+        usageStats[mode].requests++;
+        usageStats[mode].tokens += (result.usage?.totalTokens || 0);
+        usageStats[mode].totalTime += elapsed;
+
+        isGenerating = false;
+        return result;
+      } catch (error) {
+        usageStats[mode].errors++;
+        isGenerating = false;
+        throw error;
+      }
+    };
+
+    // Wrap setMode to track switches
+    const originalSetMode = setMode;
+    const trackedSetMode = (mode) => {
+      const oldMode = getMode();
+      const result = originalSetMode(mode);
+
+      if (result && oldMode !== mode) {
+        usageStats.switchHistory.unshift({
+          from: oldMode,
+          to: mode,
+          timestamp: Date.now(),
+          manual: true
+        });
+
+        // Keep last 20 switches
+        if (usageStats.switchHistory.length > 20) {
+          usageStats.switchHistory = usageStats.switchHistory.slice(0, 20);
+        }
+      }
+
+      return result;
+    };
+
+    // Track fallbacks
+    EventBus.on('hybrid-llm:fallback', ({ from, to, error }) => {
+      usageStats.fallbacks.unshift({
+        from,
+        to,
+        error,
+        timestamp: Date.now()
+      });
+
+      usageStats.switchHistory.unshift({
+        from,
+        to,
+        timestamp: Date.now(),
+        manual: false
+      });
+
+      // Keep last 20
+      if (usageStats.fallbacks.length > 20) {
+        usageStats.fallbacks = usageStats.fallbacks.slice(0, 20);
+      }
+      if (usageStats.switchHistory.length > 20) {
+        usageStats.switchHistory = usageStats.switchHistory.slice(0, 20);
+      }
+    });
+
     return {
       init,
       api: {
-        setMode,
+        setMode: trackedSetMode,
         getMode,
         isLocalAvailable,
-        complete,
+        complete: trackedComplete,
         stream,
         getStatus,
         getAutoSwitchConfig,
+        getUsageStats: () => ({ ...usageStats }),
         // Expose direct methods for advanced use
         completeLocal,
         completeCloud
+      },
+
+    // Web Component Widget
+    class HybridLLMProviderWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
       }
+
+      connectedCallback() {
+        this.render();
+
+        // Auto-refresh every 5 seconds
+        this._interval = setInterval(() => this.render(), 5000);
+      }
+
+      disconnectedCallback() {
+        if (this._interval) clearInterval(this._interval);
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      formatTime(timestamp) {
+        const now = Date.now();
+        const diff = now - timestamp;
+        const seconds = Math.floor(diff / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+
+        if (seconds < 60) return `${seconds}s ago`;
+        if (minutes < 60) return `${minutes}m ago`;
+        if (hours < 24) return `${hours}h ago`;
+        return new Date(timestamp).toLocaleDateString();
+      }
+
+      getStatus() {
+        const mode = getMode();
+        const status = getStatus();
+        const stats = usageStats;
+        const totalTokens = stats.local.tokens + stats.cloud.tokens;
+
+        return {
+          state: isGenerating ? 'active' : 'idle',
+          primaryMetric: mode === 'local' ? '⌨ Local' : '☁️ Cloud',
+          secondaryMetric: `${totalTokens.toLocaleString()} tokens`,
+          lastActivity: stats.switchHistory.length > 0 ? stats.switchHistory[0].timestamp : null,
+          message: !status.localAvailable && mode === 'local' ? 'Local LLM not ready' : null
+        };
+      }
+
+      renderPanel() {
+        const mode = getMode();
+        const status = getStatus();
+        const stats = usageStats;
+        const localAvg = stats.local.requests > 0
+          ? Math.round(stats.local.totalTime / stats.local.requests)
+          : 0;
+        const cloudAvg = stats.cloud.requests > 0
+          ? Math.round(stats.cloud.totalTime / stats.cloud.requests)
+          : 0;
+
+        return `
+          <!-- Current Provider -->
+          <div style="margin-bottom: 16px; padding: 12px; background: rgba(100,150,255,0.1); border-radius: 6px;">
+            <div style="font-size: 1.2em; font-weight: bold; margin-bottom: 8px;">
+              ${mode === 'local' ? '⌨ Local Mode' : '☁️ Cloud Mode'}
+            </div>
+            <div style="font-size: 0.9em; color: #888;">
+              ${status.localModel ? `Model: ${status.localModel}` : 'Cloud: Gemini'}
+            </div>
+
+            <!-- Switch Buttons -->
+            <div style="margin-top: 12px; display: flex; gap: 8px;">
+              ${mode === 'cloud' && status.localAvailable ? `
+                <button class="switch-btn" data-mode="local" style="flex: 1; padding: 8px; background: rgba(0,255,0,0.2); border: 1px solid #0f0; color: #0f0; border-radius: 4px; cursor: pointer; font-size: 0.9em;">
+                  ⌨ Switch to Local
+                </button>
+              ` : ''}
+              ${mode === 'local' ? `
+                <button class="switch-btn" data-mode="cloud" style="flex: 1; padding: 8px; background: rgba(100,150,255,0.2); border: 1px solid #6496ff; color: #6496ff; border-radius: 4px; cursor: pointer; font-size: 0.9em;">
+                  ☁️ Switch to Cloud
+                </button>
+              ` : ''}
+            </div>
+          </div>
+
+          <!-- Provider Comparison -->
+          <div style="margin-bottom: 16px;">
+            <h4 style="margin: 0 0 12px 0; font-size: 1em; color: #0ff;">Provider Statistics</h4>
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+              <thead>
+                <tr style="background: rgba(255,255,255,0.1);">
+                  <th style="text-align: left; padding: 8px; color: #aaa;">Provider</th>
+                  <th style="text-align: right; padding: 8px; color: #aaa;">Requests</th>
+                  <th style="text-align: right; padding: 8px; color: #aaa;">Tokens</th>
+                  <th style="text-align: right; padding: 8px; color: #aaa;">Avg Time</th>
+                  <th style="text-align: right; padding: 8px; color: #aaa;">Errors</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="${mode === 'local' ? 'background: rgba(0,255,0,0.1);' : ''}">
+                  <td style="padding: 8px; border-top: 1px solid rgba(255,255,255,0.1);">⌨ Local</td>
+                  <td style="padding: 8px; border-top: 1px solid rgba(255,255,255,0.1); text-align: right;">${stats.local.requests}</td>
+                  <td style="padding: 8px; border-top: 1px solid rgba(255,255,255,0.1); text-align: right;">${stats.local.tokens.toLocaleString()}</td>
+                  <td style="padding: 8px; border-top: 1px solid rgba(255,255,255,0.1); text-align: right;">${localAvg}ms</td>
+                  <td style="padding: 8px; border-top: 1px solid rgba(255,255,255,0.1); text-align: right; color: ${stats.local.errors > 0 ? '#f66' : '#0f0'};">${stats.local.errors}</td>
+                </tr>
+                <tr style="${mode === 'cloud' ? 'background: rgba(100,150,255,0.1);' : ''}">
+                  <td style="padding: 8px; border-top: 1px solid rgba(255,255,255,0.1);">☁️ Cloud</td>
+                  <td style="padding: 8px; border-top: 1px solid rgba(255,255,255,0.1); text-align: right;">${stats.cloud.requests}</td>
+                  <td style="padding: 8px; border-top: 1px solid rgba(255,255,255,0.1); text-align: right;">${stats.cloud.tokens.toLocaleString()}</td>
+                  <td style="padding: 8px; border-top: 1px solid rgba(255,255,255,0.1); text-align: right;">${cloudAvg}ms</td>
+                  <td style="padding: 8px; border-top: 1px solid rgba(255,255,255,0.1); text-align: right; color: ${stats.cloud.errors > 0 ? '#f66' : '#0f0'};">${stats.cloud.errors}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Availability Status -->
+          <div style="margin-bottom: 16px;">
+            <h4 style="margin: 0 0 12px 0; font-size: 1em; color: #0ff;">Provider Availability</h4>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; align-items: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                <span style="margin-right: 8px; color: ${status.localReady ? '#0f0' : '#f66'};">${status.localReady ? '✓' : '✗'}</span>
+                <span style="flex: 1;">Local LLM</span>
+                ${status.localModel ? `<span style="color: #888; font-size: 0.85em;">${status.localModel}</span>` : ''}
+              </div>
+              <div style="display: flex; align-items: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                <span style="margin-right: 8px; color: ${status.cloudAvailable ? '#0f0' : '#f66'};">${status.cloudAvailable ? '✓' : '✗'}</span>
+                <span style="flex: 1;">Cloud API</span>
+                <span style="color: #888; font-size: 0.85em;">Gemini</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fallback History -->
+          ${stats.fallbacks.length > 0 ? `
+            <div style="margin-bottom: 16px;">
+              <h4 style="margin: 0 0 12px 0; font-size: 1em; color: #0ff;">Recent Fallbacks</h4>
+              <div style="max-height: 150px; overflow-y: auto;">
+                ${stats.fallbacks.slice(0, 5).map(fb => `
+                  <div style="padding: 6px 8px; background: rgba(255,100,100,0.1); border-radius: 4px; margin-bottom: 4px; font-size: 0.85em;">
+                    <div style="color: #ffa500;">${fb.from} → ${fb.to}</div>
+                    <div style="color: #888; margin-top: 2px;">${this.formatTime(fb.timestamp)}: ${fb.error}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Switch History -->
+          ${stats.switchHistory.length > 0 ? `
+            <div style="margin-bottom: 16px;">
+              <h4 style="margin: 0 0 12px 0; font-size: 1em; color: #0ff;">Mode Switch History</h4>
+              <div style="max-height: 150px; overflow-y: auto;">
+                ${stats.switchHistory.slice(0, 5).map(sw => `
+                  <div style="padding: 6px 8px; background: rgba(255,255,255,0.03); border-radius: 4px; margin-bottom: 4px; font-size: 0.85em; display: flex; justify-content: space-between;">
+                    <span>${sw.from} → ${sw.to}</span>
+                    <span style="color: #888;">${this.formatTime(sw.timestamp)}</span>
+                    <span style="color: ${sw.manual ? '#6496ff' : '#ffa500'};">${sw.manual ? 'Manual' : 'Auto'}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+        `;
+      }
+
+      render() {
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              background: rgba(255,255,255,0.03);
+              border-radius: 8px;
+              padding: 16px;
+              color: #ccc;
+              font-family: system-ui, -apple-system, sans-serif;
+            }
+
+            h4 {
+              margin: 0 0 12px 0;
+              font-size: 1em;
+              color: #0ff;
+            }
+
+            .switch-btn:hover {
+              opacity: 0.8;
+            }
+          </style>
+
+          <div class="widget-content">
+            ${this.renderPanel()}
+          </div>
+        `;
+
+        // Wire up switch buttons
+        this.shadowRoot.querySelectorAll('.switch-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const targetMode = btn.dataset.mode;
+            trackedSetMode(targetMode);
+            this.render(); // Re-render after mode switch
+          });
+        });
+      }
+    }
+
+    // Define custom element
+    if (!customElements.get('hybrid-llm-provider-widget')) {
+      customElements.define('hybrid-llm-provider-widget', HybridLLMProviderWidget);
+    }
+
+    // Widget metadata
+    const widget = {
+      element: 'hybrid-llm-provider-widget',
+      displayName: 'Hybrid LLM Provider',
+      icon: '⚌',
+      category: 'ai',
+      order: 30,
+      updateInterval: 5000
+    };
+
+    return {
+      init,
+      api: {
+        setMode: trackedSetMode,
+        getMode,
+        isLocalAvailable,
+        complete: trackedComplete,
+        stream,
+        getStatus,
+        getAutoSwitchConfig,
+        getUsageStats: () => ({ ...usageStats }),
+        // Expose direct methods for advanced use
+        completeLocal,
+        completeCloud
+      },
+      widget
     };
   }
 };

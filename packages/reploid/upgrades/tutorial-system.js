@@ -3,6 +3,7 @@
  * Provides in-app guided walkthroughs for new users.
  * Shows contextual tooltips and step-by-step instructions.
  *
+ * @blueprint 0x000035 - Describes the interactive tutorial system.
  * @module TutorialSystem
  * @version 1.0.0
  * @category ui
@@ -35,7 +36,7 @@ const TutorialSystem = {
         description: 'Learn the basics of REPLOID',
         steps: [
           {
-            title: 'Welcome to REPLOID! 🎉',
+            title: 'Welcome to REPLOID! ♫',
             content: 'REPLOID is an AI assistant that can improve its own code. Let\'s take a quick tour!',
             target: null, // No specific target, centered
             placement: 'center',
@@ -82,7 +83,7 @@ const TutorialSystem = {
             action: 'next'
           },
           {
-            title: 'Ready to Start! ✨',
+            title: 'Ready to Start! ☆',
             content: 'You\'re all set! Try entering a goal like "Create a simple TODO app" and watch REPLOID work its magic.',
             target: null,
             placement: 'center',
@@ -96,7 +97,7 @@ const TutorialSystem = {
         description: 'Explore RSI capabilities',
         steps: [
           {
-            title: 'Advanced Features 🚀',
+            title: 'Advanced Features ⛻',
             content: 'REPLOID has powerful self-improvement features. Let\'s explore them!',
             target: null,
             placement: 'center',
@@ -167,7 +168,7 @@ const TutorialSystem = {
         description: 'Learn how REPLOID improves itself',
         steps: [
           {
-            title: 'Self-Modification 🔧',
+            title: 'Self-Modification ⚒',
             content: 'REPLOID can modify its own source code. Here\'s how the process works.',
             target: null,
             placement: 'center',
@@ -615,7 +616,7 @@ const TutorialSystem = {
             margin: 0 0 20px 0;
             font-size: 24px;
             text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-          ">📚 Interactive Tutorials</h2>
+          ">◰ Interactive Tutorials</h2>
           <p style="
             color: #e0e0e0;
             font-family: 'Courier New', monospace;
@@ -737,6 +738,367 @@ const TutorialSystem = {
     // Initialize
     addHighlightStyles();
 
+    // Tutorial usage statistics for widget
+    const tutorialStats = {
+      totalStarted: 0,
+      totalCompleted: 0,
+      tutorialsSkipped: 0,
+      lastTutorial: null,
+      tutorialHistory: []
+    };
+
+    // Wrap start to track stats
+    const wrappedStart = (tutorialId) => {
+      const result = start(tutorialId);
+      if (result) {
+        tutorialStats.totalStarted++;
+        tutorialStats.lastTutorial = {
+          id: tutorialId,
+          name: tutorials[tutorialId].name,
+          timestamp: Date.now(),
+          status: 'started'
+        };
+        tutorialStats.tutorialHistory.unshift({...tutorialStats.lastTutorial});
+        if (tutorialStats.tutorialHistory.length > 10) {
+          tutorialStats.tutorialHistory = tutorialStats.tutorialHistory.slice(0, 10);
+        }
+      }
+      return result;
+    };
+
+    // Wrap complete to track stats
+    const wrappedComplete = () => {
+      complete();
+      tutorialStats.totalCompleted++;
+      if (tutorialStats.lastTutorial) {
+        tutorialStats.lastTutorial.status = 'completed';
+        tutorialStats.lastTutorial.completedAt = Date.now();
+      }
+    };
+
+    // Wrap stop to track stats
+    const wrappedStop = () => {
+      if (isActive) {
+        tutorialStats.tutorialsSkipped++;
+        if (tutorialStats.lastTutorial) {
+          tutorialStats.lastTutorial.status = 'skipped';
+          tutorialStats.lastTutorial.skippedAt = Date.now();
+        }
+      }
+      stop();
+    };
+
+    // Web Component Widget
+    class TutorialSystemWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+
+      connectedCallback() {
+        this.render();
+        // Auto-refresh every 2 seconds to track tutorial progress
+        this._interval = setInterval(() => this.render(), 2000);
+      }
+
+      disconnectedCallback() {
+        if (this._interval) {
+          clearInterval(this._interval);
+          this._interval = null;
+        }
+      }
+
+      getStatus() {
+        const availableTutorials = getAvailableTutorials();
+        const completedCount = availableTutorials.filter(t => t.completed).length;
+        const totalCount = availableTutorials.length;
+
+        return {
+          state: isActive ? 'active' : (completedCount > 0 ? 'idle' : 'disabled'),
+          primaryMetric: isActive
+            ? `Step ${currentStep + 1}/${currentTutorial.steps.length}`
+            : `${completedCount}/${totalCount} completed`,
+          secondaryMetric: isActive ? currentTutorial.name : 'Ready',
+          lastActivity: tutorialStats.lastTutorial ? tutorialStats.lastTutorial.timestamp : null,
+          message: isActive ? 'Tutorial active' : null
+        };
+      }
+
+      getControls() {
+        const controls = [];
+
+        if (isActive) {
+          controls.push({
+            id: 'stop-tutorial',
+            label: '⏹️ Stop Tutorial',
+            action: () => {
+              wrappedStop();
+              return { success: true, message: 'Tutorial stopped' };
+            }
+          });
+
+          controls.push({
+            id: 'next-step',
+            label: '▶️ Next Step',
+            action: () => {
+              next();
+              return { success: true, message: 'Moved to next step' };
+            }
+          });
+
+          if (currentStep > 0) {
+            controls.push({
+              id: 'prev-step',
+              label: '◀️ Previous Step',
+              action: () => {
+                previous();
+                return { success: true, message: 'Moved to previous step' };
+              }
+            });
+          }
+        } else {
+          controls.push({
+            id: 'show-menu',
+            label: '☷ Show Tutorial Menu',
+            action: () => {
+              showMenu();
+              return { success: true, message: 'Tutorial menu opened' };
+            }
+          });
+
+          // Add quick-start buttons for uncompleted tutorials
+          const availableTutorials = getAvailableTutorials();
+          availableTutorials.slice(0, 2).forEach(tutorial => {
+            if (!tutorial.completed) {
+              controls.push({
+                id: `start-${tutorial.id}`,
+                label: `▶️ ${tutorial.name}`,
+                action: () => {
+                  wrappedStart(tutorial.id);
+                  return { success: true, message: `Started: ${tutorial.name}` };
+                }
+              });
+            }
+          });
+        }
+
+        return controls;
+      }
+
+      render() {
+        const availableTutorials = getAvailableTutorials();
+        const completedCount = availableTutorials.filter(t => t.completed).length;
+        const totalCount = availableTutorials.length;
+
+        let tutorialsHtml = '';
+
+        // Progress summary
+        tutorialsHtml += '<div class="section">';
+        tutorialsHtml += '<div class="section-header">Tutorial Progress</div>';
+        tutorialsHtml += `<div class="metric">Completed: <span class="value-success">${completedCount}</span> / <span class="value-cyan">${totalCount}</span></div>`;
+        tutorialsHtml += `<div class="metric">Started: <span class="value-cyan">${tutorialStats.totalStarted}</span></div>`;
+        if (tutorialStats.tutorialsSkipped > 0) {
+          tutorialsHtml += `<div class="metric">Skipped: <span class="value-warning">${tutorialStats.tutorialsSkipped}</span></div>`;
+        }
+        tutorialsHtml += '</div>';
+
+        // Current tutorial status
+        if (isActive && currentTutorial) {
+          const progressPercent = ((currentStep + 1) / currentTutorial.steps.length) * 100;
+          tutorialsHtml += '<div class="active-tutorial">';
+          tutorialsHtml += '<div class="section-header">Active Tutorial</div>';
+          tutorialsHtml += `<div class="tutorial-name">${currentTutorial.name}</div>`;
+          tutorialsHtml += `<div class="step-info">Step ${currentStep + 1} of ${currentTutorial.steps.length}</div>`;
+          tutorialsHtml += '<div class="progress-bar-bg">';
+          tutorialsHtml += `<div class="progress-bar-fill" style="width: ${progressPercent}%;"></div>`;
+          tutorialsHtml += '</div>';
+          tutorialsHtml += '</div>';
+        }
+
+        // Available tutorials
+        if (availableTutorials.length > 0) {
+          tutorialsHtml += '<div class="section">';
+          tutorialsHtml += '<div class="section-header">Available Tutorials</div>';
+          tutorialsHtml += '<div class="tutorial-list">';
+          availableTutorials.forEach(tutorial => {
+            const icon = tutorial.completed ? '✓' : '○';
+            const iconColor = tutorial.completed ? 'value-success' : 'value-muted';
+            tutorialsHtml += '<div class="tutorial-item">';
+            tutorialsHtml += `<span class="${iconColor}">${icon}</span> `;
+            tutorialsHtml += `<span class="tutorial-title">${tutorial.name}</span> `;
+            tutorialsHtml += `<span class="step-count">(${tutorial.steps} steps)</span>`;
+            tutorialsHtml += '</div>';
+          });
+          tutorialsHtml += '</div></div>';
+        }
+
+        // Last tutorial info
+        if (tutorialStats.lastTutorial) {
+          const statusColor = tutorialStats.lastTutorial.status === 'completed' ? 'value-success' :
+                             tutorialStats.lastTutorial.status === 'skipped' ? 'value-warning' : 'value-cyan';
+          tutorialsHtml += '<div class="last-tutorial">';
+          tutorialsHtml += '<div class="section-label">Last Tutorial</div>';
+          tutorialsHtml += `<div class="tutorial-detail">${tutorialStats.lastTutorial.name}</div>`;
+          tutorialsHtml += `<div class="${statusColor} status">${tutorialStats.lastTutorial.status}</div>`;
+          tutorialsHtml += `<div class="timestamp">${new Date(tutorialStats.lastTutorial.timestamp).toLocaleString()}</div>`;
+          tutorialsHtml += '</div>';
+        }
+
+        // Session stats
+        if (tutorialStats.totalStarted > 0) {
+          const completionRate = tutorialStats.totalCompleted > 0
+            ? ((tutorialStats.totalCompleted / tutorialStats.totalStarted) * 100).toFixed(1)
+            : 0;
+          const rateColor = completionRate > 50 ? 'value-success' : 'value-warning';
+          tutorialsHtml += '<div class="session-stats">';
+          tutorialsHtml += '<div class="section-label">Session Stats</div>';
+          tutorialsHtml += `<div class="tutorial-detail">Completion Rate: <span class="${rateColor}">${completionRate}%</span></div>`;
+          tutorialsHtml += '</div>';
+        }
+
+        if (tutorialStats.totalStarted === 0) {
+          tutorialsHtml += '<div class="empty-state">No tutorials started yet</div>';
+        }
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              font-family: monospace;
+              font-size: 12px;
+              color: #e0e0e0;
+            }
+
+            .section {
+              margin-bottom: 12px;
+            }
+
+            .section-header {
+              color: #0ff;
+              font-weight: bold;
+              margin-bottom: 8px;
+            }
+
+            .section-label {
+              color: #888;
+              font-weight: bold;
+              margin-bottom: 4px;
+              font-size: 10px;
+            }
+
+            .metric {
+              color: #e0e0e0;
+              margin-bottom: 4px;
+            }
+
+            .value-success { color: #0f0; }
+            .value-cyan { color: #0ff; }
+            .value-warning { color: #ff0; }
+            .value-muted { color: #888; }
+
+            .active-tutorial {
+              margin-bottom: 12px;
+              padding: 8px;
+              background: rgba(0, 255, 255, 0.05);
+              border: 1px solid rgba(0, 255, 255, 0.2);
+              border-radius: 4px;
+            }
+
+            .tutorial-name {
+              color: #fff;
+              margin-bottom: 4px;
+            }
+
+            .step-info {
+              color: #aaa;
+              font-size: 11px;
+              margin-bottom: 6px;
+            }
+
+            .progress-bar-bg {
+              background: rgba(0, 0, 0, 0.3);
+              height: 6px;
+              border-radius: 3px;
+              overflow: hidden;
+            }
+
+            .progress-bar-fill {
+              background: linear-gradient(90deg, #0ff, #0f0);
+              height: 100%;
+              transition: width 0.3s ease;
+            }
+
+            .tutorial-list {
+              max-height: 150px;
+              overflow-y: auto;
+            }
+
+            .tutorial-item {
+              padding: 4px 0;
+              border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .tutorial-title {
+              color: #fff;
+              font-size: 11px;
+            }
+
+            .step-count {
+              color: #666;
+              font-size: 10px;
+            }
+
+            .last-tutorial, .session-stats {
+              margin-bottom: 12px;
+              padding: 8px;
+              background: rgba(0, 0, 0, 0.3);
+              border: 1px solid rgba(255, 255, 255, 0.1);
+              border-radius: 4px;
+            }
+
+            .tutorial-detail {
+              color: #aaa;
+              font-size: 11px;
+              margin-bottom: 4px;
+            }
+
+            .status {
+              font-size: 10px;
+              margin-bottom: 4px;
+            }
+
+            .timestamp {
+              color: #666;
+              font-size: 10px;
+            }
+
+            .empty-state {
+              color: #888;
+              text-align: center;
+              margin-top: 20px;
+              padding: 20px;
+            }
+          </style>
+          <div class="tutorial-system-panel">
+            ${tutorialsHtml}
+          </div>
+        `;
+      }
+    }
+
+    const elementName = 'tutorial-system-widget';
+    if (!customElements.get(elementName)) {
+      customElements.define(elementName, TutorialSystemWidget);
+    }
+
+    const widget = {
+      element: elementName,
+      displayName: 'Tutorial System',
+      icon: '◰',
+      category: 'ui',
+      order: 85
+    };
+
     return {
       init: async () => {
         logger.info('[TutorialSystem] Tutorial system initialized');
@@ -748,11 +1110,11 @@ const TutorialSystem = {
         return true;
       },
       api: {
-        start,
-        stop,
+        start: wrappedStart,
+        stop: wrappedStop,
         next,
         previous,
-        complete,
+        complete: wrappedComplete,
         isActive: () => isActive,
         isCompleted,
         getCurrentTutorial: () => currentTutorial,
@@ -760,7 +1122,9 @@ const TutorialSystem = {
         getAvailableTutorials,
         showMenu,
         tutorials
-      }
+      },
+
+      widget
     };
   }
 };

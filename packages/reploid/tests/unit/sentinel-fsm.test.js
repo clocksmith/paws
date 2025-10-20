@@ -71,7 +71,7 @@ describe('SentinelFSM Module', () => {
           summary: { successRate: 100, passed: 10, failed: 0 }
         })
       },
-      SwarmOrchestrator: {
+      WebRTCCoordinator: {
         shareSuccessPattern: vi.fn().mockResolvedValue(3)
       }
     };
@@ -205,8 +205,8 @@ describe('SentinelFSM Module', () => {
       expect(mockDeps.ReflectionStore.addReflection).toBeTypeOf('function');
     });
 
-    it('should have SwarmOrchestrator for pattern sharing', () => {
-      expect(mockDeps.SwarmOrchestrator.shareSuccessPattern).toBeTypeOf('function');
+    it('should have WebRTCCoordinator for pattern sharing', () => {
+      expect(mockDeps.WebRTCCoordinator.shareSuccessPattern).toBeTypeOf('function');
     });
 
     it('should maintain reflection insights array', () => {

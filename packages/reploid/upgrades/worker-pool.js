@@ -1,3 +1,4 @@
+// @blueprint 0x000057 - WebWorker Pool for parallel execution
 // WebWorker Pool Module for REPLOID
 // Enables parallel execution of tools and computations across multiple workers
 
@@ -300,7 +301,343 @@ const WorkerPool = {
     
     // Initialize on module load
     initialize();
-    
+
+    // Job tracking for stats
+    let jobStats = {
+      completed: 0,
+      failed: 0
+    };
+
+    // Wrap handleWorkerMessage to track job completion
+    const originalHandleWorkerMessage = handleWorkerMessage;
+    handleWorkerMessage = (workerInfo, event) => {
+      const { success } = event.data;
+      const job = activeJobs.get(workerInfo.currentJob);
+
+      if (job) {
+        if (success) {
+          jobStats.completed++;
+        } else {
+          jobStats.failed++;
+        }
+      }
+
+      originalHandleWorkerMessage(workerInfo, event);
+    };
+
+    // Web Component Widget
+    class WorkerPoolWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+
+      connectedCallback() {
+        this.render();
+        // Auto-refresh every 1 second to track worker status
+        this._interval = setInterval(() => this.render(), 1000);
+      }
+
+      disconnectedCallback() {
+        if (this._interval) {
+          clearInterval(this._interval);
+          this._interval = null;
+        }
+      }
+
+      getStatus() {
+        const stats = getStats();
+        const busyWorkers = stats.busy;
+
+        return {
+          state: busyWorkers > 0 ? 'active' : 'idle',
+          primaryMetric: `${busyWorkers}/${POOL_SIZE} busy`,
+          secondaryMetric: `${jobStats.completed} jobs`,
+          lastActivity: jobStats.completed > 0 ? Date.now() : null,
+          message: stats.queueLength > 0 ? `${stats.queueLength} queued` : null
+        };
+      }
+
+      getControls() {
+        return [
+          {
+            id: 'clear-queue',
+            label: 'Clear Queue',
+            icon: '⛶️',
+            action: () => {
+              taskQueue.length = 0;
+              if (typeof EventBus !== 'undefined') {
+                EventBus.emit('toast:success', { message: 'Task queue cleared' });
+              }
+              return { success: true, message: 'Task queue cleared' };
+            }
+          },
+          {
+            id: 'terminate-pool',
+            label: 'Terminate',
+            icon: '⏹',
+            action: () => {
+              if (confirm('Terminate all workers? Active jobs will fail.')) {
+                terminate();
+                if (typeof EventBus !== 'undefined') {
+                  EventBus.emit('toast:warning', { message: 'Worker pool terminated' });
+                }
+                return { success: true, message: 'Worker pool terminated' };
+              }
+              return { success: false, message: 'Cancelled' };
+            }
+          }
+        ];
+      }
+
+      render() {
+        const stats = getStats();
+        const busyWorkers = stats.busy;
+        const utilizationPercent = Math.round((busyWorkers / POOL_SIZE) * 100);
+        const totalJobs = jobStats.completed + jobStats.failed;
+        const successRate = totalJobs > 0
+          ? Math.round((jobStats.completed / totalJobs) * 100)
+          : 100;
+
+        const workersHtml = workers.map((worker, i) => {
+          const statusColor = worker.busy ? '#ffc107' : '#4caf50';
+          const statusIcon = worker.busy ? '⚙️' : '○';
+          return `
+            <div class="worker-item ${worker.busy ? 'busy' : 'idle'}" style="border-color: ${statusColor};">
+              <div class="worker-icon">${statusIcon}</div>
+              <div class="worker-label">Worker ${i}</div>
+              <div class="worker-status" style="color: ${statusColor};">
+                ${worker.busy ? 'Busy' : 'Idle'}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              font-family: monospace;
+              font-size: 12px;
+            }
+
+            .worker-pool-panel {
+              color: #e0e0e0;
+            }
+
+            .pool-stats {
+              display: grid;
+              grid-template-columns: 1fr 1fr 1fr;
+              gap: 10px;
+              margin-bottom: 20px;
+            }
+
+            .stat-card {
+              padding: 10px;
+              border-radius: 5px;
+            }
+
+            .stat-card.pool-size {
+              background: rgba(0, 255, 255, 0.1);
+            }
+
+            .stat-card.utilization {
+              background: rgba(255, 193, 7, 0.1);
+            }
+
+            .stat-card.success-rate {
+              background: rgba(76, 175, 80, 0.1);
+            }
+
+            .stat-label {
+              color: #888;
+              font-size: 12px;
+            }
+
+            .stat-value {
+              font-size: 24px;
+              font-weight: bold;
+              margin-top: 4px;
+            }
+
+            .stat-value.cyan { color: #0ff; }
+            .stat-value.yellow { color: #ffc107; }
+            .stat-value.green { color: #4caf50; }
+
+            .job-stats {
+              display: grid;
+              grid-template-columns: 1fr 1fr 1fr;
+              gap: 10px;
+              margin-bottom: 20px;
+            }
+
+            .job-stat-item {
+              padding: 8px;
+              background: rgba(255, 255, 255, 0.03);
+              border-radius: 5px;
+              text-align: center;
+            }
+
+            .job-stat-label {
+              color: #888;
+              font-size: 12px;
+            }
+
+            .job-stat-value {
+              font-size: 20px;
+              font-weight: bold;
+              margin-top: 4px;
+            }
+
+            .job-stat-value.green { color: #4caf50; }
+            .job-stat-value.red { color: #f44336; }
+            .job-stat-value.yellow { color: #ffc107; }
+
+            .workers-list h4 {
+              color: #0ff;
+              margin: 0 0 10px 0;
+              font-size: 14px;
+            }
+
+            .worker-grid {
+              display: grid;
+              grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+              gap: 8px;
+            }
+
+            .worker-item {
+              padding: 12px;
+              background: rgba(255, 255, 255, 0.03);
+              border-radius: 5px;
+              text-align: center;
+              border: 2px solid;
+            }
+
+            .worker-icon {
+              font-size: 24px;
+              margin-bottom: 4px;
+            }
+
+            .worker-label {
+              font-size: 11px;
+              color: #888;
+            }
+
+            .worker-status {
+              font-size: 10px;
+              margin-top: 4px;
+            }
+
+            .queue-warning {
+              margin-top: 20px;
+              padding: 12px;
+              background: rgba(255, 193, 7, 0.1);
+              border-radius: 5px;
+              border-left: 3px solid #ffc107;
+            }
+
+            .queue-warning-title {
+              font-weight: bold;
+              color: #ffc107;
+              margin-bottom: 4px;
+            }
+
+            .queue-warning-text {
+              font-size: 13px;
+              color: #ccc;
+            }
+
+            .pool-info {
+              background: rgba(255, 255, 255, 0.05);
+              padding: 12px;
+              border-radius: 5px;
+              margin-top: 20px;
+            }
+
+            .pool-info h4 {
+              color: #0ff;
+              margin: 0 0 8px 0;
+              font-size: 14px;
+            }
+
+            .pool-info-content {
+              font-size: 13px;
+              color: #ccc;
+              line-height: 1.8;
+            }
+          </style>
+          <div class="worker-pool-panel">
+            <div class="pool-stats">
+              <div class="stat-card pool-size">
+                <div class="stat-label">Pool Size</div>
+                <div class="stat-value cyan">${POOL_SIZE}</div>
+              </div>
+              <div class="stat-card utilization">
+                <div class="stat-label">Utilization</div>
+                <div class="stat-value yellow">${utilizationPercent}%</div>
+              </div>
+              <div class="stat-card success-rate">
+                <div class="stat-label">Success Rate</div>
+                <div class="stat-value green">${successRate}%</div>
+              </div>
+            </div>
+
+            <div class="job-stats">
+              <div class="job-stat-item">
+                <div class="job-stat-label">Completed</div>
+                <div class="job-stat-value green">${jobStats.completed}</div>
+              </div>
+              <div class="job-stat-item">
+                <div class="job-stat-label">Failed</div>
+                <div class="job-stat-value red">${jobStats.failed}</div>
+              </div>
+              <div class="job-stat-item">
+                <div class="job-stat-label">Queued</div>
+                <div class="job-stat-value yellow">${stats.queueLength}</div>
+              </div>
+            </div>
+
+            <div class="workers-list">
+              <h4>Workers (${POOL_SIZE})</h4>
+              <div class="worker-grid">
+                ${workersHtml}
+              </div>
+            </div>
+
+            ${stats.queueLength > 0 ? `
+              <div class="queue-warning">
+                <div class="queue-warning-title">⚠️ Queue Active</div>
+                <div class="queue-warning-text">
+                  ${stats.queueLength} task${stats.queueLength > 1 ? 's' : ''} waiting for available workers
+                </div>
+              </div>
+            ` : ''}
+
+            <div class="pool-info">
+              <h4>Pool Configuration</h4>
+              <div class="pool-info-content">
+                <div>Hardware Concurrency: ${navigator.hardwareConcurrency || 'Unknown'}</div>
+                <div>Max Queue Size: ${MAX_QUEUE_SIZE}</div>
+                <div>Active Jobs: ${activeJobs.size}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    const elementName = 'worker-pool-widget';
+    if (!customElements.get(elementName)) {
+      customElements.define(elementName, WorkerPoolWidget);
+    }
+
+    const widget = {
+      element: elementName,
+      displayName: 'Worker Pool',
+      icon: '⚡',
+      category: 'core'
+    };
+
     // Public API
     return {
       api: {
@@ -311,7 +648,8 @@ const WorkerPool = {
         getStats,
         terminate,
         POOL_SIZE
-      }
+      },
+      widget
     };
   }
 };

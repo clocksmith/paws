@@ -1,3 +1,4 @@
+// @blueprint 0x00002E - Visualizes the agent FSM states and transitions.
 // Agent Visualizer - FSM State Machine Visualization with D3.js
 // Provides real-time visual representation of Sentinel FSM state transitions
 
@@ -27,14 +28,14 @@ const AgentVisualizer = {
     // FSM State definitions (from sentinel-fsm.js)
     const FSM_STATES = {
       'IDLE': { icon: '⚪', color: '#888', label: 'Idle' },
-      'CURATING_CONTEXT': { icon: '🔍', color: '#4fc3f7', label: 'Curating Context' },
+      'CURATING_CONTEXT': { icon: '⌕', color: '#4fc3f7', label: 'Curating Context' },
       'AWAITING_CONTEXT_APPROVAL': { icon: '⏸️', color: '#ffb74d', label: 'Awaiting Context' },
-      'PLANNING_WITH_CONTEXT': { icon: '🧠', color: '#9575cd', label: 'Planning' },
+      'PLANNING_WITH_CONTEXT': { icon: '⚛', color: '#9575cd', label: 'Planning' },
       'GENERATING_PROPOSAL': { icon: '✍️', color: '#64b5f6', label: 'Generating' },
       'AWAITING_PROPOSAL_APPROVAL': { icon: '⏸️', color: '#ffb74d', label: 'Awaiting Approval' },
       'APPLYING_CHANGESET': { icon: '⚙️', color: '#81c784', label: 'Applying' },
-      'REFLECTING': { icon: '💭', color: '#ba68c8', label: 'Reflecting' },
-      'ERROR': { icon: '❌', color: '#e57373', label: 'Error' }
+      'REFLECTING': { icon: '☁', color: '#ba68c8', label: 'Reflecting' },
+      'ERROR': { icon: '✗', color: '#e57373', label: 'Error' }
     };
 
     // Valid transitions (from sentinel-fsm.js)
@@ -386,13 +387,223 @@ const AgentVisualizer = {
       }
     };
 
+    // Web Component Widget
+    class AgentVisualizerWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+
+      connectedCallback() {
+        this.render();
+        // Auto-refresh every 1 second for real-time FSM visualization
+        this._updateInterval = setInterval(() => this.render(), 1000);
+
+        // Initialize the visualization if not already initialized
+        if (!initialized) {
+          // Subscribe to FSM events
+          if (SentinelFSM) {
+            currentState = SentinelFSM.getCurrentState();
+            stateHistory = SentinelFSM.getStateHistory().slice();
+          }
+          EventBus.on('fsm:state:changed', onStateChange, 'AgentVisualizer');
+        }
+      }
+
+      disconnectedCallback() {
+        if (this._updateInterval) {
+          clearInterval(this._updateInterval);
+          this._updateInterval = null;
+        }
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      getStatus() {
+        const transitionCount = stateHistory.length;
+        const recentTransition = transitionCount > 0
+          ? stateHistory[stateHistory.length - 1]
+          : null;
+
+        const isActive = recentTransition && (Date.now() - recentTransition.timestamp) < 10000;
+
+        return {
+          state: currentState === 'IDLE' ? 'idle' : (isActive ? 'active' : 'idle'),
+          primaryMetric: `State: ${currentState}`,
+          secondaryMetric: `${transitionCount} transitions`,
+          lastActivity: recentTransition?.timestamp || null,
+          message: currentState !== 'IDLE' ? `FSM: ${currentState}` : null
+        };
+      }
+
+      render() {
+        const transitionCount = stateHistory.length;
+        const recentTransitions = stateHistory.slice(-10).reverse();
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              font-family: monospace;
+            }
+            .widget-panel {
+              padding: 12px;
+            }
+            h3 {
+              margin: 0 0 12px 0;
+              font-size: 1.1em;
+              color: #fff;
+            }
+            .controls {
+              display: flex;
+              gap: 8px;
+              margin-bottom: 12px;
+            }
+            button {
+              padding: 6px 12px;
+              background: rgba(100,150,255,0.2);
+              border: 1px solid rgba(100,150,255,0.4);
+              border-radius: 4px;
+              color: #fff;
+              cursor: pointer;
+              font-size: 0.9em;
+            }
+            button:hover {
+              background: rgba(100,150,255,0.3);
+            }
+            .viz-container {
+              width: 100%;
+              height: 500px;
+              background: rgba(0,0,0,0.2);
+              border-radius: 5px;
+              margin-top: 12px;
+            }
+            .current-state {
+              padding: 12px;
+              background: rgba(100,150,255,0.1);
+              border-radius: 4px;
+              border-left: 3px solid #6496ff;
+              margin-bottom: 12px;
+            }
+            .state-value {
+              font-size: 1.4em;
+              font-weight: bold;
+              margin-top: 4px;
+            }
+            .transitions-list {
+              margin-top: 12px;
+              max-height: 200px;
+              overflow-y: auto;
+            }
+            .transition-item {
+              padding: 6px 8px;
+              background: rgba(255,255,255,0.05);
+              border-radius: 4px;
+              margin-bottom: 4px;
+              font-size: 0.85em;
+              display: flex;
+              justify-content: space-between;
+            }
+          </style>
+
+          <div class="widget-panel">
+            <h3>◍ Agent FSM Visualizer</h3>
+
+            <div class="controls">
+              <button id="reset-btn">↻ Reset</button>
+              <button id="export-btn">⇓ Export SVG</button>
+              <button id="refresh-btn">↻ Refresh</button>
+            </div>
+
+            <div class="current-state">
+              <div style="font-size: 0.9em; color: #888;">Current FSM State</div>
+              <div class="state-value">${currentState || 'UNKNOWN'}</div>
+              <div style="margin-top: 4px; color: #aaa; font-size: 0.85em;">${transitionCount} transitions total</div>
+            </div>
+
+            <div id="viz-container" class="viz-container"></div>
+
+            ${recentTransitions.length > 0 ? `
+              <h3 style="margin-top: 16px;">⌚ Recent Transitions (Last 10)</h3>
+              <div class="transitions-list">
+                ${recentTransitions.map(t => {
+                  const timeAgo = Math.floor((Date.now() - t.timestamp) / 1000);
+                  return `
+                    <div class="transition-item">
+                      <span><strong>${t.from}</strong> → <strong>${t.to}</strong></span>
+                      <span style="color: #666;">${timeAgo}s ago</span>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            ` : '<div style="margin-top: 12px; color: #888; font-style: italic;">No transitions yet</div>'}
+          </div>
+        `;
+
+        // Attach event listeners for buttons
+        this.shadowRoot.getElementById('reset-btn')?.addEventListener('click', () => {
+          reset();
+          EventBus.emit('toast:success', { message: 'Visualization reset' });
+          this.render();
+        });
+
+        this.shadowRoot.getElementById('export-btn')?.addEventListener('click', () => {
+          const svgData = exportSVG();
+          if (svgData) {
+            const blob = new Blob([svgData], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'agent-fsm-visualization.svg';
+            a.click();
+            EventBus.emit('toast:success', { message: 'SVG exported' });
+          }
+        });
+
+        this.shadowRoot.getElementById('refresh-btn')?.addEventListener('click', () => {
+          updateVisualization();
+          EventBus.emit('toast:info', { message: 'Visualization refreshed' });
+          this.render();
+        });
+
+        // Render D3 visualization
+        const vizContainer = this.shadowRoot.getElementById('viz-container');
+        if (vizContainer) {
+          // Check if D3 is available
+          if (typeof d3 === 'undefined') {
+            vizContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #888;">D3.js not loaded. Please include D3.js library.</div>';
+          } else {
+            initVisualization(vizContainer);
+          }
+        }
+      }
+    }
+
+    // Register custom element
+    const elementName = 'agent-visualizer-widget';
+    if (!customElements.get(elementName)) {
+      customElements.define(elementName, AgentVisualizerWidget);
+    }
+
+    const widget = {
+      element: elementName,
+      displayName: 'Agent Visualizer',
+      icon: '◍',
+      category: 'ai',
+      updateInterval: 1000
+    };
+
     return {
       init,
       destroy,
       updateVisualization,
       exportSVG,
       reset,
-      getStateHistory: () => stateHistory
+      getStateHistory: () => stateHistory,
+      widget
     };
   }
 };

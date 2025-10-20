@@ -19,10 +19,11 @@ Agents that can edit files, alter goals, or trigger network actions must request
 
 Without a blueprint, destructive actions might bypass confirmation or deliver inconsistent messaging that confuses operators.
 
-### 2. Architectural Overview
-`ConfirmationModal` exposes a single async API:
+### 2. Architectural Solution
+`ConfirmationModal` implements both a **Promise-based API** and a **Web Component widget** for dashboard integration.
 
 ```javascript
+// Promise-based modal API
 const confirmed = await ConfirmationModal.confirm({
   title: 'Delete Blueprint',
   message: 'Remove 0x000010 from the knowledge base?',
@@ -31,6 +32,40 @@ const confirmed = await ConfirmationModal.confirm({
   danger: true,
   details: 'This cannot be undone.'
 });
+
+// Web Component widget for dashboard
+class ConfirmationModalWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+  }
+
+  disconnectedCallback() {
+    // No intervals to clear
+  }
+
+  getStatus() {
+    const hasActiveModal = activeModal !== null;
+    const hasRecentActivity = modalStats.lastModal &&
+      (Date.now() - modalStats.lastModal.timestamp < 60000);
+    return {
+      state: hasActiveModal ? 'active' : (hasRecentActivity ? 'idle' : 'disabled'),
+      primaryMetric: modalStats.totalShown > 0 ? `${modalStats.totalShown} shown` : 'No modals',
+      secondaryMetric: modalStats.totalConfirmed > 0 ? `${modalStats.totalConfirmed} confirmed` : 'Ready',
+      lastActivity: modalStats.lastModal ? modalStats.lastModal.timestamp : null,
+      message: hasActiveModal ? 'Modal active' : (modalStats.dangerModalsShown > 0 ? `${modalStats.dangerModalsShown} danger` : null)
+    };
+  }
+
+  render() {
+    // Shadow DOM with modal usage statistics
+    this.shadowRoot.innerHTML = `<style>...</style><div>...</div>`;
+  }
+}
 ```
 
 Key mechanics:
@@ -39,23 +74,59 @@ Key mechanics:
 - **Event Wiring**: attaches click handlers, Escape key listener, overlay dismissal, and focus management.
 - **Promise Resolution**: resolves `true` on confirm, `false` on cancel or overlay close.
 - **Style Injection**: lazily injects CSS if missing to avoid duplicate styles.
+- **Usage Tracking**: tracks `modalStats` (totalShown, totalConfirmed, totalCancelled, dangerModalsShown, recentModals).
+- **Widget Protocol**
+  - Exports `widget` metadata: `{ element, displayName, icon, category, order }`.
+  - Provides `getStatus()` with 5 required fields for dashboard integration.
 
 ### 3. Implementation Pathway
-1. **Invocation Flow**
-   - UI surfaces (VFS Explorer, Tool Runner, persona actions) call `ConfirmationModal.confirm`.
-   - Provide descriptive copy—avoid generic “Are you sure?” messages.
-2. **Accessibility Guarantees**
+1. **Web Component Registration**
+   - Define `ConfirmationModalWidget` extending `HTMLElement`.
+   - Register custom element: `customElements.define('confirmation-modal-widget', ConfirmationModalWidget)`.
+   - Export widget metadata: `{ element, displayName: 'Confirmation Modal', icon: '⁇', category: 'ui', order: 65 }`.
+2. **Lifecycle: connectedCallback**
+   - Call `attachShadow({ mode: 'open' })` in constructor.
+   - No auto-refresh interval (modal stats updated on-demand).
+   - Render Shadow DOM with usage statistics.
+3. **Lifecycle: disconnectedCallback**
+   - No cleanup needed (no intervals or persistent listeners).
+4. **Shadow DOM Rendering**
+   - Render inline `<style>` with cyberpunk theme and modal-specific CSS.
+   - Display controls: "Test Modal", "Test Danger Modal" buttons for demo.
+   - Show usage summary: total shown, confirmed, cancelled, danger modal count.
+   - Display confirmation rate percentage with color coding (green/yellow/red).
+   - Show last modal info: title, timestamp, danger flag.
+   - List recent modals (last 5) with icons and timestamps.
+   - Indicate if modal is currently active.
+5. **Promise-based Modal API**
+   - Call `confirm(options)` with title, message, confirmText, cancelText, danger, details.
+   - Create overlay div with modal-content markup.
+   - Attach event listeners: confirm button, cancel button, close (×), Escape key, overlay click.
+   - Focus confirm button after render for accessibility.
+   - Return Promise that resolves `true` (confirmed) or `false` (cancelled).
+6. **Usage Tracking**
+   - Wrap `confirm()` to increment `modalStats` counters.
+   - Track: totalShown, totalConfirmed, totalCancelled, dangerModalsShown.
+   - Maintain `recentModals` array (last 10) with title, timestamp, danger flag.
+   - Update `lastModal` reference for quick access.
+7. **getStatus() Method**
+   - Return object with `state` (active if modal open, idle if recent activity, disabled otherwise).
+   - Include `primaryMetric` (total shown), `secondaryMetric` (total confirmed).
+   - Track `lastActivity` (timestamp of last modal shown).
+   - Optional `message` for danger modal count.
+8. **Style Injection**
+   - Auto-inject global CSS styles on module initialization.
+   - Check for existing `#confirmation-modal-styles` to avoid duplicates.
+   - Include animations (fadeIn, slideIn), responsive layout, danger mode styling.
+9. **Accessibility**
    - Ensure confirm button receives focus after render.
-   - Provide `aria-label`s and maintain keyboard navigation.
-   - Escape key must always cancel.
-3. **Danger Mode**
-   - `danger: true` applies red styling and warns the user; reserve for irreversible operations.
-   - Pair with toast notifications summarising the final action result.
-4. **Integration with Event Bus**
-   - Emit `ui:confirmation_shown` and `ui:confirmation_result` events so analytics can track user decisions (optional extension).
-5. **Cleanup Discipline**
-   - Always call `closeModal()` when the prompt resolves.
-   - Remove event listeners to prevent memory leaks.
+   - Provide accessible close button with aria-label.
+   - Escape key always cancels modal.
+   - Overlay click cancels modal (click outside to dismiss).
+10. **Cleanup Discipline**
+    - Call `closeModal()` to remove overlay from DOM.
+    - Remove event listeners (especially Escape key) to prevent memory leaks.
+    - Reset `activeModal` reference.
 
 ### 4. Usage Patterns
 - **Destructive Actions**: deleting files, overwriting blueprints, resetting state.

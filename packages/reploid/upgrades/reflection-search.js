@@ -3,6 +3,7 @@
  * Provides semantic similarity search over reflection history using TF-IDF embeddings.
  * Enables finding relevant past experiences by meaning, not just keywords.
  *
+ * @blueprint 0x00003D - Defines semantic reflection search.
  * @module ReflectionSearch
  * @version 1.0.0
  * @category intelligence
@@ -26,6 +27,12 @@ const ReflectionSearch = {
     let indexedReflections = [];
     let lastIndexUpdate = 0;
     const INDEX_TTL = 300000; // 5 minutes
+
+    // Widget tracking
+    let _searchCount = 0;
+    let _lastSearchTime = null;
+    let _indexRebuildCount = 0;
+    let _recentSearches = [];
 
     /**
      * Initialize semantic search system
@@ -193,6 +200,7 @@ const ReflectionSearch = {
 
       tfidfIndex = { idf, vectors };
       lastIndexUpdate = Date.now();
+      _indexRebuildCount++;
 
       const duration = Date.now() - startTime;
       logger.info(`[ReflectionSearch] Index built: ${reflections.length} reflections in ${duration}ms`);
@@ -253,6 +261,19 @@ const ReflectionSearch = {
 
       // Sort by similarity descending
       results.sort((a, b) => b.similarity - a.similarity);
+
+      // Track search
+      _searchCount++;
+      _lastSearchTime = Date.now();
+      _recentSearches.push({
+        query: query.substring(0, 50),
+        results: results.length,
+        timestamp: Date.now()
+      });
+      // Keep only last 10 searches
+      if (_recentSearches.length > 10) {
+        _recentSearches.shift();
+      }
 
       // Apply limit
       return results.slice(0, limit);
@@ -356,6 +377,285 @@ const ReflectionSearch = {
       logger.info('[ReflectionSearch] Index cleared');
     };
 
+    // Web Component Widget
+    const widget = (() => {
+      class ReflectionSearchWidget extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' });
+        }
+
+        connectedCallback() {
+          this.render();
+          this._interval = setInterval(() => this.render(), 5000);
+        }
+
+        disconnectedCallback() {
+          if (this._interval) clearInterval(this._interval);
+        }
+
+        set moduleApi(api) {
+          this._api = api;
+          this.render();
+        }
+
+        getStatus() {
+          const stats = getIndexStats();
+          const indexAge = stats.age ? Math.floor(stats.age / 1000) : 0;
+          const isStale = indexAge > (INDEX_TTL / 1000);
+
+          return {
+            state: !tfidfIndex ? 'warning' : (isStale ? 'idle' : (_searchCount > 0 ? 'active' : 'idle')),
+            primaryMetric: `${stats.indexed} reflections`,
+            secondaryMetric: `${_searchCount} searches`,
+            lastActivity: _lastSearchTime,
+            message: !tfidfIndex ? 'No index' : (isStale ? 'Index stale' : 'Ready')
+          };
+        }
+
+        render() {
+          const stats = getIndexStats();
+          const indexAge = stats.age ? Math.floor(stats.age / 1000) : 0;
+          const indexAgeMin = Math.floor(indexAge / 60);
+          const isStale = indexAge > (INDEX_TTL / 1000);
+
+          const formatTime = (timestamp) => {
+            if (!timestamp) return 'Never';
+            const diff = Date.now() - timestamp;
+            if (diff < 60000) return `${Math.floor(diff/1000)}s ago`;
+            if (diff < 3600000) return `${Math.floor(diff/60000)}m ago`;
+            return `${Math.floor(diff/3600000)}h ago`;
+          };
+
+          this.shadowRoot.innerHTML = `
+            <style>
+              :host {
+                display: block;
+                background: rgba(255,255,255,0.05);
+                border-radius: 8px;
+                padding: 16px;
+              }
+              h3 {
+                margin: 0 0 16px 0;
+                font-size: 1.4em;
+                color: #fff;
+              }
+              h4 {
+                margin: 16px 0 8px 0;
+                font-size: 1.1em;
+                color: #aaa;
+              }
+              .controls {
+                display: flex;
+                gap: 8px;
+                margin-bottom: 16px;
+              }
+              button {
+                padding: 6px 12px;
+                background: rgba(100,150,255,0.2);
+                border: 1px solid rgba(100,150,255,0.4);
+                border-radius: 4px;
+                color: #fff;
+                cursor: pointer;
+                font-size: 0.9em;
+              }
+              button:hover {
+                background: rgba(100,150,255,0.3);
+              }
+              .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+                margin-top: 12px;
+              }
+              .stat-card {
+                padding: 12px;
+                background: rgba(100,150,255,0.1);
+                border-radius: 4px;
+              }
+              .stat-card.stale {
+                background: rgba(255,150,0,0.1);
+              }
+              .stat-label {
+                font-size: 0.85em;
+                color: #888;
+              }
+              .stat-value {
+                font-size: 1.3em;
+                font-weight: bold;
+              }
+              .stat-value.warning {
+                color: #f90;
+              }
+              .index-stats {
+                margin-top: 8px;
+                padding: 12px;
+                background: rgba(255,255,255,0.05);
+                border-radius: 4px;
+              }
+              .stats-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                font-size: 0.9em;
+              }
+              .stats-row > div {
+                display: flex;
+                justify-content: space-between;
+              }
+              .stats-label {
+                color: #888;
+              }
+              .status-fresh {
+                color: #0c0;
+              }
+              .status-stale {
+                color: #f90;
+              }
+              .recent-searches {
+                max-height: 120px;
+                overflow-y: auto;
+                margin-top: 8px;
+              }
+              .search-item {
+                padding: 6px 8px;
+                background: rgba(255,255,255,0.05);
+                border-radius: 3px;
+                margin-bottom: 4px;
+                font-size: 0.85em;
+              }
+              .search-header {
+                display: flex;
+                justify-content: space-between;
+              }
+              .search-query {
+                font-style: italic;
+                color: #aaa;
+              }
+              .search-results {
+                color: #888;
+              }
+              .search-time {
+                color: #666;
+                font-size: 0.85em;
+                margin-top: 2px;
+              }
+              .info-box {
+                margin-top: 16px;
+                padding: 12px;
+                background: rgba(100,150,255,0.1);
+                border-left: 3px solid #6496ff;
+                border-radius: 4px;
+              }
+              .info-text {
+                margin-top: 6px;
+                color: #aaa;
+                font-size: 0.9em;
+              }
+            </style>
+
+            <div class="widget-panel">
+              <h3>⌕ Reflection Search</h3>
+
+              <div class="controls">
+                <button class="rebuild-index">↻ Rebuild Index</button>
+                <button class="clear-index">⛶ Clear Index</button>
+              </div>
+
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <div class="stat-label">Indexed</div>
+                  <div class="stat-value">${stats.indexed}</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-label">Vocabulary</div>
+                  <div class="stat-value">${stats.vocabularySize}</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-label">Searches</div>
+                  <div class="stat-value">${_searchCount}</div>
+                </div>
+                <div class="stat-card ${isStale ? 'stale' : ''}">
+                  <div class="stat-label">Index Age</div>
+                  <div class="stat-value ${isStale ? 'warning' : ''}">${indexAgeMin}m</div>
+                </div>
+              </div>
+
+              <h4>☱ Index Statistics</h4>
+              <div class="index-stats">
+                <div class="stats-row">
+                  <div>
+                    <span class="stats-label">Last update:</span>
+                    <span>${stats.lastUpdate ? formatTime(stats.lastUpdate) : 'Never'}</span>
+                  </div>
+                  <div>
+                    <span class="stats-label">Rebuilds:</span>
+                    <span>${_indexRebuildCount}</span>
+                  </div>
+                  <div>
+                    <span class="stats-label">TTL:</span>
+                    <span>${INDEX_TTL / 60000}min</span>
+                  </div>
+                  <div>
+                    <span class="stats-label">Status:</span>
+                    <span class="${isStale ? 'status-stale' : 'status-fresh'}">${isStale ? 'Stale' : 'Fresh'}</span>
+                  </div>
+                </div>
+              </div>
+
+              ${_recentSearches.length > 0 ? `
+                <h4>⌕ Recent Searches</h4>
+                <div class="recent-searches">
+                  ${_recentSearches.slice().reverse().map(search => `
+                    <div class="search-item">
+                      <div class="search-header">
+                        <span class="search-query">"${search.query}${search.query.length >= 50 ? '...' : ''}"</span>
+                        <span class="search-results">${search.results} results</span>
+                      </div>
+                      <div class="search-time">${formatTime(search.timestamp)}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+
+              <div class="info-box">
+                <strong>ℹ️ Semantic Search</strong>
+                <div class="info-text">
+                  TF-IDF based semantic similarity search over reflection history.<br>
+                  Last search: ${formatTime(_lastSearchTime)}
+                </div>
+              </div>
+            </div>
+          `;
+
+          // Attach event listeners
+          this.shadowRoot.querySelector('.rebuild-index')?.addEventListener('click', async () => {
+            await rebuildIndex();
+            logger.info('[ReflectionSearch] Widget: Index rebuilt');
+            this.render();
+          });
+
+          this.shadowRoot.querySelector('.clear-index')?.addEventListener('click', () => {
+            clearIndex();
+            logger.info('[ReflectionSearch] Widget: Index cleared');
+            this.render();
+          });
+        }
+      }
+
+      if (!customElements.get('reflection-search-widget')) {
+        customElements.define('reflection-search-widget', ReflectionSearchWidget);
+      }
+
+      return {
+        element: 'reflection-search-widget',
+        displayName: 'Reflection Search',
+        icon: '⌕',
+        category: 'intelligence',
+        updateInterval: 5000
+      };
+    })();
+
     return {
       init,
       api: {
@@ -365,7 +665,8 @@ const ReflectionSearch = {
         rebuildIndex,
         clearIndex,
         getIndexStats
-      }
+      },
+      widget
     };
   }
 };

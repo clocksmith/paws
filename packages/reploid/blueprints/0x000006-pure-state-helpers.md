@@ -2,6 +2,9 @@
 
 **Objective:** To articulate the principle of separating deterministic state calculations (such as validation and statistical analysis) into a dedicated, pure helper module.
 
+**Target Upgrade:** STHP (`state-helpers-pure.js`)
+
+
 **Prerequisites:** `0x000005`
 
 **Affected Artifacts:** `/modules/state-helpers-pure.js`, `/modules/state-manager.js`
@@ -20,6 +23,76 @@ A new `/modules/state-helpers-pure.js` artifact will be created. This module wil
 -   `validateStateStructurePure(stateObj, ...)`: Takes a state object and returns `null` if valid or an error string if not.
 -   `calculateDerivedStatsPure(historyArrays, ...)`: Takes arrays (e.g., `confidenceHistory`) and returns an object of calculated statistics (e.g., `{ avgConfidence: 0.85 }`).
 -   `mergeWithDefaultsPure(loadedState, ...)`: Takes a potentially incomplete state object loaded from storage and merges it with a default state structure to ensure all necessary keys exist.
+
+**Web Component Widget:**
+
+The module includes a `StateHelpersPureWidget` custom element providing dashboard visibility into validation operations and function call statistics.
+
+```javascript
+class StateHelpersPureWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+    this._interval = setInterval(() => this.render(), 5000);
+  }
+
+  disconnectedCallback() {
+    if (this._interval) {
+      clearInterval(this._interval);
+      this._interval = null;
+    }
+  }
+
+  getStatus() {
+    return {
+      state: _callStats.validations > 0 ? 'active' : 'idle',
+      primaryMetric: `${_callStats.validations} validations`,
+      secondaryMetric: `${_callStats.calculations} calculations`,
+      lastActivity: _lastCallTime
+    };
+  }
+
+  render() {
+    this.shadowRoot.innerHTML = `
+      <style>/* Shadow DOM styling */</style>
+      <div class="widget-content">
+        <h3>📐 Pure State Helpers</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Validations</div>
+            <div class="stat-value">${_callStats.validations}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Calculations</div>
+            <div class="stat-value">${_callStats.calculations}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Merges</div>
+            <div class="stat-value">${_callStats.merges}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+}
+
+// Register custom element
+if (!customElements.get('state-helpers-pure-widget')) {
+  customElements.define('state-helpers-pure-widget', StateHelpersPureWidget);
+}
+
+const widget = {
+  element: 'state-helpers-pure-widget',
+  displayName: 'State Helpers',
+  icon: '📐',
+  category: 'core',
+  updateInterval: 5000
+};
+```
 
 ### 3. The Implementation Pathway
 

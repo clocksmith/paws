@@ -1,3 +1,4 @@
+// @blueprint 0x00002B - Defines the visualization data adapter for metrics and graphs.
 // Visualization Data Adapter for REPLOID
 // Transforms internal agent state into visualizable data structures
 
@@ -454,23 +455,283 @@ const VizDataAdapter = {
       return Math.min(100, modScore + impScore);
     };
 
+    // Track adapter usage for widget
+    let adapterStats = {
+      totalQueries: 0,
+      cacheHits: 0,
+      lastQuery: null,
+      queryTypes: {
+        dependencyGraph: 0,
+        cognitiveFlow: 0,
+        memoryHeatmap: 0,
+        goalTree: 0,
+        toolUsage: 0,
+        performanceMetrics: 0,
+        rsiActivity: 0
+      }
+    };
+
+    // Wrap query functions to track stats
+    const trackQuery = (queryType, fn) => {
+      return async (...args) => {
+        adapterStats.totalQueries++;
+        adapterStats.queryTypes[queryType]++;
+        adapterStats.lastQuery = { type: queryType, timestamp: Date.now() };
+
+        if (cache[queryType] && Date.now() - cache.lastUpdate < CACHE_TTL) {
+          adapterStats.cacheHits++;
+        }
+
+        return await fn(...args);
+      };
+    };
+
+    // Widget interface
+    const widget = (() => {
+      class VizDataAdapterWidget extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' });
+        }
+
+        connectedCallback() {
+          this.render();
+          this._updateInterval = setInterval(() => this.render(), 3000);
+        }
+
+        disconnectedCallback() {
+          if (this._updateInterval) {
+            clearInterval(this._updateInterval);
+          }
+        }
+
+        set moduleApi(api) {
+          this._api = api;
+          this.render();
+        }
+
+        getStatus() {
+          const cacheHitRate = adapterStats.totalQueries > 0
+            ? Math.round((adapterStats.cacheHits / adapterStats.totalQueries) * 100)
+            : 0;
+
+          return {
+            state: adapterStats.totalQueries > 0 ? 'active' : 'idle',
+            primaryMetric: `${adapterStats.totalQueries} queries`,
+            secondaryMetric: `${cacheHitRate}% cache hit`,
+            lastActivity: adapterStats.lastQuery?.timestamp || null,
+            message: adapterStats.lastQuery ? `Last: ${adapterStats.lastQuery.type}` : null
+          };
+        }
+
+        render() {
+          const queryList = Object.entries(adapterStats.queryTypes)
+            .filter(([_, count]) => count > 0)
+            .sort((a, b) => b[1] - a[1]);
+
+          const cacheHitRate = adapterStats.totalQueries > 0
+            ? Math.round((adapterStats.cacheHits / adapterStats.totalQueries) * 100)
+            : 0;
+
+          this.shadowRoot.innerHTML = `
+            <style>
+              :host {
+                display: block;
+                font-family: monospace;
+                color: #e0e0e0;
+              }
+              .viz-data-adapter-panel {
+                padding: 12px;
+                background: #1a1a1a;
+                border-radius: 4px;
+              }
+              h4 {
+                margin: 0 0 12px 0;
+                font-size: 14px;
+                color: #0ff;
+              }
+              .controls {
+                margin-bottom: 12px;
+                display: flex;
+                gap: 8px;
+              }
+              button {
+                padding: 6px 12px;
+                background: #333;
+                color: #e0e0e0;
+                border: 1px solid #555;
+                border-radius: 3px;
+                cursor: pointer;
+                font-family: monospace;
+                font-size: 11px;
+              }
+              button:hover {
+                background: #444;
+              }
+              .adapter-stats {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 10px;
+                margin-bottom: 20px;
+              }
+              .stat-card {
+                padding: 10px;
+                border-radius: 5px;
+              }
+              .stat-card div:first-child {
+                color: #888;
+                font-size: 11px;
+                margin-bottom: 4px;
+              }
+              .stat-card div:last-child {
+                font-size: 20px;
+                font-weight: bold;
+              }
+              .last-query {
+                background: rgba(0,255,255,0.1);
+                padding: 12px;
+                border-radius: 5px;
+                margin-bottom: 20px;
+              }
+              .query-breakdown {
+                margin-bottom: 12px;
+              }
+              .query-list {
+                max-height: 250px;
+                overflow-y: auto;
+              }
+              .query-item {
+                padding: 10px;
+                background: rgba(255,255,255,0.03);
+                margin-bottom: 8px;
+                border-radius: 5px;
+              }
+              .query-bar {
+                background: rgba(0,0,0,0.3);
+                height: 6px;
+                border-radius: 3px;
+                overflow: hidden;
+              }
+              .query-fill {
+                background: linear-gradient(90deg, #0ff, #9c27b0);
+                height: 100%;
+              }
+              .adapter-info {
+                background: rgba(255,255,255,0.05);
+                padding: 12px;
+                border-radius: 5px;
+                margin-top: 20px;
+              }
+            </style>
+            <div class="viz-data-adapter-panel">
+              <h4>☱ Viz Data Adapter</h4>
+
+              <div class="controls">
+                <button class="clear-cache">⛶ Clear Cache</button>
+              </div>
+
+              <div class="adapter-stats">
+                <div class="stat-card" style="background: rgba(0,255,255,0.1);">
+                  <div>Total Queries</div>
+                  <div style="color: #0ff;">${adapterStats.totalQueries}</div>
+                </div>
+                <div class="stat-card" style="background: rgba(76,175,80,0.1);">
+                  <div>Cache Hits</div>
+                  <div style="color: #4caf50;">${adapterStats.cacheHits}</div>
+                </div>
+                <div class="stat-card" style="background: rgba(156,39,176,0.1);">
+                  <div>Hit Rate</div>
+                  <div style="color: #9c27b0;">${cacheHitRate}%</div>
+                </div>
+              </div>
+
+              ${adapterStats.lastQuery ? `
+                <div class="last-query">
+                  <div style="font-weight: bold; margin-bottom: 6px; color: #0ff;">Last Query</div>
+                  <div style="font-size: 13px; color: #ccc;">${adapterStats.lastQuery.type}</div>
+                  <div style="font-size: 11px; color: #666; margin-top: 4px;">
+                    ${new Date(adapterStats.lastQuery.timestamp).toLocaleString()}
+                  </div>
+                </div>
+              ` : ''}
+
+              <div class="query-breakdown">
+                <h4>Query Types (${queryList.length})</h4>
+                <div class="query-list">
+                  ${queryList.length > 0 ? queryList.map(([type, count]) => {
+                    const percentage = Math.round((count / adapterStats.totalQueries) * 100);
+                    return `
+                      <div class="query-item">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                          <span style="font-weight: bold; color: #ccc; font-size: 12px;">${type}</span>
+                          <span style="color: #0ff;">${count}</span>
+                        </div>
+                        <div class="query-bar">
+                          <div class="query-fill" style="width: ${percentage}%;"></div>
+                        </div>
+                        <div style="font-size: 10px; color: #666; margin-top: 4px;">${percentage}% of queries</div>
+                      </div>
+                    `;
+                  }).join('') : '<div style="color: #888; padding: 20px; text-align: center; font-size: 12px;">No queries yet</div>'}
+                </div>
+              </div>
+
+              <div class="adapter-info">
+                <h4>Adapter Info</h4>
+                <div style="font-size: 12px; color: #ccc; line-height: 1.8;">
+                  <div>Cache TTL: ${CACHE_TTL}ms</div>
+                  <div>Supported Visualizations: 7</div>
+                </div>
+              </div>
+            </div>
+          `;
+
+          // Attach event listeners
+          this.shadowRoot.querySelector('.clear-cache')?.addEventListener('click', () => {
+            cache.dependencyGraph = null;
+            cache.cognitiveFlow = null;
+            cache.memoryHeatmap = null;
+            cache.goalTree = null;
+            cache.toolUsage = null;
+            cache.lastUpdate = 0;
+            if (typeof EventBus !== 'undefined') {
+              EventBus.emit?.('toast:success', { message: 'Visualization cache cleared' });
+            }
+            this.render();
+          });
+        }
+      }
+
+      if (!customElements.get('viz-data-adapter-widget')) {
+        customElements.define('viz-data-adapter-widget', VizDataAdapterWidget);
+      }
+
+      return {
+        element: 'viz-data-adapter-widget',
+        displayName: 'Viz Data Adapter',
+        icon: '☱',
+        category: 'ui',
+        order: 85
+      };
+    })();
+
     // Initialize and return public interface
     const init = async () => {
       logger.logEvent('info', 'VizDataAdapter initialized');
-      
+
       return {
-        getDependencyGraph,
-        getCognitiveFlow,
-        getMemoryHeatmap,
-        getGoalTree,
-        getToolUsage,
-        getPerformanceMetrics,
-        getRSIActivity,
+        getDependencyGraph: trackQuery('dependencyGraph', getDependencyGraph),
+        getCognitiveFlow: trackQuery('cognitiveFlow', getCognitiveFlow),
+        getMemoryHeatmap: trackQuery('memoryHeatmap', getMemoryHeatmap),
+        getGoalTree: trackQuery('goalTree', getGoalTree),
+        getToolUsage: trackQuery('toolUsage', getToolUsage),
+        getPerformanceMetrics: trackQuery('performanceMetrics', getPerformanceMetrics),
+        getRSIActivity: trackQuery('rsiActivity', getRSIActivity),
         trackActivity
       };
     };
 
-    return { init };
+    return { init, widget };
   }
 };
 

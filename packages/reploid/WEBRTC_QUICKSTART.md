@@ -6,17 +6,17 @@ The WebRTC swarm module has been upgraded from **same-origin only** (BroadcastCh
 
 ### Before
 ```
-❌ Limited to same browser tabs on same domain
-❌ No cross-origin communication
-❌ Not suitable for production multi-user scenarios
+✗ Limited to same browser tabs on same domain
+✗ No cross-origin communication
+✗ Not suitable for production multi-user scenarios
 ```
 
 ### After
 ```
-✅ Cross-origin P2P connections
-✅ Production-ready signaling server
-✅ STUN/TURN support for NAT traversal
-✅ Automatic reconnection and peer discovery
+✓ Cross-origin P2P connections
+✓ Production-ready signaling server
+✓ STUN/TURN support for NAT traversal
+✓ Automatic reconnection and peer discovery
 ```
 
 ## Testing Locally
@@ -159,7 +159,7 @@ console.log(hybridLLM.getStatus());
 
 ```javascript
 // Get swarm orchestrator
-const swarm = await window.bootloader.getModule('SwarmOrchestrator');
+const swarm = await window.bootloader.getModule('WebRTCCoordinator');
 
 // Delegate code generation task
 const result = await swarm.delegateTask({
@@ -296,8 +296,8 @@ See full setup guide: `reploid/docs/WEBRTC_SETUP.md`
 
 ## Next Steps
 
-1. ✅ **Signaling Server**: Working (WebSocket-based)
-2. ✅ **STUN Support**: Configured (Google STUN servers)
+1. ✓ **Signaling Server**: Working (WebSocket-based)
+2. ✓ **STUN Support**: Configured (Google STUN servers)
 3. ⚠️ **TURN Support**: Not configured (add your own or use cloud service)
 4. ⚠️ **Production Deployment**: See `docs/WEBRTC_SETUP.md`
 

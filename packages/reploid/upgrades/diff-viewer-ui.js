@@ -1,3 +1,4 @@
+// @blueprint 0x000058 - Interactive Diff Viewer UI
 // Interactive Diff Viewer UI Component for REPLOID Sentinel
 // Provides rich diff visualization and interactive approval controls
 // PX-3 Enhanced: Prism.js syntax highlighting + detailed statistics
@@ -257,13 +258,13 @@ const DiffViewerUI = {
               ✎ Edit Proposal
             </button>
             <button class="btn-export" onclick="DiffViewerUI.copyToClipboard()" title="Copy diff to clipboard" aria-label="Copy diff to clipboard">
-              📋 Copy
+              ☷ Copy
             </button>
             <button class="btn-export" onclick="DiffViewerUI.exportMarkdown()" title="Export as Markdown" aria-label="Export diff as markdown file">
-              💾 Export
+              ⛃ Export
             </button>
             <button class="btn-export" onclick="DiffViewerUI.share()" title="Share diff" aria-label="Share diff">
-              📤 Share
+              ⇑ Share
             </button>
           </div>
 
@@ -314,9 +315,9 @@ const DiffViewerUI = {
     // Render a single file change
     const renderFileChange = (change, index) => {
       const icon = {
-        CREATE: '➕',
+        CREATE: '⊕',
         MODIFY: '✏️',
-        DELETE: '🗑️'
+        DELETE: '⛶️'
       }[change.operation];
       const operationClass = change.operation.toLowerCase();
       const summary = summarizeChange(change);
@@ -761,7 +762,7 @@ const DiffViewerUI = {
       if (container) {
         container.innerHTML = `
           <div class="diff-error">
-            <p>❌ ${message}</p>
+            <p>✗ ${message}</p>
           </div>
         `;
       }
@@ -1129,7 +1130,7 @@ const DiffViewerUI = {
       // Details
       md += `## Changes\n\n`;
       changes.forEach((change, i) => {
-        const icon = { CREATE: '➕', MODIFY: '✏️', DELETE: '🗑️' }[change.operation];
+        const icon = { CREATE: '⊕', MODIFY: '✏️', DELETE: '⛶️' }[change.operation];
         const status = change.approved ? '✓ Approved' : '☐ Pending';
         md += `### ${i + 1}. ${icon} ${change.operation}: ${change.file_path}\n\n`;
         md += `**Status:** ${status}\n\n`;
@@ -1236,6 +1237,65 @@ const DiffViewerUI = {
       }
     };
 
+    // Diff viewer statistics for widget
+    const diffStats = {
+      diffsShown: 0,
+      totalChanges: 0,
+      totalApprovals: 0,
+      totalRejections: 0,
+      diffsApplied: 0,
+      diffsCancelled: 0,
+      exportsGenerated: 0,
+      lastDiff: null,
+      recentDiffs: []
+    };
+
+    // Wrap handleShowDiff to track stats
+    const wrappedHandleShowDiff = async (data) => {
+      diffStats.diffsShown++;
+      diffStats.lastDiff = {
+        timestamp: Date.now(),
+        path: data.dogs_path,
+        session: data.session_id
+      };
+      diffStats.recentDiffs.unshift(diffStats.lastDiff);
+      if (diffStats.recentDiffs.length > 10) {
+        diffStats.recentDiffs = diffStats.recentDiffs.slice(0, 10);
+      }
+
+      await handleShowDiff(data);
+
+      if (currentDiff) {
+        diffStats.totalChanges += currentDiff.changes.length;
+      }
+    };
+
+    // Wrap applyApproved to track stats
+    const wrappedApplyApproved = async () => {
+      await applyApproved();
+      diffStats.diffsApplied++;
+      if (currentDiff) {
+        const approved = currentDiff.changes.filter(c => c.approved).length;
+        diffStats.totalApprovals += approved;
+      }
+    };
+
+    // Wrap cancel to track stats
+    const wrappedCancel = () => {
+      cancel();
+      diffStats.diffsCancelled++;
+      if (currentDiff) {
+        const rejected = currentDiff.changes.filter(c => !c.approved).length;
+        diffStats.totalRejections += rejected;
+      }
+    };
+
+    // Wrap exportMarkdown to track stats
+    const wrappedExportMarkdown = () => {
+      exportMarkdown();
+      diffStats.exportsGenerated++;
+    };
+
     // Export public API
     const publicApi = {
       init,
@@ -1243,16 +1303,284 @@ const DiffViewerUI = {
       toggleApproval,
       approveAll,
       rejectAll,
-      applyApproved,
+      applyApproved: wrappedApplyApproved,
       editProposal,
-      cancel,
-      showDiff: handleShowDiff,
+      cancel: wrappedCancel,
+      showDiff: wrappedHandleShowDiff,
       clearDiff,
       refresh: handleRefresh,
       getCurrentDiff: () => currentDiff,
       copyToClipboard,
-      exportMarkdown,
-      share
+      exportMarkdown: wrappedExportMarkdown,
+      share,
+
+      widget: (() => {
+        class DiffViewerUIWidget extends HTMLElement {
+          constructor() {
+            super();
+            this.attachShadow({ mode: 'open' });
+          }
+
+          connectedCallback() {
+            this.render();
+            // Listen for diff updates
+            this._diffListener = () => this.render();
+            EventBus.on('diff:updated', this._diffListener);
+          }
+
+          disconnectedCallback() {
+            if (this._diffListener) {
+              EventBus.off('diff:updated', this._diffListener);
+            }
+          }
+
+          set moduleApi(api) {
+            this._api = api;
+            this.render();
+          }
+
+          getStatus() {
+            const hasActiveDiff = currentDiff !== null;
+
+            let approvedCount = 0;
+            let totalCount = 0;
+            if (currentDiff && currentDiff.changes) {
+              totalCount = currentDiff.changes.length;
+              approvedCount = currentDiff.changes.filter(c => c.approved).length;
+            }
+
+            return {
+              state: hasActiveDiff ? 'active' : (diffStats.diffsShown > 0 ? 'idle' : 'disabled'),
+              primaryMetric: hasActiveDiff
+                ? `${approvedCount}/${totalCount} approved`
+                : diffStats.diffsShown > 0
+                  ? `${diffStats.diffsShown} shown`
+                  : 'No diffs',
+              secondaryMetric: hasActiveDiff ? 'Reviewing' : 'Ready',
+              lastActivity: diffStats.lastDiff ? diffStats.lastDiff.timestamp : null,
+              message: hasActiveDiff ? `${totalCount} changes` : null
+            };
+          }
+
+          render() {
+            this.shadowRoot.innerHTML = `
+              <style>
+                :host {
+                  display: block;
+                  background: rgba(255,255,255,0.05);
+                  border-radius: 8px;
+                  padding: 16px;
+                  font-family: monospace;
+                  font-size: 12px;
+                }
+                h3 {
+                  margin: 0 0 16px 0;
+                  font-size: 1.4em;
+                  color: #fff;
+                  font-family: sans-serif;
+                }
+                .controls {
+                  display: flex;
+                  gap: 8px;
+                  margin-bottom: 16px;
+                  flex-wrap: wrap;
+                }
+                button {
+                  padding: 6px 12px;
+                  background: rgba(100,150,255,0.2);
+                  border: 1px solid rgba(100,150,255,0.4);
+                  border-radius: 4px;
+                  color: #fff;
+                  cursor: pointer;
+                  font-size: 0.9em;
+                }
+                button:hover {
+                  background: rgba(100,150,255,0.3);
+                }
+                .section {
+                  margin-bottom: 12px;
+                }
+                .section-title {
+                  color: #0ff;
+                  font-weight: bold;
+                  margin-bottom: 8px;
+                }
+                .stat-row {
+                  color: #e0e0e0;
+                  margin-bottom: 4px;
+                }
+                .stat-value { color: #0ff; }
+                .stat-value.success { color: #0f0; }
+                .stat-value.error { color: #f00; }
+                .stat-value.warning { color: #ff0; }
+                .diff-box {
+                  margin-bottom: 12px;
+                  padding: 8px;
+                  background: rgba(0,255,255,0.05);
+                  border: 1px solid rgba(0,255,255,0.2);
+                  border-radius: 4px;
+                }
+                .diff-box-title {
+                  color: #0ff;
+                  font-weight: bold;
+                  margin-bottom: 4px;
+                }
+                .diff-stats-row {
+                  color: #aaa;
+                  margin-bottom: 2px;
+                }
+                .diff-stats-row span {
+                  color: #fff;
+                }
+                .operation-stats {
+                  margin-top: 4px;
+                  padding-top: 4px;
+                  border-top: 1px solid rgba(255,255,255,0.1);
+                }
+                .op-create { color: #4ec9b0; }
+                .op-modify { color: #ffd700; }
+                .op-delete { color: #f48771; }
+                .stats-box {
+                  margin-bottom: 12px;
+                  padding: 8px;
+                  background: rgba(0,0,0,0.3);
+                  border: 1px solid rgba(255,255,255,0.1);
+                  border-radius: 4px;
+                }
+                .stats-box-title {
+                  color: #888;
+                  font-weight: bold;
+                  margin-bottom: 4px;
+                  font-size: 10px;
+                }
+                .recent-diffs {
+                  max-height: 100px;
+                  overflow-y: auto;
+                }
+                .recent-diff-item {
+                  padding: 3px 0;
+                  border-bottom: 1px solid rgba(255,255,255,0.1);
+                }
+                .empty-state {
+                  color: #888;
+                  text-align: center;
+                  margin-top: 20px;
+                }
+              </style>
+
+              <div class="diff-viewer-panel">
+                <h3>✎ Diff Viewer</h3>
+
+                ${currentDiff ? `
+                  <div class="controls">
+                    <button class="approve-all">✓ Approve All</button>
+                    <button class="reject-all">✗ Reject All</button>
+                    <button class="copy-diff">☷ Copy Diff</button>
+                    <button class="export-diff">⛃ Export</button>
+                  </div>
+                ` : ''}
+
+                <div class="section">
+                  <div class="section-title">Session Summary</div>
+                  <div class="stat-row">Diffs Shown: <span class="stat-value">${diffStats.diffsShown}</span></div>
+                  <div class="stat-row">Total Changes: <span class="stat-value">${diffStats.totalChanges}</span></div>
+                  <div class="stat-row">Applied: <span class="stat-value success">${diffStats.diffsApplied}</span></div>
+                  <div class="stat-row">Cancelled: <span class="stat-value error">${diffStats.diffsCancelled}</span></div>
+                </div>
+
+                ${currentDiff ? (() => {
+                  const totalChanges = currentDiff.changes.length;
+                  const approvedChanges = currentDiff.changes.filter(c => c.approved).length;
+                  const stats = { CREATE: 0, MODIFY: 0, DELETE: 0 };
+                  currentDiff.changes.forEach(c => stats[c.operation]++);
+
+                  return `
+                    <div class="diff-box">
+                      <div class="diff-box-title">Current Diff</div>
+                      <div class="diff-stats-row">Total Changes: <span>${totalChanges}</span></div>
+                      <div class="diff-stats-row">Approved: <span style="color: #0f0;">${approvedChanges}</span></div>
+                      <div class="diff-stats-row">Pending: <span style="color: #ff0;">${totalChanges - approvedChanges}</span></div>
+                      <div class="operation-stats">
+                        <span class="op-create">+${stats.CREATE}</span>
+                        <span class="op-modify">~${stats.MODIFY}</span>
+                        <span class="op-delete">-${stats.DELETE}</span>
+                      </div>
+                    </div>
+                  `;
+                })() : ''}
+
+                ${diffStats.totalApprovals > 0 || diffStats.totalRejections > 0 ? `
+                  <div class="stats-box">
+                    <div class="stats-box-title">All-Time Stats</div>
+                    <div style="color: #aaa; font-size: 11px;">Approved: <span style="color: #0f0;">${diffStats.totalApprovals}</span></div>
+                    <div style="color: #aaa; font-size: 11px;">Rejected: <span style="color: #f00;">${diffStats.totalRejections}</span></div>
+                    ${diffStats.exportsGenerated > 0 ? `<div style="color: #aaa; font-size: 11px;">Exports: <span style="color: #0ff;">${diffStats.exportsGenerated}</span></div>` : ''}
+                  </div>
+                ` : ''}
+
+                ${diffStats.lastDiff ? `
+                  <div class="diff-box">
+                    <div class="diff-box-title">Last Diff</div>
+                    <div style="color: #aaa; font-size: 11px;">Session: ${diffStats.lastDiff.session || 'N/A'}</div>
+                    <div style="color: #888; font-size: 10px;">${new Date(diffStats.lastDiff.timestamp).toLocaleString()}</div>
+                  </div>
+                ` : ''}
+
+                ${diffStats.recentDiffs.length > 0 ? `
+                  <div style="margin-top: 12px;">
+                    <div class="section-title">Recent Diffs</div>
+                    <div class="recent-diffs">
+                      ${diffStats.recentDiffs.slice(0, 5).map(diff => `
+                        <div class="recent-diff-item">
+                          <span style="color: #aaa; font-size: 10px;">${new Date(diff.timestamp).toLocaleTimeString()}</span>
+                          <span style="color: #888; font-size: 10px;">${diff.session || 'N/A'}</span>
+                        </div>
+                      `).join('')}
+                    </div>
+                  </div>
+                ` : ''}
+
+                ${diffStats.diffsShown === 0 ? '<div class="empty-state">No diffs shown yet</div>' : ''}
+              </div>
+            `;
+
+            // Attach event listeners
+            this.shadowRoot.querySelector('.approve-all')?.addEventListener('click', () => {
+              approveAll();
+              this.render();
+            });
+
+            this.shadowRoot.querySelector('.reject-all')?.addEventListener('click', () => {
+              rejectAll();
+              this.render();
+            });
+
+            this.shadowRoot.querySelector('.copy-diff')?.addEventListener('click', async () => {
+              try {
+                await copyToClipboard();
+              } catch (error) {
+                logger.error('[Widget] Copy failed:', error);
+              }
+            });
+
+            this.shadowRoot.querySelector('.export-diff')?.addEventListener('click', () => {
+              wrappedExportMarkdown();
+            });
+          }
+        }
+
+        if (!customElements.get('diff-viewer-ui-widget')) {
+          customElements.define('diff-viewer-ui-widget', DiffViewerUIWidget);
+        }
+
+        return {
+          element: 'diff-viewer-ui-widget',
+          displayName: 'Diff Viewer',
+          icon: '✎',
+          category: 'ui',
+          order: 80
+        };
+      })()
     };
 
     // Set as shared instance for global access

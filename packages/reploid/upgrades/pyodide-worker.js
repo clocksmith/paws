@@ -3,6 +3,7 @@
  * Runs Python code in a sandboxed WebAssembly environment.
  * Isolated in a Web Worker to prevent blocking the main thread.
  *
+ * @blueprint 0x000060
  * @module PyodideWorker
  * @version 1.0.0
  * @category runtime
@@ -372,3 +373,149 @@ self.onmessage = async (event) => {
 
 // Log that worker is loaded
 console.log('[PyodideWorker] Worker loaded, waiting for init message');
+
+// ============================================
+// WEB COMPONENT WIDGET (for main thread visualization)
+// ============================================
+// This code only runs in the main thread, not in the worker
+if (typeof HTMLElement !== 'undefined' && typeof window !== 'undefined') {
+  class PyodideWorkerWidget extends HTMLElement {
+    constructor() {
+      super();
+      this.attachShadow({ mode: 'open' });
+    }
+
+    connectedCallback() {
+      this.render();
+      this._interval = setInterval(() => this.render(), 2000);
+    }
+
+    disconnectedCallback() {
+      if (this._interval) {
+        clearInterval(this._interval);
+        this._interval = null;
+      }
+    }
+
+    getStatus() {
+      // Query the PyodideRuntime manager for worker status
+      const runtime = window.app?.modules?.PyodideRuntime;
+
+      if (!runtime) {
+        return {
+          state: 'disabled',
+          primaryMetric: 'Not loaded',
+          secondaryMetric: 'Runtime missing',
+          lastActivity: null,
+          message: 'PyodideRuntime module not available'
+        };
+      }
+
+      const workerState = runtime.getWorkerState?.() || {};
+      const queueSize = runtime.getQueueSize?.() || 0;
+      const isReady = workerState.ready || false;
+      const error = workerState.error || null;
+
+      return {
+        state: error ? 'error' : (isReady ? 'idle' : 'active'),
+        primaryMetric: `${queueSize} queued`,
+        secondaryMetric: isReady ? `Ready (${workerState.version || 'unknown'})` : 'Initializing...',
+        lastActivity: workerState.lastTaskTime || null,
+        message: error || null
+      };
+    }
+
+    render() {
+      const status = this.getStatus();
+
+      this.shadowRoot.innerHTML = `
+        <style>
+          :host {
+            display: block;
+            font-family: monospace;
+            font-size: 12px;
+            color: #e0e0e0;
+          }
+
+          .worker-panel {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 16px;
+            border-radius: 8px;
+            border-left: 3px solid #9370db;
+          }
+
+          h3 {
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            color: #9370db;
+          }
+
+          .status-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+          }
+
+          .label {
+            color: #888;
+          }
+
+          .value {
+            font-weight: bold;
+          }
+
+          .value-idle { color: #0f0; }
+          .value-active { color: #ff0; }
+          .value-error { color: #f00; }
+          .value-disabled { color: #888; }
+
+          .message {
+            margin-top: 8px;
+            padding: 8px;
+            background: rgba(255, 0, 0, 0.1);
+            border-radius: 4px;
+            font-size: 11px;
+            color: #f88;
+          }
+        </style>
+
+        <div class="worker-panel">
+          <h3>⚙️ Pyodide Worker</h3>
+
+          <div class="status-row">
+            <span class="label">Status:</span>
+            <span class="value value-${status.state}">${status.state.toUpperCase()}</span>
+          </div>
+
+          <div class="status-row">
+            <span class="label">Queue:</span>
+            <span class="value">${status.primaryMetric}</span>
+          </div>
+
+          <div class="status-row">
+            <span class="label">State:</span>
+            <span class="value">${status.secondaryMetric}</span>
+          </div>
+
+          ${status.message ? `<div class="message">⚠️ ${status.message}</div>` : ''}
+        </div>
+      `;
+    }
+  }
+
+  // Register the custom element
+  const elementName = 'pyodide-worker-widget';
+  if (!customElements.get(elementName)) {
+    customElements.define(elementName, PyodideWorkerWidget);
+  }
+
+  // Export widget configuration for module registry
+  if (typeof window !== 'undefined') {
+    window.PyodideWorkerWidget = {
+      element: elementName,
+      displayName: 'Pyodide Worker',
+      icon: '⚙️',
+      category: 'worker'
+    };
+  }
+}

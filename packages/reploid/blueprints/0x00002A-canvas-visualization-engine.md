@@ -18,12 +18,46 @@ Visual feedback accelerates operator comprehension and agent self-reflection. Th
 
 Without a maintained blueprint, the overlay drifts into novelty territory instead of an actionable diagnostic.
 
-### 2. Architectural Overview
-The module renders a fullscreen-adjacent `<canvas>` with custom drawing routines.
+### 2. Architectural Solution
+The module is implemented as a **Web Component widget** that creates and manages a fixed-position canvas with Shadow DOM controls.
 
 ```javascript
-const canvasViz = await ModuleLoader.getModule('CNVS');
-await canvasViz.init(); // implicitly appends canvas to DOM and starts animation loop
+// Web Component class pattern
+class CanvasVisualizerWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+    this._updateInterval = setInterval(() => this.render(), 2000);
+  }
+
+  disconnectedCallback() {
+    if (this._updateInterval) {
+      clearInterval(this._updateInterval);
+    }
+  }
+
+  getStatus() {
+    const isRunning = animationId !== null;
+    const hasRecentActivity = vizStats.lastActivity &&
+      (Date.now() - vizStats.lastActivity < 5000);
+    return {
+      state: isRunning ? (hasRecentActivity ? 'active' : 'idle') : 'disabled',
+      primaryMetric: isRunning ? `${vizState.nodes.size} nodes` : 'Not running',
+      secondaryMetric: isRunning ? `${vizState.mode} mode` : 'Idle',
+      lastActivity: vizStats.lastActivity,
+      message: isRunning ? `${vizState.edges.length} edges` : null
+    };
+  }
+
+  render() {
+    // Shadow DOM with inline styles and visualization controls
+    this.shadowRoot.innerHTML = `<style>...</style><div>...</div>`;
+  }
+}
 ```
 
 Responsibilities:
@@ -39,27 +73,54 @@ Responsibilities:
 - **Rendering Pipeline**
   - Draws background grid, nodes (colour-coded by category), and animated edges.
   - Overlays tooltips / selection panels for the chosen node.
-- **Telemetry Hooks**
+- **Telemetry & Statistics**
+  - Tracks `vizStats`: framesRendered, particlesSpawned, nodesRendered, edgesRendered, modeChanges.
   - Logs interaction events via `logger.logEvent` for analytics.
+- **Widget Protocol**
+  - Exports `widget` metadata: `{ element, displayName, icon, category, updateInterval: 2000 }`.
+  - Provides `getStatus()` with 5 required fields for dashboard integration.
 
 ### 3. Implementation Pathway
-1. **Initialisation**
+1. **Web Component Registration**
+   - Define `CanvasVisualizerWidget` extending `HTMLElement`.
+   - Register custom element: `customElements.define('canvas-visualizer-widget', CanvasVisualizerWidget)`.
+   - Export widget metadata: `{ element, displayName: 'Canvas Visualizer', icon: '⛉', category: 'ui', updateInterval: 2000 }`.
+2. **Lifecycle: connectedCallback**
+   - Call `attachShadow({ mode: 'open' })` in constructor.
+   - Initialize auto-refresh interval (2000ms) for FPS and stats updates.
+   - Render Shadow DOM with visualization controls.
+3. **Lifecycle: disconnectedCallback**
+   - Clear update interval to prevent memory leaks.
+4. **Canvas Initialization**
+   - Call `init()` to create fixed-position canvas element.
    - Verify dependencies (`logger`, `Utils`, `StateManager`, `VizDataAdapter`).
-   - Append canvas to DOM; inject cyberpunk-themed styles if absent.
-   - Call `setupInteractions()` to register mouse listeners.
-2. **Data Refresh**
-   - `updateVisualizationData()` pulls module graph, tool metrics, and goal state from `VizDataAdapter`.
-   - Schedule periodic refresh (e.g., every 10 seconds) or on EventBus triggers (`metrics:update`).
-3. **Rendering**
-   - Clear canvas each frame.
-   - Apply pan/zoom transforms before drawing.
-   - Render edges first, then nodes, then overlays to ensure clarity.
-   - Animate particle trails along active edges to illustrate execution flow.
-4. **Mode Switching**
-   - Support multiple `mode` values (`dependency`, `cognitive`, `memory`, `goals`, `tools`).
-   - Each mode tweaks node colour, size, and supplementary overlays.
-5. **Cleanup**
-   - Provide `destroy()` to cancel animation, remove canvas, and detach listeners when persona deactivates the visual layer.
+   - Setup mouse interactions: drag (pan), wheel (zoom), click (node selection), hover.
+   - Create mode switcher buttons (dependency, cognitive, memory, goals, tools).
+5. **Shadow DOM Rendering**
+   - Render inline `<style>` with monospace font and cyberpunk theme.
+   - Display mode selector buttons (5 modes) with active state highlighting.
+   - Show visualization status: running/stopped, current mode, zoom level.
+   - Display rendering stats: nodes, edges, particles, animations, FPS.
+   - Show session statistics: uptime, frames rendered, particles spawned, mode changes.
+   - Display canvas info: size, pan offset, selected node.
+6. **Data Refresh & Layout**
+   - `updateVisualizationData()` pulls data from `VizDataAdapter` based on mode.
+   - Apply layout algorithm: circular, hierarchical, grid, tree, or force-directed.
+   - Update `vizState` with nodes, edges, heatmap data.
+7. **Animation Loop**
+   - `animate()` clears canvas, applies transforms, draws grid/nodes/edges/particles.
+   - Track `vizStats` for telemetry (frames, particles, activity timestamp).
+   - Use `requestAnimationFrame` for smooth 60 FPS rendering.
+8. **getStatus() Method**
+   - Return object with `state` (active/idle/disabled based on animation running & recent activity).
+   - Include `primaryMetric` (node count), `secondaryMetric` (mode).
+   - Track `lastActivity` (timestamp of last interaction or mode change).
+9. **User Interaction**
+   - Mode buttons call `setMode()` and re-render widget.
+   - Toggle animation button starts/stops animation loop.
+   - Track interactions in `vizStats` for analytics.
+10. **Cleanup**
+    - Provide `destroy()` to cancel animation, remove canvas, detach listeners.
 
 ### 4. Extension Ideas
 - **Mini-map** preview enabling quick navigation in dense graphs.

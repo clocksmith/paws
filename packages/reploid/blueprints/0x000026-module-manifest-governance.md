@@ -2,6 +2,9 @@
 
 **Objective:** Define the structure, lifecycle, and review process for `/upgrades/module-manifest.json`, the authoritative catalog for REPLOID modules.
 
+**Target Upgrade:** MMNF (`module-manifest.json`)
+
+
 **Target Artifact:** MMNF (`module-manifest.json`)
 
 **Prerequisites:** 0x000002 (Application Orchestration), 0x000013 (System Configuration Structure), 0x000025 (Universal Module Loader)

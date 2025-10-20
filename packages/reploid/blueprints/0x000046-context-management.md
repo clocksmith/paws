@@ -281,6 +281,115 @@ Enable 100+ turn conversations that would otherwise exceed limits.
 3. **Compression:** Use model itself to compress old context into dense summaries
 4. **Adaptive Thresholds:** Adjust scoring weights based on task type
 
+## Web Component Widget
+
+The module includes a `ContextManagerWidget` custom element for real-time context monitoring and management:
+
+```javascript
+class ContextManagerWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+    this._interval = setInterval(() => this.render(), 3000);
+  }
+
+  disconnectedCallback() {
+    if (this._interval) {
+      clearInterval(this._interval);
+      this._interval = null;
+    }
+  }
+
+  getStatus() {
+    const stats = getContextStats(StateManager.getHistory(), 'gemini-2.5-flash');
+    return {
+      state: stats.needsPruning ? 'warning' : (stats.tokens > 0 ? 'active' : 'idle'),
+      primaryMetric: `${stats.tokens.toLocaleString()} tokens`,
+      secondaryMetric: `${stats.utilizationPercent.toFixed(0)}% used`,
+      lastActivity: Date.now(),
+      message: stats.needsPruning ? 'Needs pruning' : 'Healthy'
+    };
+  }
+
+  render() {
+    const history = StateManager.getHistory();
+    const stats = getContextStats(history, 'gemini-2.5-flash');
+
+    this.shadowRoot.innerHTML = `
+      <style>/* Shadow DOM styling */</style>
+      <div class="widget-content">
+        <h3>🧠 Context Manager</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Messages</div>
+            <div class="stat-value">${stats.items}</div>
+          </div>
+          <div class="stat-card ${stats.needsPruning ? 'warning' : ''}">
+            <div class="stat-label">Tokens</div>
+            <div class="stat-value">${stats.tokens.toLocaleString()}</div>
+            <div class="stat-sublabel">of ${stats.limit.toLocaleString()}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Utilization</div>
+            <div class="stat-value">${stats.utilizationPercent.toFixed(1)}%</div>
+            <progress value="${stats.utilizationPercent}" max="100"></progress>
+          </div>
+        </div>
+        ${stats.needsPruning ? `
+          <div class="warning-banner">
+            ⚠️ Context exceeds 80% capacity - pruning recommended
+          </div>
+          <button class="prune-btn">Prune Context Now</button>
+        ` : ''}
+        <div class="info">
+          <strong>ℹ️ Automatic Management</strong>
+          <div>Context is automatically pruned before API calls when utilization exceeds 80%</div>
+        </div>
+      </div>
+    `;
+
+    // Wire up prune button
+    const pruneBtn = this.shadowRoot.querySelector('.prune-btn');
+    if (pruneBtn) {
+      pruneBtn.addEventListener('click', async () => {
+        const { pruned, stats: pruneStats } = pruneContext(history);
+        StateManager.setHistory(pruned);
+        EventBus.emit('toast:success', {
+          message: `Context pruned: ${pruneStats.itemsRemoved} items removed`
+        });
+        this.render();
+      });
+    }
+  }
+}
+
+// Register custom element
+if (!customElements.get('context-manager-widget')) {
+  customElements.define('context-manager-widget', ContextManagerWidget);
+}
+
+const widget = {
+  element: 'context-manager-widget',
+  displayName: 'Context Manager',
+  icon: '🧠',
+  category: 'intelligence',
+  updateInterval: 3000
+};
+```
+
+**Widget Features:**
+- Real-time token usage monitoring with 3-second refresh
+- Visual utilization progress bar and percentage
+- Warning banner when context exceeds 80% capacity
+- Interactive "Prune Context Now" button for manual pruning
+- Color-coded stat cards (warning state for high utilization)
+- Auto-refreshes to show context growth during agent cycles
+- Shadow DOM encapsulation for style isolation
+
 ## Related Blueprints
 
 - **0x000008:** Agent Cognitive Cycle (primary consumer)

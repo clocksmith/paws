@@ -1,5 +1,6 @@
 // Sentinel-specific tool implementations for PAWS workflow
 // This module contains the complete implementations for Project Sentinel tools
+// @blueprint 0x000055
 
 const SentinelTools = {
   metadata: {
@@ -375,7 +376,22 @@ Example: ["/modules/api.js", "/config.json"]`;
           }
         }
 
-        // Fallback: Basic verification patterns
+        // Try to use VerificationManager if available
+        try {
+          const VerificationManager = globalThis.DIContainer?.resolve('VerificationManager');
+
+          if (VerificationManager) {
+            logger.info(`[SentinelTools] Running verification via VerificationManager: ${command}`);
+            const result = await VerificationManager.runVerification(command);
+            return result;
+          } else {
+            logger.warn('[SentinelTools] VerificationManager not available, falling back to basic patterns');
+          }
+        } catch (error) {
+          logger.warn(`[SentinelTools] VerificationManager failed: ${error.message}, falling back to basic patterns`);
+        }
+
+        // Fallback: Basic verification patterns (when VerificationManager unavailable)
         if (command.startsWith('test:')) {
           // Run a test file from VFS
           const testPath = command.substring(5);
@@ -384,12 +400,11 @@ Example: ["/modules/api.js", "/config.json"]`;
             return { success: false, error: `Test file not found: ${testPath}` };
           }
 
-          // In a real implementation, this would execute tests in a sandbox
-          // For now, we check if test code looks valid
-          logger.warn(`[SentinelTools] Test execution not fully implemented: ${testPath}`);
+          logger.warn(`[SentinelTools] Test found at ${testPath} - VerificationManager should be enabled for actual execution`);
           return {
             success: true,
-            output: `Test file found: ${testPath} (execution not implemented)`
+            output: `Test file found: ${testPath} (use VerificationManager for execution)`,
+            warning: 'Tests not executed - VerificationManager not available'
           };
         }
 
@@ -403,10 +418,11 @@ Example: ["/modules/api.js", "/config.json"]`;
 
         for (const [name, pattern] of Object.entries(patterns)) {
           if (pattern.test(command)) {
-            logger.warn(`[SentinelTools] ${name} verification not implemented, returning success`);
+            logger.warn(`[SentinelTools] ${name} recognized - use VerificationManager for execution`);
             return {
               success: true,
-              output: `${name} command recognized but not executed (sandbox not available)`
+              output: `${name} command recognized (use VerificationManager for execution)`,
+              warning: 'Command not executed - VerificationManager not available'
             };
           }
         }
@@ -414,8 +430,8 @@ Example: ["/modules/api.js", "/config.json"]`;
         // Unknown command type
         logger.warn(`[SentinelTools] Unknown verification command: ${command}`);
         return {
-          success: true,
-          output: `Command ${command} recognized but not executed`
+          success: false,
+          error: `Unknown verification command: ${command}. Use format 'test:<path>' or standard commands like 'npm test'.`
         };
 
       } catch (error) {
@@ -424,16 +440,380 @@ Example: ["/modules/api.js", "/config.json"]`;
       }
     };
 
+    // Tool execution tracking for widget
+    let toolExecutionHistory = [];
+    let toolStats = {
+      createCatsBundle: { calls: 0, successes: 0, failures: 0, lastUsed: null },
+      createDogsBundle: { calls: 0, successes: 0, failures: 0, lastUsed: null },
+      applyDogsBundle: { calls: 0, successes: 0, failures: 0, lastUsed: null },
+      curateFilesWithAI: { calls: 0, successes: 0, failures: 0, lastUsed: null }
+    };
+
+    // Wrap functions to track usage
+    const trackExecution = (toolName, fn) => {
+      return async (...args) => {
+        const startTime = Date.now();
+        toolStats[toolName].calls++;
+        toolStats[toolName].lastUsed = startTime;
+
+        try {
+          const result = await fn(...args);
+          toolStats[toolName].successes++;
+
+          toolExecutionHistory.push({
+            tool: toolName,
+            timestamp: startTime,
+            duration: Date.now() - startTime,
+            success: true,
+            args: args[0] // First arg for context
+          });
+
+          // Keep history limited to last 100 executions
+          if (toolExecutionHistory.length > 100) {
+            toolExecutionHistory = toolExecutionHistory.slice(-100);
+          }
+
+          return result;
+        } catch (error) {
+          toolStats[toolName].failures++;
+
+          toolExecutionHistory.push({
+            tool: toolName,
+            timestamp: startTime,
+            duration: Date.now() - startTime,
+            success: false,
+            error: error.message
+          });
+
+          throw error;
+        }
+      };
+    };
+
+    // Web Component Widget
+    class SentinelToolsWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      connectedCallback() {
+        this.render();
+        // Auto-refresh every 2 seconds
+        this._interval = setInterval(() => this.render(), 2000);
+      }
+
+      disconnectedCallback() {
+        if (this._interval) {
+          clearInterval(this._interval);
+          this._interval = null;
+        }
+      }
+
+      getStatus() {
+        const totalCalls = Object.values(toolStats).reduce((sum, s) => sum + s.calls, 0);
+        const totalSuccesses = Object.values(toolStats).reduce((sum, s) => sum + s.successes, 0);
+        const successRate = totalCalls > 0 ? Math.round((totalSuccesses / totalCalls) * 100) : 100;
+
+        const recentExecution = toolExecutionHistory.length > 0
+          ? toolExecutionHistory[toolExecutionHistory.length - 1]
+          : null;
+
+        const isActive = recentExecution && (Date.now() - recentExecution.timestamp) < 5000;
+
+        return {
+          state: isActive ? 'active' : 'idle',
+          primaryMetric: `${totalCalls} tools run`,
+          secondaryMetric: `${successRate}% success`,
+          lastActivity: recentExecution?.timestamp || null,
+          message: recentExecution ? `Last: ${recentExecution.tool}` : null
+        };
+      }
+
+      getControls() {
+        return [
+          {
+            id: 'clear-history',
+            label: '⛶️ Clear History',
+            action: () => {
+              toolExecutionHistory = [];
+              this.render();
+              return { success: true, message: 'Tool execution history cleared' };
+            }
+          },
+          {
+            id: 'reset-stats',
+            label: '↻ Reset Stats',
+            action: () => {
+              Object.keys(toolStats).forEach(tool => {
+                toolStats[tool] = { calls: 0, successes: 0, failures: 0, lastUsed: null };
+              });
+              this.render();
+              return { success: true, message: 'Tool statistics reset' };
+            }
+          }
+        ];
+      }
+
+      render() {
+        const recentExecutions = toolExecutionHistory.slice(-20).reverse();
+
+        // Calculate success rates per tool
+        const toolList = Object.entries(toolStats).map(([name, stats]) => {
+          const successRate = stats.calls > 0
+            ? Math.round((stats.successes / stats.calls) * 100)
+            : 0;
+
+          return { name, stats, successRate };
+        }).sort((a, b) => b.stats.calls - a.stats.calls);
+
+        const totalCalls = Object.values(toolStats).reduce((sum, s) => sum + s.calls, 0);
+        const totalSuccesses = Object.values(toolStats).reduce((sum, s) => sum + s.successes, 0);
+        const totalFailures = Object.values(toolStats).reduce((sum, s) => sum + s.failures, 0);
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              font-family: monospace;
+              font-size: 12px;
+            }
+            .sentinel-tools-panel {
+              padding: 12px;
+              color: #fff;
+            }
+            h4 {
+              margin: 0 0 12px 0;
+              font-size: 1.1em;
+              color: #0ff;
+            }
+            .tools-summary {
+              display: grid;
+              grid-template-columns: 1fr 1fr 1fr;
+              gap: 10px;
+              margin-bottom: 20px;
+            }
+            .stat-card {
+              padding: 10px;
+              border-radius: 5px;
+            }
+            .stat-card.executions {
+              background: rgba(0,255,255,0.1);
+            }
+            .stat-card.successes {
+              background: rgba(76,175,80,0.1);
+            }
+            .stat-card.failures {
+              background: rgba(244,67,54,0.1);
+            }
+            .stat-label {
+              color: #888;
+              font-size: 12px;
+            }
+            .stat-value {
+              font-size: 24px;
+              font-weight: bold;
+            }
+            .stat-value.cyan {
+              color: #0ff;
+            }
+            .stat-value.green {
+              color: #4caf50;
+            }
+            .stat-value.red {
+              color: #f44336;
+            }
+            .tools-catalog {
+              margin-bottom: 20px;
+            }
+            .tool-list {
+              max-height: 250px;
+              overflow-y: auto;
+            }
+            .tool-item {
+              padding: 10px;
+              margin-bottom: 8px;
+              background: rgba(255,255,255,0.05);
+              border-radius: 5px;
+            }
+            .tool-item-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            }
+            .tool-name {
+              font-weight: bold;
+              margin-bottom: 4px;
+            }
+            .tool-stats {
+              font-size: 12px;
+              color: #888;
+            }
+            .tool-status {
+              text-align: right;
+              font-size: 20px;
+            }
+            .tool-last-used {
+              font-size: 11px;
+              color: #666;
+              margin-top: 4px;
+            }
+            .execution-history {
+              margin-top: 20px;
+            }
+            .execution-list {
+              max-height: 300px;
+              overflow-y: auto;
+            }
+            .execution-item {
+              padding: 8px;
+              margin-bottom: 8px;
+              background: rgba(255,255,255,0.03);
+            }
+            .execution-item.success {
+              border-left: 3px solid #4caf50;
+            }
+            .execution-item.failure {
+              border-left: 3px solid #f44336;
+            }
+            .execution-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 4px;
+            }
+            .execution-tool {
+              font-weight: bold;
+            }
+            .execution-status {
+              font-size: 18px;
+            }
+            .execution-status.success {
+              color: #4caf50;
+            }
+            .execution-status.failure {
+              color: #f44336;
+            }
+            .execution-meta {
+              font-size: 12px;
+              color: #888;
+            }
+            .execution-error {
+              font-size: 11px;
+              color: #f44336;
+              margin-top: 4px;
+            }
+            .no-executions {
+              color: #888;
+              padding: 20px;
+              text-align: center;
+            }
+          </style>
+          <div class="sentinel-tools-panel">
+            <h4>⚒️ Sentinel Tools</h4>
+
+            <div class="tools-summary">
+              <div class="stat-card executions">
+                <div class="stat-label">Total Executions</div>
+                <div class="stat-value cyan">${totalCalls}</div>
+              </div>
+              <div class="stat-card successes">
+                <div class="stat-label">Successes</div>
+                <div class="stat-value green">${totalSuccesses}</div>
+              </div>
+              <div class="stat-card failures">
+                <div class="stat-label">Failures</div>
+                <div class="stat-value red">${totalFailures}</div>
+              </div>
+            </div>
+
+            <div class="tools-catalog">
+              <h4>Tool Catalog</h4>
+              <div class="tool-list">
+                ${toolList.map(({ name, stats, successRate }) => `
+                  <div class="tool-item">
+                    <div class="tool-item-header">
+                      <div>
+                        <div class="tool-name">${name}</div>
+                        <div class="tool-stats">
+                          ${stats.calls} calls · ${successRate}% success
+                        </div>
+                      </div>
+                      <div class="tool-status">
+                        ${stats.calls > 0 ? '✓' : '○'}
+                      </div>
+                    </div>
+                    ${stats.lastUsed ? `
+                      <div class="tool-last-used">
+                        Last used: ${new Date(stats.lastUsed).toLocaleString()}
+                      </div>
+                    ` : ''}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <div class="execution-history">
+              <h4>Recent Executions (${recentExecutions.length})</h4>
+              <div class="execution-list">
+                ${recentExecutions.length > 0 ? recentExecutions.map(exec => {
+                  const time = new Date(exec.timestamp).toLocaleTimeString();
+                  const statusClass = exec.success ? 'success' : 'failure';
+                  const statusIcon = exec.success ? '✓' : '✗';
+
+                  return `
+                    <div class="execution-item ${statusClass}">
+                      <div class="execution-header">
+                        <div class="execution-tool">${exec.tool}</div>
+                        <div class="execution-status ${statusClass}">${statusIcon}</div>
+                      </div>
+                      <div class="execution-meta">
+                        ${time} · ${exec.duration}ms
+                      </div>
+                      ${exec.error ? `
+                        <div class="execution-error">
+                          Error: ${exec.error}
+                        </div>
+                      ` : ''}
+                    </div>
+                  `;
+                }).join('') : '<div class="no-executions">No executions yet</div>'}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // Register custom element
+    const elementName = 'sentinel-tools-widget';
+    if (!customElements.get(elementName)) {
+      customElements.define(elementName, SentinelToolsWidget);
+    }
+
+    const widget = {
+      element: elementName,
+      displayName: 'Sentinel Tools',
+      icon: '⚒️',
+      category: 'tools'
+    };
+
     // Export the tool implementations
     return {
       api: {
-        createCatsBundle,
-        createDogsBundle,
-        applyDogsBundle,
+        createCatsBundle: trackExecution('createCatsBundle', createCatsBundle),
+        createDogsBundle: trackExecution('createDogsBundle', createDogsBundle),
+        applyDogsBundle: trackExecution('applyDogsBundle', applyDogsBundle),
         parseDogsBundle,
         isPathAllowed,
-        curateFilesWithAI
-      }
+        curateFilesWithAI: trackExecution('curateFilesWithAI', curateFilesWithAI)
+      },
+      widget
     };
   }
 };

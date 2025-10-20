@@ -1,4 +1,8 @@
 {
+  "_blueprint": {
+    "id": "0x000026",
+    "description": "Specifies the module manifest structure and dependency governance."
+  },
   "version": "1.0.0",
   "description": "Module loading manifest for REPLOID agent",
   "loadGroups": [

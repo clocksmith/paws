@@ -3,6 +3,7 @@
  * Handles communication with Gemini, OpenAI, Anthropic, and Local models.
  * Includes automatic retry logic with exponential backoff for reliability.
  *
+ * @blueprint 0x000027 - Describes the multi-provider API gateway for LLM traffic.
  * @module ApiClientMulti
  * @version 2.1.0
  * @category service
@@ -34,6 +35,16 @@ const ApiClientMulti = {
     let proxyStatus = null;
     let proxyChecked = false;
     let currentProvider = 'gemini'; // Default provider
+
+    // Widget tracking state
+    const _apiCallHistory = [];
+    const _providerStats = {
+      gemini: { calls: 0, successes: 0, failures: 0, retries: 0 },
+      openai: { calls: 0, successes: 0, failures: 0, retries: 0 },
+      anthropic: { calls: 0, successes: 0, failures: 0, retries: 0 },
+      local: { calls: 0, successes: 0, failures: 0, retries: 0 }
+    };
+    let _lastActivity = null;
     
     /**
      * Check proxy server availability and supported providers
@@ -255,10 +266,32 @@ const ApiClientMulti = {
       const maxRetries = options.maxRetries || 3;
       const baseDelay = options.baseDelay || 1000; // 1 second
       let firstMeaningfulError = null;
+      const provider = options.provider || currentProvider;
+      const callStartTime = Date.now();
+      let totalRetries = 0;
+
+      // Track call start
+      _providerStats[provider].calls++;
 
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
-          return await performApiCall(history, apiKey, funcDecls, options, attempt);
+          const result = await performApiCall(history, apiKey, funcDecls, options, attempt);
+
+          // Track success
+          _providerStats[provider].successes++;
+          _lastActivity = Date.now();
+
+          // Record call history
+          _apiCallHistory.push({
+            provider,
+            timestamp: Date.now(),
+            duration: Date.now() - callStartTime,
+            retries: totalRetries,
+            success: true
+          });
+          if (_apiCallHistory.length > 50) _apiCallHistory.shift();
+
+          return result;
         } catch (error) {
           const isLastAttempt = attempt === maxRetries;
           const isRetriable = isRetriableError(error);
@@ -269,9 +302,28 @@ const ApiClientMulti = {
           }
 
           if (isLastAttempt || !isRetriable) {
+            // Track failure
+            _providerStats[provider].failures++;
+            _providerStats[provider].retries += totalRetries;
+            _lastActivity = Date.now();
+
+            // Record failed call
+            _apiCallHistory.push({
+              provider,
+              timestamp: Date.now(),
+              duration: Date.now() - callStartTime,
+              retries: totalRetries,
+              success: false,
+              error: error.message
+            });
+            if (_apiCallHistory.length > 50) _apiCallHistory.shift();
+
             // Throw the first meaningful error if we have one, otherwise throw current error
             throw firstMeaningfulError || error;
           }
+
+          // Track retry
+          totalRetries++;
 
           // Exponential backoff: 1s, 2s, 4s
           const delay = baseDelay * Math.pow(2, attempt);
@@ -499,7 +551,222 @@ const ApiClientMulti = {
     const sanitizeLlmJsonResp = (rawText) => {
       return Utils.sanitizeLlmJsonRespPure(rawText, logger).sanitizedJson;
     };
-    
+
+    // Web Component Widget
+    class ApiClientMultiWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+
+      connectedCallback() {
+        this.render();
+        if (this.updateInterval) {
+          this._interval = setInterval(() => this.render(), this.updateInterval);
+        }
+      }
+
+      disconnectedCallback() {
+        if (this._interval) clearInterval(this._interval);
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      getStatus() {
+        const totalCalls = Object.values(_providerStats).reduce((sum, stat) => sum + stat.calls, 0);
+        const totalSuccess = Object.values(_providerStats).reduce((sum, stat) => sum + stat.successes, 0);
+        const isActive = _lastActivity && (Date.now() - _lastActivity < 2000);
+
+        return {
+          state: isActive ? 'active' : 'idle',
+          primaryMetric: currentProvider,
+          secondaryMetric: `${totalCalls} calls`,
+          lastActivity: _lastActivity,
+          message: `${totalSuccess}/${totalCalls} successful`
+        };
+      }
+
+      renderControls() {
+        const available = getAvailableProviders();
+        const controls = [
+          ...available.map(provider => `
+            <button
+              data-provider="${provider}"
+              class="provider-switch"
+              ${provider === currentProvider ? 'disabled' : ''}>
+              Switch to ${provider}
+            </button>
+          `),
+          `<button class="check-proxy">↻ Check Proxy</button>`
+        ].join('');
+
+        return `<div class="controls">${controls}</div>`;
+      }
+
+      render() {
+        const totalCalls = Object.values(_providerStats).reduce((sum, stat) => sum + stat.calls, 0);
+        const recentCalls = _apiCallHistory.slice(-20).reverse();
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              background: rgba(255,255,255,0.05);
+              border-radius: 8px;
+              padding: 16px;
+            }
+            h3 {
+              margin: 0 0 12px 0;
+              font-size: 1.1em;
+              color: #fff;
+            }
+            .widget-panel {
+              color: #ddd;
+            }
+            .controls {
+              margin-top: 12px;
+              display: flex;
+              flex-wrap: wrap;
+              gap: 8px;
+            }
+            button {
+              padding: 6px 12px;
+              background: rgba(100,150,255,0.2);
+              border: 1px solid rgba(100,150,255,0.4);
+              border-radius: 4px;
+              color: #fff;
+              cursor: pointer;
+              font-size: 0.9em;
+            }
+            button:hover:not(:disabled) {
+              background: rgba(100,150,255,0.3);
+            }
+            button:disabled {
+              opacity: 0.5;
+              cursor: not-allowed;
+            }
+          </style>
+
+          <div class="widget-panel">
+            <h3>♁ Provider Status</h3>
+            <div style="margin-top: 12px; padding: 12px; background: rgba(100,150,255,0.1); border-radius: 4px; border-left: 3px solid #6496ff;">
+              <div style="font-size: 0.9em; color: #888;">Active Provider</div>
+              <div style="font-size: 1.4em; font-weight: bold; margin-top: 4px;">${currentProvider.toUpperCase()}</div>
+              ${proxyStatus ? `
+                <div style="margin-top: 8px; font-size: 0.85em; color: #aaa;">
+                  Proxy: ${proxyStatus.proxyAvailable ? '✓ Available' : '✗ Unavailable'}
+                </div>
+              ` : ''}
+            </div>
+
+            ${this.renderControls()}
+
+            <h3 style="margin-top: 20px;">☱ Provider Statistics</h3>
+            <div style="margin-top: 12px;">
+              ${['gemini', 'openai', 'anthropic', 'local'].map(provider => {
+                const stats = _providerStats[provider];
+                const successRate = stats.calls > 0 ? ((stats.successes / stats.calls) * 100).toFixed(1) : '0.0';
+                const avgRetries = stats.successes > 0 ? (stats.retries / stats.successes).toFixed(2) : '0.00';
+                const isActive = provider === currentProvider;
+
+                return `
+                  <div style="padding: 10px; background: ${isActive ? 'rgba(100,150,255,0.1)' : 'rgba(255,255,255,0.05)'}; border-radius: 4px; margin-bottom: 8px; ${isActive ? 'border-left: 3px solid #6496ff;' : ''}">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                      <div style="font-size: 1.1em; font-weight: bold;">${provider.toUpperCase()}${isActive ? ' ⚡' : ''}</div>
+                      <div style="font-size: 0.85em; color: ${stats.calls > 0 ? '#0c0' : '#666'};">${stats.calls} calls</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 0.85em;">
+                      <div>
+                        <div style="color: #888;">Success Rate</div>
+                        <div style="font-weight: bold; color: ${parseFloat(successRate) > 90 ? '#0c0' : parseFloat(successRate) > 50 ? '#ffa500' : '#ff6b6b'};">${successRate}%</div>
+                      </div>
+                      <div>
+                        <div style="color: #888;">Failures</div>
+                        <div style="font-weight: bold; color: ${stats.failures > 0 ? '#ff6b6b' : '#666'};">${stats.failures}</div>
+                      </div>
+                      <div>
+                        <div style="color: #888;">Avg Retries</div>
+                        <div style="font-weight: bold;">${avgRetries}</div>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+
+            ${recentCalls.length > 0 ? `
+              <h3 style="margin-top: 20px;">⌚ Recent API Calls (Last 20)</h3>
+              <div style="margin-top: 12px; max-height: 300px; overflow-y: auto;">
+                ${recentCalls.map(call => {
+                  const timeAgo = Math.floor((Date.now() - call.timestamp) / 1000);
+                  const durationSec = (call.duration / 1000).toFixed(2);
+
+                  return `
+                    <div style="padding: 6px 8px; background: ${call.success ? 'rgba(0,200,100,0.05)' : 'rgba(255,0,0,0.1)'}; border-radius: 4px; margin-bottom: 4px; font-size: 0.85em; border-left: 3px solid ${call.success ? '#0c0' : '#ff6b6b'};">
+                      <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="flex: 1;">
+                          <span style="font-weight: bold; text-transform: uppercase;">${call.provider}</span>
+                          ${call.retries > 0 ? `<span style="margin-left: 8px; color: #ffa500;">↻ ${call.retries} retries</span>` : ''}
+                          ${call.error ? `<div style="color: #ff6b6b; font-size: 0.9em; margin-top: 2px;">${call.error.substring(0, 60)}${call.error.length > 60 ? '...' : ''}</div>` : ''}
+                        </div>
+                        <div style="text-align: right; margin-left: 12px;">
+                          <div style="color: ${call.success ? '#0c0' : '#ff6b6b'}; font-weight: bold;">${call.success ? '✓' : '✗'}</div>
+                          <div style="color: #666; font-size: 0.85em;">${durationSec}s</div>
+                          <div style="color: #666; font-size: 0.8em;">${timeAgo}s ago</div>
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            ` : '<div style="margin-top: 12px; color: #888; font-style: italic;">No API calls yet</div>'}
+
+            <div style="margin-top: 16px; padding: 12px; background: rgba(100,150,255,0.1); border-left: 3px solid #6496ff; border-radius: 4px;">
+              <strong>☱ Total Statistics</strong>
+              <div style="margin-top: 6px; color: #aaa; font-size: 0.9em;">
+                ${totalCalls} total calls across all providers<br>
+                Current provider: ${currentProvider}<br>
+                Proxy status: ${proxyStatus ? (proxyStatus.proxyAvailable ? 'Available' : 'Unavailable') : 'Not checked'}
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Attach event listeners
+        this.shadowRoot.querySelectorAll('.provider-switch').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const provider = btn.dataset.provider;
+            setProvider(provider);
+            logger.info(`[ApiClientMulti] Widget: Switched to ${provider}`);
+            this.render();
+          });
+        });
+
+        this.shadowRoot.querySelector('.check-proxy')?.addEventListener('click', async () => {
+          proxyChecked = false;
+          await checkProxyAvailability();
+          logger.info('[ApiClientMulti] Widget: Proxy status refreshed');
+          this.render();
+        });
+      }
+    }
+
+    // Register custom element
+    if (!customElements.get('api-client-multi-widget')) {
+      customElements.define('api-client-multi-widget', ApiClientMultiWidget);
+    }
+
+    const widget = {
+      element: 'api-client-multi-widget',
+      displayName: 'API Client (Multi-Provider)',
+      icon: '♁',
+      category: 'ai',
+      updateInterval: 5000
+    };
+
     // Public API
     return {
       api: {
@@ -510,7 +777,8 @@ const ApiClientMulti = {
         getAvailableProviders,
         getCurrentProvider: () => currentProvider,
         checkProxyAvailability
-      }
+      },
+      widget
     };
   }
 };

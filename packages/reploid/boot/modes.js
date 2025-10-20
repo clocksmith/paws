@@ -5,8 +5,8 @@ import { checkAPIStatus } from './api.js';
 
 export const MODE_INFO = {
     local: {
-        title: '🖥️ Local (Ollama) Configuration',
-        icon: '🖥️',
+        title: '⌨️ Local (Ollama) Configuration',
+        icon: '⌨️',
         help: {
             title: 'Local Mode (Ollama)',
             requirements: ['Ollama installed and running', 'At least one model pulled', 'Node.js proxy server (npm start)'],
@@ -27,8 +27,8 @@ export const MODE_INFO = {
         }
     },
     browser: {
-        title: '🌐 Browser-Only Configuration',
-        icon: '🌐',
+        title: '♁ Browser-Only Configuration',
+        icon: '♁',
         help: {
             title: 'Browser-Only Mode',
             requirements: ['Modern browser with WebGPU support', 'GPU with sufficient VRAM (4GB+)'],
@@ -38,8 +38,8 @@ export const MODE_INFO = {
         }
     },
     'web-llm': {
-        title: '🕸️ Web LLM Configuration',
-        icon: '🕸️',
+        title: '⚌️ Web LLM Configuration',
+        icon: '⚌️',
         help: {
             title: 'Web LLM (WebGPU) Mode',
             requirements: ['Modern browser with WebGPU support', 'GPU with 4GB+ VRAM', 'Initial model download (3-4GB)'],
@@ -49,8 +49,8 @@ export const MODE_INFO = {
         }
     },
     hybrid: {
-        title: '🔄 Hybrid Mode Configuration',
-        icon: '🔄',
+        title: '↻ Hybrid Mode Configuration',
+        icon: '↻',
         help: {
             title: 'Hybrid (Auto-Switching) Mode',
             requirements: ['Ollama installed', 'At least one cloud API key', 'Node.js proxy server'],
@@ -71,8 +71,8 @@ export const MODE_INFO = {
         }
     },
     custom: {
-        title: '🔧 Custom Endpoint Configuration',
-        icon: '🔧',
+        title: '⚒ Custom Endpoint Configuration',
+        icon: '⚒',
         help: {
             title: 'Custom Endpoint Mode',
             requirements: ['Your own API endpoint', 'Compatible API format'],
@@ -441,7 +441,7 @@ function renderLocalConfig(env) {
     if (env.hasOllama && models.length > 0) {
         html += `
             <div class="mode-status">
-                <span class="mode-status-icon">✅</span>
+                <span class="mode-status-icon">✓</span>
                 <div class="mode-status-text">
                     <div class="mode-status-label">Status</div>
                     <div class="mode-status-value">Ollama detected with ${models.length} model(s)</div>
@@ -488,7 +488,7 @@ function renderLocalConfig(env) {
 
     html += `
         <div class="mode-info">
-            <span class="mode-info-text">💡 Local mode is completely free and private. Your code never leaves your machine.</span>
+            <span class="mode-info-text">◯ Local mode is completely free and private. Your code never leaves your machine.</span>
         </div>
     `;
 
@@ -525,7 +525,7 @@ function renderOfflineConfig(env) {
     } else if (Array.isArray(env.ollamaModels) && env.ollamaModels.length > 0) {
         html += `
             <div class="mode-status">
-                <span class="mode-status-icon">✅</span>
+                <span class="mode-status-icon">✓</span>
                 <div class="mode-status-text">
                     <div class="mode-status-label">Local Models</div>
                     <div class="mode-status-value">${env.ollamaModels.length} available</div>
@@ -544,7 +544,7 @@ function renderOfflineConfig(env) {
     } else {
         html += `
             <div class="mode-status">
-                <span class="mode-status-icon">✅</span>
+                <span class="mode-status-icon">✓</span>
                 <div class="mode-status-text">
                     <div class="mode-status-label">Cloud Keys</div>
                     <div class="mode-status-value">None detected</div>
@@ -687,7 +687,7 @@ function renderCloudConfig(env) {
 function renderBrowserConfig(env) {
     return `
         <div class="mode-info">
-            <span class="mode-info-text">🌐 Browser-only mode serves Reploid as static files—perfect for GitHub Pages, Netlify, or quick demos without a backend.</span>
+            <span class="mode-info-text">♁ Browser-only mode serves Reploid as static files—perfect for GitHub Pages, Netlify, or quick demos without a backend.</span>
         </div>
         <div class="mode-warning">
             <span class="mode-warning-icon">⚠️</span>
@@ -706,7 +706,7 @@ function renderWebLLMConfig(env) {
 
     let html = `
         <div class="mode-info">
-            <span class="mode-info-text">🕸️ Web LLM streams the model into your browser and executes it with WebGPU. Ideal when you have a strong GPU but no backend.</span>
+            <span class="mode-info-text">⚌️ Web LLM streams the model into your browser and executes it with WebGPU. Ideal when you have a strong GPU but no backend.</span>
         </div>
     `;
 
@@ -720,7 +720,7 @@ function renderWebLLMConfig(env) {
     } else {
         html += `
             <div class="mode-status">
-                <span class="mode-status-icon">✅</span>
+                <span class="mode-status-icon">✓</span>
                 <div class="mode-status-text">
                     <div class="mode-status-label">WebGPU</div>
                     <div class="mode-status-value">Ready for Web LLM</div>
@@ -782,13 +782,13 @@ function renderHybridConfig(env) {
 
     html += `
         <div class="mode-info">
-            <span class="mode-info-text">🔄 Hybrid mode automatically switches between local and cloud based on availability, cost, and complexity.</span>
+            <span class="mode-info-text">↻ Hybrid mode automatically switches between local and cloud based on availability, cost, and complexity.</span>
         </div>
         <p style="color: #b9bad6; font-size: 14px; margin: 16px 0;">
             Configure both local (Ollama) and cloud providers. The system will intelligently choose the best option for each request.
         </p>
         <p style="color: #8e8ea6; font-size: 13px;">
-            💡 Tip: Use local models for simple tasks and cloud models for complex reasoning to optimize costs.
+            ◯ Tip: Use local models for simple tasks and cloud models for complex reasoning to optimize costs.
         </p>
     `;
 
@@ -840,7 +840,7 @@ function renderCustomConfig(env) {
 
     return `
         <div class="mode-info">
-            <span class="mode-info-text">🔧 Custom mode allows you to connect to your own API endpoint (Azure, AWS, vLLM, etc.).</span>
+            <span class="mode-info-text">⚒ Custom mode allows you to connect to your own API endpoint (Azure, AWS, vLLM, etc.).</span>
         </div>
         <div style="margin: 16px 0;">
             <label style="display: block; margin-bottom: 6px; color: #b9bad6; font-size: 13px;">Custom Endpoint URL:</label>

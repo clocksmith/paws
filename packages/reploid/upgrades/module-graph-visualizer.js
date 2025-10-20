@@ -1,3 +1,4 @@
+// @blueprint 0x000030 - Describes the module graph visualization.
 // Module Graph Visualizer - D3.js Force-Directed Graph for Module Dependencies
 // Visualizes the module dependency graph from Introspector
 
@@ -254,11 +255,150 @@ const ModuleGraphVisualizer = {
       };
     };
 
+    // Web Component Widget
+    class ModuleGraphVisualizerWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+
+      connectedCallback() {
+        this.render();
+        // Manual update - no auto-refresh needed
+      }
+
+      disconnectedCallback() {
+        // No cleanup needed
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      getStatus() {
+        const stats = getStats();
+
+        return {
+          state: initialized ? (stats ? 'idle' : 'loading') : 'disabled',
+          primaryMetric: stats ? `${stats.totalModules} modules` : 'Not loaded',
+          secondaryMetric: stats ? `${stats.totalDependencies} deps` : '',
+          lastActivity: null,
+          message: initialized ? null : 'D3.js not available'
+        };
+      }
+
+      render() {
+        const stats = getStats();
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              font-family: monospace;
+            }
+            .widget-panel { padding: 12px; height: 100%; }
+            h3 { margin: 0 0 12px 0; font-size: 1.1em; color: #fff; }
+            .controls { display: flex; gap: 8px; margin-bottom: 12px; }
+            button {
+              padding: 6px 12px;
+              background: rgba(100,150,255,0.2);
+              border: 1px solid rgba(100,150,255,0.4);
+              border-radius: 4px;
+              color: #fff;
+              cursor: pointer;
+              font-size: 0.9em;
+            }
+            button:hover { background: rgba(100,150,255,0.3); }
+          </style>
+
+          <div class="widget-panel">
+            <h3>⚌️ Module Graph</h3>
+
+            ${typeof d3 !== 'undefined' ? `
+              <div class="controls">
+                <button id="refresh-btn">↻ Refresh</button>
+                <button id="reset-btn">↻ Reset View</button>
+              </div>
+
+              ${stats ? `
+                <div style="padding: 10px; background: rgba(0,0,0,0.2); margin-bottom: 10px; border-radius: 5px;">
+                  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; font-size: 13px;">
+                    <div><span style="color: #888;">Modules:</span> <strong>${stats.totalModules}</strong></div>
+                    <div><span style="color: #888;">Dependencies:</span> <strong>${stats.totalDependencies}</strong></div>
+                    <div><span style="color: #888;">Categories:</span> <strong>${stats.categories}</strong></div>
+                    <div><span style="color: #888;">Avg Deps:</span> <strong>${stats.avgDependencies.toFixed(1)}</strong></div>
+                  </div>
+                </div>
+              ` : ''}
+
+              <div id="module-graph-container" style="width: 100%; height: 500px; background: rgba(0,0,0,0.2); border-radius: 5px;"></div>
+            ` : `
+              <div style="padding: 20px; text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 20px;">⚌️</div>
+                <h3 style="color: #0ff;">D3.js Not Loaded</h3>
+                <p style="color: #888;">Include D3.js library to visualize module dependencies</p>
+              </div>
+            `}
+          </div>
+        `;
+
+        // Attach event listeners
+        const refreshBtn = this.shadowRoot.getElementById('refresh-btn');
+        if (refreshBtn) {
+          refreshBtn.addEventListener('click', async () => {
+            await visualize();
+            if (typeof EventBus !== 'undefined') {
+              EventBus.emit('toast:success', { message: 'Graph refreshed' });
+            }
+            this.render();
+          });
+        }
+
+        const resetBtn = this.shadowRoot.getElementById('reset-btn');
+        if (resetBtn) {
+          resetBtn.addEventListener('click', () => {
+            reset();
+            if (typeof EventBus !== 'undefined') {
+              EventBus.emit('toast:info', { message: 'Graph reset' });
+            }
+            this.render();
+          });
+        }
+
+        // Initialize and render the graph
+        const graphContainer = this.shadowRoot.getElementById('module-graph-container');
+        if (graphContainer && typeof d3 !== 'undefined') {
+          if (!initialized) {
+            init(graphContainer);
+          }
+          if (initialized) {
+            visualize();
+          }
+        }
+      }
+    }
+
+    // Register custom element
+    const elementName = 'module-graph-visualizer-widget';
+    if (!customElements.get(elementName)) {
+      customElements.define(elementName, ModuleGraphVisualizerWidget);
+    }
+
+    const widget = {
+      element: elementName,
+      displayName: 'Module Graph',
+      icon: '⚌️',
+      category: 'ui',
+      updateInterval: null
+    };
+
     return {
       init,
       visualize,
       reset,
-      getStats
+      getStats,
+      widget
     };
   }
 };

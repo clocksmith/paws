@@ -1,3 +1,4 @@
+// @blueprint 0x000007 - Details a robust API client with retry logic and abort handling.
 // Standardized API Client Module for REPLOID
 // Handles all communication with the Gemini API
 
@@ -35,6 +36,13 @@ const ApiClient = {
     let useProxy = false;
     let proxyChecked = false;
     const API_ENDPOINT_BASE = "https://generativelanguage.googleapis.com/v1beta/models/";
+
+    // API call tracking for widget
+    const _callHistory = [];
+    const MAX_HISTORY = 50;
+    let _callStats = { total: 0, success: 0, error: 0, aborted: 0 };
+    let _lastCallTime = null;
+    let _totalTokensUsed = 0;
     
     // Check if proxy is available
     const checkProxyAvailability = async () => {
@@ -267,12 +275,199 @@ const ApiClient = {
       }
     };
     
+    // Web Component widget
+    class ApiClientWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+        this._updateInterval = null;
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      connectedCallback() {
+        this.render();
+        this._updateInterval = setInterval(() => this.render(), 1000);
+      }
+
+      disconnectedCallback() {
+        if (this._updateInterval) {
+          clearInterval(this._updateInterval);
+          this._updateInterval = null;
+        }
+      }
+
+      getStatus() {
+        const isActive = currentAbortController !== null;
+        const provider = useProxy ? 'Proxy' : 'Direct';
+
+        let state = 'idle';
+        if (isActive) state = 'active';
+        if (_callStats.error > _callStats.success) state = 'error';
+
+        return {
+          state,
+          primaryMetric: `${_callStats.total} requests`,
+          secondaryMetric: provider,
+          lastActivity: _lastCallTime
+        };
+      }
+
+      getControls() {
+        return [
+          {
+            id: 'abort-call',
+            label: 'Abort',
+            icon: '■',
+            action: () => {
+              abortCurrentCall('User requested abort from dashboard');
+              const ToastNotifications = window.DIContainer?.resolve('ToastNotifications');
+              ToastNotifications?.show('API call aborted', 'info');
+            }
+          },
+          {
+            id: 'clear-stats',
+            label: 'Clear Stats',
+            icon: '⌦',
+            action: () => {
+              _callHistory.length = 0;
+              _callStats = { total: 0, success: 0, error: 0, aborted: 0 };
+              _totalTokensUsed = 0;
+              const ToastNotifications = window.DIContainer?.resolve('ToastNotifications');
+              ToastNotifications?.show('API stats cleared', 'success');
+              this.render();
+            }
+          }
+        ];
+      }
+
+      render() {
+          const successRate = _callStats.total > 0
+            ? ((_callStats.success / _callStats.total) * 100).toFixed(0)
+            : 0;
+
+        const formatTime = (timestamp) => {
+          if (!timestamp) return 'Never';
+          return new Date(timestamp).toLocaleTimeString();
+        };
+
+        const formatTimeAgo = (timestamp) => {
+          if (!timestamp) return 'Never';
+          const diff = Date.now() - timestamp;
+          if (diff < 1000) return 'Just now';
+          if (diff < 60000) return `${Math.floor(diff/1000)}s ago`;
+          if (diff < 3600000) return `${Math.floor(diff/60000)}m ago`;
+          return `${Math.floor(diff/3600000)}h ago`;
+        };
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host { display: block; font-family: monospace; }
+            .api-client-panel { padding: 12px; }
+            h4 { margin: 0 0 12px 0; color: #fff; }
+            h5 { margin: 16px 0 8px 0; color: #888; font-size: 0.95em; }
+            .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+            .stat-card { padding: 12px; background: rgba(100,150,255,0.1); border-radius: 4px; text-align: center; }
+            .stat-label { font-size: 0.85em; color: #888; }
+            .stat-value { font-size: 1.3em; font-weight: bold; margin-top: 4px; }
+            .api-info { margin-bottom: 16px; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 4px; }
+            .info-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9em; }
+            .info-label { color: #888; }
+            .info-value { color: #fff; }
+            .call-history { max-height: 200px; overflow-y: auto; }
+            .call-entry { padding: 6px; background: rgba(255,255,255,0.03); margin-bottom: 4px; border-radius: 3px; display: flex; gap: 12px; align-items: center; font-size: 0.85em; }
+            .call-entry.call-error { background: rgba(255,0,0,0.1); }
+            .call-time { color: #888; }
+            .call-status { font-weight: bold; }
+            .call-duration { color: #6496ff; }
+            .call-error-msg { color: #ff6b6b; flex: 1; }
+            .rate-limit-info { margin-top: 16px; padding: 12px; background: rgba(255,165,0,0.1); border-radius: 4px; color: #ffa500; font-size: 0.9em; }
+          </style>
+          <div class="api-client-panel">
+              <h4>◉ API Client</h4>
+
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <div class="stat-label">Total Requests</div>
+                  <div class="stat-value">${_callStats.total}</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-label">Success</div>
+                  <div class="stat-value">${_callStats.success}</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-label">Errors</div>
+                  <div class="stat-value">${_callStats.error}</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-label">Success Rate</div>
+                  <div class="stat-value">${successRate}%</div>
+                </div>
+              </div>
+
+              <div class="api-info">
+                <div class="info-row">
+                  <span class="info-label">Connection:</span>
+                  <span class="info-value">${useProxy ? 'Proxy Server' : 'Direct API'}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Active Call:</span>
+                  <span class="info-value">${currentAbortController ? 'Yes' : 'No'}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Total Tokens:</span>
+                  <span class="info-value">${_totalTokensUsed.toLocaleString()}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label">Last Call:</span>
+                  <span class="info-value">${formatTimeAgo(_lastCallTime)}</span>
+                </div>
+              </div>
+
+              <h5>Recent API Calls</h5>
+              <div class="call-history">
+                ${_callHistory.length > 0 ? _callHistory.slice(-10).reverse().map((call, idx) => `
+                  <div class="call-entry ${call.success ? '' : 'call-error'}">
+                    <span class="call-time">${formatTime(call.timestamp)}</span>
+                    <span class="call-status">${call.success ? '✓' : '✗'}</span>
+                    <span class="call-duration">${call.duration || 0}ms</span>
+                    ${call.error ? `<span class="call-error-msg">${call.error}</span>` : ''}
+                  </div>
+                `).join('') : '<p>No API calls yet</p>'}
+              </div>
+
+              ${rateLimiter ? `
+                <div class="rate-limit-info">
+                  <strong>Rate Limiting:</strong> Active (10 calls/min)
+                </div>
+              ` : ''}
+            </div>
+        `;
+      }
+    }
+
+    // Define custom element
+    const elementName = 'api-client-widget';
+    if (!customElements.get(elementName)) {
+      customElements.define(elementName, ApiClientWidget);
+    }
+
     // Public API
     return {
       api: {
         callApiWithRetry,
         abortCurrentCall,
         sanitizeLlmJsonResp
+      },
+      widget: {
+        element: elementName,
+        displayName: 'API Client',
+        icon: '◉',
+        category: 'core',
+        updateInterval: 1000
       }
     };
   }

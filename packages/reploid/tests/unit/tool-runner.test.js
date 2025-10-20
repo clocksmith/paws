@@ -887,4 +887,254 @@ describe('ToolRunner Module', () => {
       expect(deleteResult.success).toBe(true);
     });
   });
+
+  describe('ToolRunnerWidget Web Component', () => {
+    let widget;
+    let mockApi;
+
+    beforeEach(() => {
+      // Reset DOM
+      document.body.innerHTML = '';
+
+      // Verify custom element is defined
+      expect(customElements.get('tool-runner-widget')).toBeDefined();
+
+      // Create widget instance
+      widget = document.createElement('tool-runner-widget');
+
+      // Mock API with getStats method
+      mockApi = {
+        getStats: vi.fn(() => ({
+          totalExecutions: 42,
+          successCount: 40,
+          errorCount: 2,
+          activeExecutions: 1,
+          executionHistory: [
+            {
+              toolName: 'read_artifact',
+              timestamp: Date.now() - 5000,
+              success: true,
+              duration: 150
+            },
+            {
+              toolName: 'write_artifact',
+              timestamp: Date.now() - 3000,
+              success: true,
+              duration: 200
+            },
+            {
+              toolName: 'delete_artifact',
+              timestamp: Date.now() - 1000,
+              success: false,
+              error: 'Not found',
+              duration: 50
+            }
+          ],
+          toolUsageCounts: {
+            'read_artifact': 20,
+            'write_artifact': 15,
+            'delete_artifact': 7
+          }
+        })),
+        clearHistory: vi.fn()
+      };
+    });
+
+    afterEach(() => {
+      if (widget.parentNode) {
+        widget.parentNode.removeChild(widget);
+      }
+    });
+
+    it('should create shadow DOM on construction', () => {
+      expect(widget.shadowRoot).toBeDefined();
+      expect(widget.shadowRoot.mode).toBe('open');
+    });
+
+    it('should render loading state without API', () => {
+      document.body.appendChild(widget);
+
+      const content = widget.shadowRoot.innerHTML;
+      expect(content).toContain('Loading');
+    });
+
+    it('should render stats when API injected', async () => {
+      widget.moduleApi = mockApi;
+      document.body.appendChild(widget);
+
+      // Wait for render
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      const statValues = widget.shadowRoot.querySelectorAll('.stat-value');
+      expect(statValues.length).toBeGreaterThan(0);
+
+      // Check for execution count
+      const content = widget.shadowRoot.textContent;
+      expect(content).toContain('42');
+    });
+
+    it('should implement getStatus() correctly', () => {
+      widget.moduleApi = mockApi;
+
+      const status = widget.getStatus();
+
+      expect(status).toHaveProperty('state');
+      expect(status).toHaveProperty('primaryMetric');
+      expect(status).toHaveProperty('secondaryMetric');
+      expect(status.primaryMetric).toContain('42');
+    });
+
+    it('should report active state when executions in progress', () => {
+      mockApi.getStats.mockReturnValue({
+        totalExecutions: 10,
+        successCount: 8,
+        errorCount: 0,
+        activeExecutions: 2,
+        executionHistory: [],
+        toolUsageCounts: {}
+      });
+
+      widget.moduleApi = mockApi;
+
+      const status = widget.getStatus();
+      expect(status.state).toBe('active');
+    });
+
+    it('should report idle state when no executions', () => {
+      mockApi.getStats.mockReturnValue({
+        totalExecutions: 0,
+        successCount: 0,
+        errorCount: 0,
+        activeExecutions: 0,
+        executionHistory: [],
+        toolUsageCounts: {}
+      });
+
+      widget.moduleApi = mockApi;
+
+      const status = widget.getStatus();
+      expect(status.state).toBe('idle');
+    });
+
+    it('should display execution history', async () => {
+      widget.moduleApi = mockApi;
+      document.body.appendChild(widget);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      const historyItems = widget.shadowRoot.querySelectorAll('.execution-item');
+      expect(historyItems.length).toBe(3);
+    });
+
+    it('should display tool usage stats', async () => {
+      widget.moduleApi = mockApi;
+      document.body.appendChild(widget);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      const content = widget.shadowRoot.textContent;
+      expect(content).toContain('read_artifact');
+      expect(content).toContain('20');
+    });
+
+    it('should call clearHistory when button clicked', async () => {
+      widget.moduleApi = mockApi;
+      document.body.appendChild(widget);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      const clearBtn = widget.shadowRoot.querySelector('#clear-history');
+      expect(clearBtn).toBeTruthy();
+
+      clearBtn.click();
+
+      expect(mockApi.clearHistory).toHaveBeenCalled();
+    });
+
+    it('should auto-refresh with update interval', async () => {
+      widget.updateInterval = 100;
+      widget.moduleApi = mockApi;
+      document.body.appendChild(widget);
+
+      // Initial call
+      expect(mockApi.getStats).toHaveBeenCalledTimes(1);
+
+      // Wait for auto-refresh
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      // Should have been called again
+      expect(mockApi.getStats).toHaveBeenCalledTimes(2);
+    });
+
+    it('should clean up interval on disconnect', () => {
+      widget.updateInterval = 100;
+      widget.moduleApi = mockApi;
+      document.body.appendChild(widget);
+
+      expect(widget._interval).toBeDefined();
+
+      document.body.removeChild(widget);
+
+      expect(widget._interval).toBeUndefined();
+    });
+
+    it('should handle missing getStats gracefully', () => {
+      const brokenApi = {};
+      widget.moduleApi = brokenApi;
+
+      const status = widget.getStatus();
+      expect(status.state).toBe('idle');
+      expect(status.primaryMetric).toBe('Loading...');
+    });
+
+    it('should show error indicator for failed executions', async () => {
+      mockApi.getStats.mockReturnValue({
+        totalExecutions: 10,
+        successCount: 5,
+        errorCount: 5,
+        activeExecutions: 0,
+        executionHistory: [],
+        toolUsageCounts: {}
+      });
+
+      widget.moduleApi = mockApi;
+      document.body.appendChild(widget);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      const content = widget.shadowRoot.textContent;
+      expect(content).toContain('5'); // error count
+    });
+
+    it('should re-render when moduleApi changes', async () => {
+      widget.moduleApi = mockApi;
+      document.body.appendChild(widget);
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      const firstContent = widget.shadowRoot.textContent;
+      expect(firstContent).toContain('42');
+
+      // Update API
+      const newApi = {
+        getStats: vi.fn(() => ({
+          totalExecutions: 100,
+          successCount: 95,
+          errorCount: 5,
+          activeExecutions: 0,
+          executionHistory: [],
+          toolUsageCounts: {}
+        })),
+        clearHistory: vi.fn()
+      };
+
+      widget.moduleApi = newApi;
+
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      const updatedContent = widget.shadowRoot.textContent;
+      expect(updatedContent).toContain('100');
+      expect(updatedContent).not.toContain('42');
+    });
+  });
 });

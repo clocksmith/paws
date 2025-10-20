@@ -173,11 +173,11 @@ dogs turn-0.dogs.md --verify "npm test"
 
 ### With Project Hermes
 
-The Node.js server uses these tools internally:
+The Node.js server uses the PAWS CLI tools:
 
 ```javascript
-const { createCatsBundle } = require('../bin/cats');
-const { applyDogsBundle } = require('../bin/dogs');
+const { main: createCatsBundle } = require('@paws/cli-js/src/cats');
+const { main: applyDogsBundle } = require('@paws/cli-js/src/dogs');
 ```
 
 ### In CI/CD Pipelines
@@ -186,7 +186,7 @@ const { applyDogsBundle } = require('../bin/dogs');
 # GitHub Actions example
 - name: Apply changes
   run: |
-    bin/dogs changes.dogs.md --verify "npm test"
+    npx dogs changes.dogs.md --verify "npm test"
 ```
 
 ## Error Handling

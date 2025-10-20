@@ -2,6 +2,9 @@
 
 **Objective:** To explain the structure and purpose of the JSON artifact that defines the agent's built-in, static toolset.
 
+**Target Upgrade:** TLRD (`tools-read.json`)
+
+
 **Prerequisites:** `0x00000A`
 
 **Affected Artifacts:** `/modules/data-tools-static.json`, `/modules/tool-runner.js`

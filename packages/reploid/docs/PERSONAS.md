@@ -41,6 +41,7 @@ Lab personas include:
 - `rsi_lab_sandbox`: Learn recursive self-improvement
 - `code_refactorer`: Analyze and improve code
 - `rfc_author`: Draft formal change proposals
+- `multi_mind_architect`: Advanced multi-perspective agent with structured 8-step cycle
 
 #### Factory Personas 🏭
 Designed for rapid production and real work. Features:

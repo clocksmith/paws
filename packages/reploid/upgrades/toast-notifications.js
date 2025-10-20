@@ -1,3 +1,4 @@
+// @blueprint 0x000031 - Defines the toast notification system.
 // Toast Notification System - Non-blocking user feedback
 // Replaces alert() calls with elegant toast notifications
 
@@ -18,6 +19,12 @@ const ToastNotifications = {
     let container = null;
     let toastQueue = [];
     let activeToasts = [];
+
+    // Widget tracking
+    const _toastHistory = [];
+    const MAX_HISTORY = 100;
+    let _toastStats = { success: 0, error: 0, warning: 0, info: 0, total: 0 };
+    let _lastToastTime = null;
 
     // Toast types
     const TOAST_TYPES = {
@@ -50,6 +57,19 @@ const ToastNotifications = {
     // Show toast notification
     const show = (message, type = 'info', duration = 4000) => {
       init(); // Ensure container exists
+
+      // Track toast
+      _lastToastTime = Date.now();
+      _toastStats.total++;
+      _toastStats[type] = (_toastStats[type] || 0) + 1;
+      _toastHistory.push({
+        message,
+        type,
+        timestamp: _lastToastTime
+      });
+      if (_toastHistory.length > MAX_HISTORY) {
+        _toastHistory.shift();
+      }
 
       const config = TOAST_TYPES[type] || TOAST_TYPES.info;
 
@@ -138,7 +158,267 @@ const ToastNotifications = {
       error,
       warning,
       info,
-      clearAll
+      clearAll,
+
+      // Web Component Widget
+      widget: (() => {
+        class ToastNotificationsWidget extends HTMLElement {
+          constructor() {
+            super();
+            this.attachShadow({ mode: 'open' });
+          }
+
+          connectedCallback() {
+            this.render();
+            this._interval = setInterval(() => this.render(), 1000);
+          }
+
+          disconnectedCallback() {
+            if (this._interval) clearInterval(this._interval);
+          }
+
+          set moduleApi(api) {
+            this._api = api;
+            this.render();
+          }
+
+          getStatus() {
+            let state = 'idle';
+            if (activeToasts.length > 0) state = 'active';
+            if (activeToasts.some(t => t.className.includes('error'))) state = 'error';
+
+            return {
+              state,
+              primaryMetric: `${activeToasts.length} active`,
+              secondaryMetric: `${_toastStats.total} total`,
+              lastActivity: _lastToastTime
+            };
+          }
+
+          render() {
+            const formatTime = (timestamp) => {
+              if (!timestamp) return 'Never';
+              return new Date(timestamp).toLocaleTimeString();
+            };
+
+            this.shadowRoot.innerHTML = `
+              <style>
+                :host {
+                  display: block;
+                  background: rgba(255,255,255,0.05);
+                  border-radius: 8px;
+                  padding: 16px;
+                }
+                h4 {
+                  margin: 0 0 16px 0;
+                  font-size: 1.2em;
+                  color: #fff;
+                }
+                h5 {
+                  margin: 16px 0 8px 0;
+                  font-size: 1em;
+                  color: #aaa;
+                }
+                .controls {
+                  display: flex;
+                  gap: 8px;
+                  margin-bottom: 16px;
+                }
+                button {
+                  padding: 6px 12px;
+                  background: rgba(100,150,255,0.2);
+                  border: 1px solid rgba(100,150,255,0.4);
+                  border-radius: 4px;
+                  color: #fff;
+                  cursor: pointer;
+                }
+                button:hover {
+                  background: rgba(100,150,255,0.3);
+                }
+                .stats-grid {
+                  display: grid;
+                  grid-template-columns: repeat(4, 1fr);
+                  gap: 12px;
+                  margin-bottom: 16px;
+                }
+                .stat-card {
+                  background: rgba(255,255,255,0.05);
+                  border-radius: 6px;
+                  padding: 12px;
+                  text-align: center;
+                }
+                .stat-label {
+                  font-size: 0.85em;
+                  color: #888;
+                  margin-bottom: 4px;
+                }
+                .stat-value {
+                  font-size: 1.5em;
+                  font-weight: bold;
+                  color: #0ff;
+                }
+                .toast-stats-breakdown {
+                  background: rgba(0,0,0,0.2);
+                  border-radius: 6px;
+                  padding: 8px;
+                  margin-bottom: 16px;
+                }
+                .toast-stat-row {
+                  display: grid;
+                  grid-template-columns: 30px 1fr auto auto;
+                  gap: 8px;
+                  padding: 6px;
+                  align-items: center;
+                  border-bottom: 1px solid rgba(255,255,255,0.1);
+                }
+                .toast-stat-row:last-child {
+                  border-bottom: none;
+                }
+                .toast-type-icon {
+                  font-size: 1.2em;
+                }
+                .toast-type-label {
+                  color: #ddd;
+                }
+                .toast-type-count {
+                  color: #0ff;
+                  font-weight: bold;
+                }
+                .toast-type-percent {
+                  color: #888;
+                  font-size: 0.9em;
+                }
+                .toast-history-list {
+                  max-height: 200px;
+                  overflow-y: auto;
+                  background: rgba(0,0,0,0.2);
+                  border-radius: 6px;
+                  padding: 8px;
+                }
+                .toast-history-item {
+                  display: grid;
+                  grid-template-columns: auto auto 1fr;
+                  gap: 8px;
+                  padding: 6px;
+                  border-bottom: 1px solid rgba(255,255,255,0.05);
+                  font-size: 0.9em;
+                }
+                .toast-history-item:last-child {
+                  border-bottom: none;
+                }
+                .toast-history-time {
+                  color: #888;
+                  font-size: 0.85em;
+                }
+                .toast-history-type {
+                  color: #0ff;
+                  font-weight: bold;
+                  text-transform: uppercase;
+                  font-size: 0.8em;
+                }
+                .toast-history-message {
+                  color: #ddd;
+                }
+                .toast-history-success { border-left: 3px solid #0f0; }
+                .toast-history-error { border-left: 3px solid #f00; }
+                .toast-history-warning { border-left: 3px solid #ff0; }
+                .toast-history-info { border-left: 3px solid #0ff; }
+              </style>
+
+              <div class="toast-notifications-panel">
+                <h4>⚏ Toast Notifications</h4>
+
+                <div class="controls">
+                  <button class="clear-all">⌦ Clear All</button>
+                  <button class="clear-history">≡ Clear History</button>
+                </div>
+
+                <div class="stats-grid">
+                  <div class="stat-card">
+                    <div class="stat-label">Active</div>
+                    <div class="stat-value">${activeToasts.length}</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="stat-label">Total Shown</div>
+                    <div class="stat-value">${_toastStats.total}</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="stat-label">Errors</div>
+                    <div class="stat-value">${_toastStats.error}</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="stat-label">Success</div>
+                    <div class="stat-value">${_toastStats.success}</div>
+                  </div>
+                </div>
+
+                <h5>Statistics by Type</h5>
+                <div class="toast-stats-breakdown">
+                  <div class="toast-stat-row">
+                    <span class="toast-type-icon">✓</span>
+                    <span class="toast-type-label">Success</span>
+                    <span class="toast-type-count">${_toastStats.success}</span>
+                    <span class="toast-type-percent">${(_toastStats.total > 0 ? (_toastStats.success / _toastStats.total * 100).toFixed(0) : 0)}%</span>
+                  </div>
+                  <div class="toast-stat-row">
+                    <span class="toast-type-icon">✕</span>
+                    <span class="toast-type-label">Error</span>
+                    <span class="toast-type-count">${_toastStats.error}</span>
+                    <span class="toast-type-percent">${(_toastStats.total > 0 ? (_toastStats.error / _toastStats.total * 100).toFixed(0) : 0)}%</span>
+                  </div>
+                  <div class="toast-stat-row">
+                    <span class="toast-type-icon">⚠</span>
+                    <span class="toast-type-label">Warning</span>
+                    <span class="toast-type-count">${_toastStats.warning}</span>
+                    <span class="toast-type-percent">${(_toastStats.total > 0 ? (_toastStats.warning / _toastStats.total * 100).toFixed(0) : 0)}%</span>
+                  </div>
+                  <div class="toast-stat-row">
+                    <span class="toast-type-icon">ℹ</span>
+                    <span class="toast-type-label">Info</span>
+                    <span class="toast-type-count">${_toastStats.info}</span>
+                    <span class="toast-type-percent">${(_toastStats.total > 0 ? (_toastStats.info / _toastStats.total * 100).toFixed(0) : 0)}%</span>
+                  </div>
+                </div>
+
+                <h5>Recent Toasts</h5>
+                <div class="toast-history-list">
+                  ${_toastHistory.length > 0 ? _toastHistory.slice(-20).reverse().map(toast => `
+                    <div class="toast-history-item toast-history-${toast.type}">
+                      <span class="toast-history-time">${formatTime(toast.timestamp)}</span>
+                      <span class="toast-history-type">${toast.type}</span>
+                      <span class="toast-history-message">${toast.message}</span>
+                    </div>
+                  `).join('') : '<p style="color: #888; text-align: center;">No toasts shown yet</p>'}
+                </div>
+              </div>
+            `;
+
+            // Attach event listeners
+            this.shadowRoot.querySelector('.clear-all')?.addEventListener('click', () => {
+              clearAll();
+              this.render();
+            });
+
+            this.shadowRoot.querySelector('.clear-history')?.addEventListener('click', () => {
+              _toastHistory.length = 0;
+              _toastStats = { success: 0, error: 0, warning: 0, info: 0, total: 0 };
+              this.render();
+            });
+          }
+        }
+
+        if (!customElements.get('toast-notifications-widget')) {
+          customElements.define('toast-notifications-widget', ToastNotificationsWidget);
+        }
+
+        return {
+          element: 'toast-notifications-widget',
+          displayName: 'Toast Notifications',
+          icon: '⚏',
+          category: 'ui',
+          updateInterval: 1000
+        };
+      })()
     };
   }
 };

@@ -1,7 +1,11 @@
-
-[
-  {
-    "name": "system.backup",
+{
+  "_blueprint": {
+    "id": "0x000068",
+    "description": "Documents the system tools manifest for backup, RFC creation, and project export."
+  },
+  "tools": [
+    {
+      "name": "system.backup",
     "description": "Saves the current state of the agent's entire Virtual File System (VFS) to the server for persistence. This should be called after making significant changes to any files.",
     "parameters": {
       "type": "object",
@@ -37,4 +41,5 @@
       "required": []
     }
   }
-]
+  ]
+}

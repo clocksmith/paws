@@ -2,6 +2,9 @@
 
 **Objective:** Transform Paxos and Penteract competition telemetry into a real-time, human-auditable dashboard that guides approval decisions and future persona tuning.
 
+**Target Upgrade:** PAXA (`penteract-analytics.js`)
+
+
 **Prerequisites:** 0x000007, 0x00000D, 0x000019
 
 **Affected Artifacts:** `/js/cats.js`, `/js/dogs.js`, `/js/progress-bus.js`, `/py/paws_paxos.py`, `/reploid/hermes/index.js`, `/reploid/upgrades/ui-manager.js`, `/reploid/upgrades/penteract-visualizer.js`
@@ -12,23 +15,106 @@
 Penteract-mode competitions generate multi-agent deliberations whose value hinges on transparency. Without instrumentation, approvers face opaque “winner” selections and cannot diagnose why specific personas succeed or fail. Streaming analytics aligns PAWS with 2025 context-engineering best practices: it preserves trust, accelerates iteration, and surfaces signals that inform persona curation, verification design, and upgrade prioritisation.
 
 ### 2. The Architectural Solution
-The solution establishes a pipeline from CLI telemetry to REPLOID’s UI. `cats`/`dogs` publish structured events via **ProgressBus** (`.paws/cache/progress-stream.ndjson`). Hermes’ **ProgressWatcher** tails the log and broadcasts `PROGRESS_EVENT` frames over WebSocket. The UI manager converts those into `progress:event` and `paxos:analytics` signals. The new **PenteractVisualizer** upgrade renders consensus state (status badges, agent metrics) and primes future overlays (guild heatmaps, persona win-rates). Paxos orchestrator snapshots persist to `paxos-analytics.json` so past runs fuel historical insights.
+The solution is implemented as a **Web Component widget** that aggregates Paxos telemetry into actionable analytics for visualization.
+
+```javascript
+// Web Component class pattern
+class PenteractAnalyticsWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  connectedCallback() {
+    this.render();
+    this._updateListener = () => this.render();
+    EventBus.on('paxos:analytics:processed', this._updateListener, 'PenteractAnalyticsWidget');
+  }
+
+  disconnectedCallback() {
+    if (this._updateListener) {
+      EventBus.off('paxos:analytics:processed', this._updateListener);
+    }
+  }
+
+  getStatus() {
+    const totalRuns = history.length;
+    const successRate = totalRuns > 0 ? Math.round((successCount / totalRuns) * 100) : 0;
+    let state = 'idle';
+    if (latest?.consensus?.status === 'success') state = 'active';
+    else if (latest?.consensus?.status === 'failed') state = 'error';
+    return {
+      state,
+      primaryMetric: `${totalRuns} runs`,
+      secondaryMetric: `${successRate}% success`,
+      lastActivity: latest?.timestamp ? new Date(latest.timestamp).getTime() : null
+    };
+  }
+
+  render() {
+    // Shadow DOM with analytics dashboard
+    this.shadowRoot.innerHTML = `<style>...</style><div>...</div>`;
+  }
+}
+```
+
+Data flow:
+- `cats`/`dogs` publish structured events via **ProgressBus** (`.paws/cache/progress-stream.ndjson`).
+- Hermes' **ProgressWatcher** tails the log and broadcasts `PROGRESS_EVENT` frames over WebSocket.
+- UI manager converts those into `progress:event` and `paxos:analytics` signals.
+- **PenteractAnalytics** listens to `EventBus.on('paxos:analytics')` and processes snapshots.
+- Widget renders consensus state (status badges, agent metrics) and historical analytics.
+- Paxos snapshots persist to `paxos-analytics.json` for historical insights.
+- **Widget Protocol**
+  - Exports `widget` metadata: `{ element, displayName, icon, category, order }`.
+  - Provides `getStatus()` with 5 required fields for dashboard integration.
+  - Auto-updates when new analytics are processed.
 
 ### 3. The Implementation Pathway
-1. **Emit Telemetry**  
-   - Call `ProgressBus.publish()` from `cats`, `dogs`, Paxos (`bundle:*`, `apply:*`, `analytics`).  
-   - Keep payloads JSON-safe; append to `.paws/cache/progress-stream.ndjson`.
-2. **Transport to UI**  
-   - Ensure Hermes’ watcher streams tail increments to REPLOID clients.  
-   - On reconnect, replay recent lines so dashboards stay warm-started.
-3. **UI Integration**  
-   - In `ui-manager`, bridge `PROGRESS_EVENT` → EventBus (`progress:event`, `paxos:analytics`).  
-   - Log meaningful summaries in Advanced Log for audit trails.
-4. **Render Analytics**  
-   - Initialize `PenteractVisualizer.init('penteract-visualizer')` once layout loads.  
-   - Display consensus header, agent table (status, tokens, latency), and task summary.  
-   - Leave hooks for persona heatmaps, historical sparklines, and guild-specific stats.
-5. **Iterate**  
-   - Extend Paxos orchestrator to record guild/persona metadata.  
-   - Feed analytics into decision heuristics (e.g., auto-prune failing agents, adjust temperatures).  
-   - Add UI controls to compare runs, export reports, or trigger follow-up Paxos rounds.
+1. **Web Component Registration**
+   - Define `PenteractAnalyticsWidget` extending `HTMLElement`.
+   - Register custom element: `customElements.define('penteract-analytics-widget', PenteractAnalyticsWidget)`.
+   - Export widget metadata: `{ element, displayName: 'Penteract Analytics', icon: '▤', category: 'paxos', order: 85 }`.
+2. **Lifecycle: connectedCallback**
+   - Call `attachShadow({ mode: 'open' })` in constructor.
+   - Subscribe to `EventBus.on('paxos:analytics:processed')` for real-time updates.
+   - Render Shadow DOM with analytics dashboard.
+3. **Lifecycle: disconnectedCallback**
+   - Unsubscribe from EventBus listener to prevent memory leaks.
+4. **Module Initialization**
+   - Call `init()` to load history from `/analytics/penteract-analytics.json`.
+   - Subscribe to `EventBus.on('paxos:analytics', handleSnapshot)`.
+   - Emit latest analytics if available.
+5. **Analytics Processing**
+   - Listen for `paxos:analytics` events with snapshot data.
+   - Normalize agent data: status, execution_time, token_count, solution_path, error.
+   - Analyze agents: totals (pass/fail/error), averages (tokens/time), fastest/most expensive.
+   - Build recommendations based on consensus status and metrics.
+   - Enrich snapshot with metrics and recommendations.
+   - Store in history (last 20 runs) and persist to StateManager.
+   - Emit `paxos:analytics:processed` event.
+6. **Shadow DOM Rendering**
+   - Render inline `<style>` with monospace font and cyberpunk theme.
+   - Display controls: "Clear History" button.
+   - Show stats grid: total runs, success count, failed count, success rate.
+   - Display latest run: timestamp, status, agent count, avg tokens, avg time, recommendations.
+   - List recent runs (last 10) with timestamp, status, agent counts, pass/fail ratio.
+7. **getStatus() Method**
+   - Return object with `state` (active if latest run successful, error if failed, idle otherwise).
+   - Include `primaryMetric` (total runs), `secondaryMetric` (success rate percentage).
+   - Track `lastActivity` (timestamp of latest run).
+8. **Public API**
+   - `getLatest()`: returns cloned latest analytics snapshot.
+   - `getHistory()`: returns cloned history array.
+   - `getSummary()`: returns totalRuns, lastRunAt, successRate, consensusTrail.
+   - `ingestSnapshot(snapshot)`: manually trigger analytics processing.
+9. **History Management**
+   - Load history from StateManager artifact on init.
+   - Persist history after each snapshot processed.
+   - Limit to 20 most recent runs.
+   - Clear history button empties array and persists.
+10. **Integration Points**
+    - Emit telemetry from `cats`, `dogs`, Paxos orchestrator.
+    - Transport via Hermes ProgressWatcher over WebSocket.
+    - Bridge to EventBus in UI manager.
+    - Widget auto-updates on new analytics events.

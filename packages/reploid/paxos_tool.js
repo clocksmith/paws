@@ -3,15 +3,15 @@
  * REPLOID Tool for Initiating the PAWS Paxos Workflow.
  *
  * This file provides the client-side function to trigger the multi-agent
- * competitive verification workflow on the Hermes server.
+ * competitive verification workflow via the proxy server.
  */
 
 /**
  * Initiates the multi-agent Paxos competitive verification workflow.
  *
- * This function sends a request to the Hermes server's /api/paxos endpoint.
- * The server then spawns the paws_paxos.py script. The client should
- * listen for WebSocket messages to get real-time logs and results.
+ * This function sends a request to the proxy server's /api/paxos endpoint.
+ * The proxy then spawns the paws-paxos CLI script. The client can
+ * poll for results or use WebSocket for real-time updates.
  *
  * @param {string} objective The high-level goal for the agents.
  * @returns {Promise<void>} A promise that resolves when the request is successfully sent.

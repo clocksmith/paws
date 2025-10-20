@@ -2,6 +2,9 @@
 
 **Objective:** To describe the foundational HTML skeleton artifact that structures the agent's user interface.
 
+**Target Upgrade:** BODY (`ui-body-template.html`)
+
+
 **Prerequisites:** `0x00000D`
 
 **Affected Artifacts:** `/modules/ui-body-template.html`, `/modules/ui-manager.js`

@@ -1,3 +1,4 @@
+// @blueprint 0x00005B - Hot Module Reload system
 // Hot Module Reload System for REPLOID
 // Enables dynamic code replacement without losing state
 
@@ -434,6 +435,202 @@ const HotReload = {
     // Initialize on module load
     initialize();
     
+    // Web Component Widget
+    const widget = (() => {
+      class HotReloadWidget extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' });
+        }
+
+        connectedCallback() {
+          this.render();
+        }
+
+        disconnectedCallback() {
+          // No interval to clean up
+        }
+
+        set moduleApi(api) {
+          this._api = api;
+          this.render();
+        }
+
+        getStatus() {
+          const stats = getStats();
+          return {
+            state: stats.totalModules > 0 ? 'active' : 'idle',
+            primaryMetric: `${stats.totalModules} modules`,
+            secondaryMetric: `${stats.modules.reduce((sum, m) => sum + m.version - 1, 0)} reloads`,
+            lastActivity: null,
+            message: null
+          };
+        }
+
+        render() {
+          const stats = getStats();
+          const totalReloads = stats.modules.reduce((sum, m) => sum + m.version - 1, 0);
+
+          this.shadowRoot.innerHTML = `
+            <style>
+              :host {
+                display: block;
+                background: rgba(255,255,255,0.05);
+                border-radius: 8px;
+                padding: 16px;
+              }
+              h3 {
+                margin: 0 0 16px 0;
+                font-size: 1.4em;
+                color: #fff;
+              }
+              h4 {
+                margin: 16px 0 10px 0;
+                font-size: 1.1em;
+                color: #0ff;
+              }
+              .controls {
+                display: flex;
+                gap: 8px;
+                margin-bottom: 16px;
+              }
+              button {
+                padding: 6px 12px;
+                background: rgba(100,150,255,0.2);
+                border: 1px solid rgba(100,150,255,0.4);
+                border-radius: 4px;
+                color: #fff;
+                cursor: pointer;
+                font-size: 0.9em;
+              }
+              button:hover {
+                background: rgba(100,150,255,0.3);
+              }
+              .stats-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 10px;
+                margin-bottom: 20px;
+              }
+              .stat-card {
+                padding: 10px;
+                border-radius: 5px;
+              }
+              .stat-card.modules {
+                background: rgba(255,87,34,0.1);
+              }
+              .stat-card.reloads {
+                background: rgba(0,255,255,0.1);
+              }
+              .stat-card.rate {
+                background: rgba(76,175,80,0.1);
+              }
+              .stat-label {
+                color: #888;
+                font-size: 12px;
+              }
+              .stat-value {
+                font-size: 24px;
+                font-weight: bold;
+              }
+              .stat-value.modules { color: #ff5722; }
+              .stat-value.reloads { color: #0ff; }
+              .stat-value.rate { color: #4caf50; }
+              .module-list {
+                max-height: 300px;
+                overflow-y: auto;
+              }
+              .module-item {
+                padding: 10px;
+                background: rgba(255,255,255,0.03);
+                margin-bottom: 8px;
+                border-radius: 3px;
+              }
+              .module-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              }
+              .module-id {
+                font-weight: bold;
+                color: #ccc;
+              }
+              .module-version {
+                font-size: 12px;
+                color: #666;
+              }
+              .module-path {
+                font-size: 11px;
+                color: #666;
+                margin-top: 4px;
+              }
+              .empty-state {
+                color: #888;
+                padding: 20px;
+                text-align: center;
+              }
+            </style>
+
+            <div class="hot-reload-panel">
+              <h3>☄ Hot Reload</h3>
+
+              <div class="controls">
+                <button class="cleanup">⛶ Cleanup</button>
+              </div>
+
+              <div class="stats-grid">
+                <div class="stat-card modules">
+                  <div class="stat-label">Active Modules</div>
+                  <div class="stat-value modules">${stats.totalModules}</div>
+                </div>
+                <div class="stat-card reloads">
+                  <div class="stat-label">Total Reloads</div>
+                  <div class="stat-value reloads">${totalReloads}</div>
+                </div>
+                <div class="stat-card rate">
+                  <div class="stat-label">Modules</div>
+                  <div class="stat-value rate">${stats.totalModules}</div>
+                </div>
+              </div>
+
+              <h4>Active Modules (${moduleRegistry.size})</h4>
+              <div class="module-list">
+                ${stats.modules.length > 0 ? stats.modules.map(module => `
+                  <div class="module-item">
+                    <div class="module-header">
+                      <span class="module-id">${module.id}</span>
+                      <span class="module-version">v${module.version}</span>
+                    </div>
+                    <div class="module-path">${module.sourcePath}</div>
+                  </div>
+                `).join('') : '<div class="empty-state">No active modules</div>'}
+              </div>
+            </div>
+          `;
+
+          // Attach event listeners
+          this.shadowRoot.querySelector('.cleanup')?.addEventListener('click', () => {
+            cleanup();
+            if (typeof EventBus !== 'undefined') {
+              EventBus.emit('toast:success', { message: 'Hot reload cleaned up' });
+            }
+            this.render();
+          });
+        }
+      }
+
+      if (!customElements.get('hot-reload-widget')) {
+        customElements.define('hot-reload-widget', HotReloadWidget);
+      }
+
+      return {
+        element: 'hot-reload-widget',
+        displayName: 'Hot Reload',
+        icon: '☄',
+        category: 'core'
+      };
+    })();
+
     // Public API
     return {
       api: {
@@ -446,7 +643,8 @@ const HotReload = {
         profileModule,
         getStats,
         cleanup
-      }
+      },
+      widget
     };
   }
 };

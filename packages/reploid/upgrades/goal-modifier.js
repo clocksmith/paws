@@ -1,3 +1,4 @@
+// @blueprint 0x000017 - Safe patterns for agent goal evolution and modification.
 // Goal Modification Safety Module
 // Provides safe mechanisms for goal evolution and modification
 const GoalModifierModule = (
@@ -427,6 +428,255 @@ Respond with JSON: {"score": 0.0-1.0, "reasoning": "explanation"}`;
 
   logger.info("[GMOD] Goal Modifier Module initialized successfully");
 
+  // Web Component Widget
+  class GoalModifierWidget extends HTMLElement {
+    constructor() {
+      super();
+      this.attachShadow({ mode: 'open' });
+    }
+
+    set moduleApi(api) {
+      this._api = api;
+      this.render();
+    }
+
+    connectedCallback() {
+      this.render();
+    }
+
+    disconnectedCallback() {
+      // No cleanup needed
+    }
+
+    getStatus() {
+      const goalState = getCurrentGoalState();
+      if (!goalState) {
+        return {
+          state: 'disabled',
+          primaryMetric: 'No goal',
+          secondaryMetric: '-',
+          lastActivity: null,
+          message: null
+        };
+      }
+
+      const stats = getGoalStatistics();
+
+      return {
+        state: goalState.can_modify ? 'idle' : 'warning',
+        primaryMetric: `${stats.total_modifications} mods`,
+        secondaryMetric: `${modificationCount}/${MAX_MODIFICATIONS_PER_CYCLE} this cycle`,
+        lastActivity: goalHistory.length > 0 ? goalHistory[goalHistory.length - 1].timestamp : null,
+        message: !goalState.can_modify ? 'Modification limit reached' : null
+      };
+    }
+
+    getControls() {
+      return [
+        {
+          id: 'reset-limits',
+          label: '↻ Reset Limits',
+          action: () => {
+            modificationCount = 0;
+            logger.info('[GMOD] Modification limits reset');
+            this.render();
+            return { success: true, message: 'Modification limits reset' };
+          }
+        }
+      ];
+    }
+
+    render() {
+      const goalState = getCurrentGoalState();
+      if (!goalState) {
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              font-family: monospace;
+              font-size: 12px;
+            }
+            .no-goal {
+              padding: 20px;
+              text-align: center;
+              color: #888;
+            }
+          </style>
+          <div class="no-goal">No active goal</div>
+        `;
+        return;
+      }
+
+      const stats = getGoalStatistics();
+      const recentMods = goalHistory.slice(-10).reverse();
+
+      this.shadowRoot.innerHTML = `
+        <style>
+          :host {
+            display: block;
+            font-family: monospace;
+            font-size: 12px;
+          }
+          .goal-panel {
+            padding: 12px;
+            color: #fff;
+          }
+          h4 {
+            margin: 0 0 12px 0;
+            font-size: 1.1em;
+            color: #0ff;
+          }
+          .current-goal {
+            background: rgba(0,255,255,0.1);
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+          }
+          .current-goal-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #0ff;
+          }
+          .current-goal-text {
+            font-size: 14px;
+            color: #ccc;
+            line-height: 1.5;
+          }
+          .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+          }
+          .stat-card {
+            background: rgba(255,255,255,0.05);
+            padding: 10px;
+            border-radius: 5px;
+          }
+          .stat-label {
+            color: #888;
+            font-size: 12px;
+          }
+          .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+          }
+          .constraints-section {
+            margin-bottom: 20px;
+          }
+          .constraint-item {
+            padding: 6px;
+            background: rgba(244,67,54,0.1);
+            margin-bottom: 4px;
+            border-left: 3px solid #f44336;
+            border-radius: 3px;
+            color: #ccc;
+            font-size: 12px;
+          }
+          .history-section {
+            margin-top: 20px;
+          }
+          .history-list {
+            max-height: 200px;
+            overflow-y: auto;
+          }
+          .history-item {
+            padding: 10px;
+            background: rgba(255,255,255,0.03);
+            margin-bottom: 8px;
+            border-radius: 3px;
+          }
+          .history-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+          }
+          .history-type {
+            font-weight: bold;
+            color: #0ff;
+          }
+          .history-time {
+            font-size: 12px;
+            color: #888;
+          }
+          .history-goal {
+            font-size: 12px;
+            color: #ccc;
+          }
+          .history-alignment {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+          }
+          .no-history {
+            color: #888;
+            padding: 20px;
+            text-align: center;
+          }
+        </style>
+        <div class="goal-panel">
+          <h4>⊙ Goal Modifier</h4>
+
+          <div class="current-goal">
+            <div class="current-goal-title">Current Goal</div>
+            <div class="current-goal-text">${goalState.current || 'No active goal'}</div>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-label">Total Mods</div>
+              <div class="stat-value">${stats.total_modifications}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">This Cycle</div>
+              <div class="stat-value">${modificationCount}/${MAX_MODIFICATIONS_PER_CYCLE}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Avg Alignment</div>
+              <div class="stat-value">${stats.average_alignment ? (stats.average_alignment * 100).toFixed(0) : 0}%</div>
+            </div>
+          </div>
+
+          <div class="constraints-section">
+            <h4>Immutable Constraints (${IMMUTABLE_CONSTRAINTS.length})</h4>
+            ${IMMUTABLE_CONSTRAINTS.map(c => `
+              <div class="constraint-item">${c}</div>
+            `).join('')}
+          </div>
+
+          <div class="history-section">
+            <h4>Recent Modifications (${recentMods.length})</h4>
+            <div class="history-list">
+              ${recentMods.length > 0 ? recentMods.map(mod => {
+                const time = new Date(mod.timestamp).toLocaleTimeString();
+                return `
+                  <div class="history-item">
+                    <div class="history-header">
+                      <span class="history-type">${mod.type}</span>
+                      <span class="history-time">${time}</span>
+                    </div>
+                    <div class="history-goal">${mod.to || mod.from || 'N/A'}</div>
+                    ${mod.alignment && mod.alignment.score ? `
+                      <div class="history-alignment">
+                        Alignment: ${(mod.alignment.score * 100).toFixed(0)}%
+                      </div>
+                    ` : ''}
+                  </div>
+                `;
+              }).join('') : '<div class="no-history">No modifications yet</div>'}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  // Register custom element
+  const elementName = 'goal-modifier-widget';
+  if (!customElements.get(elementName)) {
+    customElements.define(elementName, GoalModifierWidget);
+  }
+
   return {
     evaluateAlignment,
     refineGoal,
@@ -437,6 +687,12 @@ Respond with JSON: {"score": 0.0-1.0, "reasoning": "explanation"}`;
     getGoalStatistics,
     getCurrentGoalState,
     IMMUTABLE_CONSTRAINTS,
-    SOFT_CONSTRAINTS
+    SOFT_CONSTRAINTS,
+    widget: {
+      element: elementName,
+      displayName: 'Goal Modifier',
+      icon: '⊙',
+      category: 'agent'
+    }
   };
 };

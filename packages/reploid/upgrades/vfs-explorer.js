@@ -1,3 +1,4 @@
+// @blueprint 0x000029 - Covers VFS explorer interactions and safeguards.
 // VFS Explorer Module for REPLOID
 // Enhanced file tree with search, expand/collapse, and file viewer
 
@@ -50,7 +51,7 @@ const VFSExplorer = {
             <div class="vfs-toolbar" role="toolbar" aria-label="File explorer controls">
               <input type="text"
                      class="vfs-search"
-                     placeholder="🔍 Search files..."
+                     placeholder="⌕ Search files..."
                      value="${this.escapeHtml(this.searchTerm)}"
                      aria-label="Search files"
                      role="searchbox">
@@ -168,7 +169,7 @@ const VFSExplorer = {
 
       renderFolder(node, depth) {
         const isExpanded = this.expanded.has(node.path) || this.searchTerm !== '';
-        const icon = isExpanded ? '📂' : '📁';
+        const icon = isExpanded ? '⛁' : '⛁';
         const expandIcon = isExpanded ? '▼' : '▶';
 
         const childrenHtml = isExpanded ? this.renderTree(node, depth + 1) : '';
@@ -205,26 +206,26 @@ const VFSExplorer = {
       getFileIcon(path) {
         const ext = path.split('.').pop().toLowerCase();
         const iconMap = {
-          'js': '📜',
-          'json': '📋',
-          'md': '📝',
-          'css': '🎨',
-          'html': '🌐',
-          'txt': '📄',
+          'js': '⚶',
+          'json': '☷',
+          'md': '✎',
+          'css': '⛉',
+          'html': '♁',
+          'txt': '⛿',
           'yml': '⚙️',
           'yaml': '⚙️',
-          'xml': '📰',
-          'svg': '🖼️',
-          'png': '🖼️',
-          'jpg': '🖼️',
-          'jpeg': '🖼️',
-          'gif': '🖼️',
-          'pdf': '📕',
-          'zip': '📦',
-          'tar': '📦',
-          'gz': '📦'
+          'xml': '⚶',
+          'svg': '☐️',
+          'png': '☐️',
+          'jpg': '☐️',
+          'jpeg': '☐️',
+          'gif': '☐️',
+          'pdf': '◫',
+          'zip': '⛝',
+          'tar': '⛝',
+          'gz': '⛝'
         };
-        return iconMap[ext] || '📄';
+        return iconMap[ext] || '⛿';
       }
 
       formatSize(bytes) {
@@ -402,8 +403,8 @@ const VFSExplorer = {
                 <pre><code class="language-${language}">${this.escapeHtml(content || '')}</code></pre>
               </div>
               <div class="vfs-file-viewer-footer">
-                <button class="vfs-file-viewer-copy">📋 Copy</button>
-                <button class="vfs-file-viewer-history">📜 History</button>
+                <button class="vfs-file-viewer-copy">☷ Copy</button>
+                <button class="vfs-file-viewer-history">⚶ History</button>
                 <button class="vfs-file-viewer-edit">✏️ Edit</button>
               </div>
             </div>
@@ -504,6 +505,155 @@ const VFSExplorer = {
       logger.info('[VFSExplorer] Module initialized');
     };
 
+    // Widget interface for ModuleWidgetProtocol
+    const widget = (() => {
+      class VFSExplorerWidget extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' });
+        }
+
+        connectedCallback() {
+          this.render();
+          this._updateInterval = setInterval(() => this.render(), 3000);
+
+          // Listen for VFS changes
+          this._vfsHandlers = [
+            () => this.render(),
+            () => this.render(),
+            () => this.render(),
+            () => this.render()
+          ];
+
+          EventBus.on('vfs:updated', this._vfsHandlers[0]);
+          EventBus.on('artifact:created', this._vfsHandlers[1]);
+          EventBus.on('artifact:updated', this._vfsHandlers[2]);
+          EventBus.on('artifact:deleted', this._vfsHandlers[3]);
+        }
+
+        disconnectedCallback() {
+          if (this._updateInterval) {
+            clearInterval(this._updateInterval);
+            this._updateInterval = null;
+          }
+
+          if (this._vfsHandlers) {
+            EventBus.off('vfs:updated', this._vfsHandlers[0]);
+            EventBus.off('artifact:created', this._vfsHandlers[1]);
+            EventBus.off('artifact:updated', this._vfsHandlers[2]);
+            EventBus.off('artifact:deleted', this._vfsHandlers[3]);
+          }
+        }
+
+        set moduleApi(api) {
+          this._api = api;
+          this.render();
+        }
+
+        async getStatus() {
+          const allMeta = await StateManager.getAllArtifactMetadata();
+          const fileCount = Object.keys(allMeta).length;
+          const searchActive = explorer.searchTerm && explorer.searchTerm.length > 0;
+
+          return {
+            state: searchActive ? 'active' : 'idle',
+            primaryMetric: `${fileCount} files`,
+            secondaryMetric: explorer.selectedFile ? `Selected: ${explorer.selectedFile.split('/').pop()}` : 'No selection',
+            lastActivity: explorer.selectedFile ? Date.now() : null,
+            message: searchActive ? `Searching: "${explorer.searchTerm}"` : null
+          };
+        }
+
+        async render() {
+          this.shadowRoot.innerHTML = `
+            <style>
+              :host {
+                display: block;
+                font-family: monospace;
+                color: #e0e0e0;
+                height: 100%;
+              }
+              .vfs-explorer-widget {
+                padding: 12px;
+                background: #1a1a1a;
+                border-radius: 4px;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+              }
+              .controls {
+                margin-bottom: 12px;
+                display: flex;
+                gap: 8px;
+              }
+              button {
+                padding: 6px 12px;
+                background: #333;
+                color: #e0e0e0;
+                border: 1px solid #555;
+                border-radius: 3px;
+                cursor: pointer;
+                font-family: monospace;
+                font-size: 11px;
+              }
+              button:hover {
+                background: #444;
+              }
+              #vfs-explorer-widget-container {
+                flex: 1;
+                overflow: hidden;
+              }
+            </style>
+            <div class="vfs-explorer-widget">
+              <div class="controls">
+                <button class="refresh">↻ Refresh</button>
+                <button class="expand-all">⊞ Expand All</button>
+                <button class="collapse-all">⊟ Collapse All</button>
+              </div>
+              <div id="vfs-explorer-widget-container"></div>
+            </div>
+          `;
+
+          // Attach event listeners
+          this.shadowRoot.querySelector('.refresh')?.addEventListener('click', () => {
+            explorer.render();
+            EventBus.emit('toast:success', { message: 'File tree refreshed' });
+          });
+
+          this.shadowRoot.querySelector('.expand-all')?.addEventListener('click', async () => {
+            const allMeta = await StateManager.getAllArtifactMetadata();
+            const tree = explorer.buildTree(allMeta);
+            explorer.expandAll(tree);
+            explorer.render();
+            EventBus.emit('toast:info', { message: 'All folders expanded' });
+          });
+
+          this.shadowRoot.querySelector('.collapse-all')?.addEventListener('click', () => {
+            explorer.expanded.clear();
+            explorer.render();
+            EventBus.emit('toast:info', { message: 'All folders collapsed' });
+          });
+
+          // Use the existing explorer rendering
+          const widgetContainer = this.shadowRoot.querySelector('#vfs-explorer-widget-container');
+          explorer.container = widgetContainer;
+          await explorer.render();
+        }
+      }
+
+      if (!customElements.get('vfs-explorer-widget')) {
+        customElements.define('vfs-explorer-widget', VFSExplorerWidget);
+      }
+
+      return {
+        element: 'vfs-explorer-widget',
+        displayName: 'VFS Explorer',
+        icon: '⛁',
+        category: 'storage',
+        order: 20
+      };
+    })();
+
     return {
       init,
       api: {
@@ -525,7 +675,8 @@ const VFSExplorer = {
           explorer.selectedFile = path;
           explorer.showFileViewer(path);
         }
-      }
+      },
+      widget
     };
   }
 };

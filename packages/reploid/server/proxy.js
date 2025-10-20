@@ -37,6 +37,7 @@ const GEMINI_API_KEY = appConfig?.api?.geminiKey || process.env.GEMINI_API_KEY;
 const LOCAL_MODEL_ENDPOINT = appConfig?.api?.localEndpoint || process.env.LOCAL_MODEL_ENDPOINT || 'http://localhost:11434';
 const OPENAI_API_KEY = appConfig?.api?.openaiKey || process.env.OPENAI_API_KEY;
 const ANTHROPIC_API_KEY = appConfig?.api?.anthropicKey || process.env.ANTHROPIC_API_KEY;
+const HUGGINGFACE_API_KEY = appConfig?.api?.huggingfaceKey || process.env.HUGGINGFACE_API_KEY;
 const CORS_ORIGINS = appConfig?.server?.corsOrigins || ['http://localhost:8080'];
 const AUTO_START_OLLAMA = appConfig?.ollama?.autoStart || process.env.AUTO_START_OLLAMA === 'true';
 
@@ -49,6 +50,7 @@ console.log('🔧 Available API providers:');
 if (GEMINI_API_KEY) console.log('   ✅ Google Gemini');
 if (OPENAI_API_KEY) console.log('   ✅ OpenAI');
 if (ANTHROPIC_API_KEY) console.log('   ✅ Anthropic');
+if (HUGGINGFACE_API_KEY) console.log('   ✅ HuggingFace');
 console.log(`   🖥️  Local models at: ${LOCAL_MODEL_ENDPOINT}`);
 
 // Ollama process management
@@ -167,6 +169,7 @@ app.get('/api/health', (req, res) => {
   if (GEMINI_API_KEY) providers.push('gemini');
   if (OPENAI_API_KEY) providers.push('openai');
   if (ANTHROPIC_API_KEY) providers.push('anthropic');
+  if (HUGGINGFACE_API_KEY) providers.push('huggingface');
   providers.push('local');
 
   res.json({
@@ -383,6 +386,57 @@ app.post('/api/anthropic/*', async (req, res) => {
   }
 });
 
+// Proxy endpoint for HuggingFace Inference API
+app.post('/api/huggingface/models/:model(*)', async (req, res) => {
+  if (!HUGGINGFACE_API_KEY) {
+    return res.status(500).json({
+      error: 'Server is not configured with HuggingFace API key'
+    });
+  }
+
+  const modelId = req.params.model;
+  const huggingfaceUrl = `https://api-inference.huggingface.co/models/${modelId}`;
+
+  try {
+    const fetch = (await import('node-fetch')).default;
+    const response = await fetch(huggingfaceUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${HUGGINGFACE_API_KEY}`
+      },
+      body: JSON.stringify(req.body)
+    });
+
+    const responseText = await response.text();
+
+    try {
+      const data = JSON.parse(responseText);
+
+      if (!response.ok) {
+        console.error('HuggingFace API error:', data);
+        return res.status(response.status).json(data);
+      }
+
+      res.json(data);
+    } catch (parseError) {
+      console.error('Failed to parse response:', responseText);
+      res.status(response.status || 500).json({
+        error: 'Invalid response from HuggingFace API',
+        status: response.status,
+        statusText: response.statusText,
+        details: responseText.substring(0, 500)
+      });
+    }
+  } catch (error) {
+    console.error('HuggingFace proxy error:', error);
+    res.status(500).json({
+      error: 'Failed to proxy request to HuggingFace API',
+      details: error.message
+    });
+  }
+});
+
 // Endpoint to check if proxy is available (for client detection)
 app.get('/api/proxy-status', (req, res) => {
   res.json({
@@ -392,6 +446,7 @@ app.get('/api/proxy-status', (req, res) => {
       gemini: !!GEMINI_API_KEY,
       openai: !!OPENAI_API_KEY,
       anthropic: !!ANTHROPIC_API_KEY,
+      huggingface: !!HUGGINGFACE_API_KEY,
       local: true
     },
     localEndpoint: LOCAL_MODEL_ENDPOINT
@@ -524,6 +579,7 @@ server.listen(PORT, () => {
   if (GEMINI_API_KEY) providers.push('Gemini');
   if (OPENAI_API_KEY) providers.push('OpenAI');
   if (ANTHROPIC_API_KEY) providers.push('Anthropic');
+  if (HUGGINGFACE_API_KEY) providers.push('HuggingFace');
   providers.push('Local');
 
   console.log(`

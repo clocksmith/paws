@@ -1,3 +1,4 @@
+// @blueprint 0x00000D - Details the architecture for managing the agent's developer console UI.
 // Standardized UI Manager Module for REPLOID - v2.0 (Dashboard Enabled)
 // POLISH-1 Enhanced: Integrated AgentVisualizer and ASTVisualizer panels
 
@@ -35,10 +36,10 @@ const UI = {
     const STORAGE_KEY_PANEL = 'reploid_last_panel_view';
 
     const resolveProgressUrl = () => {
-        const configured = config?.hermes?.websocketUrl ||
-            config?.hermes?.wsUrl ||
-            config?.hermes?.websocketPath ||
-            config?.hermes?.websocket;
+        const configured = config?.proxy?.websocketUrl ||
+            config?.proxy?.wsUrl ||
+            config?.proxy?.websocketPath ||
+            config?.proxy?.websocket;
 
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         if (configured) {
@@ -48,8 +49,8 @@ const UI = {
             return `${protocol}//${configured}`;
         }
 
-        const hostname = config?.hermes?.host || window.location.hostname || 'localhost';
-        const port = config?.hermes?.port || 8000;
+        const hostname = config?.proxy?.host || window.location.hostname || 'localhost';
+        const port = config?.proxy?.port || 8000;
         return `${protocol}//${hostname}:${port}`;
     };
 
@@ -727,13 +728,13 @@ const UI = {
             const error = PyodideRuntime.getError();
 
             if (error) {
-                uiRefs.pyodideStatusIcon.textContent = '🔴';
+                uiRefs.pyodideStatusIcon.textContent = '●';
                 uiRefs.pyodideStatusText.textContent = `Error: ${error.message}`;
             } else if (isReady) {
-                uiRefs.pyodideStatusIcon.textContent = '🟢';
+                uiRefs.pyodideStatusIcon.textContent = '○';
                 uiRefs.pyodideStatusText.textContent = 'Ready';
             } else {
-                uiRefs.pyodideStatusIcon.textContent = '🟡';
+                uiRefs.pyodideStatusIcon.textContent = '○';
                 uiRefs.pyodideStatusText.textContent = 'Initializing...';
             }
         };
@@ -828,7 +829,7 @@ const UI = {
                         }
                     } finally {
                         syncBtn.disabled = false;
-                        syncBtn.textContent = '🔄 Sync VFS';
+                        syncBtn.textContent = '↻ Sync VFS';
                     }
                 };
             }
@@ -1014,10 +1015,10 @@ const UI = {
             const status = LocalLLM.getStatus();
 
             if (status.error) {
-                uiRefs.llmStatusIcon.textContent = '🔴';
+                uiRefs.llmStatusIcon.textContent = '●';
                 uiRefs.llmStatusText.textContent = `Error: ${status.error}`;
             } else if (status.ready) {
-                uiRefs.llmStatusIcon.textContent = '🟢';
+                uiRefs.llmStatusIcon.textContent = '○';
                 uiRefs.llmStatusText.textContent = 'Ready';
                 uiRefs.llmCurrentModel.textContent = status.model || 'Unknown';
 
@@ -1031,7 +1032,7 @@ const UI = {
                 if (loadBtn) loadBtn.classList.add('hidden');
                 if (unloadBtn) unloadBtn.classList.remove('hidden');
             } else if (status.loading) {
-                uiRefs.llmStatusIcon.textContent = '🟡';
+                uiRefs.llmStatusIcon.textContent = '○';
                 uiRefs.llmStatusText.textContent = 'Loading model...';
             } else {
                 uiRefs.llmStatusIcon.textContent = '⚪';
@@ -1045,10 +1046,10 @@ const UI = {
             const statusDiv = document.getElementById('llm-webgpu-status');
 
             if (gpuCheck.available) {
-                statusDiv.innerHTML = `✅ WebGPU available (${gpuCheck.info?.vendor || 'Unknown'})`;
+                statusDiv.innerHTML = `✓ WebGPU available (${gpuCheck.info?.vendor || 'Unknown'})`;
                 statusDiv.style.color = '#0f0';
             } else {
-                statusDiv.innerHTML = `❌ WebGPU not available: ${gpuCheck.error}`;
+                statusDiv.innerHTML = `✗ WebGPU not available: ${gpuCheck.error}`;
                 statusDiv.style.color = '#f00';
 
                 // Disable load button
@@ -1319,7 +1320,7 @@ const UI = {
                         <span><strong>Dependencies:</strong> ${stats.totalDependencies}</span>
                         <span><strong>Categories:</strong> ${stats.categories}</span>
                         <span><strong>Avg Dependencies:</strong> ${stats.avgDependencies.toFixed(2)}</span>
-                        <button id="graph-reset-btn" style="margin-left: auto; padding: 4px 12px; background: rgba(0, 255, 255, 0.1); border: 1px solid rgba(0, 255, 255, 0.3); color: #00ffff; border-radius: 4px; cursor: pointer;">🔄 Reset View</button>
+                        <button id="graph-reset-btn" style="margin-left: auto; padding: 4px 12px; background: rgba(0, 255, 255, 0.1); border: 1px solid rgba(0, 255, 255, 0.3); color: #00ffff; border-radius: 4px; cursor: pointer;">↻ Reset View</button>
                     `;
 
                     document.getElementById('graph-reset-btn')?.addEventListener('click', () => {
@@ -1369,7 +1370,7 @@ const UI = {
                 // Visual feedback
                 perfRefreshBtn.textContent = '✓ Refreshed';
                 setTimeout(() => {
-                    perfRefreshBtn.textContent = '🔄 Refresh';
+                    perfRefreshBtn.textContent = '↻ Refresh';
                 }, 1000);
             });
         }
@@ -1380,7 +1381,7 @@ const UI = {
                     const report = PerformanceMonitor.generateReport();
                     exportAsMarkdown(`performance-report-${Date.now()}.md`, report);
                     logger.info('[UIManager] Exported performance report');
-                    showButtonSuccess(perfExportBtn, '💾 Export Report', '✓ Exported!');
+                    showButtonSuccess(perfExportBtn, '⛃ Export Report', '✓ Exported!');
                 } catch (err) {
                     logger.error('[UIManager] Failed to export performance report:', err);
                     if (ToastNotifications) ToastNotifications.error('Failed to export performance report');
@@ -1412,7 +1413,7 @@ const UI = {
                 // Visual feedback
                 introRefreshBtn.textContent = '✓ Refreshed';
                 setTimeout(() => {
-                    introRefreshBtn.textContent = '🔄 Refresh';
+                    introRefreshBtn.textContent = '↻ Refresh';
                 }, 1000);
             });
         }
@@ -1423,7 +1424,7 @@ const UI = {
                     const report = await Introspector.generateSelfReport();
                     exportAsMarkdown(`self-analysis-report-${Date.now()}.md`, report);
                     logger.info('[UIManager] Exported self-analysis report');
-                    showButtonSuccess(introExportBtn, '💾 Export Report', '✓ Exported!');
+                    showButtonSuccess(introExportBtn, '⛃ Export Report', '✓ Exported!');
                 } catch (err) {
                     logger.error('[UIManager] Failed to export self-analysis report:', err);
                     if (ToastNotifications) ToastNotifications.error('Failed to export self-analysis report');
@@ -1435,7 +1436,7 @@ const UI = {
             introGraphBtn.addEventListener('click', async () => {
                 // Open modal with D3.js module graph visualization
                 showModuleGraphModal();
-                showButtonSuccess(introGraphBtn, '🕸️ Module Graph', '✓ Opened!');
+                showButtonSuccess(introGraphBtn, '⚌️ Module Graph', '✓ Opened!');
             });
         }
 
@@ -1450,7 +1451,7 @@ const UI = {
                 // Visual feedback
                 reflRefreshBtn.textContent = '✓ Refreshed';
                 setTimeout(() => {
-                    reflRefreshBtn.textContent = '🔄 Refresh';
+                    reflRefreshBtn.textContent = '↻ Refresh';
                 }, 1000);
             });
         }
@@ -1461,7 +1462,7 @@ const UI = {
                     const report = await ReflectionStore.generateReport();
                     exportAsMarkdown(`reflections-report-${Date.now()}.md`, report);
                     logger.info('[UIManager] Exported reflections report');
-                    showButtonSuccess(reflExportBtn, '💾 Export Report', '✓ Exported!');
+                    showButtonSuccess(reflExportBtn, '⛃ Export Report', '✓ Exported!');
                 } catch (err) {
                     logger.error('[UIManager] Failed to export reflections report:', err);
                     if (ToastNotifications) ToastNotifications.error('Failed to export reflections report');
@@ -1486,7 +1487,7 @@ const UI = {
 
                         reflClearBtn.textContent = `✓ Cleared ${oldRefl.length}`;
                         setTimeout(() => {
-                            reflClearBtn.textContent = '🗑️ Clear Old';
+                            reflClearBtn.textContent = '⛶️ Clear Old';
                         }, 2000);
                     } catch (err) {
                         logger.error('[UIManager] Failed to clear old reflections:', err);
@@ -1528,7 +1529,7 @@ const UI = {
                     const report = SelfTester.generateReport();
                     exportAsMarkdown(`self-test-report-${Date.now()}.md`, report);
                     logger.info('[UIManager] Exported self-test report');
-                    showButtonSuccess(testExportBtn, '💾 Export Report', '✓ Exported!');
+                    showButtonSuccess(testExportBtn, '⛃ Export Report', '✓ Exported!');
                 } catch (err) {
                     logger.error('[UIManager] Failed to export test report:', err);
                     if (ToastNotifications) ToastNotifications.error('Failed to export test report');
@@ -1541,7 +1542,7 @@ const UI = {
                 await renderSelfTestPanel();
                 testRefreshBtn.textContent = '✓ Refreshed';
                 setTimeout(() => {
-                    testRefreshBtn.textContent = '🔄 Refresh';
+                    testRefreshBtn.textContent = '↻ Refresh';
                 }, 1000);
             });
         }
@@ -1566,7 +1567,7 @@ const UI = {
 
         if (filesystemSyncBtn && BrowserAPIs) {
             filesystemSyncBtn.addEventListener('click', async () => {
-                const originalText = '💾 Sync VFS';
+                const originalText = '⛃ Sync VFS';
                 try {
                     filesystemSyncBtn.textContent = '⏳ Syncing...';
                     filesystemSyncBtn.disabled = true;
@@ -1609,7 +1610,7 @@ const UI = {
                 await renderBrowserAPIsPanel();
                 storageRefreshBtn.textContent = '✓ Refreshed';
                 setTimeout(() => {
-                    storageRefreshBtn.textContent = '🔄 Refresh';
+                    storageRefreshBtn.textContent = '↻ Refresh';
                 }, 1000);
             });
         }
@@ -1619,7 +1620,7 @@ const UI = {
                 const isPersisted = await BrowserAPIs.requestPersistentStorage();
                 storagePersistBtn.textContent = isPersisted ? '✓ Persistent' : '✗ Not Persistent';
                 setTimeout(() => {
-                    storagePersistBtn.textContent = '🔒 Request Persistent';
+                    storagePersistBtn.textContent = '⛝ Request Persistent';
                 }, 2000);
             });
         }
@@ -1630,7 +1631,7 @@ const UI = {
                     const report = BrowserAPIs.generateReport();
                     exportAsMarkdown(`browser-apis-report-${Date.now()}.md`, report);
                     logger.info('[UIManager] Exported browser APIs report');
-                    showButtonSuccess(apiExportBtn, '💾 Export Report', '✓ Exported!');
+                    showButtonSuccess(apiExportBtn, '⛃ Export Report', '✓ Exported!');
                 } catch (err) {
                     logger.error('[UIManager] Failed to export browser APIs report:', err);
                     if (ToastNotifications) ToastNotifications.error('Failed to export browser APIs report');
@@ -1646,7 +1647,7 @@ const UI = {
             avisResetBtn.addEventListener('click', () => {
                 if (agentVisualizerInitialized) {
                     AgentVisualizer.resetVisualization();
-                    showButtonSuccess(avisResetBtn, '🔄 Reset', '✓ Reset!');
+                    showButtonSuccess(avisResetBtn, '↻ Reset', '✓ Reset!');
                 }
             });
         }
@@ -1655,7 +1656,7 @@ const UI = {
             avisCenterBtn.addEventListener('click', () => {
                 if (agentVisualizerInitialized) {
                     AgentVisualizer.centerView();
-                    showButtonSuccess(avisCenterBtn, '🎯 Center', '✓ Centered!');
+                    showButtonSuccess(avisCenterBtn, '⊙ Center', '✓ Centered!');
                 }
             });
         }
@@ -1672,7 +1673,7 @@ const UI = {
                 const code = astCodeInput.value;
                 if (code && code.trim()) {
                     ASTVisualizer.visualizeCode(code);
-                    showButtonSuccess(astVisualizeBtn, '🔍 Visualize', '✓ Visualized!');
+                    showButtonSuccess(astVisualizeBtn, '⌕ Visualize', '✓ Visualized!');
                 }
             });
         }
@@ -1680,14 +1681,14 @@ const UI = {
         if (astExpandBtn && ASTVisualizer) {
             astExpandBtn.addEventListener('click', () => {
                 ASTVisualizer.expandAll();
-                showButtonSuccess(astExpandBtn, '➕ Expand All', '✓ Expanded!');
+                showButtonSuccess(astExpandBtn, '⊕ Expand All', '✓ Expanded!');
             });
         }
 
         if (astCollapseBtn && ASTVisualizer) {
             astCollapseBtn.addEventListener('click', () => {
                 ASTVisualizer.collapseAll();
-                showButtonSuccess(astCollapseBtn, '➖ Collapse All', '✓ Collapsed!');
+                showButtonSuccess(astCollapseBtn, '⊖ Collapse All', '✓ Collapsed!');
             });
         }
 
@@ -1697,7 +1698,7 @@ const UI = {
 function greet(name) {
   return \`Hello, \${name}!\`;
 }`;
-                showButtonSuccess(astResetBtn, '🔄 Reset', '✓ Reset!');
+                showButtonSuccess(astResetBtn, '↻ Reset', '✓ Reset!');
             });
         }
     };
@@ -1989,7 +1990,7 @@ function greet(name) {
             if (themeBtn) themeBtn.textContent = '☀️';
         } else {
             root.removeAttribute('data-theme');
-            if (themeBtn) themeBtn.textContent = '🌙';
+            if (themeBtn) themeBtn.textContent = '☾';
         }
     };
 
@@ -2334,13 +2335,247 @@ function greet(name) {
         }
     };
 
+    // UI Manager statistics for widget
+    const uiStats = {
+      panelSwitches: 0,
+      progressEventsReceived: 0,
+      thoughtUpdates: 0,
+      goalUpdates: 0,
+      statusBarUpdates: 0,
+      lastActivity: null,
+      panelUsage: {},
+      currentPanel: null,
+      sessionStart: Date.now()
+    };
+
+    // Wrap streamThought to track stats
+    const wrappedStreamThought = (...args) => {
+      uiStats.thoughtUpdates++;
+      uiStats.lastActivity = Date.now();
+      return streamThought(...args);
+    };
+
+    // Wrap updateGoal to track stats
+    const wrappedUpdateGoal = (...args) => {
+      uiStats.goalUpdates++;
+      uiStats.lastActivity = Date.now();
+      return updateGoal(...args);
+    };
+
+    // Wrap updateStatusBar to track stats
+    const wrappedUpdateStatusBar = (...args) => {
+      uiStats.statusBarUpdates++;
+      uiStats.lastActivity = Date.now();
+      return updateStatusBar(...args);
+    };
+
+    // Track progress events
+    EventBus.on('progress:event', () => {
+      uiStats.progressEventsReceived++;
+      uiStats.lastActivity = Date.now();
+    });
+
+    // Track panel switches
+    EventBus.on('panel:switch', (data) => {
+      uiStats.panelSwitches++;
+      uiStats.lastActivity = Date.now();
+      if (data && data.panel) {
+        uiStats.currentPanel = data.panel;
+        uiStats.panelUsage[data.panel] = (uiStats.panelUsage[data.panel] || 0) + 1;
+      }
+    });
+
+    // Web Component Widget (defined inside factory to access closure state)
+    class UIManagerWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+        this._updateInterval = null;
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      connectedCallback() {
+        this.render();
+        // Auto-refresh every 5 seconds for real-time stats
+        this._updateInterval = setInterval(() => this.render(), 5000);
+      }
+
+      disconnectedCallback() {
+        if (this._updateInterval) {
+          clearInterval(this._updateInterval);
+          this._updateInterval = null;
+        }
+      }
+
+      getStatus() {
+        const hasRecentActivity = uiStats.lastActivity &&
+          (Date.now() - uiStats.lastActivity < 30000);
+        const totalUpdates = uiStats.thoughtUpdates + uiStats.goalUpdates + uiStats.statusBarUpdates;
+
+        return {
+          state: hasRecentActivity ? 'active' : (totalUpdates > 0 ? 'idle' : 'disabled'),
+          primaryMetric: uiStats.currentPanel
+            ? `Panel: ${uiStats.currentPanel}`
+            : totalUpdates > 0
+              ? `${totalUpdates} updates`
+              : 'Ready',
+          secondaryMetric: uiStats.progressEventsReceived > 0
+            ? `${uiStats.progressEventsReceived} events`
+            : 'Idle',
+          lastActivity: uiStats.lastActivity,
+          message: hasRecentActivity ? 'Active' : null
+        };
+      }
+
+      getControls() {
+        return [
+          {
+            id: 'panel-thoughts',
+            label: '☁ Thoughts Panel',
+            action: () => {
+              EventBus.emit('panel:switch', { panel: 'thoughts' });
+              return { success: true, message: 'Switched to thoughts panel' };
+            }
+          },
+          {
+            id: 'panel-performance',
+            label: '☱ Performance Panel',
+            action: () => {
+              EventBus.emit('panel:switch', { panel: 'performance' });
+              return { success: true, message: 'Switched to performance panel' };
+            }
+          },
+          {
+            id: 'panel-logs',
+            label: '✎ Logs Panel',
+            action: () => {
+              EventBus.emit('panel:switch', { panel: 'logs' });
+              return { success: true, message: 'Switched to logs panel' };
+            }
+          }
+        ];
+      }
+
+      renderPanel() {
+        const uptime = Date.now() - uiStats.sessionStart;
+        const uptimeMinutes = Math.floor(uptime / 60000);
+        const totalUpdates = uiStats.thoughtUpdates + uiStats.goalUpdates + uiStats.statusBarUpdates;
+
+        let html = '<div style="font-family: monospace; font-size: 12px;">';
+
+        // Update summary
+        html += '<div style="margin-bottom: 12px;">';
+        html += '<div style="color: #0ff; font-weight: bold; margin-bottom: 8px;">UI Activity</div>';
+        html += `<div style="color: #e0e0e0;">Total Updates: <span style="color: #0ff;">${totalUpdates}</span></div>`;
+        html += `<div style="color: #e0e0e0;">Panel Switches: <span style="color: #0ff;">${uiStats.panelSwitches}</span></div>`;
+        html += `<div style="color: #e0e0e0;">Progress Events: <span style="color: #0ff;">${uiStats.progressEventsReceived}</span></div>`;
+        html += `<div style="color: #aaa; font-size: 10px;">Uptime: ${uptimeMinutes} min</div>`;
+        html += '</div>';
+
+        // Update breakdown
+        if (totalUpdates > 0) {
+          html += '<div style="margin-bottom: 12px; padding: 8px; background: rgba(0,255,255,0.05); border: 1px solid rgba(0,255,255,0.2);">';
+          html += '<div style="color: #0ff; font-weight: bold; margin-bottom: 4px;">Update Breakdown</div>';
+          if (uiStats.thoughtUpdates > 0) {
+            html += `<div style="color: #aaa;">Thought Updates: <span style="color: #fff;">${uiStats.thoughtUpdates}</span></div>`;
+          }
+          if (uiStats.goalUpdates > 0) {
+            html += `<div style="color: #aaa;">Goal Updates: <span style="color: #fff;">${uiStats.goalUpdates}</span></div>`;
+          }
+          if (uiStats.statusBarUpdates > 0) {
+            html += `<div style="color: #aaa;">Status Bar Updates: <span style="color: #fff;">${uiStats.statusBarUpdates}</span></div>`;
+          }
+          html += '</div>';
+        }
+
+        // Current panel
+        if (uiStats.currentPanel) {
+          html += '<div style="margin-bottom: 12px; padding: 8px; background: rgba(0,255,255,0.05); border: 1px solid rgba(0,255,255,0.2);">';
+          html += '<div style="color: #0ff; font-weight: bold; margin-bottom: 4px;">Current Panel</div>';
+          html += `<div style="color: #fff; font-size: 14px;">${uiStats.currentPanel}</div>`;
+          html += '</div>';
+        }
+
+        // Panel usage statistics
+        if (Object.keys(uiStats.panelUsage).length > 0) {
+          html += '<div style="margin-bottom: 12px;">';
+          html += '<div style="color: #0ff; font-weight: bold; margin-bottom: 8px;">Panel Usage</div>';
+          html += '<div style="max-height: 120px; overflow-y: auto;">';
+          const sortedPanels = Object.entries(uiStats.panelUsage)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5);
+          sortedPanels.forEach(([panel, count]) => {
+            const percentage = ((count / uiStats.panelSwitches) * 100).toFixed(1);
+            html += `<div style="padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">`;
+            html += `<div style="display: flex; justify-content: space-between;">`;
+            html += `<span style="color: #fff; font-size: 11px;">${panel}</span>`;
+            html += `<span style="color: #888; font-size: 10px;">${count} (${percentage}%)</span>`;
+            html += `</div>`;
+            html += `<div style="margin-top: 2px; background: rgba(0,0,0,0.3); height: 4px; border-radius: 2px; overflow: hidden;">`;
+            html += `<div style="background: #0ff; height: 100%; width: ${percentage}%;"></div>`;
+            html += '</div></div>';
+          });
+          html += '</div></div>';
+        }
+
+        // Connection status
+        const wsConnected = progressSocket && progressSocket.readyState === WebSocket.OPEN;
+        html += '<div style="margin-top: 12px; padding: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);">';
+        html += '<div style="color: #888; font-weight: bold; margin-bottom: 4px; font-size: 10px;">Connection Status</div>';
+        html += `<div style="color: ${wsConnected ? '#0f0' : '#f00'}; font-size: 11px;">`;
+        html += `WebSocket: ${wsConnected ? '✓ Connected' : '✗ Disconnected'}`;
+        html += '</div>';
+        html += '</div>';
+
+        if (totalUpdates === 0) {
+          html += '<div style="color: #888; text-align: center; margin-top: 20px;">No UI activity yet</div>';
+        }
+
+        html += '</div>';
+        return html;
+      }
+
+      render() {
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              font-family: monospace;
+              font-size: 12px;
+              color: #ccc;
+            }
+          </style>
+
+          ${this.renderPanel()}
+        `;
+      }
+    }
+
+    // Define custom element
+    const elementName = 'ui-manager-widget';
+    if (!customElements.get(elementName)) {
+      customElements.define(elementName, UIManagerWidget);
+    }
+
     return {
       init,
-      updateGoal,
+      updateGoal: wrappedUpdateGoal,
       api: {
-        updateGoal,
-        streamThought,
-        updateStatusBar
+        updateGoal: wrappedUpdateGoal,
+        streamThought: wrappedStreamThought,
+        updateStatusBar: wrappedUpdateStatusBar
+      },
+      widget: {
+        element: elementName,
+        displayName: 'UI Manager',
+        icon: '⌨️',
+        category: 'ui',
+        order: 5,
+        updateInterval: 5000
       }
     };
   }

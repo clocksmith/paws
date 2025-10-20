@@ -3,6 +3,7 @@
  * Implements the complete Sentinel Agent cognitive cycle with automatic checkpoints.
  * Manages state transitions, user approvals, self-testing, and reflection learning.
  *
+ * @blueprint 0x000064
  * @module SentinelFSM
  * @version 2.3.0
  * @category agent
@@ -12,13 +13,13 @@ const SentinelFSM = {
   metadata: {
     id: 'SentinelFSM',
     version: '2.2.0',
-    dependencies: ['StateManager', 'ToolRunner', 'ApiClient', 'HybridLLMProvider', 'EventBus', 'Utils', 'SentinelTools', 'GitVFS', 'ReflectionStore', 'SelfTester', 'SwarmOrchestrator'],
+    dependencies: ['StateManager', 'ToolRunner', 'ApiClient', 'HybridLLMProvider', 'EventBus', 'Utils', 'SentinelTools', 'GitVFS', 'ReflectionStore', 'SelfTester', 'WebRTCCoordinator'],
     async: false,
     type: 'service'
   },
 
   factory: (deps) => {
-    const { StateManager, ToolRunner, ApiClient, HybridLLMProvider, EventBus, Utils, SentinelTools, GitVFS, ReflectionStore, SelfTester, SwarmOrchestrator } = deps;
+    const { StateManager, ToolRunner, ApiClient, HybridLLMProvider, EventBus, Utils, SentinelTools, GitVFS, ReflectionStore, SelfTester, WebRTCCoordinator } = deps;
     const { logger } = Utils;
 
     let currentState = 'IDLE';
@@ -635,9 +636,9 @@ Now generate your proposal:`
           logger.info(`[SentinelFSM] Reflection stored with ID: ${reflectionId}`);
 
           // Share successful reflections with swarm
-          if (SwarmOrchestrator && reflectionData.outcome === 'successful') {
+          if (WebRTCCoordinator && reflectionData.outcome === 'successful') {
             try {
-              const peersShared = await SwarmOrchestrator.shareSuccessPattern(reflectionData);
+              const peersShared = await WebRTCCoordinator.shareSuccessPattern(reflectionData);
               if (peersShared > 0) {
                 logger.info(`[SentinelFSM] Shared successful pattern with ${peersShared} peers`);
               }
@@ -922,6 +923,265 @@ Now generate your proposal:`
       return false;
     };
 
+    // Web Component Widget
+    class SentinelFSMWidget extends HTMLElement {
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+      }
+
+      set moduleApi(api) {
+        this._api = api;
+        this.render();
+      }
+
+      connectedCallback() {
+        this.render();
+        // Auto-refresh every second when active
+        this._interval = setInterval(() => this.render(), 1000);
+      }
+
+      disconnectedCallback() {
+        if (this._interval) {
+          clearInterval(this._interval);
+          this._interval = null;
+        }
+      }
+
+      getStatus() {
+        const isActive = currentState !== 'IDLE' && currentState !== 'ERROR';
+        const cycleNum = stateHistory.length > 0 ? Math.floor(stateHistory.length / 9) + 1 : 0;
+
+        return {
+          state: isActive ? 'active' : (currentState === 'ERROR' ? 'error' : 'idle'),
+          primaryMetric: `State: ${currentState}`,
+          secondaryMetric: cycleContext ? `Cycle: ${cycleNum}` : 'No active cycle',
+          lastActivity: stateHistory.length > 0 ? stateHistory[stateHistory.length - 1].timestamp : null,
+          message: currentState === 'ERROR' ? 'FSM encountered an error' : null
+        };
+      }
+
+      getControls() {
+        const controls = [];
+
+        if (currentState === 'IDLE') {
+          controls.push({
+            id: 'test-cycle',
+            label: '▶ Test Cycle',
+            action: () => {
+              startCycle('Test goal: Verify FSM functionality');
+              this.render();
+              return { success: true, message: 'Test cycle started' };
+            }
+          });
+        } else if (currentState !== 'ERROR') {
+          controls.push({
+            id: 'pause',
+            label: '⏸ Pause',
+            action: () => {
+              pauseCycle();
+              this.render();
+              return { success: true, message: 'Cycle paused' };
+            }
+          });
+        }
+
+        controls.push({
+          id: 'reset',
+          label: '↻ Reset History',
+          action: () => {
+            stateHistory = [];
+            reflectionInsights = [];
+            this.render();
+            return { success: true, message: 'History cleared' };
+          }
+        });
+
+        return controls;
+      }
+
+      render() {
+        const cycleNum = stateHistory.length > 0 ? Math.floor(stateHistory.length / 9) + 1 : 0;
+        const recentTransitions = stateHistory.slice(-20).reverse();
+
+        // State icons mapping
+        const stateIcons = {
+          IDLE: '○',
+          CURATING_CONTEXT: '⚙',
+          AWAITING_CONTEXT_APPROVAL: '⏸',
+          PLANNING_WITH_CONTEXT: '◐',
+          GENERATING_PROPOSAL: '✎',
+          AWAITING_PROPOSAL_APPROVAL: '⏸',
+          APPLYING_CHANGESET: '▶',
+          REFLECTING: '◐',
+          ERROR: '⚠'
+        };
+
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host {
+              display: block;
+              font-family: monospace;
+              font-size: 12px;
+            }
+            .sentinel-fsm-panel {
+              padding: 12px;
+              color: #fff;
+            }
+            h4 {
+              margin: 0 0 12px 0;
+              font-size: 1.1em;
+              color: #0ff;
+            }
+            .fsm-current-state {
+              margin-bottom: 20px;
+            }
+            .fsm-state-icon {
+              font-size: 48px;
+              text-align: center;
+              margin: 20px 0;
+            }
+            .fsm-state-name {
+              text-align: center;
+              font-size: 20px;
+              font-weight: bold;
+              margin-bottom: 10px;
+            }
+            .fsm-cycle-info {
+              text-align: center;
+              color: #888;
+              margin-bottom: 20px;
+            }
+            .no-cycle {
+              text-align: center;
+              color: #888;
+              margin-bottom: 20px;
+            }
+            .fsm-statistics {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 10px;
+              margin-bottom: 20px;
+            }
+            .stat-card {
+              background: rgba(255,255,255,0.05);
+              padding: 10px;
+              border-radius: 5px;
+            }
+            .stat-label {
+              color: #888;
+              font-size: 12px;
+            }
+            .stat-value {
+              font-size: 24px;
+              font-weight: bold;
+            }
+            .fsm-transitions {
+              margin-top: 20px;
+            }
+            .transition-list {
+              max-height: 300px;
+              overflow-y: auto;
+            }
+            .transition-item {
+              padding: 8px;
+              border-left: 3px solid #0ff;
+              margin-bottom: 8px;
+              background: rgba(0,255,255,0.05);
+            }
+            .transition-item-header {
+              font-weight: bold;
+            }
+            .transition-item-time {
+              font-size: 12px;
+              color: #888;
+            }
+            .no-transitions {
+              color: #888;
+              padding: 20px;
+              text-align: center;
+            }
+            .fsm-insights {
+              margin-top: 20px;
+            }
+            .insights-list {
+              max-height: 200px;
+              overflow-y: auto;
+            }
+            .insight-item {
+              padding: 8px;
+              border-left: 3px solid #ba68c8;
+              margin-bottom: 8px;
+              background: rgba(186,104,200,0.05);
+            }
+          </style>
+          <div class="sentinel-fsm-panel">
+            <div class="fsm-current-state">
+              <div class="fsm-state-icon">${stateIcons[currentState] || '○'}</div>
+              <div class="fsm-state-name">${currentState}</div>
+              ${cycleContext ? `
+                <div class="fsm-cycle-info">
+                  <div><strong>Goal:</strong> ${cycleContext.goal}</div>
+                  <div><strong>Cycle:</strong> ${cycleNum}</div>
+                  <div><strong>Iterations:</strong> ${cycleContext.iterations} / ${cycleContext.maxIterations}</div>
+                </div>
+              ` : '<div class="no-cycle">No active cycle</div>'}
+            </div>
+
+            <div class="fsm-statistics">
+              <div class="stat-card">
+                <div class="stat-label">Total Transitions</div>
+                <div class="stat-value">${stateHistory.length}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Insights Learned</div>
+                <div class="stat-value">${reflectionInsights.length}</div>
+              </div>
+            </div>
+
+            <div class="fsm-transitions">
+              <h4>Recent Transitions (${recentTransitions.length})</h4>
+              <div class="transition-list">
+                ${recentTransitions.length > 0 ? recentTransitions.map(t => {
+                  const time = new Date(t.timestamp).toLocaleTimeString();
+                  return `
+                    <div class="transition-item">
+                      <div class="transition-item-header">${t.from} → ${t.to}</div>
+                      <div class="transition-item-time">${time}</div>
+                    </div>
+                  `;
+                }).join('') : '<div class="no-transitions">No transitions yet</div>'}
+              </div>
+            </div>
+
+            ${reflectionInsights.length > 0 ? `
+              <div class="fsm-insights">
+                <h4>Recent Insights</h4>
+                <div class="insights-list">
+                  ${reflectionInsights.slice(-5).reverse().map(insight => `
+                    <div class="insight-item">${insight}</div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
+    }
+
+    // Register custom element
+    const elementName = 'sentinel-fsm-widget';
+    if (!customElements.get(elementName)) {
+      customElements.define(elementName, SentinelFSMWidget);
+    }
+
+    const widget = {
+      element: elementName,
+      displayName: 'Sentinel FSM',
+      icon: '⚙',
+      category: 'agent'
+    };
+
     // Export public API
     return {
       api: {
@@ -932,7 +1192,8 @@ Now generate your proposal:`
         getCurrentState: () => currentState,
         getStateHistory: () => stateHistory,
         getReflectionInsights: () => reflectionInsights
-      }
+      },
+      widget
     };
   }
 };

@@ -1,3 +1,4 @@
+// @blueprint 0x000025 - Governs the universal module loader and dependency lifecycle.
 // Universal Module Loader for REPLOID
 // Provides consistent module loading, dependency injection, and lifecycle management
 
@@ -301,7 +302,290 @@ const ModuleLoader = {
     this.modules.clear();
     this.loadOrder = [];
     console.log("[ModuleLoader] All modules cleared");
+  },
+
+  // Web Component widget
+  widget: {
+    element: 'module-loader-widget',
+    displayName: 'Module Loader',
+    icon: '⚙',
+    category: 'core',
+    updateInterval: null
   }
+};
+
+// Define Web Component
+class ModuleLoaderWidget extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  set moduleApi(api) {
+    this._api = api;
+    this.render();
+  }
+
+  connectedCallback() {
+    this.render();
+  }
+
+  disconnectedCallback() {
+    // No cleanup needed
+  }
+
+  getStatus() {
+    const totalModules = ModuleLoader.modules.size;
+    const instantiatedCount = Array.from(ModuleLoader.modules.values())
+      .filter(m => m.instance !== null).length;
+    const legacyCount = Array.from(ModuleLoader.modules.values())
+      .filter(m => m.isLegacy).length;
+
+    return {
+      state: totalModules > 0 ? 'active' : 'disabled',
+      primaryMetric: `${totalModules} module${totalModules !== 1 ? 's' : ''}`,
+      secondaryMetric: `${instantiatedCount} loaded`,
+      lastActivity: totalModules > 0 ? Date.now() : null,
+      message: legacyCount > 0 ? `${legacyCount} legacy` : null
+    };
+  }
+
+  getControls() {
+    return [
+      {
+        id: 'list-modules',
+        label: '☷ List Modules',
+        action: () => {
+          const modules = ModuleLoader.getLoadedModules();
+          console.log('Loaded Modules:', modules);
+          console.table(modules.map(id => {
+            const entry = ModuleLoader.modules.get(id);
+            return {
+              ID: id,
+              Type: entry.isLegacy ? 'Legacy' : 'Modern',
+              Instantiated: entry.instance ? 'Yes' : 'No',
+              Path: entry.vfsPath
+            };
+          }));
+          return { success: true, message: `${modules.length} modules (check console)` };
+        }
+      },
+      {
+        id: 'show-load-order',
+        label: '⚎ Show Load Order',
+        action: () => {
+          console.log('Module Load Order:', ModuleLoader.loadOrder);
+          return { success: true, message: `${ModuleLoader.loadOrder.length} modules in order` };
+        }
+      }
+    ];
+  }
+
+  render() {
+    const totalModules = ModuleLoader.modules.size;
+    const instantiatedCount = Array.from(ModuleLoader.modules.values())
+      .filter(m => m.instance !== null).length;
+    const legacyCount = Array.from(ModuleLoader.modules.values())
+      .filter(m => m.isLegacy).length;
+    const modernCount = totalModules - legacyCount;
+
+    // Build load order HTML
+    let loadOrderHTML = '';
+    if (ModuleLoader.loadOrder.length > 0) {
+      ModuleLoader.loadOrder.slice(0, 10).forEach((moduleId, idx) => {
+        const entry = ModuleLoader.modules.get(moduleId);
+        const statusIcon = entry.instance ? '✓' : '⏳';
+        const typeIcon = entry.isLegacy ? '⚒' : '⛝';
+        loadOrderHTML += `
+          <div class="load-item">
+            ${idx + 1}. ${statusIcon} ${typeIcon} <span class="module-id">${moduleId}</span>
+          </div>
+        `;
+      });
+    }
+
+    // Build dependency graph HTML
+    let depsHTML = '';
+    const modulesWithDeps = Array.from(ModuleLoader.modules.entries())
+      .filter(([id, entry]) => !entry.isLegacy && entry.definition.metadata?.dependencies?.length > 0);
+
+    if (modulesWithDeps.length > 0) {
+      modulesWithDeps.slice(0, 5).forEach(([id, entry]) => {
+        const deps = entry.definition.metadata.dependencies || [];
+        depsHTML += `
+          <div class="dep-item">
+            <span class="dep-module">${id}</span> → ${deps.join(', ')}
+          </div>
+        `;
+      });
+    }
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+          font-family: monospace;
+          font-size: 12px;
+        }
+
+        .widget-panel {
+          padding: 12px;
+        }
+
+        h3 {
+          margin: 0 0 12px 0;
+          color: #0ff;
+          font-weight: bold;
+        }
+
+        .summary-item {
+          color: #e0e0e0;
+          margin-bottom: 4px;
+        }
+
+        .summary-item .value {
+          color: #0ff;
+        }
+
+        .summary-item.instantiated .value {
+          color: #0f0;
+        }
+
+        .summary-item.pending .value {
+          color: #ff0;
+        }
+
+        .type-box {
+          margin: 12px 0;
+          padding: 8px;
+          background: rgba(0,255,255,0.05);
+          border: 1px solid rgba(0,255,255,0.2);
+          border-radius: 4px;
+        }
+
+        .type-box h4 {
+          margin: 0 0 4px 0;
+          color: #0ff;
+          font-weight: bold;
+          font-size: 1em;
+        }
+
+        .type-item {
+          color: #aaa;
+          margin-top: 2px;
+        }
+
+        .type-item .value {
+          color: #0ff;
+        }
+
+        .type-item.legacy .value {
+          color: #ff0;
+        }
+
+        .load-order-section {
+          margin: 12px 0;
+        }
+
+        .load-order-section h4 {
+          margin: 0 0 8px 0;
+          color: #0ff;
+          font-weight: bold;
+          font-size: 1em;
+        }
+
+        .load-list {
+          max-height: 150px;
+          overflow-y: auto;
+        }
+
+        .load-item {
+          padding: 3px 0;
+          border-bottom: 1px solid rgba(255,255,255,0.1);
+          color: #aaa;
+        }
+
+        .load-item .module-id {
+          color: #fff;
+        }
+
+        .deps-section {
+          margin-top: 12px;
+          padding: 8px;
+          background: rgba(0,0,0,0.3);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 4px;
+        }
+
+        .deps-section h4 {
+          margin: 0 0 4px 0;
+          color: #888;
+          font-weight: bold;
+          font-size: 10px;
+        }
+
+        .dep-list {
+          max-height: 100px;
+          overflow-y: auto;
+        }
+
+        .dep-item {
+          color: #666;
+          font-size: 10px;
+          padding: 2px 0;
+        }
+
+        .dep-item .dep-module {
+          color: #aaa;
+        }
+
+        .empty-state {
+          color: #888;
+          text-align: center;
+          margin-top: 20px;
+        }
+      </style>
+
+      <div class="widget-panel">
+        <h3>Module Summary</h3>
+        <div class="summary-item">Total Modules: <span class="value">${totalModules}</span></div>
+        <div class="summary-item instantiated">Instantiated: <span class="value">${instantiatedCount}</span></div>
+        <div class="summary-item pending">Pending: <span class="value">${totalModules - instantiatedCount}</span></div>
+
+        <div class="type-box">
+          <h4>Module Types</h4>
+          <div class="type-item">Modern (metadata/factory): <span class="value">${modernCount}</span></div>
+          <div class="type-item legacy">Legacy (function): <span class="value">${legacyCount}</span></div>
+        </div>
+
+        ${ModuleLoader.loadOrder.length > 0 ? `
+          <div class="load-order-section">
+            <h4>Load Order (Recent)</h4>
+            <div class="load-list">
+              ${loadOrderHTML}
+            </div>
+          </div>
+        ` : ''}
+
+        ${modulesWithDeps.length > 0 ? `
+          <div class="deps-section">
+            <h4>Dependency Graph</h4>
+            <div class="dep-list">
+              ${depsHTML}
+            </div>
+          </div>
+        ` : ''}
+
+        ${totalModules === 0 ? '<div class="empty-state">No modules loaded</div>' : ''}
+      </div>
+    `;
+  }
+}
+
+// Define custom element
+if (!customElements.get('module-loader-widget')) {
+  customElements.define('module-loader-widget', ModuleLoaderWidget);
+}
 };
 
 // Export for use
