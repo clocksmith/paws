@@ -8,7 +8,17 @@
  * displaying them in a real-time panel with history and export capabilities.
  */
 
-export default function createModule(ModuleLoader, EventBus) {
+const ProgressTracker = {
+  metadata: {
+    id: 'ProgressTracker',
+    version: '1.0.0',
+    dependencies: ['EventBus'],
+    async: false,
+    type: 'ui'
+  },
+
+  factory: (deps) => {
+    const { EventBus } = deps;
   // Module state (in closure)
   let currentState = 'idle';
   let eventHistory = [];
@@ -370,4 +380,5 @@ export default function createModule(ModuleLoader, EventBus) {
       defaultCollapsed: false
     }
   };
-}
+  }
+};

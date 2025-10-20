@@ -6,14 +6,14 @@ const ToolRunner = {
   metadata: {
     id: 'ToolRunner',
     version: '1.0.0',
-    dependencies: ['config', 'Storage', 'StateManager', 'ApiClient', 'Utils', 'ToolRunnerPureHelpers', 'DiffUtils'],
+    dependencies: ['config', 'Storage', 'StateManager', 'ApiClient', 'Utils', 'ToolRunnerPureHelpers'],
     async: false,
     type: 'service'
   },
 
   factory: (deps) => {
     // Validate dependencies
-    const { config, Storage, StateManager, ApiClient, Utils, ToolRunnerPureHelpers, DiffUtils } = deps;
+    const { config, Storage, StateManager, ApiClient, Utils, ToolRunnerPureHelpers } = deps;
     const { logger, Errors } = Utils || {};
 
     // Lazy-load MetaToolCreator to break circular dependency
@@ -151,19 +151,43 @@ const ToolRunner = {
                 );
             }
 
-            // Use DiffUtils for proper diff computation
-            const diffOptions = {
-                format: toolArgs.format || 'unified',
-                contextLines: toolArgs.context || 3,
-                ignoreWhitespace: toolArgs.ignore_whitespace || false
-            };
+            // Simple line-based diff (inline implementation)
+            const linesA = contentA.split('\n');
+            const linesB = contentB.split('\n');
+            const diffLines = [];
+            const maxLen = Math.max(linesA.length, linesB.length);
 
-            const diffResult = DiffUtils.diff(contentA, contentB, diffOptions);
+            let additions = 0;
+            let deletions = 0;
+
+            for (let i = 0; i < maxLen; i++) {
+                const lineA = linesA[i];
+                const lineB = linesB[i];
+
+                if (lineA === lineB) {
+                    diffLines.push(`  ${lineA || ''}`);
+                } else if (lineA === undefined) {
+                    diffLines.push(`+ ${lineB}`);
+                    additions++;
+                } else if (lineB === undefined) {
+                    diffLines.push(`- ${lineA}`);
+                    deletions++;
+                } else if (lineA !== lineB) {
+                    diffLines.push(`- ${lineA}`);
+                    diffLines.push(`+ ${lineB}`);
+                    deletions++;
+                    additions++;
+                }
+            }
 
             return {
-                diff: diffResult.formatted,
-                differences: !diffResult.identical,
-                stats: diffResult.stats,
+                diff: diffLines.join('\n'),
+                differences: additions > 0 || deletions > 0,
+                stats: {
+                    additions,
+                    deletions,
+                    unchanged: linesA.length + linesB.length - additions - deletions
+                },
                 version_a: toolArgs.version_a,
                 version_b: toolArgs.version_b
             };

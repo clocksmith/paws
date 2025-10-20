@@ -8,7 +8,17 @@
  * circular buffer, and export capabilities.
  */
 
-export default function createModule(ModuleLoader, EventBus) {
+const LogPanel = {
+  metadata: {
+    id: 'LogPanel',
+    version: '1.0.0',
+    dependencies: ['EventBus'],
+    async: false,
+    type: 'ui'
+  },
+
+  factory: (deps) => {
+    const { EventBus } = deps;
   // Module state (in closure)
   const MAX_LOGS = 1000;
   let logs = [];
@@ -500,4 +510,5 @@ export default function createModule(ModuleLoader, EventBus) {
       defaultCollapsed: false
     }
   };
-}
+  }
+};

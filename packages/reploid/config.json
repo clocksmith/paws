@@ -543,9 +543,12 @@
     ],
     "localEndpoint": "http://localhost:11434",
     "localModel": "gpt-oss:120b",
-    "geminiModel": "gemini-2.5-flash",
-    "openaiModel": "gpt-5-mini-2025-08-07",
-    "anthropicModel": "claude-haiku-4-5"
+    "geminiModelFast": "gemini-2.5-flash-lite",
+    "geminiModelBalanced": "gemini-2.5-flash",
+    "openaiModelFast": "gpt-5-2025-08-07-mini",
+    "openaiModelAdvanced": "gpt-5-2025-08-07",
+    "anthropicModelFast": "claude-4-5-haiku",
+    "anthropicModelBalanced": "claude-4-5-sonnet"
   },
   "webrtc": {
     "signalingServer": "ws://localhost:8000/signaling",

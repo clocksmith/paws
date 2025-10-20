@@ -660,15 +660,7 @@ if (!customElements.get('diff-utils-widget')) {
 }
 }
 
-// Export for CommonJS
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = DiffUtils;
-}
-
-// Export for ES modules
-export default DiffUtils;
-
-// Export for browser usage
+// Export for browser usage (REPLOID module system)
 if (typeof window !== 'undefined') {
   window.DiffUtils = DiffUtils;
 }

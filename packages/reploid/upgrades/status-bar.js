@@ -8,7 +8,19 @@
  * module health, and real-time system metrics.
  */
 
-export default function createModule(ModuleLoader, EventBus) {
+const StatusBar = {
+  metadata: {
+    id: 'StatusBar',
+    version: '1.0.0',
+    dependencies: ['EventBus'],
+    async: false,
+    type: 'ui'
+  },
+
+  factory: (deps) => {
+    const { EventBus } = deps;
+    // Note: ModuleLoader will need to be accessed via globalThis if needed
+    const ModuleLoader = globalThis.ModuleLoader;
   // Module state (in closure)
   let currentFSMState = 'idle';
   let lastStatusUpdate = null;
@@ -474,4 +486,5 @@ export default function createModule(ModuleLoader, EventBus) {
       defaultCollapsed: false
     }
   };
-}
+  }
+};

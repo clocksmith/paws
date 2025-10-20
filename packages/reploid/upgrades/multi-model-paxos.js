@@ -24,11 +24,14 @@ const MultiModelPaxos = {
     const { Utils, EventBus, StateManager, HybridLLMProvider, VerificationManager, DIContainer, Config } = deps;
     const { logger } = Utils;
 
-    // Get verified cloud models from config
+    // Get all 6 verified cloud models from config (2 per provider)
     const CLOUD_MODELS = [
-      Config.api.get('api.geminiModel') || 'gemini-2.5-flash',
-      Config.api.get('api.openaiModel') || 'gpt-5-mini-2025-08-07',
-      Config.api.get('api.anthropicModel') || 'claude-haiku-4-5'
+      Config.api.get('api.geminiModelFast') || 'gemini-2.5-flash-lite',
+      Config.api.get('api.geminiModelBalanced') || 'gemini-2.5-flash',
+      Config.api.get('api.openaiModelFast') || 'gpt-5-2025-08-07-mini',
+      Config.api.get('api.openaiModelAdvanced') || 'gpt-5-2025-08-07',
+      Config.api.get('api.anthropicModelFast') || 'claude-4-5-haiku',
+      Config.api.get('api.anthropicModelBalanced') || 'claude-4-5-sonnet'
     ];
 
     // Competition state
