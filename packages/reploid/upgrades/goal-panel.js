@@ -1,4 +1,4 @@
-// @blueprint 0x000066 - Goal Panel Module
+// @blueprint 0x00005C - Goal Panel Module
 // Goal Panel UI Component for REPLOID Agent
 // Provides bidirectional goal management with history tracking
 // CLUSTER 2 Phase 7 Implementation

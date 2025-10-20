@@ -1,4 +1,4 @@
-// @blueprint 0x00002A - Blueprint for the canvas visualization engine.
+// @blueprint 0x000024 - Blueprint for the canvas visualization engine.
 // Canvas Visualizer Module for REPLOID
 // Provides 2D visualization of agent architecture, cognitive processes, and RSI activities
 

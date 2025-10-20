@@ -1,4 +1,4 @@
-// @blueprint 0x00002F - Details the AST visualization framework.
+// @blueprint 0x000029 - Details the AST visualization framework.
 // AST Visualizer - JavaScript Abstract Syntax Tree Visualization with D3.js
 // Provides interactive tree visualization of JavaScript code structure
 

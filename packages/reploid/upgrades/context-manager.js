@@ -1,4 +1,4 @@
-// @blueprint 0x000046 - Intelligent context window management and pruning for optimal LLM performance.
+// @blueprint 0x000040 - Intelligent context window management and pruning for optimal LLM performance.
 // Context Manager Module
 // Intelligent context window management and pruning for optimal LLM performance
 

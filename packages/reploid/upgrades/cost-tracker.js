@@ -3,7 +3,7 @@
  * Tracks API usage costs across providers and enforces rate limits.
  * Displays spending metrics in dashboard and warns on budget overruns.
  *
- * @blueprint 0x00003F - Tracks API cost and rate governance.
+ * @blueprint 0x000039 - Tracks API cost and rate governance.
  * @module CostTracker
  * @version 1.0.0
  * @category analytics

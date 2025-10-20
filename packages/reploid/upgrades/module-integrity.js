@@ -1,4 +1,4 @@
-// @blueprint 0x000033 - Specifies module integrity signing and verification.
+// @blueprint 0x00002D - Specifies module integrity signing and verification.
 // Module Integrity Verification System
 // Provides module signing and verification for secure self-modification
 

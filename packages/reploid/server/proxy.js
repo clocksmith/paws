@@ -528,6 +528,47 @@ app.get('/api/vfs/restore', (req, res) => {
 });
 // --- End VFS Persistence Endpoints ---
 
+// --- Console Logging Endpoint ---
+const CONSOLE_LOG_PATH = path.join(__dirname, '..', 'console.log');
+
+// Endpoint to receive browser console logs
+app.post('/api/console-logs', (req, res) => {
+  try {
+    const { logs } = req.body;
+    if (!logs || !Array.isArray(logs)) {
+      return res.status(400).json({ error: 'Invalid log format' });
+    }
+
+    // Append logs to file
+    const logLines = logs.map(log => {
+      return `[${log.timestamp}] [${log.level.toUpperCase()}] ${log.message}`;
+    }).join('\n') + '\n';
+
+    fs.appendFileSync(CONSOLE_LOG_PATH, logLines);
+    res.json({ success: true, logsReceived: logs.length });
+  } catch (error) {
+    console.error('Error saving console logs:', error);
+    res.status(500).json({ error: 'Failed to save logs' });
+  }
+});
+
+// Endpoint to read console logs
+app.get('/api/console-logs', (req, res) => {
+  try {
+    if (fs.existsSync(CONSOLE_LOG_PATH)) {
+      const logs = fs.readFileSync(CONSOLE_LOG_PATH, 'utf8');
+      const lines = logs.split('\n').filter(line => line.trim()).slice(-100); // Last 100 lines
+      res.json({ logs: lines });
+    } else {
+      res.json({ logs: [] });
+    }
+  } catch (error) {
+    console.error('Error reading console logs:', error);
+    res.status(500).json({ error: 'Failed to read logs' });
+  }
+});
+// --- End Console Logging Endpoint ---
+
 // --- WebRTC Signaling Endpoints ---
 let signalingServer = null;
 

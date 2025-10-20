@@ -1,4 +1,4 @@
-// @blueprint 0x000023 - Curator Mode: Autonomous overnight proposal generation with safety boundaries and visual reports.
+// @blueprint 0x00001D - Curator Mode: Autonomous overnight proposal generation with safety boundaries and visual reports.
 const AutonomousOrchestrator = {
   metadata: {
     id: 'AutonomousOrchestrator',

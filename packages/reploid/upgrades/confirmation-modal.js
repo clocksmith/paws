@@ -1,4 +1,4 @@
-// @blueprint 0x000028 - Documents confirmation modal safety and UX patterns.
+// @blueprint 0x000022 - Documents confirmation modal safety and UX patterns.
 // Confirmation Modal Component for REPLOID
 // Provides user confirmation dialogs for destructive actions
 

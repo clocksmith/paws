@@ -1,4 +1,4 @@
-// @blueprint 0x000044 - Implements WebRTC swarm transport.
+// @blueprint 0x00003E - Implements WebRTC swarm transport.
 // WebRTC Swarm Module for REPLOID
 // Enables peer-to-peer communication between multiple agent instances
 

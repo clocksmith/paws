@@ -1,4 +1,4 @@
-// @blueprint 0x00002C - Outlines the performance monitoring metrics stack.
+// @blueprint 0x000026 - Outlines the performance monitoring metrics stack.
 // Performance Monitor Module for REPLOID - RSI-5
 // Tracks tool runtime, state changes, memory, and LLM API usage for data-driven self-optimization
 

@@ -1,4 +1,4 @@
-// @blueprint 0x000025 - Governs the universal module loader and dependency lifecycle.
+// @blueprint 0x00001F - Governs the universal module loader and dependency lifecycle.
 // Universal Module Loader for REPLOID
 // Provides consistent module loading, dependency injection, and lifecycle management
 

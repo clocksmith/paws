@@ -7,7 +7,7 @@ import { closeHelpPopover } from './boot/ui.js';
 // Detect if proxy server is available
 async function detectProxyServer() {
     try {
-        const response = await fetch('http://localhost:8000/health', {
+        const response = await fetch('http://localhost:8000/api/health', {
             method: 'GET',
             signal: AbortSignal.timeout(2000)
         });

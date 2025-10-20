@@ -454,17 +454,17 @@
                     <div class="boot-mode-options">
                         <button class="boot-mode-btn selected" data-mode="minimal" onclick="selectBootMode('minimal')">
                             <div class="boot-mode-label">Standard RSI</div>
-                            <div class="boot-mode-desc">23 modules — Complete RSI with streaming, context management, and tool creation.</div>
+                            <div class="boot-mode-desc">23 modules — Complete RSI with streaming, context management, hybrid LLM, and tool creation.</div>
                         </button>
 
                         <button class="boot-mode-btn" data-mode="all-blueprints" onclick="selectBootMode('all-blueprints')">
                             <div class="boot-mode-label">RSI + Guides</div>
-                            <div class="boot-mode-desc">23 modules + 69 blueprints — Standard RSI plus architectural guides and patterns.</div>
+                            <div class="boot-mode-desc">23 modules + 100 blueprints — Standard RSI plus all architectural guides and patterns.</div>
                         </button>
 
                         <button class="boot-mode-btn" data-mode="all-upgrades" onclick="selectBootMode('all-upgrades')">
                             <div class="boot-mode-label">Complete System</div>
-                            <div class="boot-mode-desc">71 modules + 69 blueprints — Full stack with visualization, Python, monitoring, swarm.</div>
+                            <div class="boot-mode-desc">87 modules + 100 blueprints — Full stack with visualization, Python, monitoring, swarm, multi-provider.</div>
                         </button>
                     </div>
                 </div>
@@ -576,6 +576,8 @@
             <script src="https://unpkg.com/@isomorphic-git/lightning-fs"></script>
     <script src="https://unpkg.com/isomorphic-git"></script>
     <script type="module" src="https://unpkg.com/isomorphic-git/http/web/index.js"></script>
+    <script src="integrations/claude-code/workflows/console-monitor.js"></script>
+    <script src="integrations/claude-code/workflows/live-reload.js"></script>
     <script type="module" src="boot.js"></script>
 </body>
 </html>

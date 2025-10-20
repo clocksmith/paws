@@ -1,4 +1,4 @@
-// @blueprint 0x000045 - Real-time streaming response handler for incremental UI updates.
+// @blueprint 0x00003F - Real-time streaming response handler for incremental UI updates.
 // Streaming Response Handler Module
 // Provides real-time streaming response handling for incremental UI updates
 

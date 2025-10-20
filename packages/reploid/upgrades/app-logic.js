@@ -29,7 +29,7 @@ const CoreLogicModule = async (initialConfig, vfs) => {
     // Load and instantiate the DI Container
     const diContainerContent = await vfs.read("/upgrades/di-container.js");
     const DIContainerModule = new Function(diContainerContent + "\nreturn DIContainer;");
-    const container = DIContainerModule().factory({ Utils });
+    const { api: container } = DIContainerModule().factory({ Utils });
 
     // Expose container globally for lazy dependency resolution
     globalThis.DIContainer = container;
@@ -79,7 +79,7 @@ const CoreLogicModule = async (initialConfig, vfs) => {
 
     const evaluateLegacyModule = (code, path = '') => {
       const wrapped = `/* module: ${path} */
-${code}
+${code};
         return (typeof CycleLogic !== 'undefined') ? CycleLogic :
                (typeof StateManager !== 'undefined') ? StateManager :
                (typeof ApiClient !== 'undefined') ? ApiClient :
@@ -423,6 +423,9 @@ ${code}
     });
 
     handleInitializationError(error);
+
+    // Re-throw so boot.js can handle it
+    throw error;
   }
 };
 
@@ -644,4 +647,12 @@ const AppLogic = {
   }
 };
 
-export default AppLogic;
+// Export for ES6 modules
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { CoreLogicModule, AppLogic };
+}
+
+// Return CoreLogicModule for Function() constructor
+if (typeof CoreLogicModule !== 'undefined') {
+  CoreLogicModule;
+}

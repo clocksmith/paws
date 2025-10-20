@@ -3,7 +3,7 @@
  * Manages Python code execution in a WebAssembly sandbox via Web Worker.
  * Provides secure, isolated Python runtime with VFS integration.
  *
- * @blueprint 0x000036 - Outlines Pyodide runtime orchestration.
+ * @blueprint 0x000030 - Outlines Pyodide runtime orchestration.
  * @module PyodideRuntime
  * @version 1.0.0
  * @category runtime

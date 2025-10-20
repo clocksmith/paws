@@ -1,4 +1,4 @@
-// @blueprint 0x00003B - Documents the reflection store architecture.
+// @blueprint 0x000035 - Documents the reflection store architecture.
 // Reflection Store Module for REPLOID - RSI-2
 // Persistent storage for agent reflections to enable learning over time
 

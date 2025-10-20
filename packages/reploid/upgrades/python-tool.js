@@ -3,7 +3,7 @@
  * Provides a tool interface for executing Python code via Pyodide.
  * Allows the agent to run Python scripts, install packages, and manage files.
  *
- * @blueprint 0x000037 - Defines the Python tooling interface.
+ * @blueprint 0x000031 - Defines the Python tooling interface.
  * @module PythonTool
  * @version 1.0.0
  * @category tool

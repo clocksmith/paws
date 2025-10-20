@@ -1,4 +1,4 @@
-// @blueprint 0x000032 - Covers rate limiting strategies for API usage.
+// @blueprint 0x00002C - Covers rate limiting strategies for API usage.
 // Rate Limiter Module for API calls
 // Implements token bucket algorithm for rate limiting
 

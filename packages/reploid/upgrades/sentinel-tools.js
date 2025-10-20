@@ -1,6 +1,6 @@
 // Sentinel-specific tool implementations for PAWS workflow
 // This module contains the complete implementations for Project Sentinel tools
-// @blueprint 0x000055
+// @blueprint 0x00004E
 
 const SentinelTools = {
   metadata: {

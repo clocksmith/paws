@@ -4,7 +4,7 @@
  * Provides a consistent grid view of all loaded modules with their status,
  * metrics, and controls. Integrates with the Module Widget Protocol.
  *
- * @blueprint 0x00005E
+ * @blueprint 0x000055
  * @module ModuleDashboard
  * @version 1.0.0
  * @category ui

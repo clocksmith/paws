@@ -3,7 +3,7 @@
  * Automatically generates markdown documentation from tool schemas.
  * Provides comprehensive reference docs for all available tools.
  *
- * @blueprint 0x000041 - Generates tool documentation from schemas.
+ * @blueprint 0x00003B - Generates tool documentation from schemas.
  * @module ToolDocGenerator
  * @version 1.0.0
  * @category documentation

@@ -87,7 +87,9 @@
       "modules": [
         { "id": "ProgressTracker", "path": "/upgrades/progress-tracker.js" },
         { "id": "LogPanel", "path": "/upgrades/log-panel.js" },
-        { "id": "StatusBar", "path": "/upgrades/status-bar.js" }
+        { "id": "StatusBar", "path": "/upgrades/status-bar.js" },
+        { "id": "GoalPanel", "path": "/upgrades/goal-panel.js" },
+        { "id": "ThoughtPanel", "path": "/upgrades/thought-panel.js" }
       ]
     },
     {
@@ -102,6 +104,7 @@
       "modules": [
         { "id": "GitVFS", "path": "/upgrades/git-vfs.js" },
         { "id": "SentinelTools", "path": "/upgrades/sentinel-tools.js" },
+        { "id": "SentinelPanel", "path": "/upgrades/sentinel-panel.js" },
         { "id": "DiffViewerUI", "path": "/upgrades/diff-viewer-ui.js" },
         { "id": "WebRTCSwarm", "path": "/upgrades/webrtc-swarm.js" },
         { "id": "WebRTCCoordinator", "path": "/upgrades/webrtc-coordinator.js" },

@@ -1,0 +1,190 @@
+[2025-10-20T20:15:22.782Z] [LOG] [ConsoleMonitor] Browser console monitoring enabled
+[2025-10-20T20:15:22.782Z] [LOG] [LiveReload] Auto-reload enabled
+[2025-10-20T20:15:22.789Z] [LOG] [Config] Loaded settings: {
+  "selectedModel": null,
+  "aiProvider": null,
+  "selectedMode": null
+}
+[2025-10-20T20:15:22.789Z] [LOG] [API] Checking server status...
+[2025-10-20T20:15:22.794Z] [LOG] [API] Server online: {
+  "status": "ok",
+  "providers": [
+    "gemini",
+    "local"
+  ],
+  "primaryProvider": "gemini",
+  "ollama": {
+    "status": "running",
+    "endpoint": "http://localhost:11434"
+  },
+  "ollamaStatus": "running",
+  "timestamp": "2025-10-20T20:15:22.791Z"
+}
+[2025-10-20T20:15:22.794Z] [LOG] [API] WebGPU available
+[2025-10-20T20:15:22.795Z] [LOG] [Boot] Proxy server available: true
+[2025-10-20T20:15:24.326Z] [LOG] [ConsoleMonitor] Browser console monitoring enabled
+[2025-10-20T20:15:24.326Z] [LOG] [LiveReload] Auto-reload enabled
+[2025-10-20T20:15:24.329Z] [LOG] [Config] Loaded settings: {
+  "selectedModel": null,
+  "aiProvider": null,
+  "selectedMode": null
+}
+[2025-10-20T20:15:24.329Z] [LOG] [API] Checking server status...
+[2025-10-20T20:15:24.332Z] [LOG] [API] Server online: {
+  "status": "ok",
+  "providers": [
+    "gemini",
+    "local"
+  ],
+  "primaryProvider": "gemini",
+  "ollama": {
+    "status": "running",
+    "endpoint": "http://localhost:11434"
+  },
+  "ollamaStatus": "running",
+  "timestamp": "2025-10-20T20:15:24.330Z"
+}
+[2025-10-20T20:15:24.332Z] [LOG] [API] WebGPU available
+[2025-10-20T20:15:24.333Z] [LOG] [Boot] Proxy server available: true
+[2025-10-20T20:15:26.372Z] [LOG] [ConsoleMonitor] Browser console monitoring enabled
+[2025-10-20T20:15:26.372Z] [LOG] [LiveReload] Auto-reload enabled
+[2025-10-20T20:15:26.378Z] [LOG] [Config] Loaded settings: {
+  "selectedModel": null,
+  "aiProvider": null,
+  "selectedMode": null
+}
+[2025-10-20T20:15:26.378Z] [LOG] [API] Checking server status...
+[2025-10-20T20:15:26.380Z] [LOG] [API] Server online: {
+  "status": "ok",
+  "providers": [
+    "gemini",
+    "local"
+  ],
+  "primaryProvider": "gemini",
+  "ollama": {
+    "status": "running",
+    "endpoint": "http://localhost:11434"
+  },
+  "ollamaStatus": "running",
+  "timestamp": "2025-10-20T20:15:26.379Z"
+}
+[2025-10-20T20:15:26.381Z] [LOG] [API] WebGPU available
+[2025-10-20T20:15:26.382Z] [LOG] [Boot] Proxy server available: true
+[2025-10-20T20:15:27.985Z] [LOG] [VFS] Reading: /upgrades/context-manager.js
+[2025-10-20T20:15:27.985Z] [LOG] [VFS] Reading: /upgrades/browser-apis.js
+[2025-10-20T20:15:27.985Z] [LOG] [VFS] Reading: /upgrades/pyodide-runtime.js
+[2025-10-20T20:15:27.985Z] [LOG] [VFS] Reading: /upgrades/introspector.js
+[2025-10-20T20:15:27.985Z] [LOG] [VFS] Reading: /upgrades/self-tester.js
+[2025-10-20T20:15:27.985Z] [LOG] [VFS] Reading: /upgrades/vfs-explorer.js
+[2025-10-20T20:15:27.985Z] [LOG] [VFS] Reading: /upgrades/metrics-dashboard.js
+[2025-10-20T20:15:27.985Z] [LOG] [VFS] Reading: /upgrades/agent-visualizer.js
+[2025-10-20T20:15:27.985Z] [LOG] [VFS] Reading: /upgrades/ast-visualizer.js
+[2025-10-20T20:15:27.985Z] [LOG] [VFS] Reading: /upgrades/module-graph-visualizer.js
+[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/tutorial-system.js
+[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/progress-tracker.js
+[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/log-panel.js
+[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/status-bar.js
+[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/goal-panel.js
+[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/thought-panel.js
+[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/ui-manager.js
+[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/agent-cycle.js
+[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/git-vfs.js
+[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/sentinel-tools.js
+[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/sentinel-panel.js
+[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/diff-viewer-ui.js
+[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/webrtc-swarm.js
+[2025-10-20T20:15:27.986Z] [LOG] [VFS] Reading: /upgrades/webrtc-coordinator.js
+[2025-10-20T20:15:27.987Z] [LOG] [VFS] Reading: /upgrades/sentinel-fsm.js
+[2025-10-20T20:15:27.987Z] [LOG] [VFS] Reading: /upgrades/meta-tool-creator.js
+[2025-10-20T20:15:27.989Z] [LOG] [VFS] Loaded: /upgrades/utils.js (23523 bytes)
+[2025-10-20T20:15:27.990Z] [LOG] [VFS] Loaded: /upgrades/event-bus.js (10766 bytes)
+[2025-10-20T20:15:27.992Z] [LOG] [VFS] Loaded: /upgrades/tool-runner-pure-helpers.js (6293 bytes)
+[2025-10-20T20:15:27.992Z] [LOG] [VFS] Loaded: /upgrades/agent-logic-pure.js (6050 bytes)
+[2025-10-20T20:15:27.992Z] [LOG] [VFS] Loaded: /upgrades/state-helpers-pure.js (5784 bytes)
+[2025-10-20T20:15:27.993Z] [LOG] [VFS] Loaded: /upgrades/storage-indexeddb.js (13962 bytes)
+[2025-10-20T20:15:27.993Z] [LOG] [VFS] Loaded: /upgrades/di-container.js (17553 bytes)
+[2025-10-20T20:15:27.995Z] [LOG] [VFS] Loaded: /upgrades/rate-limiter.js (17640 bytes)
+[2025-10-20T20:15:27.996Z] [LOG] [VFS] Loaded: /upgrades/local-llm.js (23463 bytes)
+[2025-10-20T20:15:27.996Z] [LOG] [VFS] Loaded: /upgrades/state-manager.js (35007 bytes)
+[2025-10-20T20:15:27.997Z] [LOG] [VFS] Loaded: /upgrades/api-client.js (21290 bytes)
+[2025-10-20T20:15:27.997Z] [LOG] [VFS] Loaded: /upgrades/hybrid-llm-provider.js (25498 bytes)
+[2025-10-20T20:15:27.997Z] [LOG] [VFS] Loaded: /upgrades/audit-logger.js (20795 bytes)
+[2025-10-20T20:15:27.999Z] [LOG] [VFS] Loaded: /upgrades/tool-runner.js (39647 bytes)
+[2025-10-20T20:15:28.000Z] [LOG] [VFS] Loaded: /utils/diff-generator.js (1320 bytes)
+[2025-10-20T20:15:28.000Z] [LOG] [VFS] Loaded: /upgrades/performance-monitor.js (22514 bytes)
+[2025-10-20T20:15:28.000Z] [LOG] [VFS] Loaded: /upgrades/streaming-response-handler.js (14028 bytes)
+[2025-10-20T20:15:28.001Z] [LOG] [VFS] Loaded: /upgrades/reflection-store.js (25016 bytes)
+[2025-10-20T20:15:28.001Z] [LOG] [VFS] Loaded: /upgrades/toast-notifications.js (14884 bytes)
+[2025-10-20T20:15:28.003Z] [LOG] [VFS] Loaded: /upgrades/vfs-explorer.js (23688 bytes)
+[2025-10-20T20:15:28.004Z] [LOG] [VFS] Loaded: /upgrades/introspector.js (25697 bytes)
+[2025-10-20T20:15:28.004Z] [LOG] [VFS] Loaded: /upgrades/context-manager.js (20606 bytes)
+[2025-10-20T20:15:28.004Z] [LOG] [VFS] Loaded: /upgrades/self-tester.js (30790 bytes)
+[2025-10-20T20:15:28.005Z] [LOG] [VFS] Loaded: /upgrades/browser-apis.js (27525 bytes)
+[2025-10-20T20:15:28.005Z] [LOG] [VFS] Loaded: /upgrades/pyodide-runtime.js (19493 bytes)
+[2025-10-20T20:15:28.009Z] [LOG] [VFS] Loaded: /upgrades/metrics-dashboard.js (20024 bytes)
+[2025-10-20T20:15:28.009Z] [LOG] [VFS] Loaded: /upgrades/ast-visualizer.js (21155 bytes)
+[2025-10-20T20:15:28.009Z] [LOG] [VFS] Loaded: /upgrades/agent-visualizer.js (19658 bytes)
+[2025-10-20T20:15:28.009Z] [LOG] [VFS] Loaded: /upgrades/progress-tracker.js (10606 bytes)
+[2025-10-20T20:15:28.009Z] [LOG] [VFS] Loaded: /upgrades/tutorial-system.js (37339 bytes)
+[2025-10-20T20:15:28.009Z] [LOG] [VFS] Loaded: /upgrades/module-graph-visualizer.js (12418 bytes)
+[2025-10-20T20:15:28.010Z] [LOG] [VFS] Loaded: /upgrades/status-bar.js (13657 bytes)
+[2025-10-20T20:15:28.011Z] [LOG] [VFS] Loaded: /upgrades/goal-panel.js (18559 bytes)
+[2025-10-20T20:15:28.012Z] [LOG] [VFS] Loaded: /upgrades/log-panel.js (15770 bytes)
+[2025-10-20T20:15:28.012Z] [LOG] [VFS] Loaded: /upgrades/agent-cycle.js (14891 bytes)
+[2025-10-20T20:15:28.012Z] [LOG] [VFS] Loaded: /upgrades/thought-panel.js (15697 bytes)
+[2025-10-20T20:15:28.012Z] [LOG] [VFS] Loaded: /upgrades/ui-manager.js (113293 bytes)
+[2025-10-20T20:15:28.014Z] [LOG] [VFS] Loaded: /upgrades/git-vfs.js (24703 bytes)
+[2025-10-20T20:15:28.016Z] [LOG] [VFS] Loaded: /upgrades/sentinel-tools.js (28407 bytes)
+[2025-10-20T20:15:28.016Z] [LOG] [VFS] Loaded: /upgrades/webrtc-coordinator.js (21481 bytes)
+[2025-10-20T20:15:28.016Z] [LOG] [VFS] Loaded: /upgrades/sentinel-panel.js (20814 bytes)
+[2025-10-20T20:15:28.016Z] [LOG] [VFS] Loaded: /upgrades/webrtc-swarm.js (39937 bytes)
+[2025-10-20T20:15:28.016Z] [LOG] [VFS] Loaded: /upgrades/diff-viewer-ui.js (55603 bytes)
+[2025-10-20T20:15:28.017Z] [LOG] [VFS] Loaded: /upgrades/sentinel-fsm.js (40706 bytes)
+[2025-10-20T20:15:28.017Z] [LOG] [VFS] Loaded: /upgrades/meta-tool-creator.js (22986 bytes)
+[2025-10-20T20:15:28.017Z] [INFO] {"timestamp":"2025-10-20T20:15:28.017Z","level":"INFO","message":"[CoreLogic] Module contents loaded: 45 items","details":{}}
+[2025-10-20T20:15:28.017Z] [INFO] {"timestamp":"2025-10-20T20:15:28.017Z","level":"INFO","message":"[CoreLogic] agent-logic-pure content length: 6050","details":{}}
+[2025-10-20T20:15:28.018Z] [LOG] [CoreLogic] Loaded module from /upgrades/utils.js: Utils
+[2025-10-20T20:15:28.018Z] [INFO] {"timestamp":"2025-10-20T20:15:28.018Z","level":"INFO","message":"[DIContainer] Registered module: Utils","details":{}}
+[2025-10-20T20:15:28.018Z] [INFO] {"timestamp":"2025-10-20T20:15:28.018Z","level":"INFO","message":"[CoreLogic] Registered module: Utils from /upgrades/utils.js","details":{}}
+[2025-10-20T20:15:28.019Z] [INFO] {"timestamp":"2025-10-20T20:15:28.019Z","level":"INFO","message":"[DIContainer] Registered module: EventBus","details":{}}
+[2025-10-20T20:15:28.019Z] [INFO] {"timestamp":"2025-10-20T20:15:28.019Z","level":"INFO","message":"[CoreLogic] Registered module: EventBus from /upgrades/event-bus.js","details":{}}
+[2025-10-20T20:15:28.020Z] [LOG] [CoreLogic] Loaded module from /upgrades/di-container.js: DIContainer
+[2025-10-20T20:15:28.020Z] [INFO] {"timestamp":"2025-10-20T20:15:28.020Z","level":"INFO","message":"[DIContainer] Registered module: DIContainer","details":{}}
+[2025-10-20T20:15:28.020Z] [INFO] {"timestamp":"2025-10-20T20:15:28.020Z","level":"INFO","message":"[CoreLogic] Registered module: DIContainer from /upgrades/di-container.js","details":{}}
+[2025-10-20T20:15:28.020Z] [INFO] {"timestamp":"2025-10-20T20:15:28.020Z","level":"INFO","message":"[DIContainer] Registered module: StateHelpersPure","details":{}}
+[2025-10-20T20:15:28.020Z] [INFO] {"timestamp":"2025-10-20T20:15:28.020Z","level":"INFO","message":"[CoreLogic] Registered module: StateHelpersPure from /upgrades/state-helpers-pure.js","details":{}}
+[2025-10-20T20:15:28.021Z] [INFO] {"timestamp":"2025-10-20T20:15:28.021Z","level":"INFO","message":"[DIContainer] Registered module: ToolRunnerPureHelpers","details":{}}
+[2025-10-20T20:15:28.021Z] [INFO] {"timestamp":"2025-10-20T20:15:28.021Z","level":"INFO","message":"[CoreLogic] Registered module: ToolRunnerPureHelpers from /upgrades/tool-runner-pure-helpers.js","details":{}}
+[2025-10-20T20:15:28.021Z] [INFO] {"timestamp":"2025-10-20T20:15:28.021Z","level":"INFO","message":"[CoreLogic] Loading agent-logic-pure.js (size: 6050)","details":{}}
+[2025-10-20T20:15:28.022Z] [INFO] {"timestamp":"2025-10-20T20:15:28.022Z","level":"INFO","message":"[CoreLogic] agent-logic-pure.js loaded:","details":{"hasModule":true,"hasMetadata":true,"moduleType":"object","moduleKeys":["metadata","factory"],"metadataId":"AgentLogicPureHelpers","factoryType":"function"}}
+[2025-10-20T20:15:28.022Z] [INFO] {"timestamp":"2025-10-20T20:15:28.022Z","level":"INFO","message":"[DIContainer] Registered module: AgentLogicPureHelpers","details":{}}
+[2025-10-20T20:15:28.022Z] [INFO] {"timestamp":"2025-10-20T20:15:28.022Z","level":"INFO","message":"[CoreLogic] Registered module: AgentLogicPureHelpers from /upgrades/agent-logic-pure.js","details":{}}
+[2025-10-20T20:15:28.023Z] [INFO] {"timestamp":"2025-10-20T20:15:28.023Z","level":"INFO","message":"[DIContainer] Registered module: Storage","details":{}}
+[2025-10-20T20:15:28.023Z] [INFO] {"timestamp":"2025-10-20T20:15:28.023Z","level":"INFO","message":"[CoreLogic] Registered module: Storage from /upgrades/storage-indexeddb.js","details":{}}
+[2025-10-20T20:15:28.024Z] [INFO] {"timestamp":"2025-10-20T20:15:28.024Z","level":"INFO","message":"[DIContainer] Registered module: AuditLogger","details":{}}
+[2025-10-20T20:15:28.024Z] [INFO] {"timestamp":"2025-10-20T20:15:28.024Z","level":"INFO","message":"[CoreLogic] Registered module: AuditLogger from /upgrades/audit-logger.js","details":{}}
+[2025-10-20T20:15:28.025Z] [INFO] {"timestamp":"2025-10-20T20:15:28.025Z","level":"INFO","message":"[DIContainer] Registered module: RateLimiter","details":{}}
+[2025-10-20T20:15:28.025Z] [INFO] {"timestamp":"2025-10-20T20:15:28.025Z","level":"INFO","message":"[CoreLogic] Registered module: RateLimiter from /upgrades/rate-limiter.js","details":{}}
+[2025-10-20T20:15:28.025Z] [ERROR] [CoreLogic] Legacy evaluation failed for /upgrades/state-manager.js: SyntaxError: Unexpected token ';'
+SyntaxError: Unexpected token ';'
+    at new Function (<anonymous>)
+    at evaluateLegacyModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:152:16)
+    at loadModuleFromContent (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:193:22)
+    at CoreLogicModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:241:28)
+    at async HTMLButtonElement.awakenAgent (http://localhost:8080/boot.js:459:9)
+[2025-10-20T20:15:28.026Z] [ERROR] [CoreLogic] Initialization failed: SyntaxError: Unexpected token ';'
+SyntaxError: Unexpected token ';'
+    at new Function (<anonymous>)
+    at evaluateLegacyModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:152:16)
+    at loadModuleFromContent (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:193:22)
+    at CoreLogicModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:241:28)
+    at async HTMLButtonElement.awakenAgent (http://localhost:8080/boot.js:459:9)
+[2025-10-20T20:15:28.026Z] [WARN] [LiveReload] Too many errors, disabling auto-reload to prevent loops
+[2025-10-20T20:15:28.026Z] [ERROR] [Boot] Failed to awaken agent: SyntaxError: Unexpected token ';'
+SyntaxError: Unexpected token ';'
+    at new Function (<anonymous>)
+    at evaluateLegacyModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:152:16)
+    at loadModuleFromContent (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:193:22)
+    at CoreLogicModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:241:28)
+    at async HTMLButtonElement.awakenAgent (http://localhost:8080/boot.js:459:9)
+[2025-10-20T20:15:28.026Z] [WARN] [LiveReload] Too many errors, disabling auto-reload to prevent loops

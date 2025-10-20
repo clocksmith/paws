@@ -3,7 +3,7 @@
  * Provides in-app guided walkthroughs for new users.
  * Shows contextual tooltips and step-by-step instructions.
  *
- * @blueprint 0x000035 - Describes the interactive tutorial system.
+ * @blueprint 0x00002F - Describes the interactive tutorial system.
  * @module TutorialSystem
  * @version 1.0.0
  * @category ui

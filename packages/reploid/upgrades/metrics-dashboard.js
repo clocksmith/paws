@@ -2,7 +2,7 @@
  * @fileoverview Metrics Dashboard - Visual performance metrics with Chart.js
  * Extends PerformanceMonitor with interactive charts and visualizations
  *
- * @blueprint 0x00002D - Explains the metrics dashboard charting layer.
+ * @blueprint 0x000027 - Explains the metrics dashboard charting layer.
  * @module MetricsDashboard
  * @version 1.0.0
  * @category ui

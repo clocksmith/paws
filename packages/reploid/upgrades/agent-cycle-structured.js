@@ -2,7 +2,7 @@
  * @fileoverview Structured 8-Step Agent Cycle for REPLOID
  * Implements explicit deliberation → proposal → assessment flow with confidence scoring
  *
- * @blueprint 0x000047 - 8-step structured agent cycle with explicit deliberation, self-assessment, and confidence scoring.
+ * @blueprint 0x000041 - 8-step structured agent cycle with explicit deliberation, self-assessment, and confidence scoring.
  * @module AgentCycleStructured
  * @version 1.0.0
  * @category agent

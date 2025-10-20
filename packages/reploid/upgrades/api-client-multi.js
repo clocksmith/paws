@@ -3,7 +3,7 @@
  * Handles communication with Gemini, OpenAI, Anthropic, and Local models.
  * Includes automatic retry logic with exponential backoff for reliability.
  *
- * @blueprint 0x000027 - Describes the multi-provider API gateway for LLM traffic.
+ * @blueprint 0x000021 - Describes the multi-provider API gateway for LLM traffic.
  * @module ApiClientMulti
  * @version 2.1.0
  * @category service
@@ -158,13 +158,14 @@ const ApiClientMulti = {
         
         case 'local':
           // Ollama format
+          const defaultModel = config?.ollama?.defaultModel || process.env.DEFAULT_LOCAL_MODEL || 'gpt-oss:120b';
           return {
-            model: options.model || 'llama2',
+            model: options.model || defaultModel,
             messages: formattedMessages,
             stream: false,
             options: {
-              temperature: options.temperature || 0.8,
-              num_predict: options.maxTokens || 2048
+              temperature: options.temperature || config?.ollama?.temperature || 0.7,
+              num_predict: options.maxTokens || config?.ollama?.maxTokens || 4096
             }
           };
         
@@ -506,6 +507,200 @@ const ApiClientMulti = {
     };
     
     /**
+     * Streaming API call function that returns a Response object for streaming
+     * To be used with StreamingResponseHandler for token-by-token streaming
+     * @param {Array} history - Message history array
+     * @param {string} apiKey - API key for authentication
+     * @param {Array} funcDecls - Function declarations for tool calling
+     * @param {Object} options - Configuration options
+     * @returns {Promise<Response>} Fetch Response object with readable stream
+     */
+    const callApiWithStreaming = async (history, apiKey, funcDecls = [], options = {}) => {
+      const provider = options.provider || currentProvider;
+      const callStartTime = Date.now();
+
+      // Track call start
+      _providerStats[provider].calls++;
+
+      try {
+        const response = await performApiCallStreaming(history, apiKey, funcDecls, options);
+
+        // Track success
+        _providerStats[provider].successes++;
+        _lastActivity = Date.now();
+
+        // Record call history
+        _apiCallHistory.push({
+          provider,
+          timestamp: Date.now(),
+          duration: Date.now() - callStartTime,
+          retries: 0,
+          success: true,
+          streaming: true
+        });
+        if (_apiCallHistory.length > 50) _apiCallHistory.shift();
+
+        return response;
+      } catch (error) {
+        // Track failure
+        _providerStats[provider].failures++;
+        _lastActivity = Date.now();
+
+        // Record failed call
+        _apiCallHistory.push({
+          provider,
+          timestamp: Date.now(),
+          duration: Date.now() - callStartTime,
+          retries: 0,
+          success: false,
+          error: error.message,
+          streaming: true
+        });
+        if (_apiCallHistory.length > 50) _apiCallHistory.shift();
+
+        throw error;
+      }
+    };
+
+    // Perform streaming API call
+    const performApiCallStreaming = async (history, apiKey, funcDecls = [], options = {}) => {
+      // Check proxy availability on first call
+      if (!proxyChecked) {
+        await checkProxyAvailability();
+      }
+
+      // Abort any existing call
+      if (currentAbortController) {
+        currentAbortController.abort("New call initiated");
+      }
+      currentAbortController = new AbortController();
+
+      // Use provider from options or current default
+      const provider = options.provider || currentProvider;
+
+      // Determine endpoint and fetch options
+      let apiEndpoint;
+      let fetchOptions = {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: currentAbortController.signal,
+      };
+
+      // Build request body with streaming enabled
+      const requestBody = buildRequestBody(history, provider, {
+        ...options,
+        tools: funcDecls,
+        expectJson: !funcDecls || funcDecls.length === 0,
+        streaming: true
+      });
+
+      // Add streaming flag to request body for providers that support it
+      if (provider === 'openai' || provider === 'anthropic' || provider === 'local') {
+        requestBody.stream = true;
+      }
+
+      // Route through proxy if available, otherwise direct
+      if (proxyStatus && proxyStatus.proxyAvailable) {
+        // Use proxy endpoints with streaming
+        switch (provider) {
+          case 'gemini':
+            apiEndpoint = `/api/gemini/models/gemini-2.5-flash:streamGenerateContent`;
+            break;
+          case 'openai':
+            apiEndpoint = `/api/openai/chat/completions`;
+            break;
+          case 'anthropic':
+            apiEndpoint = `/api/anthropic/messages`;
+            break;
+          case 'local':
+            apiEndpoint = `/api/local/api/chat`;
+            break;
+          default:
+            throw new Error(`Unknown provider: ${provider}`);
+        }
+      } else {
+        // Direct API calls (requires API keys in browser)
+        if (!apiKey && provider !== 'local') {
+          throw new ApiError(`No API key provided for ${provider}`, 401);
+        }
+
+        switch (provider) {
+          case 'gemini':
+            apiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${apiKey}&alt=sse`;
+            break;
+          case 'openai':
+            apiEndpoint = `https://api.openai.com/v1/chat/completions`;
+            fetchOptions.headers['Authorization'] = `Bearer ${apiKey}`;
+            break;
+          case 'anthropic':
+            apiEndpoint = `https://api.anthropic.com/v1/messages`;
+            fetchOptions.headers['X-API-Key'] = apiKey;
+            fetchOptions.headers['anthropic-version'] = '2023-06-01';
+            break;
+          case 'local':
+            apiEndpoint = `${config.localEndpoint || 'http://localhost:11434'}/api/chat`;
+            break;
+          default:
+            throw new Error(`Unknown provider: ${provider}`);
+        }
+      }
+
+      try {
+        logger.info(`Calling ${provider} API with streaming via ${proxyStatus ? 'proxy' : 'direct'}`);
+
+        const response = await fetch(apiEndpoint, {
+          ...fetchOptions,
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+          const errBody = await response.text();
+          throw new ApiError(
+            `${provider} API Error (${response.status}): ${errBody}`,
+            response.status
+          );
+        }
+
+        // Return the response object for streaming
+        // StreamingResponseHandler will read response.body.getReader()
+        return response;
+
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          throw new AbortError("API call aborted.");
+        }
+
+        // Enhance error with better messages and codes
+        if (error instanceof ApiError && error.statusCode) {
+          if (error.statusCode === 401 || error.statusCode === 403) {
+            error.code = 'AUTH_FAILED';
+            error.message = "Authentication failed. Please check your API key in settings or .env file.";
+          } else if (error.statusCode === 429) {
+            error.code = 'RATE_LIMIT';
+            error.message = "Rate limit exceeded. Please wait a moment before trying again.";
+          } else if (error.statusCode >= 500) {
+            error.code = 'SERVER_ERROR';
+            error.message = `The AI service is temporarily unavailable (${error.statusCode}). Please try again in a few moments.`;
+          }
+        }
+
+        // Check for offline status
+        if (!navigator.onLine) {
+          throw new ApiError(
+            "No internet connection detected. Please check your network and try again.",
+            0,
+            "NETWORK_OFFLINE"
+          );
+        }
+
+        logger.error(`${provider} API Call Failed`, error);
+        throw error;
+      } finally {
+        currentAbortController = null;
+      }
+    };
+
+    /**
      * Set the active provider for API calls
      * @param {string} provider - Provider name: gemini, openai, anthropic, or local
      * @throws {Error} If provider is invalid
@@ -771,6 +966,7 @@ const ApiClientMulti = {
     return {
       api: {
         callApiWithRetry,
+        callApiWithStreaming,
         abortCurrentCall,
         sanitizeLlmJsonResp,
         setProvider,

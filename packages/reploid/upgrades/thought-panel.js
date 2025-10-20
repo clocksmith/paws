@@ -1,4 +1,4 @@
-// @blueprint 0x000065 - Thought Panel Module
+// @blueprint 0x00005B - Thought Panel Module
 // Thought Panel UI Component for REPLOID Agent
 // Provides real-time agent thought streaming with memory management
 // CLUSTER 2 Phase 6 Implementation
@@ -37,9 +37,14 @@ const ThoughtPanel = {
     let isPaused = false;
     let lastActivity = null;
 
+    // Streaming state
+    let currentStreamingThought = null;  // {timestamp, text, isStreaming: true}
+
     // Event listener tracking for cleanup
     const eventListeners = {
       agentThought: null,
+      streamChunk: null,
+      streamComplete: null,
       panelShow: null,
       panelHide: null
     };
@@ -49,6 +54,14 @@ const ThoughtPanel = {
       if (eventListeners.agentThought) {
         EventBus.off('agent:thought', eventListeners.agentThought);
         eventListeners.agentThought = null;
+      }
+      if (eventListeners.streamChunk) {
+        EventBus.off('hybrid-llm:stream-chunk', eventListeners.streamChunk);
+        eventListeners.streamChunk = null;
+      }
+      if (eventListeners.streamComplete) {
+        EventBus.off('hybrid-llm:stream-complete', eventListeners.streamComplete);
+        eventListeners.streamComplete = null;
       }
       if (eventListeners.panelShow) {
         EventBus.off('ui:panel-show', eventListeners.panelShow);
@@ -90,6 +103,8 @@ const ThoughtPanel = {
 
       // Register event listeners and store references
       eventListeners.agentThought = handleThought;
+      eventListeners.streamChunk = handleStreamChunk;
+      eventListeners.streamComplete = handleStreamComplete;
       eventListeners.panelShow = () => {
         isPaused = false;
         logger.debug('[ThoughtPanel] Resumed rendering');
@@ -100,6 +115,8 @@ const ThoughtPanel = {
       };
 
       EventBus.on('agent:thought', eventListeners.agentThought);
+      EventBus.on('hybrid-llm:stream-chunk', eventListeners.streamChunk);
+      EventBus.on('hybrid-llm:stream-complete', eventListeners.streamComplete);
       EventBus.on('ui:panel-show', eventListeners.panelShow);
       EventBus.on('ui:panel-hide', eventListeners.panelHide);
 
@@ -128,6 +145,63 @@ const ThoughtPanel = {
       }
 
       appendThought(thoughtChunk);
+    };
+
+    // Handle real-time streaming chunks
+    const handleStreamChunk = (data) => {
+      // Feature flag check
+      const featureFlags = window.reploidConfig?.featureFlags;
+      if (featureFlags && !featureFlags.useModularPanels?.ThoughtPanel) {
+        return;  // Panel disabled, skip rendering
+      }
+
+      if (isPaused) {
+        return;  // Don't render when panel hidden
+      }
+
+      const { chunk, total, chunkCount, provider } = data;
+
+      // Initialize or update the current streaming thought
+      if (!currentStreamingThought) {
+        currentStreamingThought = {
+          timestamp: Date.now(),
+          text: total,
+          isStreaming: true,
+          provider,
+          chunkCount
+        };
+      } else {
+        currentStreamingThought.text = total;
+        currentStreamingThought.chunkCount = chunkCount;
+      }
+
+      lastActivity = Date.now();
+      render();
+    };
+
+    // Handle stream completion - finalize streaming thought
+    const handleStreamComplete = (data) => {
+      if (!currentStreamingThought) return;
+
+      // Move streaming thought to permanent thoughts
+      thoughts.push({
+        timestamp: currentStreamingThought.timestamp,
+        text: currentStreamingThought.text
+      });
+
+      // Auto-trim if over limit
+      if (thoughts.length > MAX_THOUGHTS) {
+        const removed = thoughts.length - MAX_THOUGHTS;
+        thoughts = thoughts.slice(removed);
+        logger.debug(`[ThoughtPanel] Auto-trimmed ${removed} old thoughts`);
+      }
+
+      logger.info(`[ThoughtPanel] Stream complete: ${currentStreamingThought.chunkCount} chunks, ${currentStreamingThought.text.length} characters`);
+
+      // Clear streaming state
+      currentStreamingThought = null;
+      lastActivity = Date.now();
+      render();
     };
 
     // Append thought with auto-trim
@@ -171,13 +245,28 @@ const ThoughtPanel = {
     const render = () => {
       if (!container) return;
 
-      if (thoughts.length === 0) {
+      if (thoughts.length === 0 && !currentStreamingThought) {
         container.innerHTML = `
           <div class="thought-panel-empty">
             <p>No thoughts yet. Waiting for agent reasoning...</p>
           </div>
         `;
         return;
+      }
+
+      // Build streaming thought HTML (show at top if active)
+      let streamingHtml = '';
+      if (currentStreamingThought) {
+        const date = new Date(currentStreamingThought.timestamp).toLocaleTimeString();
+        streamingHtml = `
+          <div class="thought-item thought-item-streaming">
+            <span class="thought-timestamp">
+              ${date}
+              <span class="streaming-indicator">● Streaming (${currentStreamingThought.chunkCount} chunks)</span>
+            </span>
+            <span class="thought-text">${escapeHtml(currentStreamingThought.text)}<span class="cursor-blink">▊</span></span>
+          </div>
+        `;
       }
 
       // Build thought list (most recent first)
@@ -197,13 +286,14 @@ const ThoughtPanel = {
 
       container.innerHTML = `
         <div class="thought-panel-header">
-          <h4>Agent Thoughts (${thoughts.length}/${MAX_THOUGHTS})</h4>
+          <h4>Agent Thoughts (${thoughts.length}/${MAX_THOUGHTS})${currentStreamingThought ? ' 🔴 Live' : ''}</h4>
           <div class="thought-controls">
             <button id="export-thoughts-btn" class="btn-secondary" title="Export to Markdown">📥 Export</button>
             <button id="clear-thoughts-btn" class="btn-secondary" title="Clear all thoughts">🗑️ Clear</button>
           </div>
         </div>
         <div class="thought-panel-list">
+          ${streamingHtml}
           ${thoughtsHtml}
         </div>
         ${thoughts.length === MAX_THOUGHTS ? '<div class="thought-warning">⚠️ Memory limit reached. Old thoughts auto-trimmed.</div>' : ''}
@@ -325,16 +415,63 @@ const ThoughtPanel = {
         font-size: 12px;
       }
 
+      .thought-item-streaming {
+        background: rgba(100, 150, 255, 0.1);
+        border-left: 3px solid rgba(100, 150, 255, 0.5);
+        animation: pulse-border 2s infinite;
+      }
+
+      @keyframes pulse-border {
+        0%, 100% {
+          border-left-color: rgba(100, 150, 255, 0.5);
+        }
+        50% {
+          border-left-color: rgba(100, 150, 255, 1);
+        }
+      }
+
       .thought-timestamp {
         color: rgba(255, 255, 255, 0.5);
         font-size: 10px;
         margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .streaming-indicator {
+        color: rgba(100, 150, 255, 0.9);
+        font-weight: bold;
+        animation: pulse-text 1.5s infinite;
+      }
+
+      @keyframes pulse-text {
+        0%, 100% {
+          opacity: 0.7;
+        }
+        50% {
+          opacity: 1;
+        }
       }
 
       .thought-text {
         color: rgba(255, 255, 255, 0.9);
         white-space: pre-wrap;
         word-break: break-word;
+      }
+
+      .cursor-blink {
+        color: rgba(100, 150, 255, 0.9);
+        animation: blink 1s step-end infinite;
+      }
+
+      @keyframes blink {
+        0%, 50% {
+          opacity: 1;
+        }
+        51%, 100% {
+          opacity: 0;
+        }
       }
 
       .thought-panel-empty {

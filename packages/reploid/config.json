@@ -57,8 +57,8 @@
         "0x000016",
         "0x000017",
         "0x000018",
-        "0x00004A",
-        "0x00004B"
+        "0x000044",
+        "0x000045"
       ],
       "lessons": [
         {
@@ -185,8 +185,8 @@
         "0x000009",
         "0x000003",
         "0x000012",
-        "0x00004A",
-        "0x00004B"
+        "0x000044",
+        "0x000045"
       ],
       "lessons": [
         {
@@ -318,10 +318,10 @@
         "0x000012",
         "0x00001B",
         "0x000047",
-        "0x00004A",
-        "0x00004B"
+        "0x000044",
+        "0x000045"
       ],
-      "persona": "MultiMindSynthesisPersona",
+      "persona": "multi-mind-synthesis-persona",
       "lessons": [
         {
           "name": "Multi-Perspective Analysis",
@@ -571,14 +571,14 @@
       "path": "boot-module-loader.js",
       "description": "Standardized module loader system",
       "category": "core",
-      "blueprint": "0x000025"
+      "blueprint": "0x00001F"
     },
     {
       "id": "MMNF",
       "path": "module-manifest.json",
       "description": "Module dependency manifest",
       "category": "core",
-      "blueprint": "0x000026"
+      "blueprint": "0x000020"
     },
     {
       "id": "PRMT",
@@ -641,7 +641,7 @@
       "path": "api-client-multi.js",
       "description": "Multi-provider API client (Gemini, OpenAI, Anthropic, Local)",
       "category": "agent",
-      "blueprint": "0x000027"
+      "blueprint": "0x000021"
     },
     {
       "id": "CYCL",
@@ -704,14 +704,14 @@
       "path": "confirmation-modal.js",
       "description": "Confirmation dialog for destructive actions",
       "category": "ui",
-      "blueprint": "0x000028"
+      "blueprint": "0x000022"
     },
     {
       "id": "VFSX",
       "path": "vfs-explorer.js",
       "description": "Enhanced VFS file tree with search and viewer",
       "category": "ui",
-      "blueprint": "0x000029"
+      "blueprint": "0x000023"
     },
     {
       "id": "TLRD",
@@ -725,7 +725,7 @@
       "path": "tools-write.json",
       "description": "Write tools that enable RSI",
       "category": "tools",
-      "blueprint": "0x000022"
+      "blueprint": "0x00001C"
     },
     {
       "id": "EVAL",
@@ -781,7 +781,7 @@
       "path": "canvas-visualizer.js",
       "description": "2D canvas visualization for RSI insights",
       "category": "visualization",
-      "blueprint": "0x00002A"
+      "blueprint": "0x000024"
     },
     {
       "id": "VRSI",
@@ -795,112 +795,112 @@
       "path": "viz-data-adapter.js",
       "description": "Transforms agent state into visual data",
       "category": "visualization",
-      "blueprint": "0x00002B"
+      "blueprint": "0x000025"
     },
     {
       "id": "PMON",
       "path": "performance-monitor.js",
       "description": "Performance monitoring for RSI data-driven optimization",
       "category": "monitoring",
-      "blueprint": "0x00002C"
+      "blueprint": "0x000026"
     },
     {
       "id": "MDSH",
       "path": "metrics-dashboard.js",
       "description": "Visual metrics dashboard with Chart.js for performance visualization",
       "category": "monitoring",
-      "blueprint": "0x00002D"
+      "blueprint": "0x000027"
     },
     {
       "id": "AVIS",
       "path": "agent-visualizer.js",
       "description": "FSM state machine visualization with D3.js force-directed graph",
       "category": "visualization",
-      "blueprint": "0x00002E"
+      "blueprint": "0x000028"
     },
     {
       "id": "ASTV",
       "path": "ast-visualizer.js",
       "description": "JavaScript AST tree visualization with D3.js and Acorn parser",
       "category": "visualization",
-      "blueprint": "0x00002F"
+      "blueprint": "0x000029"
     },
     {
       "id": "MGRV",
       "path": "module-graph-visualizer.js",
       "description": "Interactive D3.js force-directed graph of module dependencies",
       "category": "visualization",
-      "blueprint": "0x000030"
+      "blueprint": "0x00002A"
     },
     {
       "id": "TSTN",
       "path": "toast-notifications.js",
       "description": "Non-blocking toast notification system for user feedback",
       "category": "ui",
-      "blueprint": "0x000031"
+      "blueprint": "0x00002B"
     },
     {
       "id": "RATE",
       "path": "rate-limiter.js",
       "description": "Token bucket and sliding window rate limiters for API calls",
       "category": "service",
-      "blueprint": "0x000032"
+      "blueprint": "0x00002C"
     },
     {
       "id": "MINT",
       "path": "module-integrity.js",
       "description": "Module signing and integrity verification system",
       "category": "security",
-      "blueprint": "0x000033"
+      "blueprint": "0x00002D"
     },
     {
       "id": "AUDT",
       "path": "audit-logger.js",
       "description": "Security audit logging for modules and VFS operations",
       "category": "security",
-      "blueprint": "0x000034"
+      "blueprint": "0x00002E"
     },
     {
       "id": "TUTR",
       "path": "tutorial-system.js",
       "description": "Interactive tutorial system for onboarding new users",
       "category": "ui",
-      "blueprint": "0x000035"
+      "blueprint": "0x00002F"
     },
     {
       "id": "PYOD",
       "path": "pyodide-runtime.js",
       "description": "WebAssembly Python runtime via Pyodide with VFS integration",
       "category": "runtime",
-      "blueprint": "0x000036"
+      "blueprint": "0x000030"
     },
     {
       "id": "PYTH",
       "path": "python-tool.js",
       "description": "Python code execution tool interface for agent",
       "category": "tools",
-      "blueprint": "0x000037"
+      "blueprint": "0x000031"
     },
     {
       "id": "LLMR",
       "path": "local-llm.js",
       "description": "Local LLM runtime with WebGPU acceleration via WebLLM",
       "category": "runtime",
-      "blueprint": "0x000038"
+      "blueprint": "0x000032"
     },
     {
       "id": "HYBR",
       "path": "hybrid-llm-provider.js",
       "description": "Hybrid LLM provider for seamless local/cloud inference switching",
       "category": "agent",
-      "blueprint": "0x000039"
+      "blueprint": "0x000033"
     },
     {
       "id": "WRTC",
       "path": "webrtc-coordinator.js",
       "description": "P2P coordination - browser-to-browser task delegation via WebRTC",
       "category": "service",
-      "blueprint": "0x00003A"
+      "blueprint": "0x000034"
     },
     {
       "id": "INTR",
@@ -914,42 +914,42 @@
       "path": "reflection-store.js",
       "description": "Persistent reflection storage for learning over time",
       "category": "introspection",
-      "blueprint": "0x00003B"
+      "blueprint": "0x000035"
     },
     {
       "id": "REAN",
       "path": "reflection-analyzer.js",
       "description": "Pattern recognition and learning from reflection history",
       "category": "learning",
-      "blueprint": "0x00003C"
+      "blueprint": "0x000036"
     },
     {
       "id": "RESRCH",
       "path": "reflection-search.js",
       "description": "Semantic search over reflections using TF-IDF embeddings",
       "category": "intelligence",
-      "blueprint": "0x00003D"
+      "blueprint": "0x000037"
     },
     {
       "id": "TOAN",
       "path": "tool-analytics.js",
       "description": "Tool usage analytics and performance tracking",
       "category": "analytics",
-      "blueprint": "0x00003E"
+      "blueprint": "0x000038"
     },
     {
       "id": "COST",
       "path": "cost-tracker.js",
       "description": "API cost tracking and rate limiting for budget management",
       "category": "analytics",
-      "blueprint": "0x00003F"
+      "blueprint": "0x000039"
     },
     {
       "id": "TABC",
       "path": "tab-coordinator.js",
       "description": "Inter-tab state synchronization via BroadcastChannel",
       "category": "coordination",
-      "blueprint": "0x000040"
+      "blueprint": "0x00003A"
     },
     {
       "id": "RFCA",
@@ -963,28 +963,28 @@
       "path": "tool-doc-generator.js",
       "description": "Automatic markdown documentation generator for tool schemas",
       "category": "documentation",
-      "blueprint": "0x000041"
+      "blueprint": "0x00003B"
     },
     {
       "id": "TEST",
       "path": "self-tester.js",
       "description": "Self-testing and validation framework for safe RSI",
       "category": "validation",
-      "blueprint": "0x000042"
+      "blueprint": "0x00003C"
     },
     {
       "id": "BAPI",
       "path": "browser-apis.js",
       "description": "Browser-native Web API integration (File System, Notifications, Storage, etc.)",
       "category": "capability",
-      "blueprint": "0x000043"
+      "blueprint": "0x00003D"
     },
     {
       "id": "AUOR",
       "path": "autonomous-orchestrator.js",
       "description": "Curator Mode - Autonomous overnight proposal generation with visual reports",
       "category": "service",
-      "blueprint": "0x000023"
+      "blueprint": "0x00001D"
     },
     {
       "id": "WRTS",
@@ -992,77 +992,84 @@
       "description": "WebRTC peer-to-peer swarm communication (disabled by default for security)",
       "category": "service",
       "requiresExplicitEnable": true,
-      "blueprint": "0x000044"
+      "blueprint": "0x00003E"
     },
     {
       "id": "PAXA",
       "path": "penteract-analytics.js",
       "description": "Aggregates Paxos telemetry and emits analytics snapshots",
       "category": "analytics",
-      "blueprint": "0x000024"
+      "blueprint": "0x00001E"
     },
     {
       "id": "STRM",
       "path": "streaming-response-handler.js",
       "description": "Real-time streaming response handler for incremental UI updates",
       "category": "service",
-      "blueprint": "0x000045"
+      "blueprint": "0x00003F"
     },
     {
       "id": "CTXM",
       "path": "context-manager.js",
       "description": "Intelligent context window management and pruning",
       "category": "intelligence",
-      "blueprint": "0x000046"
+      "blueprint": "0x000040"
     },
     {
       "id": "STCY",
       "path": "agent-cycle-structured.js",
       "description": "8-step structured agent cycle with explicit deliberation, self-assessment, and confidence scoring",
       "category": "agent",
-      "blueprint": "0x000047"
+      "blueprint": "0x000041"
     },
     {
       "id": "DGPR",
       "path": "dogs-parser-browser.js",
       "description": "Browser-native DOGS/CATS parser for self-contained bundle handling",
       "category": "pure",
-      "blueprint": "0x000048"
+      "blueprint": "0x000042"
     },
     {
       "id": "GENS",
       "path": "genesis-snapshot.js",
       "description": "Genesis snapshot system - saves initial boot state for RSI tracking",
       "category": "rsi",
-      "blueprint": "0x000049"
+      "blueprint": "0x000043"
     },
     {
       "id": "DIFF",
       "path": "diff-utils.js",
       "description": "Line-based diff comparison without external dependencies",
       "category": "pure",
-      "blueprint": "0x00004C"
+      "blueprint": "0x000046"
     },
     {
       "id": "VRFY",
       "path": "verification-manager.js",
       "description": "Web Worker-based verification execution manager for safe command running",
       "category": "service",
-      "blueprint": "0x00004D"
+      "blueprint": "0x000047"
     },
     {
       "id": "DEJA",
       "path": "deja-vu-detector.js",
       "description": "Pattern recognition for repetitive actions to identify automation opportunities",
       "category": "meta-cognitive",
-      "blueprint": "0x00004A"
+      "blueprint": "0x000044"
     },
     {
       "id": "MTCG",
       "path": "meta-cognitive-layer.js",
       "description": "Autonomous meta-cognitive decision-making and self-improvement coordination",
       "category": "meta-cognitive",
-      "blueprint": "0x00004B"
+      "blueprint": "0x000045"
+    },
+    {
+      "id": "IPAT",
+      "path": "internal-patch-format.js",
+      "description": "Fast JSON-based patch format for internal RSI (10x faster than DOGS/CATS)",
+      "category": "rsi",
+      "blueprint": "0x000063"
     }
   ],
   "blueprints": [
@@ -1202,229 +1209,234 @@
       "description": "Details the introspector for deep code self-analysis."
     },
     {
-      "id": "0x000022",
+      "id": "0x00001C",
       "path": "0x000022-write-tools-manifest.md",
       "description": "Documents the write tools manifest and RSI tool catalog."
     },
     {
-      "id": "0x000023",
+      "id": "0x00001D",
       "path": "0x000023-autonomous-orchestrator-curator-mode.md",
       "description": "Curator Mode: Autonomous overnight proposal generation with safety boundaries and visual reports."
     },
     {
-      "id": "0x000024",
+      "id": "0x00001E",
       "path": "0x000024-penteract-analytics-and-visualization.md",
       "description": "Outlines Penteract analytics and visualization pipeline."
     },
     {
-      "id": "0x000025",
+      "id": "0x00001F",
       "path": "0x000025-universal-module-loader.md",
       "description": "Governs the universal module loader and dependency lifecycle."
     },
     {
-      "id": "0x000026",
+      "id": "0x000020",
       "path": "0x000026-module-manifest-governance.md",
       "description": "Specifies the module manifest structure and dependency governance."
     },
     {
-      "id": "0x000027",
+      "id": "0x000021",
       "path": "0x000027-multi-provider-api-gateway.md",
       "description": "Describes the multi-provider API gateway for LLM traffic."
     },
     {
-      "id": "0x000028",
+      "id": "0x000022",
       "path": "0x000028-confirmation-modal-safety.md",
       "description": "Documents confirmation modal safety and UX patterns."
     },
     {
-      "id": "0x000029",
+      "id": "0x000023",
       "path": "0x000029-vfs-explorer-interaction.md",
       "description": "Covers VFS explorer interactions and safeguards."
     },
     {
-      "id": "0x00002A",
+      "id": "0x000024",
       "path": "0x00002A-canvas-visualization-engine.md",
       "description": "Blueprint for the canvas visualization engine."
     },
     {
-      "id": "0x00002B",
+      "id": "0x000025",
       "path": "0x00002B-visualization-data-adapter.md",
       "description": "Defines the visualization data adapter for metrics and graphs."
     },
     {
-      "id": "0x00002C",
+      "id": "0x000026",
       "path": "0x00002C-performance-monitoring-stack.md",
       "description": "Outlines the performance monitoring metrics stack."
     },
     {
-      "id": "0x00002D",
+      "id": "0x000027",
       "path": "0x00002D-metrics-dashboard-visuals.md",
       "description": "Explains the metrics dashboard charting layer."
     },
     {
-      "id": "0x00002E",
+      "id": "0x000028",
       "path": "0x00002E-agent-fsm-visualizer.md",
       "description": "Visualizes the agent FSM states and transitions."
     },
     {
-      "id": "0x00002F",
+      "id": "0x000029",
       "path": "0x00002F-ast-visualization-framework.md",
       "description": "Details the AST visualization framework."
     },
     {
-      "id": "0x000030",
+      "id": "0x00002A",
       "path": "0x000030-module-graph-visualizer.md",
       "description": "Describes the module graph visualization."
     },
     {
-      "id": "0x000031",
+      "id": "0x00002B",
       "path": "0x000031-toast-notification-system.md",
       "description": "Defines the toast notification system."
     },
     {
-      "id": "0x000032",
+      "id": "0x00002C",
       "path": "0x000032-rate-limiting-strategies.md",
       "description": "Covers rate limiting strategies for API usage."
     },
     {
-      "id": "0x000033",
+      "id": "0x00002D",
       "path": "0x000033-module-integrity-verification.md",
       "description": "Specifies module integrity signing and verification."
     },
     {
-      "id": "0x000034",
+      "id": "0x00002E",
       "path": "0x000034-audit-logging-policy.md",
       "description": "Documents the audit logging policy."
     },
     {
-      "id": "0x000035",
+      "id": "0x00002F",
       "path": "0x000035-interactive-tutorial-system.md",
       "description": "Describes the interactive tutorial system."
     },
     {
-      "id": "0x000036",
+      "id": "0x000030",
       "path": "0x000036-pyodide-runtime-orchestration.md",
       "description": "Outlines Pyodide runtime orchestration."
     },
     {
-      "id": "0x000037",
+      "id": "0x000031",
       "path": "0x000037-python-tool-interface.md",
       "description": "Defines the Python tooling interface."
     },
     {
-      "id": "0x000038",
+      "id": "0x000032",
       "path": "0x000038-local-llm-runtime.md",
       "description": "Documents the local LLM runtime."
     },
     {
-      "id": "0x000039",
+      "id": "0x000033",
       "path": "0x000039-hybrid-llm-orchestration.md",
       "description": "Explains hybrid LLM orchestration."
     },
     {
-      "id": "0x00003A",
+      "id": "0x000034",
       "path": "0x00003A-swarm-orchestration.md",
       "description": "Details swarm orchestration behaviors."
     },
     {
-      "id": "0x00003B",
+      "id": "0x000035",
       "path": "0x00003B-reflection-store-architecture.md",
       "description": "Documents the reflection store architecture."
     },
     {
-      "id": "0x00003C",
+      "id": "0x000036",
       "path": "0x00003C-reflection-analysis-engine.md",
       "description": "Outlines the reflection analysis engine."
     },
     {
-      "id": "0x00003D",
+      "id": "0x000037",
       "path": "0x00003D-reflection-semantic-search.md",
       "description": "Defines semantic reflection search."
     },
     {
-      "id": "0x00003E",
+      "id": "0x000038",
       "path": "0x00003E-tool-usage-analytics.md",
       "description": "Summarizes tool usage analytics."
     },
     {
-      "id": "0x00003F",
+      "id": "0x000039",
       "path": "0x00003F-api-cost-tracker.md",
       "description": "Tracks API cost and rate governance."
     },
     {
-      "id": "0x000040",
+      "id": "0x00003A",
       "path": "0x000040-tab-coordination.md",
       "description": "Coordinates browser tabs via BroadcastChannel."
     },
     {
-      "id": "0x000041",
+      "id": "0x00003B",
       "path": "0x000041-tool-documentation-generator.md",
       "description": "Generates tool documentation from schemas."
     },
     {
-      "id": "0x000042",
+      "id": "0x00003C",
       "path": "0x000042-self-testing-framework.md",
       "description": "Runs self-testing and validation frameworks."
     },
     {
-      "id": "0x000043",
+      "id": "0x00003D",
       "path": "0x000043-browser-api-integration.md",
       "description": "Integrates browser-native APIs for capabilities."
     },
     {
-      "id": "0x000044",
+      "id": "0x00003E",
       "path": "0x000044-webrtc-swarm-transport.md",
       "description": "Implements WebRTC swarm transport."
     },
     {
-      "id": "0x000045",
+      "id": "0x00003F",
       "path": "0x000045-streaming-response-handler.md",
       "description": "Real-time streaming response handler for incremental UI updates."
     },
     {
-      "id": "0x000046",
+      "id": "0x000040",
       "path": "0x000046-context-management.md",
       "description": "Intelligent context window management and pruning for optimal LLM performance."
     },
     {
-      "id": "0x000047",
+      "id": "0x000041",
       "path": "0x000047-structured-agent-cycle.md",
       "description": "8-step structured agent cycle with explicit deliberation, self-assessment, and confidence scoring."
     },
     {
-      "id": "0x000048",
+      "id": "0x000042",
       "path": "0x000048-dogs-cats-browser-parser.md",
       "description": "Browser-native DOGS/CATS parser for zero-dependency bundle handling in REPLOID."
     },
     {
-      "id": "0x000049",
+      "id": "0x000043",
       "path": "0x000049-genesis-snapshot-system.md",
       "description": "Genesis snapshot system for RSI evolution tracking and self-awareness."
     },
     {
-      "id": "0x00004A",
+      "id": "0x000044",
       "path": "0x00004A-deja-vu-pattern-detection.md",
       "description": "Déjà Vu pattern detection for identifying repetitive actions and automation opportunities."
     },
     {
-      "id": "0x00004B",
+      "id": "0x000045",
       "path": "0x00004B-meta-cognitive-coordination.md",
       "description": "Meta-cognitive coordination layer for autonomous self-improvement decision-making."
     },
     {
-      "id": "0x00004C",
+      "id": "0x000046",
       "path": "0x00004C-diff-utilities.md",
       "description": "Browser-native line-based diff comparison for tracking code changes during self-modification."
     },
     {
-      "id": "0x00004D",
+      "id": "0x000047",
       "path": "0x00004D-verification-manager.md",
       "description": "Web Worker-based verification system for safe test execution and code validation."
+    },
+    {
+      "id": "0x000063",
+      "path": "0x00006D-internal-patch-format.md",
+      "description": "Fast JSON-based patch format for internal RSI operations, 10x faster than DOGS/CATS markdown parsing."
     }
   ],
   "structuredCycle": {
     "enabled": true,
-    "defaultPersona": "MultiMindSynthesisPersona",
+    "defaultPersona": "multi-mind-synthesis-persona",
     "confidenceThresholds": {
       "autoApply": 0.85,
       "showWarning": 0.5,

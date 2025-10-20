@@ -9,7 +9,7 @@
  * - Tracks improvement outcomes
  * - Learns which improvements work best
  *
- * @blueprint 0x00004B - Meta-cognitive coordination layer for autonomous self-improvement decision-making.
+ * @blueprint 0x000045 - Meta-cognitive coordination layer for autonomous self-improvement decision-making.
  * @module MetaCognitiveLayer
  * @version 1.0.0
  * @category meta-cognitive

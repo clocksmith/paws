@@ -2,7 +2,7 @@
  * @fileoverview Genesis Snapshot System for REPLOID
  * Saves the initial boot state as the "genesis version" for RSI tracking
  *
- * @blueprint 0x000049 - Genesis snapshot system for RSI evolution tracking and self-awareness.
+ * @blueprint 0x000043 - Genesis snapshot system for RSI evolution tracking and self-awareness.
  * @module GenesisSnapshot
  * @version 1.0.0
  * @category rsi

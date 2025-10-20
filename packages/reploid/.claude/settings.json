@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "integrations/claude-code/hooks/inject-console-logs.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '✅ Code changed. Test with: ./integrations/claude-code/hooks/feedback-loop.sh'",
+            "timeout": 2
+          }
+        ]
+      }
+    ]
+  }
+}

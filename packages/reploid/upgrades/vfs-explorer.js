@@ -1,4 +1,4 @@
-// @blueprint 0x000029 - Covers VFS explorer interactions and safeguards.
+// @blueprint 0x000023 - Covers VFS explorer interactions and safeguards.
 // VFS Explorer Module for REPLOID
 // Enhanced file tree with search, expand/collapse, and file viewer
 

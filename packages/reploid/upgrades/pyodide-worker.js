@@ -3,7 +3,7 @@
  * Runs Python code in a sandboxed WebAssembly environment.
  * Isolated in a Web Worker to prevent blocking the main thread.
  *
- * @blueprint 0x000060
+ * @blueprint 0x000056
  * @module PyodideWorker
  * @version 1.0.0
  * @category runtime

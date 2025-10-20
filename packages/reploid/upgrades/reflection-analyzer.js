@@ -3,7 +3,7 @@
  * Analyzes patterns in reflections to enable learning from past experiences.
  * Provides clustering, failure pattern detection, and success strategy identification.
  *
- * @blueprint 0x00003C - Outlines the reflection analysis engine.
+ * @blueprint 0x000036 - Outlines the reflection analysis engine.
  * @module ReflectionAnalyzer
  * @version 1.0.0
  * @category intelligence

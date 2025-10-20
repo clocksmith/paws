@@ -1,4 +1,4 @@
-// @blueprint 0x000061 - Verification Worker for sandboxed testing/linting/type-checking
+// @blueprint 0x000057 - Verification Worker for sandboxed testing/linting/type-checking
 // Web Worker for sandboxed verification execution
 // This runs verification commands in an isolated context
 

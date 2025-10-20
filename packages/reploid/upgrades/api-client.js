@@ -268,6 +268,150 @@ const ApiClient = {
       }
     };
     
+    const callApiWithStreaming = async (history, apiKey, funcDecls = []) => {
+      // Rate limiting check
+      if (rateLimiter) {
+        const allowed = await RateLimiter.waitForToken(rateLimiter, 5000);
+        if (!allowed) {
+          throw new ApiError(
+            'Rate limit exceeded. Please wait before making another request.',
+            429,
+            'RATE_LIMIT_EXCEEDED'
+          );
+        }
+      }
+
+      // Check proxy availability on first call
+      if (!proxyChecked) {
+        await checkProxyAvailability();
+      }
+
+      // Abort any existing call
+      if (currentAbortController) {
+        currentAbortController.abort("New call initiated");
+      }
+      currentAbortController = new AbortController();
+
+      const modelName = "gemini-2.5-flash";
+
+      // Use proxy if available, otherwise direct API
+      let apiEndpoint;
+      let fetchOptions;
+
+      if (useProxy) {
+        // Use local proxy endpoint with streaming
+        apiEndpoint = `/api/gemini/models/${modelName}:streamGenerateContent`;
+        fetchOptions = {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: currentAbortController.signal,
+        };
+      } else {
+        // Use direct Gemini API with streaming endpoint
+        apiEndpoint = `${API_ENDPOINT_BASE}${modelName}:streamGenerateContent`;
+        fetchOptions = {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: currentAbortController.signal,
+        };
+      }
+
+      const reqBody = {
+        contents: history,
+        safetySettings: [
+          "HARASSMENT", "HATE_SPEECH", "SEXUALLY_EXPLICIT", "DANGEROUS_CONTENT"
+        ].map(cat => ({
+          category: `HARM_CATEGORY_${cat}`,
+          threshold: "BLOCK_ONLY_HIGH"
+        })),
+        generationConfig: {
+          temperature: 0.8,
+          maxOutputTokens: 8192
+        },
+      };
+
+      // Add function declarations if provided
+      if (funcDecls && funcDecls.length > 0) {
+        reqBody.tools = [{ functionDeclarations: funcDecls }];
+        reqBody.tool_config = { function_calling_config: { mode: "AUTO" } };
+      }
+
+      try {
+        // Build URL - proxy doesn't need key in URL
+        const url = useProxy ? apiEndpoint : `${apiEndpoint}?key=${apiKey}&alt=sse`;
+
+        const response = await fetch(url, {
+          ...fetchOptions,
+          body: JSON.stringify(reqBody),
+        });
+
+        if (!response.ok) {
+          const errBody = await response.text();
+          throw new ApiError(
+            `API Error (${response.status}): ${errBody}`,
+            response.status
+          );
+        }
+
+        // Return the response object for streaming
+        // StreamingResponseHandler will read response.body.getReader()
+        return response;
+
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          throw new AbortError("API call was cancelled. You can start a new request.");
+        }
+
+        // Provide helpful error messages based on error type
+        if (!navigator.onLine) {
+          const offlineError = new ApiError(
+            "No internet connection detected. Please check your network and try again.",
+            0,
+            "NETWORK_OFFLINE"
+          );
+          logger.error("API Call Failed - Offline", error);
+          throw offlineError;
+        }
+
+        const status = error.statusCode || error.status;
+
+        if (status === 401 || status === 403) {
+          const authError = new ApiError(
+            "Authentication failed. Please check your API key in settings or .env file.",
+            status,
+            "AUTH_FAILED"
+          );
+          logger.error("API Call Failed - Authentication", error);
+          throw authError;
+        }
+
+        if (status === 429) {
+          const rateLimitError = new ApiError(
+            "Rate limit exceeded. Please wait a moment before trying again.",
+            429,
+            "RATE_LIMIT"
+          );
+          logger.error("API Call Failed - Rate Limit", error);
+          throw rateLimitError;
+        }
+
+        if (status >= 500) {
+          const serverError = new ApiError(
+            `The AI service is temporarily unavailable (${status}). Please try again in a few moments.`,
+            status,
+            "SERVER_ERROR"
+          );
+          logger.error("API Call Failed - Server Error", error);
+          throw serverError;
+        }
+
+        logger.error("API Call Failed", error);
+        throw error;
+      } finally {
+        currentAbortController = null;
+      }
+    };
+
     const abortCurrentCall = (reason = "User requested abort") => {
       if (currentAbortController) {
         currentAbortController.abort(reason);
@@ -459,6 +603,7 @@ const ApiClient = {
     return {
       api: {
         callApiWithRetry,
+        callApiWithStreaming,
         abortCurrentCall,
         sanitizeLlmJsonResp
       },

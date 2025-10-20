@@ -3,7 +3,7 @@
  * Provides semantic similarity search over reflection history using TF-IDF embeddings.
  * Enables finding relevant past experiences by meaning, not just keywords.
  *
- * @blueprint 0x00003D - Defines semantic reflection search.
+ * @blueprint 0x000037 - Defines semantic reflection search.
  * @module ReflectionSearch
  * @version 1.0.0
  * @category intelligence

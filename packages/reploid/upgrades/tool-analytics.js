@@ -2,7 +2,7 @@
  * @fileoverview Tool Usage Analytics for REPLOID
  * Tracks tool execution patterns, performance, and errors for optimization.
  *
- * @blueprint 0x00003E - Summarizes tool usage analytics.
+ * @blueprint 0x000038 - Summarizes tool usage analytics.
  * @module ToolAnalytics
  * @version 1.0.0
  * @category analytics

@@ -2,7 +2,7 @@
  * @fileoverview Browser-native DOGS/CATS Parser for REPLOID
  * Self-contained implementation with zero external dependencies
  *
- * @blueprint 0x000048 - Browser-native DOGS/CATS parser for zero-dependency bundle handling in REPLOID.
+ * @blueprint 0x000042 - Browser-native DOGS/CATS parser for zero-dependency bundle handling in REPLOID.
  * @module DogsParserBrowser
  * @version 1.0.0
  * @category parser

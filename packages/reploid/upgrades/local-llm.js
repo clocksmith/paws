@@ -7,7 +7,7 @@
  * Model library version: v0_2_48
  * Access full model catalog: window.webllm.prebuiltAppConfig.model_list
  *
- * @blueprint 0x000038 - Documents the local LLM runtime.
+ * @blueprint 0x000032 - Documents the local LLM runtime.
  * @module LocalLLM
  * @version 1.0.0
  * @category runtime

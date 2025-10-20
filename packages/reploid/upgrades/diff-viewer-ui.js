@@ -1,4 +1,4 @@
-// @blueprint 0x000058 - Interactive Diff Viewer UI
+// @blueprint 0x000051 - Interactive Diff Viewer UI
 // Interactive Diff Viewer UI Component for REPLOID Sentinel
 // Provides rich diff visualization and interactive approval controls
 // PX-3 Enhanced: Prism.js syntax highlighting + detailed statistics

@@ -1,4 +1,4 @@
-// @blueprint 0x000024 - Outlines Penteract analytics and visualization pipeline.
+// @blueprint 0x00001E - Outlines Penteract analytics and visualization pipeline.
 // Penteract Analytics Aggregator
 // Consolidates Paxos telemetry into actionable analytics for visualization
 

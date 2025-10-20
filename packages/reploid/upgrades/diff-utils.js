@@ -1,4 +1,4 @@
-// @blueprint 0x00004C - Diff Utilities for code comparison
+// @blueprint 0x000046 - Diff Utilities for code comparison
 /**
  * @fileoverview Simple Diff Utilities for REPLOID
  * Provides line-based diff comparison without external dependencies

@@ -2,7 +2,7 @@
  * @fileoverview Inter-Tab Coordinator for REPLOID
  * Synchronizes state across multiple browser tabs to prevent conflicts.
  *
- * @blueprint 0x000040 - Coordinates browser tabs via BroadcastChannel.
+ * @blueprint 0x00003A - Coordinates browser tabs via BroadcastChannel.
  * @module TabCoordinator
  * @version 1.0.0
  * @category coordination

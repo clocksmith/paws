@@ -9,7 +9,7 @@
  * @module Config
  * @version 1.0.0
  * @category core
- * @blueprint 0x000050 (Project Phoenix - Centralized Config)
+ * @blueprint 0x00004A (Project Phoenix - Centralized Config)
  */
 
 const Config = {

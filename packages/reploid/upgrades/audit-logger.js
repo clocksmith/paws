@@ -3,7 +3,7 @@
  * Provides comprehensive audit logging for security-sensitive operations.
  * Tracks module loads, VFS operations, API calls, and security events.
  *
- * @blueprint 0x000034 - Documents the audit logging policy.
+ * @blueprint 0x00002E - Documents the audit logging policy.
  * @module AuditLogger
  * @version 1.0.0
  * @category security

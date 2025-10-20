@@ -1,7 +1,7 @@
 /**
  * @fileoverview Module Widget Protocol - Standardized UI interface for all modules
  *
- * @blueprint 0x00004E
+ * @blueprint 0x000048
  *
  * Every module can optionally expose a .widget interface to provide:
  * - Visual status representation

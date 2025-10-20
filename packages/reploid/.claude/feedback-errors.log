@@ -1,0 +1,43 @@
+🚀 Launching browser (headless: true)...
+✅ Browser launched
+📍 Navigating to http://localhost:8080...
+❌ [Browser Error]: Failed to load resource: the server responded with a status of 404 (File not found)
+✅ Page loaded
+🎯 Awakening agent with goal: "test final wrapper fix"...
+✅ Goal set: "test final wrapper fix"
+✅ Awaken button clicked
+❌ [Browser Error]: Failed to load resource: the server responded with a status of 404 (File not found)
+❌ [Browser Error]: [VFS] Error reading /personas/CodeRefactorerPersona.js: Error: Failed to fetch /personas/CodeRefactorerPersona.js: File not found
+    at Object.read (http://localhost:8080/boot.js:418:31)
+    at async CoreLogicModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:56:32)
+    at async HTMLButtonElement.awakenAgent (http://localhost:8080/boot.js:459:9)
+❌ [Browser Error]: [CoreLogic] Legacy evaluation failed for /upgrades/state-manager.js: SyntaxError: Unexpected token ';'
+    at new Function (<anonymous>)
+    at evaluateLegacyModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:152:16)
+    at loadModuleFromContent (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:193:22)
+    at CoreLogicModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:241:28)
+    at async HTMLButtonElement.awakenAgent (http://localhost:8080/boot.js:459:9)
+❌ [Browser Error]: [CoreLogic] Initialization failed: SyntaxError: Unexpected token ';'
+    at new Function (<anonymous>)
+    at evaluateLegacyModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:152:16)
+    at loadModuleFromContent (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:193:22)
+    at CoreLogicModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:241:28)
+    at async HTMLButtonElement.awakenAgent (http://localhost:8080/boot.js:459:9)
+❌ [Browser Error]: [Boot] Failed to awaken agent: SyntaxError: Unexpected token ';'
+    at new Function (<anonymous>)
+    at evaluateLegacyModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:152:16)
+    at loadModuleFromContent (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:193:22)
+    at CoreLogicModule (eval at awakenAgent (http://localhost:8080/boot.js:438:33), <anonymous>:241:28)
+    at async HTMLButtonElement.awakenAgent (http://localhost:8080/boot.js:459:9)
+📸 Taking screenshot...
+✅ Screenshot saved to: /tmp/reploid-after-awaken.png
+
+❌ Errors detected:
+   [2025-10-20T20:15:28.025Z] [ERROR] [CoreLogic] Legacy evaluation failed for /upgrades/state-manager.js: SyntaxError: Unexpected token ';'
+   [2025-10-20T20:15:28.026Z] [ERROR] [CoreLogic] Initialization failed: SyntaxError: Unexpected token ';'
+   [2025-10-20T20:15:28.026Z] [ERROR] [Boot] Failed to awaken agent: SyntaxError: Unexpected token ';'
+🛑 Closing browser...
+✅ Browser closed
+=== Iteration 1 ===
+[Boot] Failed to awaken agent: SyntaxError: Unexpected token ';'
+

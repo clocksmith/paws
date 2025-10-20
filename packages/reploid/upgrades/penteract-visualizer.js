@@ -1,4 +1,4 @@
-// @blueprint 0x000062 - Penteract multi-agent analytics visualizer
+// @blueprint 0x000058 - Penteract multi-agent analytics visualizer
 // PenteractVisualizer - Stub module for multi-agent analytics & visualization
 
 const PenteractVisualizer = {

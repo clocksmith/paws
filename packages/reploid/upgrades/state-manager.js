@@ -951,9 +951,6 @@ const StateManager = {
         },
         widget
       };
-    };
+    }
   }
-};
-
-// Export standardized module
-export default StateManager;
+}

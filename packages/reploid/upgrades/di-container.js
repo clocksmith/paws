@@ -1,4 +1,4 @@
-// @blueprint 0x00004F - Dependency Injection Container architecture
+// @blueprint 0x000049 - Dependency Injection Container architecture
 // DI Container for REPLOID - Project Phoenix
 
 const DIContainer = {

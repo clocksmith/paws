@@ -2,7 +2,7 @@
  * @fileoverview HITL Control Panel UI
  * Visual interface for managing Human-in-the-Loop vs Autonomous modes
  *
- * @blueprint 0x000052
+ * @blueprint 0x00004C
  * @module HITLControlPanel
  * @version 1.0.0
  * @category ui

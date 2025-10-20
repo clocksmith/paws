@@ -6,7 +6,7 @@
  * Note: This is different from PAWS swarm.js (LLM-based multi-agent collaboration).
  * This module handles P2P browser-to-browser coordination.
  *
- * @blueprint 0x00003A - Details swarm orchestration behaviors.
+ * @blueprint 0x000034 - Details swarm orchestration behaviors.
  * @module WebRTCCoordinator
  * @version 1.0.0
  * @category service

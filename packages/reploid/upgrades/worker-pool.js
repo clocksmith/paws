@@ -1,4 +1,4 @@
-// @blueprint 0x000057 - WebWorker Pool for parallel execution
+// @blueprint 0x000050 - WebWorker Pool for parallel execution
 // WebWorker Pool Module for REPLOID
 // Enables parallel execution of tools and computations across multiple workers
 

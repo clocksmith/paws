@@ -1,4 +1,4 @@
-// @blueprint 0x000031 - Defines the toast notification system.
+// @blueprint 0x00002B - Defines the toast notification system.
 // Toast Notification System - Non-blocking user feedback
 // Replaces alert() calls with elegant toast notifications
 

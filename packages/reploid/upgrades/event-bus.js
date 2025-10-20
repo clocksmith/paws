@@ -1,6 +1,6 @@
 // Event Bus Module for REPLOID - Project Phoenix
 // A simple pub/sub system for decoupling modules.
-// @blueprint 0x000063
+// @blueprint 0x000059
 
 const EventBus = {
   metadata: {

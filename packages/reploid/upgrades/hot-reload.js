@@ -1,4 +1,4 @@
-// @blueprint 0x00005B - Hot Module Reload system
+// @blueprint 0x000053 - Hot Module Reload system
 // Hot Module Reload System for REPLOID
 // Enables dynamic code replacement without losing state
 

@@ -1,4 +1,4 @@
-// @blueprint 0x00005A - HITL Controller for human-in-the-loop management
+// @blueprint 0x000052 - HITL Controller for human-in-the-loop management
 /**
  * @fileoverview HITL Controller - Human-in-the-Loop vs Autonomous Mode Management
  * Provides centralized control over which modules require human approval vs running autonomously

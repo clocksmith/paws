@@ -1,4 +1,4 @@
-// @blueprint 0x00002E - Visualizes the agent FSM states and transitions.
+// @blueprint 0x000028 - Visualizes the agent FSM states and transitions.
 // Agent Visualizer - FSM State Machine Visualization with D3.js
 // Provides real-time visual representation of Sentinel FSM state transitions
 

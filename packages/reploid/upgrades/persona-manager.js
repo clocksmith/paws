@@ -8,7 +8,7 @@
  * @module PersonaManager
  * @version 1.0.0
  * @category core
- * @blueprint 0x000051 (Project Phoenix - Persona Management)
+ * @blueprint 0x00004B (Project Phoenix - Persona Management)
  */
 
 const PersonaManager = {
@@ -32,13 +32,13 @@ const PersonaManager = {
 
     /**
      * Load a persona module dynamically
-     * @param {string} personaName - Name of the persona file (e.g., 'CodeRefactorerPersona')
+     * @param {string} personaName - Name of the persona file (e.g., 'code-refactorer-persona')
      * @returns {Promise<Object>} Loaded persona module
      */
     const loadPersonaModule = async (personaName) => {
       try {
         const module = await import(`/personas/${personaName}.js`);
-        return module[personaName] || module.default;
+        return module.default;
       } catch (error) {
         logger.error(`[PersonaManager] Failed to load persona: ${personaName}`, error);
         throw error;

@@ -3,7 +3,7 @@
  * Implements the complete Sentinel Agent cognitive cycle with automatic checkpoints.
  * Manages state transitions, user approvals, self-testing, and reflection learning.
  *
- * @blueprint 0x000064
+ * @blueprint 0x00005A
  * @module SentinelFSM
  * @version 2.3.0
  * @category agent

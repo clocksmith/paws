@@ -1,4 +1,4 @@
-// @blueprint 0x00004D - Verification Manager for sandboxed execution
+// @blueprint 0x000047 - Verification Manager for sandboxed execution
 // Verification Manager - Handles Web Worker creation and communication
 // Integrates with tool-runner.js for sandboxed verification execution
 

@@ -3,7 +3,7 @@
  * Provides unified interface for local WebLLM and cloud API providers.
  * Enables seamless switching between local-first and cloud-based inference.
  *
- * @blueprint 0x000039 - Explains hybrid LLM orchestration.
+ * @blueprint 0x000033 - Explains hybrid LLM orchestration.
  * @module HybridLLMProvider
  * @version 1.0.0
  * @category agent
@@ -13,13 +13,13 @@ const HybridLLMProvider = {
   metadata: {
     id: 'HybridLLMProvider',
     version: '1.0.0',
-    dependencies: ['config', 'Utils', 'EventBus', 'StateManager', 'LocalLLM', 'ApiClient'],
+    dependencies: ['config', 'Utils', 'EventBus', 'StateManager', 'LocalLLM', 'ApiClient', 'StreamingResponseHandler?'],
     async: true,
     type: 'agent'
   },
 
   factory: (deps) => {
-    const { config, Utils, EventBus, StateManager, LocalLLM, ApiClient } = deps;
+    const { config, Utils, EventBus, StateManager, LocalLLM, ApiClient, StreamingResponseHandler } = deps;
     const { logger } = Utils;
 
     let useLocal = false; // Default to cloud
@@ -213,11 +213,12 @@ const HybridLLMProvider = {
     };
 
     /**
-     * Generate streaming completion (only supported with local for now)
+     * Generate streaming completion
+     * Supports real HTTP/2 streaming for both local and cloud providers
      */
     const stream = async function* (messages, options = {}) {
       if (useLocal && LocalLLM && LocalLLM.isReady()) {
-        // Local streaming
+        // Local streaming via WebLLM
         const formattedMessages = messages.map(msg => ({
           role: msg.role,
           content: msg.content
@@ -238,37 +239,141 @@ const HybridLLMProvider = {
           };
         }
       } else {
-        // Cloud streaming simulation - chunk the response for progressive display
-        const result = await completeCloud(messages, options);
+        // Cloud streaming via HTTP/2 + Server-Sent Events
+        if (!StreamingResponseHandler) {
+          // Fallback to simulation if StreamingResponseHandler not available
+          logger.warn('[HybridLLM] StreamingResponseHandler not available, falling back to simulated streaming');
+          const result = await completeCloud(messages, options);
+          const chunkSize = 50;
+          const text = result.text;
+          let yielded = '';
 
-        // Simulate streaming by yielding chunks of the text
-        const chunkSize = 50; // Characters per chunk
-        const text = result.text;
-        let yielded = '';
-
-        for (let i = 0; i < text.length; i += chunkSize) {
-          const chunk = text.slice(i, i + chunkSize);
-          yielded += chunk;
+          for (let i = 0; i < text.length; i += chunkSize) {
+            const chunk = text.slice(i, i + chunkSize);
+            yielded += chunk;
+            yield {
+              delta: chunk,
+              text: yielded,
+              done: false,
+              provider: 'cloud'
+            };
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
 
           yield {
-            delta: chunk,
-            text: yielded,
-            done: false,
-            provider: 'cloud'
+            delta: '',
+            text: result.text,
+            done: true,
+            provider: 'cloud',
+            usage: result.usage
           };
+        } else {
+          // Real HTTP/2 streaming
+          const history = messages.map(msg => ({
+            role: msg.role === 'system' ? 'user' : msg.role,
+            parts: [{ text: msg.content }]
+          }));
 
-          // Small delay to simulate streaming
-          await new Promise(resolve => setTimeout(resolve, 50));
+          logger.info('[HybridLLM] Starting cloud streaming via HTTP/2 + SSE');
+
+          let fullText = '';
+          let chunkCount = 0;
+
+          try {
+            // Call ApiClient.callApiWithStreaming to get Response object
+            const response = await ApiClient.callApiWithStreaming(history, null);
+
+            // Read the stream directly
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+              const { done, value } = await reader.read();
+
+              if (done) {
+                logger.info('[HybridLLM] Cloud streaming completed', {
+                  totalLength: fullText.length,
+                  chunks: chunkCount
+                });
+                break;
+              }
+
+              // Decode the chunk
+              buffer += decoder.decode(value, { stream: true });
+
+              // Process SSE format (data: prefix)
+              const lines = buffer.split('\n');
+              buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  const jsonStr = line.slice(6).trim();
+                  if (jsonStr === '[DONE]') continue;
+
+                  try {
+                    const parsed = JSON.parse(jsonStr);
+                    // Extract text from Gemini streaming format
+                    const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+                    if (text) {
+                      fullText += text;
+                      chunkCount++;
+
+                      // Emit event for UI updates
+                      EventBus.emit('hybrid-llm:stream-chunk', {
+                        chunk: text,
+                        total: fullText,
+                        chunkCount,
+                        provider: 'cloud'
+                      });
+
+                      // Yield the chunk
+                      yield {
+                        delta: text,
+                        text: fullText,
+                        done: false,
+                        provider: 'cloud'
+                      };
+                    }
+                  } catch (parseError) {
+                    logger.warn('[HybridLLM] Failed to parse SSE chunk', { jsonStr });
+                  }
+                }
+              }
+            }
+
+            // Emit completion event
+            EventBus.emit('hybrid-llm:stream-complete', {
+              text: fullText,
+              chunkCount,
+              provider: 'cloud'
+            });
+
+            // Final yield with complete result
+            yield {
+              delta: '',
+              text: fullText,
+              done: true,
+              provider: 'cloud',
+              usage: {
+                promptTokens: 0,
+                completionTokens: 0,
+                totalTokens: 0
+              }
+            };
+          } catch (error) {
+            logger.error('[HybridLLM] Cloud streaming failed', error);
+
+            // Emit error event
+            EventBus.emit('hybrid-llm:stream-error', {
+              error: error.message,
+              provider: 'cloud'
+            });
+
+            throw error;
+          }
         }
-
-        // Final chunk with usage metadata
-        yield {
-          delta: '',
-          text: result.text,
-          done: true,
-          provider: 'cloud',
-          usage: result.usage
-        };
       }
     };
 

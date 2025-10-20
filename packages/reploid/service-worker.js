@@ -1,7 +1,7 @@
 // Service Worker for REPLOID
 // Enables offline operation, background processing, and persistent autonomy
 
-const CACHE_NAME = 'reploid-v1';
+const CACHE_NAME = 'reploid-v4';
 const RUNTIME_CACHE = 'reploid-runtime';
 const API_CACHE = 'reploid-api';
 

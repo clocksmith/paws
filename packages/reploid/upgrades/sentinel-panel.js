@@ -1,4 +1,4 @@
-// @blueprint 0x000069 - Sentinel Panel Module
+// @blueprint 0x00005F - Sentinel Panel Module
 // Sentinel Panel UI Component for REPLOID Agent
 // Provides approval workflow for context and proposal reviews
 // CLUSTER 2 Phase 8 Implementation

@@ -7,7 +7,7 @@
  * - Missing abstractions (could be automated with a tool)
  * - Learning opportunities (pattern could be generalized)
  *
- * @blueprint 0x00004A - Déjà Vu pattern detection for identifying repetitive actions and automation opportunities.
+ * @blueprint 0x000044 - Déjà Vu pattern detection for identifying repetitive actions and automation opportunities.
  * @module DejaVuDetector
  * @version 1.0.0
  * @category meta-cognitive

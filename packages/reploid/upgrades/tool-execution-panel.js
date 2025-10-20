@@ -1,4 +1,4 @@
-// @blueprint 0x000056 - Visual Tool Execution Panel
+// @blueprint 0x00004F - Visual Tool Execution Panel
 /**
  * @fileoverview Visual Tool Execution Panel for REPLOID Dashboard
  * Provides real-time visual representation of tool executions with interactive cards

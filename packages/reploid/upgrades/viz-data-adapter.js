@@ -1,4 +1,4 @@
-// @blueprint 0x00002B - Defines the visualization data adapter for metrics and graphs.
+// @blueprint 0x000025 - Defines the visualization data adapter for metrics and graphs.
 // Visualization Data Adapter for REPLOID
 // Transforms internal agent state into visualizable data structures
 

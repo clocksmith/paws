@@ -1,4 +1,4 @@
-// @blueprint 0x000030 - Describes the module graph visualization.
+// @blueprint 0x00002A - Describes the module graph visualization.
 // Module Graph Visualizer - D3.js Force-Directed Graph for Module Dependencies
 // Visualizes the module dependency graph from Introspector
 
