@@ -211,8 +211,8 @@ const StateManager = {
 
             const turn = {
                 turn: turnNumber,
-                cats_path: `${sessionPath}/turn-${turnNumber}.cats.md`,
-                dogs_path: `${sessionPath}/turn-${turnNumber}.dogs.md`,
+                context_path: `${sessionPath}/turn-${turnNumber}.context.md`,
+                proposal_path: `${sessionPath}/turn-${turnNumber}.proposal.md`,
                 status: 'pending_context',
                 checkpointId,
                 createdAt: new Date().toISOString()

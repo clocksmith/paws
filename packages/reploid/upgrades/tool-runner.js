@@ -205,13 +205,13 @@ const ToolRunner = {
             return await StateManager.getArtifactDiff(toolArgs.path, toolArgs.refA, toolArgs.refB);
         }
 
-        case "create_cats_bundle": {
+        case "create_context_bundle": {
             const { file_paths = [], reason = "Context bundle", turn_path } = toolArgs;
             if (!turn_path) {
-                throw new ToolError("create_cats_bundle requires 'turn_path'");
+                throw new ToolError("create_context_bundle requires 'turn_path'");
             }
 
-            let bundleContent = `## PAWS Context Bundle (cats.md)\n\n**Reason:** ${reason}\n\n---\n\n`;
+            let bundleContent = `## PAWS Context Bundle (context.md)\n\n**Reason:** ${reason}\n\n---\n\n`;
             for (const filePath of file_paths) {
                 const content = await StateManager.getArtifactContent(filePath);
                 const safeContent = content == null ? '' : content;
@@ -230,14 +230,14 @@ const ToolRunner = {
             return { success: true, path: turn_path };
         }
 
-        // DOGS removed - case "create_dogs_bundle": {
-        case "____DISABLED_create_dogs_bundle": {
+        // DISABLED - Proposal bundles (previously create_dogs_bundle)
+        case "____DISABLED_create_proposal_bundle": {
             const { changes = [], turn_path } = toolArgs;
             if (!turn_path) {
-                throw new ToolError("create_dogs_bundle requires 'turn_path'");
+                throw new ToolError("create_proposal_bundle requires 'turn_path'");
             }
 
-            let bundleContent = `## PAWS Change Proposal (dogs.md)\n\n`;
+            let bundleContent = `## PAWS Change Proposal (proposal.md)\n\n`;
             for (const change of changes) {
                 bundleContent += [
                     '```paws-change',
@@ -256,24 +256,24 @@ const ToolRunner = {
             return { success: true, path: turn_path };
         }
 
-        // DOGS removed - case "apply_dogs_bundle": {
-        case "____DISABLED_apply_dogs_bundle": {
-            const { dogs_path, verify_command } = toolArgs;
-            logger.info(`[ToolRunner] Applying DOGS bundle: ${dogs_path}`);
+        // DISABLED - Apply proposal bundles (previously apply_dogs_bundle)
+        case "____DISABLED_apply_proposal_bundle": {
+            const { proposal_path, verify_command } = toolArgs;
+            logger.info(`[ToolRunner] Applying proposal bundle: ${proposal_path}`);
 
-            const dogsContent = await StateManager.getArtifactContent(dogs_path);
-            if (!dogsContent) {
-                throw new ArtifactError(`dogs bundle not found at ${dogs_path}`);
+            const proposalContent = await StateManager.getArtifactContent(proposal_path);
+            if (!proposalContent) {
+                throw new ArtifactError(`proposal bundle not found at ${proposal_path}`);
             }
 
             // Validate bundle format
-            const validation = DogsParserBrowser.validateDogs(dogsContent);
+            const validation = ProposalParser.validate(proposalContent);
             if (!validation.valid) {
-                throw new ToolError(`Invalid DOGS bundle:\n${validation.errors.join('\n')}`);
+                throw new ToolError(`Invalid proposal bundle:\n${validation.errors.join('\n')}`);
             }
 
             // Parse the bundle
-            const changeSet = DogsParserBrowser.parseDogs(dogsContent);
+            const changeSet = ProposalParser.parse(proposalContent);
             if (changeSet.total === 0) {
                 return { success: false, message: "No valid changes found in bundle" };
             }
@@ -281,7 +281,7 @@ const ToolRunner = {
             logger.info(`[ToolRunner] Parsed ${changeSet.total} changes (${changeSet.creates} creates, ${changeSet.modifies} modifies, ${changeSet.deletes} deletes)`);
 
             // Create checkpoint before applying changes
-            const checkpoint = await StateManager.createCheckpoint(`Before applying ${dogs_path}`);
+            const checkpoint = await StateManager.createCheckpoint(`Before applying ${proposal_path}`);
             logger.info(`[ToolRunner] Created checkpoint: ${checkpoint.id}`);
 
             const appliedChanges = [];
@@ -360,7 +360,7 @@ const ToolRunner = {
                 // Rollback on error
                 logger.error(`[ToolRunner] Error applying changes, rolling back to checkpoint ${checkpoint.id}`);
                 await StateManager.restoreCheckpoint(checkpoint.id);
-                throw new ToolError(`Failed to apply dogs bundle: ${error.message}`);
+                throw new ToolError(`Failed to apply proposal bundle: ${error.message}`);
             }
         }
 

@@ -1612,6 +1612,13 @@ if (typeof window !== 'undefined') {
       sharedInstance = instance;
     },
 
+    init: (containerId) => {
+      if (!sharedInstance) {
+        console.error('[DiffViewerUI] Not initialized. Call init() first.');
+        return;
+      }
+      return sharedInstance.init(containerId);
+    },
     toggleExpand: (index) => {
       if (!sharedInstance) {
         console.error('[DiffViewerUI] Not initialized. Call init() first.');
@@ -1692,4 +1699,5 @@ if (typeof window !== 'undefined') {
   };
 }
 
-export default DiffViewerUIModule;
+// Module available for evaluation
+DiffViewerUIModule;
