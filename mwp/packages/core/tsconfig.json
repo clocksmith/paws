@@ -49,8 +49,8 @@
     // Paths (for imports)
     "baseUrl": ".",
     "paths": {
-      "@mcp-wp/core": ["./src/index.ts"],
-      "@mcp-wp/core/*": ["./src/*"]
+      "@mwp/core": ["./src/index.ts"],
+      "@mwp/core/*": ["./src/*"]
     }
   },
   "include": [

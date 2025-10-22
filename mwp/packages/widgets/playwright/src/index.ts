@@ -4,7 +4,7 @@
  * Creates Playwright MCP widget for browser automation.
  */
 
-import type { types } from '@mcp-wp/core';
+import type { types } from '@mwp/core';
 
 type WidgetFactoryFunction = types.WidgetFactoryFunction;
 type WidgetFactory = types.WidgetFactory;
@@ -93,7 +93,7 @@ const createPlaywrightWidget: WidgetFactoryFunction = (
       tags: ['playwright', 'browser', 'automation', 'testing', 'screenshots'],
       version: '1.0.0',
       author: {
-        name: 'MCP-WP Team',
+        name: 'MWP Team',
       },
       permissions: {
         tools: {

@@ -1,6 +1,6 @@
 # MCP Widget Protocol Schemas
 
-This directory contains JSON Schema definitions for the MCP Widget Protocol (MCP-WP).
+This directory contains JSON Schema definitions for the MCP Widget Protocol (MWP).
 
 ## Overview
 
@@ -49,10 +49,10 @@ The schemas are **automatically generated** from Zod validators in `packages/cor
 
 ```typescript
 // Import Zod schemas (recommended)
-import { WidgetMetadataSchema } from '@mcp-wp/core/schemas';
+import { WidgetMetadataSchema } from '@mwp/core/schemas';
 
 // Or import JSON Schema
-import widgetMetadataSchema from '@mcp-wp/core/schemas/widget-metadata.json';
+import widgetMetadataSchema from '@mwp/core/schemas/widget-metadata.json';
 ```
 
 ### Python
@@ -97,14 +97,14 @@ pnpm build
 
 Schemas are published with stable URLs:
 
-- Base URL: `https://mcp-wp.dev/schemas/`
-- Example: `https://mcp-wp.dev/schemas/widget-metadata.json`
+- Base URL: `https://mwp.dev/schemas/`
+- Example: `https://mwp.dev/schemas/widget-metadata.json`
 
 These URLs can be used in `$schema` fields for validation and IDE support:
 
 ```json
 {
-  "$schema": "https://mcp-wp.dev/schemas/widget-metadata.json",
+  "$schema": "https://mwp.dev/schemas/widget-metadata.json",
   "protocolVersion": "1.0.0",
   "name": "my-widget",
   "displayName": "My Widget"
@@ -115,10 +115,10 @@ These URLs can be used in `$schema` fields for validation and IDE support:
 
 ### Runtime Validation (TypeScript)
 
-Use the Zod schemas from `@mcp-wp/core`:
+Use the Zod schemas from `@mwp/core`:
 
 ```typescript
-import { validateWidgetMetadata } from '@mcp-wp/core/schemas';
+import { validateWidgetMetadata } from '@mwp/core/schemas';
 
 const result = validateWidgetMetadata(data);
 if (!result.success) {
@@ -142,7 +142,7 @@ check-jsonschema --schemafile widget-metadata.schema.json widget.json
 
 ## Integration with Specification
 
-These schemas are referenced in the [MCP-WP Specification](../MWP.md) as normative definitions of the protocol contracts. The specification provides:
+These schemas are referenced in the [MWP Specification](../MWP.md) as normative definitions of the protocol contracts. The specification provides:
 
 - **Context** - Why each schema exists
 - **Requirements** - Normative MUST/SHOULD/MAY statements
@@ -174,7 +174,7 @@ See [CONTRIBUTING.md](../../CONTRIBUTING.md) for full guidelines.
 
 ## Related Documentation
 
-- **[Protocol Specification](../MWP.md)** - Complete MCP-WP protocol
+- **[Protocol Specification](../MWP.md)** - Complete MWP protocol
 - **[Core Package README](../../packages/core/README.md)** - Type and schema documentation
 - **[Validator Tool](../../packages/tools/validator/README.md)** - Schema validation CLI
 - **[Widget Development Guide](../../GETTING-STARTED.md)** - Using schemas in widgets

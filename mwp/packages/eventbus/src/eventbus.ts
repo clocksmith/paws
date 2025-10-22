@@ -11,7 +11,7 @@ import type {
   MCPEvent,
   EventPayload,
   EventMetadata,
-} from '@mcp-wp/core';
+} from '@mwp/core';
 
 /**
  * EventBus Options

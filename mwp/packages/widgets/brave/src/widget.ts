@@ -12,7 +12,7 @@ import type {
   WidgetStatus,
   ResourceUsage,
   UnsubscribeFunction,
-} from '@mcp-wp/core';
+} from '@mwp/core';
 import { styles } from './styles.js';
 import type {
   BraveWidgetConfig,

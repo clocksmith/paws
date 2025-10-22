@@ -14,7 +14,7 @@ This document describes the complete architecture of the MCP Widget Protocol mon
 
 ## Overview
 
-The MCP-WP monorepo contains:
+The MWP monorepo contains:
 
 1. **Specification** - Protocol documentation and formal verification
 2. **Reference Implementation** - Dashboard host and official widgets
@@ -48,16 +48,16 @@ mwp/
 │
 ├── packages/                          # Monorepo packages
 │   ├── widgets/                      # Official MCP server widgets
-│   │   ├── github/                   # @mcp-wp/widget-github
-│   │   ├── playwright/               # @mcp-wp/widget-playwright
-│   │   ├── filesystem/               # @mcp-wp/widget-filesystem
-│   │   ├── brave/                    # @mcp-wp/widget-brave
-│   │   ├── sequential-thinking/      # @mcp-wp/widget-sequential-thinking
-│   │   ├── memory/                   # @mcp-wp/widget-memory
-│   │   ├── fetch/                    # @mcp-wp/widget-fetch
-│   │   ├── everything/               # @mcp-wp/widget-everything
-│   │   ├── supabase/                 # @mcp-wp/widget-supabase
-│   │   └── stripe/                   # @mcp-wp/widget-stripe
+│   │   ├── github/                   # @mwp/widget-github
+│   │   ├── playwright/               # @mwp/widget-playwright
+│   │   ├── filesystem/               # @mwp/widget-filesystem
+│   │   ├── brave/                    # @mwp/widget-brave
+│   │   ├── sequential-thinking/      # @mwp/widget-sequential-thinking
+│   │   ├── memory/                   # @mwp/widget-memory
+│   │   ├── fetch/                    # @mwp/widget-fetch
+│   │   ├── everything/               # @mwp/widget-everything
+│   │   ├── supabase/                 # @mwp/widget-supabase
+│   │   └── stripe/                   # @mwp/widget-stripe
 │   │
 │   ├── dashboard/                    # Reference dashboard host (web app)
 │   │   ├── src/host/                 # Host implementation
@@ -79,7 +79,7 @@ mwp/
 │   ├── eventbus/                     # Reusable EventBus implementation
 │   │
 │   ├── tools/                        # Developer tooling
-│   │   ├── create-mcp-widget/        # Widget scaffolding CLI
+│   │   ├── create-mwp-widget/        # Widget scaffolding CLI
 │   │   ├── validator/                # Conformance validator
 │   │   └── testing/                  # Testing utilities
 │   │
@@ -111,7 +111,7 @@ mwp/
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                         @mcp-wp/core                        │
+│                         @mwp/core                        │
 │  (Types, Schemas, Utilities - Foundation for everything)   │
 └─────────────────────────────────────────────────────────────┘
                              ▲
@@ -119,7 +119,7 @@ mwp/
       ┌──────────────────────┼──────────────────────┐
       │                      │                      │
 ┌─────┴─────┐          ┌─────┴─────┐          ┌─────┴─────┐
-│@mcp-wp/   │          │@mcp-wp/   │          │@mcp-wp/   │
+│@mwp/   │          │@mwp/   │          │@mwp/   │
 │ bridge    │          │ eventbus  │          │ testing   │
 └───────────┘          └───────────┘          └───────────┘
       ▲                      ▲                      ▲
@@ -129,7 +129,7 @@ mwp/
       ┌──────────────────────┼──────────────────────┐
       │                      │                      │
 ┌─────┴─────────┐     ┌──────┴───────┐     ┌───────┴────────┐
-│  @mcp-wp/     │     │  @mcp-wp/    │     │  @mcp-wp/      │
+│  @mwp/     │     │  @mwp/    │     │  @mwp/      │
 │  dashboard    │     │  widget-*    │     │  mcp-server    │
 │  (Host)       │     │  (Widgets)   │     │  (MCP Server)  │
 └───────────────┘     └──────────────┘     └────────────────┘
@@ -139,15 +139,15 @@ mwp/
 
 | Package | Depends On | Used By | Purpose |
 |---------|-----------|---------|---------|
-| `@mcp-wp/core` | - | All packages | Foundation types, schemas, utils |
-| `@mcp-wp/bridge` | core | dashboard, mcp-server, widgets | MCPBridge implementation |
-| `@mcp-wp/eventbus` | core | dashboard, widgets | EventBus implementation |
-| `@mcp-wp/testing` | core, bridge, eventbus | widgets, dashboard | Testing utilities |
-| `@mcp-wp/dashboard` | core, bridge, eventbus | - | Web dashboard host |
-| `@mcp-wp/widget-*` | core, bridge, eventbus | dashboard | Official widgets |
-| `@mcp-wp/mcp-server` | core, bridge | - | Dashboard MCP server |
-| `@mcp-wp/create-mcp-widget` | core | - | Widget scaffolding CLI |
-| `@mcp-wp/validator` | core | CI/CD | Conformance validator |
+| `@mwp/core` | - | All packages | Foundation types, schemas, utils |
+| `@mwp/bridge` | core | dashboard, mcp-server, widgets | MCPBridge implementation |
+| `@mwp/eventbus` | core | dashboard, widgets | EventBus implementation |
+| `@mwp/testing` | core, bridge, eventbus | widgets, dashboard | Testing utilities |
+| `@mwp/dashboard` | core, bridge, eventbus | - | Web dashboard host |
+| `@mwp/widget-*` | core, bridge, eventbus | dashboard | Official widgets |
+| `@mwp/mcp-server` | core, bridge | - | Dashboard MCP server |
+| `@mwp/create-mwp-widget` | core | - | Widget scaffolding CLI |
+| `@mwp/validator` | core | CI/CD | Conformance validator |
 
 ---
 
@@ -206,7 +206,7 @@ pnpm dev
 
 ```bash
 # Use the scaffolding tool
-pnpm create-mcp-widget my-custom-widget
+pnpm create-mwp-widget my-custom-widget
 
 # This creates:
 # packages/widgets/my-custom-widget/
@@ -262,7 +262,7 @@ pnpm dev
 pnpm build
 
 # Build specific package
-pnpm --filter @mcp-wp/widget-github build
+pnpm --filter @mwp/widget-github build
 
 # Clean and rebuild
 pnpm clean && pnpm build
@@ -278,7 +278,7 @@ pnpm test
 pnpm test --watch
 
 # Run conformance tests
-pnpm --filter @mcp-wp/validator test
+pnpm --filter @mwp/validator test
 
 # Run integration tests
 pnpm test:integration
@@ -332,7 +332,7 @@ GitHub Actions workflows automatically:
 ### Widgets (`packages/widgets/`)
 
 Each widget package:
-- Implements MCP-WP specification
+- Implements MWP specification
 - Connects to a specific MCP server
 - Provides visual interface for MCP primitives (tools, resources, prompts)
 - Includes tests with >80% coverage
@@ -351,7 +351,7 @@ Each widget package:
 
 ### Dashboard (`packages/dashboard/`)
 
-Reference implementation of MCP-WP host:
+Reference implementation of MWP host:
 - Loads and initializes widgets
 - Provides EventBus for inter-widget communication
 - Provides MCPBridge for MCP server communication
@@ -413,7 +413,7 @@ Reusable implementations of host dependencies:
 ### Tools (`packages/tools/`)
 
 Developer tooling:
-- **create-mcp-widget**: Scaffold new widgets
+- **create-mwp-widget**: Scaffold new widgets
 - **validator**: Validate widget manifests
 - **testing**: Testing utilities and fixtures
 
@@ -467,7 +467,7 @@ Schema validation → MCP server execution → Result returned
 
 ## Performance Requirements
 
-Per MCP-WP Specification Section 18:
+Per MWP Specification Section 18:
 
 - **Bundle Size**: <500KB gzipped (target: 100KB)
 - **Initial Render**: <500ms (target: 200ms)
@@ -478,7 +478,7 @@ Per MCP-WP Specification Section 18:
 
 ## Accessibility Requirements
 
-Per MCP-WP Specification Section 11.5:
+Per MWP Specification Section 11.5:
 
 - **WCAG 2.1 Level AA** compliance required
 - Keyboard navigation support
@@ -506,4 +506,4 @@ MIT License - See [LICENSE](./LICENSE) file
 ---
 
 **Last Updated**: 2025-10-21
-**MCP-WP Version**: 1.0.0
+**MWP Version**: 1.0.0

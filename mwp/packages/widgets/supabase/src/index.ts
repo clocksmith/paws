@@ -3,7 +3,7 @@ import type {
   MCPServerInfo,
   WidgetFactory,
   WidgetFactoryFunction,
-} from '@mcp-wp/core';
+} from '@mwp/core';
 import { SupabaseWidget } from './widget.js';
 
 const TAG_NAME = 'mcp-supabase-widget';
@@ -54,7 +54,7 @@ const createSupabaseWidget: WidgetFactoryFunction = (
         prompts: true,
       },
       author: {
-        name: 'MCP-WP Team',
+        name: 'MWP Team',
       },
       permissions: {
         tools: {

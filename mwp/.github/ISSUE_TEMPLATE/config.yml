@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
   - name: Discord Community
-    url: https://discord.gg/mcp-wp
+    url: https://discord.gg/mwp
     about: Join our Discord community for questions and discussions
   - name: Stack Overflow
-    url: https://stackoverflow.com/questions/tagged/mcp-wp
-    about: Ask questions on Stack Overflow with the mcp-wp tag
+    url: https://stackoverflow.com/questions/tagged/mwp
+    about: Ask questions on Stack Overflow with the mwp tag
   - name: Discussions
-    url: https://github.com/your-org/mcp-wp/discussions
+    url: https://github.com/your-org/mwp/discussions
     about: For general questions, ideas, and community discussions

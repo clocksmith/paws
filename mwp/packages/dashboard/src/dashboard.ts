@@ -10,9 +10,9 @@ import type {
   Configuration as IConfiguration,
   ThemeConfiguration,
   MCPServerInfo,
-} from '@mcp-wp/core';
-import { EventBus } from '@mcp-wp/eventbus';
-import { MCPBridge } from '@mcp-wp/bridge';
+} from '@mwp/core';
+import { EventBus } from '@mwp/eventbus';
+import { MCPBridge } from '@mwp/bridge';
 import type {
   DashboardOptions,
   AddWidgetOptions,

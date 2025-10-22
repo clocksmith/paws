@@ -1,4 +1,4 @@
-# @mcp-wp/widget-fetch
+# @mwp/widget-fetch
 
 **Web Content Fetching and Processing Widget**
 
@@ -18,7 +18,7 @@ A Web Component widget for the Fetch MCP server, providing web content fetching,
 ## Installation
 
 ```bash
-pnpm add @mcp-wp/widget-fetch
+pnpm add @mwp/widget-fetch
 ```
 
 ## Usage
@@ -26,8 +26,8 @@ pnpm add @mcp-wp/widget-fetch
 ### Basic Setup
 
 ```typescript
-import { Dashboard } from '@mcp-wp/dashboard';
-import createFetchWidget from '@mcp-wp/widget-fetch';
+import { Dashboard } from '@mwp/dashboard';
+import createFetchWidget from '@mwp/widget-fetch';
 
 const dashboard = new Dashboard({
   container: document.getElementById('app')!,
@@ -380,7 +380,7 @@ import type {
   FetchRequest,
   FetchResult,
   FetchHistoryItem,
-} from '@mcp-wp/widget-fetch';
+} from '@mwp/widget-fetch';
 
 const config: FetchWidgetConfig = {
   syntaxHighlight: true,
@@ -418,6 +418,6 @@ MIT
 
 ## Related
 
-- [@mcp-wp/core](../core) - Core types and utilities
-- [@mcp-wp/dashboard](../dashboard) - Widget host
+- [@mwp/core](../core) - Core types and utilities
+- [@mwp/dashboard](../dashboard) - Widget host
 - [Fetch MCP Server](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) - Official server

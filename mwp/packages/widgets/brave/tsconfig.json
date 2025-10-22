@@ -44,8 +44,8 @@
     // Paths
     "baseUrl": ".",
     "paths": {
-      "@mcp-wp/widget-brave": ["./src/index.ts"],
-      "@mcp-wp/widget-brave/*": ["./src/*"]
+      "@mwp/widget-brave": ["./src/index.ts"],
+      "@mwp/widget-brave/*": ["./src/*"]
     }
   },
   "include": [

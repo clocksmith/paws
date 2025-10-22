@@ -48,7 +48,7 @@ export function getReploidServerConfig(): ServerConfig {
   const pawsRoot = getPAWSRoot();
   const reploidServerPath = path.join(
     pawsRoot,
-    "packages/reploid/mcp-server/build/server.js"
+    "reploid/mcp-server/build/server.js"
   );
 
   return {

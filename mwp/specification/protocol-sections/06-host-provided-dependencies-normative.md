@@ -4,11 +4,11 @@ Hosts MUST supply the core dependencies described in Sections 6.1–6.3. Section
 
 ### 6.1 EventBus Interface
 
-**MCP-WP-6.1.1:** Same as generic spec (Section 6.1 from MWP).
+**MWP-6.1.1:** Same as generic spec (Section 6.1 from MWP).
 
 ### 6.2 MCPBridge Interface (NEW)
 
-**MCP-WP-6.2.1:** The host MUST provide an MCPBridge instance conforming to:
+**MWP-6.2.1:** The host MUST provide an MCPBridge instance conforming to:
 
 Widgets rely on the bridge to access every MCP primitive advertised in `MCPServerInfo.capabilities`. When a server exposes the `sampling` capability declared in Section 3, the bridge MUST surface the sampling helpers defined below.
 
@@ -106,21 +106,21 @@ interface MCPError extends Error {
 }
 ```
 
-**MCP-WP-6.2.2:** `callTool()` MUST send a `tools/call` JSON-RPC request to the specified MCP server.
+**MWP-6.2.2:** `callTool()` MUST send a `tools/call` JSON-RPC request to the specified MCP server.
 
-**MCP-WP-6.2.3:** `readResource()` MUST send a `resources/read` JSON-RPC request.
+**MWP-6.2.3:** `readResource()` MUST send a `resources/read` JSON-RPC request.
 
-**MCP-WP-6.2.4:** `getPrompt()` MUST send a `prompts/get` JSON-RPC request.
+**MWP-6.2.4:** `getPrompt()` MUST send a `prompts/get` JSON-RPC request.
 
-**MCP-WP-6.2.5:** All MCP operations MUST handle JSON-RPC errors and translate them to JavaScript exceptions.
+**MWP-6.2.5:** All MCP operations MUST handle JSON-RPC errors and translate them to JavaScript exceptions.
 
-**MCP-WP-6.2.6:** MCPBridge MUST emit events on the EventBus for all MCP operations (see Section 8.2).
+**MWP-6.2.6:** MCPBridge MUST emit events on the EventBus for all MCP operations (see Section 8.2).
 
-**MCP-WP-6.2.7:** `createMessage()` MUST send a `sampling/createMessage` JSON-RPC request as defined in the MCP specification and resolve with the content that the user (or host policy) approves.
+**MWP-6.2.7:** `createMessage()` MUST send a `sampling/createMessage` JSON-RPC request as defined in the MCP specification and resolve with the content that the user (or host policy) approves.
 
-**MCP-WP-6.2.8:** Hosts **SHOULD** reuse human-in-the-loop workflows for agent or widget initiated sampling actions (see Section 17) before forwarding responses to servers.
+**MWP-6.2.8:** Hosts **SHOULD** reuse human-in-the-loop workflows for agent or widget initiated sampling actions (see Section 17) before forwarding responses to servers.
 
-**MCP-WP-6.2.9:** The `SamplingRequest` and `SamplingResult` interfaces mirror the MCP 2025-06-18 schema. Widgets MUST treat unknown fields as opaque and pass them through unchanged so hosts can adopt future MCP extensions.
+**MWP-6.2.9:** The `SamplingRequest` and `SamplingResult` interfaces mirror the MCP 2025-06-18 schema. Widgets MUST treat unknown fields as opaque and pass them through unchanged so hosts can adopt future MCP extensions.
 
 | JSON-RPC Code | Name              | Recommended Host Behaviour                                  |
 | ------------- | ----------------- | ------------------------------------------------------------ |
@@ -131,17 +131,17 @@ interface MCPError extends Error {
 | -32603        | Internal error    | Allow manual retry or escalate to server operator           |
 | -32000..-32099| Server error      | Inspect `error.data` and apply backoff before retrying      |
 
-**MCP-WP-6.2.10:** Hosts MAY wrap raw JSON-RPC errors in an `MCPError` so widgets can display consistent messaging while preserving the original `jsonrpcCode` and any attached data.
+**MWP-6.2.10:** Hosts MAY wrap raw JSON-RPC errors in an `MCPError` so widgets can display consistent messaging while preserving the original `jsonrpcCode` and any attached data.
 
 <Note>
-Batch JSON-RPC operations remain out of scope for MCP-WP v1.0. Hosts SHOULD dispatch one request at a time so consent, auditing, and UI state stay predictable.
+Batch JSON-RPC operations remain out of scope for MWP v1.0. Hosts SHOULD dispatch one request at a time so consent, auditing, and UI state stay predictable.
 </Note>
 
 ### 6.3 Configuration Interface
 
-**MCP-WP-6.3.1:** Same as generic spec, with MCP-specific keys:
+**MWP-6.3.1:** Same as generic spec, with MCP-specific keys:
 
-**MCP-WP-6.3.2:** Standard configuration keys:
+**MWP-6.3.2:** Standard configuration keys:
 
 | Key                  | Type    | Description                            |
 | -------------------- | ------- | -------------------------------------- |
@@ -152,7 +152,7 @@ Batch JSON-RPC operations remain out of scope for MCP-WP v1.0. Hosts SHOULD disp
 
 ### 6.4 Theme Interface (Optional)
 
-**MCP-WP-6.4.1:** Hosts implementing theming **SHOULD** provide a `Theme` dependency with the following interface:
+**MWP-6.4.1:** Hosts implementing theming **SHOULD** provide a `Theme` dependency with the following interface:
 
 ```typescript
 interface Theme {
@@ -254,25 +254,25 @@ interface ColorAdaptationOptions {
 }
 ```
 
-**MCP-WP-6.4.2:** Hosts providing `Theme` **MUST**:
+**MWP-6.4.2:** Hosts providing `Theme` **MUST**:
 - Inject all 18 base CSS custom properties (as defined in Section 5.5.3) into widget shadow roots
 - Provide at least `light` and `dark` theme modes
 - Update theme tokens dynamically when user changes theme preferences
 - Persist theme preference across sessions
 
-**MCP-WP-6.4.3:** Hosts providing `Theme` **SHOULD**:
+**MWP-6.4.3:** Hosts providing `Theme` **SHOULD**:
 - Provide extended color palettes (`accentColors`, `dataColors`, `semanticColors`)
 - Implement optional helper methods (`getContrastRatio`, `adaptColor`, `generateColorScale`)
 - Support scoped theming configuration for widgets with custom branding requirements
 - Respect system-level theme preferences (e.g., `prefers-color-scheme`)
 
-**MCP-WP-6.4.4:** Widgets using `Theme` **MUST**:
+**MWP-6.4.4:** Widgets using `Theme` **MUST**:
 - Detect the presence of the `Theme` dependency at runtime
 - Gracefully degrade to fallback styling if `Theme` is undefined
 - Use CSS custom properties for all themeable elements
 - Subscribe to theme changes via `onChange` if real-time updates are needed
 
-**MCP-WP-6.4.5:** Extended theming for complex widgets:
+**MWP-6.4.5:** Extended theming for complex widgets:
 
 Widgets with extensive custom styling (e.g., data visualizations, branded components) **MAY** use:
 
@@ -312,14 +312,14 @@ Widgets with extensive custom styling (e.g., data visualizations, branded compon
    }
    ```
 
-**MCP-WP-6.4.6:** Accessibility requirements for theming:
+**MWP-6.4.6:** Accessibility requirements for theming:
 
 Hosts implementing `Theme` with `getContrastRatio` **SHOULD**:
 - Ensure all theme color combinations meet WCAG 2.1 Level AA (4.5:1 for normal text, 3:1 for large text)
 - Provide `accessible` color scheme option with enhanced contrast ratios (7:1 for AAA compliance)
 - Support high-contrast mode detection via `mode: 'high-contrast'`
 
-**MCP-WP-6.4.7:** Theme configuration example:
+**MWP-6.4.7:** Theme configuration example:
 
 ```typescript
 // Dashboard configuration with extended theming
@@ -344,11 +344,11 @@ const themeConfig = {
 
 ### 6.5 Inter-Widget Communication Bus
 
-**MCP-WP-6.5.1:** Hosts MAY extend the EventBus to support widget-to-widget communication.
+**MWP-6.5.1:** Hosts MAY extend the EventBus to support widget-to-widget communication.
 
-**MCP-WP-6.5.2:** Widget communication uses dedicated event channels: `mcp:widget:<targetWidget>:message`
+**MWP-6.5.2:** Widget communication uses dedicated event channels: `mcp:widget:<targetWidget>:message`
 
-**MCP-WP-6.5.3:** Inter-widget communication interface:
+**MWP-6.5.3:** Inter-widget communication interface:
 
 ```typescript
 interface WidgetMessaging {
@@ -372,13 +372,13 @@ interface WidgetMessage {
 type MessageHandler = (message: WidgetMessage) => void;
 ```
 
-**MCP-WP-6.5.4:** Hosts implementing widget messaging MUST:
+**MWP-6.5.4:** Hosts implementing widget messaging MUST:
 - Validate message schema before delivery
 - Enforce rate limits (default: 10 messages/second per widget)
 - Provide sender verification (prevent spoofing)
 - Log all inter-widget messages for debugging
 
-**MCP-WP-6.5.5:** Example composite workflow:
+**MWP-6.5.5:** Example composite workflow:
 
 ```javascript
 // GitHub widget emits PR created event
@@ -400,12 +400,12 @@ EventBus.on('mcp:widget:slack-widget:message', (event) => {
 });
 ```
 
-**MCP-WP-6.5.6:** Security considerations:
+**MWP-6.5.6:** Security considerations:
 - Widgets MUST declare `widgetCommunication` permission to send messages
 - Recipients MAY implement allowlists for trusted senders
 - Hosts SHOULD sanitize all message payloads to prevent XSS
 
-**MCP-WP-6.5.7:** Message schema validation:
+**MWP-6.5.7:** Message schema validation:
 
 ```typescript
 interface WidgetCommunicationPermission {
@@ -418,9 +418,9 @@ interface WidgetCommunicationPermission {
 
 ### 6.6 Offline Capability Contract
 
-**MCP-WP-6.6.1:** Hosts that advertise offline support **MUST** provide an `OfflineCache` dependency.
+**MWP-6.6.1:** Hosts that advertise offline support **MUST** provide an `OfflineCache` dependency.
 
-**MCP-WP-6.6.2:** Widgets **MAY** inspect the dependency list to detect offline availability and **MUST** degrade gracefully if it is absent.
+**MWP-6.6.2:** Widgets **MAY** inspect the dependency list to detect offline availability and **MUST** degrade gracefully if it is absent.
 
 ```typescript
 interface OfflineCache {
@@ -441,11 +441,11 @@ interface QueuedOperation {
 }
 ```
 
-**MCP-WP-6.6.3:** Hosts providing `OfflineCache` **MUST** ensure queued operations are executed in order once connectivity returns and **MUST** present conflicts to the user if execution fails.
+**MWP-6.6.3:** Hosts providing `OfflineCache` **MUST** ensure queued operations are executed in order once connectivity returns and **MUST** present conflicts to the user if execution fails.
 
 ### 6.7 Telemetry Interface
 
-**MCP-WP-6.7.1:** Hosts collecting usage analytics **MUST** expose a `Telemetry` dependency and obtain user consent before forwarding any events.
+**MWP-6.7.1:** Hosts collecting usage analytics **MUST** expose a `Telemetry` dependency and obtain user consent before forwarding any events.
 
 ```typescript
 interface Telemetry {
@@ -455,13 +455,13 @@ interface Telemetry {
 }
 ```
 
-**MCP-WP-6.7.2:** Widgets **MUST NOT** send personally identifiable information through `Telemetry` unless explicitly required permissions are granted.
+**MWP-6.7.2:** Widgets **MUST NOT** send personally identifiable information through `Telemetry` unless explicitly required permissions are granted.
 
-**MCP-WP-6.7.3:** Hosts **SHOULD** provide no-op implementations when telemetry collection is disabled.
+**MWP-6.7.3:** Hosts **SHOULD** provide no-op implementations when telemetry collection is disabled.
 
 ### 6.8 Internationalization Interface
 
-**MCP-WP-6.8.1:** Hosts targeting multiple locales **SHOULD** provide an `I18n` dependency.
+**MWP-6.8.1:** Hosts targeting multiple locales **SHOULD** provide an `I18n` dependency.
 
 ```typescript
 interface I18n {
@@ -472,8 +472,8 @@ interface I18n {
 }
 ```
 
-**MCP-WP-6.8.2:** Widgets using `I18n` **MUST** fall back to built-in strings when the dependency is not present.
+**MWP-6.8.2:** Widgets using `I18n` **MUST** fall back to built-in strings when the dependency is not present.
 
-**MCP-WP-6.8.3:** Hosts **MUST** keep locale data and user preference storage in sync so widgets receive timely updates via configuration change notifications.
+**MWP-6.8.3:** Hosts **MUST** keep locale data and user preference storage in sync so widgets receive timely updates via configuration change notifications.
 
 ---

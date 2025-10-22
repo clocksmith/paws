@@ -2,3 +2,5 @@ packages:
   - 'packages/*'
   - 'integrations/*'
   - 'mwp/packages/*'
+  - 'mwp/packages/tools/*'
+  - 'reploid'

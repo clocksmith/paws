@@ -1,6 +1,6 @@
 # MCP Widget Protocol Specification
 
-This directory contains the complete MCP Widget Protocol (MCP-WP) specification and tooling for editing it.
+This directory contains the complete MCP Widget Protocol (MWP) specification and tooling for editing it.
 
 ## 📄 Files
 
@@ -152,7 +152,7 @@ node packaging/split-protocol.js
 cat > protocol-sections/19-new-feature.md << 'EOF'
 ## 19. New Feature (Normative)
 
-**MCP-WP-19.1.1:** Requirements for the new feature...
+**MWP-19.1.1:** Requirements for the new feature...
 EOF
 
 # Reassemble (auto-detects new section)

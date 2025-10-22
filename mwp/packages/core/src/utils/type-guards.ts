@@ -1,7 +1,7 @@
 /**
  * Type Guard Utilities
  *
- * Runtime type checking functions for MCP-WP types.
+ * Runtime type checking functions for MWP types.
  */
 
 import type {

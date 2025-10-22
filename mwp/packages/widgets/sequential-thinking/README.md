@@ -1,4 +1,4 @@
-# @mcp-wp/widget-sequential-thinking
+# @mwp/widget-sequential-thinking
 
 **Sequential Thinking Visualization Widget**
 
@@ -18,7 +18,7 @@ A Web Component widget for the Sequential Thinking MCP server, providing visuali
 ## Installation
 
 ```bash
-pnpm add @mcp-wp/widget-sequential-thinking
+pnpm add @mwp/widget-sequential-thinking
 ```
 
 ## Usage
@@ -26,8 +26,8 @@ pnpm add @mcp-wp/widget-sequential-thinking
 ### Basic Setup
 
 ```typescript
-import { Dashboard } from '@mcp-wp/dashboard';
-import createSequentialThinkingWidget from '@mcp-wp/widget-sequential-thinking';
+import { Dashboard } from '@mwp/dashboard';
+import createSequentialThinkingWidget from '@mwp/widget-sequential-thinking';
 
 const dashboard = new Dashboard({
   container: document.getElementById('app')!,
@@ -391,7 +391,7 @@ import type {
   ThinkingWidgetConfig,
   ThinkingSession,
   ThinkingStep,
-} from '@mcp-wp/widget-sequential-thinking';
+} from '@mwp/widget-sequential-thinking';
 
 const config: ThinkingWidgetConfig = {
   showTimings: true,
@@ -417,6 +417,6 @@ MIT
 
 ## Related
 
-- [@mcp-wp/core](../core) - Core types and utilities
-- [@mcp-wp/dashboard](../dashboard) - Widget host
+- [@mwp/core](../core) - Core types and utilities
+- [@mwp/dashboard](../dashboard) - Widget host
 - [Sequential Thinking MCP Server](https://github.com/modelcontextprotocol/servers/tree/main/src/sequential-thinking) - Official server

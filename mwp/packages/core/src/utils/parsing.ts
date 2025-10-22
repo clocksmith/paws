@@ -1,7 +1,7 @@
 /**
  * Parsing Utilities
  *
- * Helper functions for parsing MCP-WP data structures.
+ * Helper functions for parsing MWP data structures.
  */
 
 import type { JSONSchema } from '../types/dependencies.js';
@@ -217,7 +217,7 @@ function parseSchemaProperty(schema: JSONSchema): SchemaProperty {
 /**
  * Parse package name
  *
- * @param packageName - Package name (e.g., "@mcp-wp/widget-github")
+ * @param packageName - Package name (e.g., "@mwp/widget-github")
  * @returns Parsed package components
  */
 export function parsePackageName(packageName: string): {

@@ -4,7 +4,7 @@
  * Pre-configured themes for common design systems.
  */
 
-import type { ThemeConfiguration } from '@mcp-wp/core';
+import type { ThemeConfiguration } from '@mwp/core';
 
 /**
  * Default Theme

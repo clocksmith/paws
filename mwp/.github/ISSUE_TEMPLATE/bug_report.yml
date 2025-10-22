@@ -1,5 +1,5 @@
 name: Bug Report
-description: Report a bug or issue with MCP-WP
+description: Report a bug or issue with MWP
 title: "[Bug]: "
 labels: ["bug", "triage"]
 body:
@@ -14,10 +14,10 @@ body:
       label: Component
       description: Which component is affected?
       options:
-        - Core (@mcp-wp/core)
-        - Bridge (@mcp-wp/bridge)
-        - EventBus (@mcp-wp/eventbus)
-        - Dashboard (@mcp-wp/dashboard)
+        - Core (@mwp/core)
+        - Bridge (@mwp/bridge)
+        - EventBus (@mwp/eventbus)
+        - Dashboard (@mwp/dashboard)
         - Widget (specify in description)
         - CLI Tool (specify in description)
         - Documentation
@@ -86,7 +86,7 @@ body:
     id: version
     attributes:
       label: Version
-      description: Which version of MCP-WP are you using?
+      description: Which version of MWP are you using?
       placeholder: "1.0.0"
     validations:
       required: true

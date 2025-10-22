@@ -1,8 +1,8 @@
 /**
- * Test fixtures for MCP-WP testing
+ * Test fixtures for MWP testing
  */
 
-import type { MCPServerInfo, MCPTool, MCPResource, MCPPrompt } from '@mcp-wp/core';
+import type { MCPServerInfo, MCPTool, MCPResource, MCPPrompt } from '@mwp/core';
 
 /**
  * Create mock MCP server info

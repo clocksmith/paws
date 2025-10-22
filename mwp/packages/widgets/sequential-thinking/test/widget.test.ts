@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import type { types } from '@mcp-wp/core';
+import type { types } from '@mwp/core';
 import createSequentialThinkingWidget from '../src/index.js';
 import { SequentialThinkingWidget } from '../src/widget.js';
 

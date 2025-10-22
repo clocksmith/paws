@@ -12,7 +12,7 @@ The competitive landscape analysis for the proposed "MCP Widget Protocol" (MWP) 
 
 ### Critical Divergence: Governance and Formalization
 
-The primary deviation from the MWP analysis is that **no formal MCP-WP standard has emerged**. Instead, mcp-ui has evolved from "experimental playground" toward production readiness without formalizing into the standardized protocol that MWP envisioned. This creates both an opportunity and a risk.
+The primary deviation from the MWP analysis is that **no formal MWP standard has emerged**. Instead, mcp-ui has evolved from "experimental playground" toward production readiness without formalizing into the standardized protocol that MWP envisioned. This creates both an opportunity and a risk.
 
 ---
 
@@ -58,7 +58,7 @@ The analysis warned of a "single, well-crafted 'MCP Data Source' plugin" unlocki
 Grafana has not merely "adapted" to MCP—it has **embraced it as a core integration layer**. The threat is now existential: Grafana's vast panel ecosystem (hundreds of plugins) is now available for MCP data visualization. Any new protocol must answer the question: "Why not just use Grafana?"
 
 #### MWP's Defensive Strategy Still Valid:
-The recommendation to develop an "MCP-WP Host for Grafana" (a panel plugin that renders MCP-WP widgets) remains the correct counter-strategy. However, this now requires competing with Grafana's *native* MCP integration, raising the bar significantly.
+The recommendation to develop an "MWP Host for Grafana" (a panel plugin that renders MWP widgets) remains the correct counter-strategy. However, this now requires competing with Grafana's *native* MCP integration, raising the bar significantly.
 
 ---
 
@@ -74,8 +74,8 @@ The recommendation to develop an "MCP-WP Host for Grafana" (a panel plugin that 
 - **Tool visualization**: Rich dialogs with editable parameters
 - **Extension contribution model**: Extensions can bundle MCP servers
 
-#### Impact on MCP-WP's Value Proposition:
-The MWP analysis correctly identified the "good enough" threat of platform-locked solutions. VS Code's native MCP integration is **exceptionally good**, providing a frictionless developer experience that any external protocol must exceed. The "portability" argument (build once, embed anywhere) remains MCP-WP's only differentiator—but developers must first feel *pain* from VS Code lock-in before seeking alternatives.
+#### Impact on MWP's Value Proposition:
+The MWP analysis correctly identified the "good enough" threat of platform-locked solutions. VS Code's native MCP integration is **exceptionally good**, providing a frictionless developer experience that any external protocol must exceed. The "portability" argument (build once, embed anywhere) remains MWP's only differentiator—but developers must first feel *pain* from VS Code lock-in before seeking alternatives.
 
 #### Current Reality:
 Most MCP developers are building *for* VS Code, not in spite of it. The market has not yet demanded cross-platform portability at scale.
@@ -99,7 +99,7 @@ The DaaS platforms have not aggressively pivoted to AI-native dashboards because
 3. **Vertical integration**: Observability platforms (LangSmith, Braintrust) are building custom UIs, not adopting generic DaaS
 
 #### Strategic Implication:
-MWP's concern about DaaS "Trojan Horse" adaptations was overstated. The real battle is between **protocol-native solutions** (mcp-ui, Grafana's MCP integration) vs. **formal standards** (the still-missing MCP-WP), not against generic BI platforms.
+MWP's concern about DaaS "Trojan Horse" adaptations was overstated. The real battle is between **protocol-native solutions** (mcp-ui, Grafana's MCP integration) vs. **formal standards** (the still-missing MWP), not against generic BI platforms.
 
 ---
 
@@ -117,7 +117,7 @@ MWP's concern about DaaS "Trojan Horse" adaptations was overstated. The real bat
 The analysis correctly anticipated that observability platforms would need interactive UIs beyond trace viewing. However, they have not yet built extensible widget systems—they're building *integrated* experiences (e.g., Grafana Assistant for natural language queries) rather than *modular* widget protocols.
 
 #### Window of Opportunity:
-The MWP analysis suggested a "crucial but limited window" to establish MCP-WP before observability platforms build widget capabilities. **This window remains open**, but is narrowing as platforms choose vertical integration over horizontal extensibility.
+The MWP analysis suggested a "crucial but limited window" to establish MWP before observability platforms build widget capabilities. **This window remains open**, but is narrowing as platforms choose vertical integration over horizontal extensibility.
 
 ---
 
@@ -127,7 +127,7 @@ The MWP analysis suggested a "crucial but limited window" to establish MCP-WP be
 
 **Current Reality Check:**
 
-| MWP Requirement | mcp-ui | Grafana MCP | VS Code MCP | MCP-WP (Proposed) |
+| MWP Requirement | mcp-ui | Grafana MCP | VS Code MCP | MWP (Proposed) |
 |-----------------|--------|-------------|-------------|-------------------|
 | **Protocol-Native** | ✅ Yes | ⚠️ Partial | ⚠️ Partial | ✅ Yes |
 | **Platform-Agnostic** | ✅ Yes | ❌ Grafana-locked | ❌ VS Code-locked | ✅ Yes |
@@ -148,15 +148,15 @@ The MWP analysis suggested a "crucial but limited window" to establish MCP-WP be
 ### 3.1 The Collaboration Strategy: More Urgent Than Ever
 
 **MWP's Original Recommendation**:
-> "The most effective path forward is not competition but collaboration. MCP-WP should aim to formalize and build upon the successful concepts pioneered by mcp-ui."
+> "The most effective path forward is not competition but collaboration. MWP should aim to formalize and build upon the successful concepts pioneered by mcp-ui."
 
 **2025 Assessment**: **CRITICAL PRIORITY**
 
 #### Action Items (Updated):
 1. **Immediate engagement**: Reach out to Ido Salomon (mcp-ui creator) and propose a joint standardization working group
-2. **Merge, don't fork**: Position MCP-WP as "mcp-ui 2.0: The Formal Specification" rather than a competitor
+2. **Merge, don't fork**: Position MWP as "mcp-ui 2.0: The Formal Specification" rather than a competitor
 3. **Governance proposal**: Offer a W3C Community Group model with mcp-ui contributors as founding members
-4. **Backward compatibility**: Commit to supporting existing mcp-ui UIResource format in MCP-WP 1.0 spec
+4. **Backward compatibility**: Commit to supporting existing mcp-ui UIResource format in MWP 1.0 spec
 
 #### Risk if Not Executed:
 mcp-ui will continue its trajectory toward de facto standardization. By 2026, attempting to introduce a competing protocol will be perceived as fragmenting a working ecosystem, generating community backlash similar to the ES4/ES5 JavaScript standardization conflicts.
@@ -170,7 +170,7 @@ mcp-ui will continue its trajectory toward de facto standardization. By 2026, at
 **2025 Reality**: mcp-ui's iframe + remote-dom model is working in production (Shopify). The security "gap" is narrower than MWP assumed.
 
 #### Updated Strategy:
-- **Don't claim superior security—demonstrate it**: Publish formal threat model analysis comparing MCP-WP vs. mcp-ui
+- **Don't claim superior security—demonstrate it**: Publish formal threat model analysis comparing MWP vs. mcp-ui
 - **CVE response advantage**: Show how formal governance enables faster security updates (note: Anthropic MCP Inspector had CVE-2025-49596)
 - **Enterprise audit trail**: Provide compliance documentation (SOC2, ISO 27001 alignment) that ad-hoc projects cannot
 - **Permissions granularity**: Deliver Chrome MV3-style declarative permissions that exceed iframe sandboxing
@@ -179,14 +179,14 @@ mcp-ui will continue its trajectory toward de facto standardization. By 2026, at
 
 ### 3.3 Positioning Against Grafana: Symbiosis, Not Competition
 
-**MWP's Strategy**: Build "MCP-WP Host for Grafana" to turn competitor into distribution channel
+**MWP's Strategy**: Build "MWP Host for Grafana" to turn competitor into distribution channel
 
 **2025 Update**: Grafana's native MCP integration changes the calculus
 
 #### Revised Approach:
-Instead of "MCP-WP widgets inside Grafana," focus on:
-1. **Complementary use cases**: Grafana for metrics/logs/traces; MCP-WP for agent interaction and control UIs
-2. **Embeddability**: MCP-WP widgets can be embedded in Grafana *dashboards*, but also in docs, IDEs, and web apps
+Instead of "MWP widgets inside Grafana," focus on:
+1. **Complementary use cases**: Grafana for metrics/logs/traces; MWP for agent interaction and control UIs
+2. **Embeddability**: MWP widgets can be embedded in Grafana *dashboards*, but also in docs, IDEs, and web apps
 3. **Lightweight alternative**: Position as "Grafana for when you don't need all of Grafana"—avoid the enterprise platform complexity for simple agent dashboards
 
 ---
@@ -198,9 +198,9 @@ Instead of "MCP-WP widgets inside Grafana," focus on:
 **Actual Barrier in 2025**: VS Code + native MCP support provides zero-friction DX. Any protocol must match or exceed this.
 
 #### Updated DX Requirements:
-- **Onboarding in <5 minutes**: `npx create-mcp-widget` → working demo
+- **Onboarding in <5 minutes**: `npx create-mwp-widget` → working demo
 - **Hot reload**: Live preview during development (like Storybook)
-- **TypeScript-first**: Full type safety for widget APIs (mcp-ui has this; MCP-WP must match)
+- **TypeScript-first**: Full type safety for widget APIs (mcp-ui has this; MWP must match)
 - **Testing utilities**: Built-in tools for unit/integration testing widgets
 - **VS Code extension**: Native support in developer's primary environment (don't fight it, embrace it)
 
@@ -252,17 +252,17 @@ Module Federation has not emerged as a significant pattern in the MCP ecosystem.
 - [ ] Publish formal threat model comparing security approaches
 - [ ] Build reference implementation with Chrome MV3-style permissions
 - [ ] Create enterprise compliance documentation
-- [ ] Develop automated security scanning for MCP-WP widgets
+- [ ] Develop automated security scanning for MWP widgets
 
 ### Priority 3: Developer Experience Parity (Months 3-9)
 - [ ] Ship TypeScript SDK with DX matching mcp-ui
-- [ ] Build VS Code extension for MCP-WP development
+- [ ] Build VS Code extension for MWP development
 - [ ] Create interactive tutorial (in-browser, no install required)
 - [ ] Establish <5 minute "hello world" benchmark
 
 ### Priority 4: Ecosystem Integration (Months 6-12)
-- [ ] MCP-WP renderer for Grafana dashboards
-- [ ] MCP-WP panel for VS Code
+- [ ] MWP renderer for Grafana dashboards
+- [ ] MWP panel for VS Code
 - [ ] Integration guides for Next.js, React, Vue
 - [ ] Partnership discussions with LangSmith, Braintrust
 
@@ -286,7 +286,7 @@ Module Federation has not emerged as a significant pattern in the MCP ecosystem.
                            ↑
                            |
     Grafana MCP        [WHITE SPACE]      VS Code MCP
-    Data Source     ← (MCP-WP could go    Extension API
+    Data Source     ← (MWP could go    Extension API
                         here, but doesn't
     Retool             exist yet)
                            |
@@ -302,7 +302,7 @@ Generic ←─────────────────┼─────
 ### Key Change from MWP's Original Map:
 **mcp-ui is migrating upward** on the Y-axis. While still labeled "experimental," its production deployments, multi-language SDK ecosystem, and growing adoption are giving it *de facto* formality without *de jure* standardization.
 
-**The white space is shrinking**. If MCP-WP does not act soon, mcp-ui will occupy the top-right quadrant through momentum alone.
+**The white space is shrinking**. If MWP does not act soon, mcp-ui will occupy the top-right quadrant through momentum alone.
 
 ---
 
@@ -332,26 +332,26 @@ Generic ←─────────────────┼─────
 
 ## Section 8: The Question MWP Couldn't Answer
 
-### "Should MCP-WP Even Exist?"
+### "Should MWP Even Exist?"
 
 **MWP's Implicit Assumption**: A formal widget protocol is *needed*
 
 **2025 Counter-Argument**: mcp-ui is working. Grafana and VS Code provide excellent native experiences. Is the "problem" solved?
 
-#### The Case Against MCP-WP:
+#### The Case Against MWP:
 1. **Market fragmentation risk**: Introducing a new standard might split the ecosystem
 2. **Innovation tax**: Formal standardization slows iteration velocity
 3. **Unclear value**: Portability is theoretical; most developers build for one platform
 4. **Governance overhead**: W3C-style processes are slow and political
 
-#### The Case For MCP-WP (Revised):
+#### The Case For MWP (Revised):
 1. **Insurance against platform risk**: If Grafana changes direction, or VS Code deprioritizes MCP, locked-in developers lose
 2. **Multi-platform reality**: Enterprise teams use Grafana, VS Code, web dashboards, and docs sites—portability has real value
 3. **Security standardization**: Ad-hoc solutions accumulate tech debt; formal specs enable ecosystem-wide security tooling
 4. **Long-term ecosystem health**: Open governance prevents single-vendor capture
 
 ### Recommendation:
-**MCP-WP should exist, but only if it collaborates with mcp-ui from day one**. A "competitor" protocol is net-negative. A "formalization partner" protocol is net-positive.
+**MWP should exist, but only if it collaborates with mcp-ui from day one**. A "competitor" protocol is net-negative. A "formalization partner" protocol is net-positive.
 
 ---
 

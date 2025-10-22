@@ -1,5 +1,5 @@
 {
-  "name": "@mcp-wp/bridge",
+  "name": "@mwp/bridge",
   "version": "1.0.0",
   "description": "MCPBridge implementation for MCP Widget Protocol",
   "type": "module",
@@ -26,14 +26,14 @@
   },
   "keywords": [
     "mcp",
-    "mcp-wp",
+    "mwp",
     "bridge",
     "client"
   ],
-  "author": "MCP-WP Team",
+  "author": "MWP Team",
   "license": "MIT",
   "dependencies": {
-    "@mcp-wp/core": "workspace:*",
+    "@mwp/core": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "devDependencies": {

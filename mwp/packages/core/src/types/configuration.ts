@@ -2,7 +2,7 @@
  * Configuration Types
  *
  * Defines configuration structures for dashboard and widgets.
- * Based on MCP-WP Specification Section 11 (Configuration)
+ * Based on MWP Specification Section 11 (Configuration)
  */
 
 import type { WidgetPermissions } from './permissions.js';
@@ -10,7 +10,7 @@ import type { WidgetPermissions } from './permissions.js';
 /**
  * Dashboard Configuration
  *
- * Complete configuration for an MCP-WP dashboard.
+ * Complete configuration for an MWP dashboard.
  */
 export interface DashboardConfiguration {
   /**
@@ -302,7 +302,7 @@ export interface WidgetConfiguration {
   id: string;
 
   /**
-   * Widget package name (e.g., "@mcp-wp/widget-github")
+   * Widget package name (e.g., "@mwp/widget-github")
    */
   package: string;
 

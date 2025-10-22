@@ -9,7 +9,7 @@ import type {
   WidgetFactory,
   Dependencies,
   MCPServerInfo,
-} from '@mcp-wp/core';
+} from '@mwp/core';
 import { FetchWidget } from './widget.js';
 
 /**
@@ -77,7 +77,7 @@ const createFetchWidget: WidgetFactoryFunction = (
       tags: ['fetch', 'web', 'scraping', 'content', 'http'],
       version: '1.0.0',
       author: {
-        name: 'MCP-WP Team',
+        name: 'MWP Team',
       },
       permissions: {
         tools: {

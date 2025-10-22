@@ -510,7 +510,6 @@ In `config.json`, add:
 - `personas/CodeRefactorerPersona.js` - Built-in refactoring persona
 - `upgrades/sentinel-fsm.js` - Default FSM cycle
 - `upgrades/agent-cycle.js` - Default agent cycle
-- `hermes/paxos_orchestrator.js` - Multi-mind deliberation prompt
 
 ---
 

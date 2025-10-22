@@ -1,5 +1,5 @@
 {
-  "name": "@mcp-wp/widget-filesystem",
+  "name": "@mwp/widget-filesystem",
   "version": "1.0.0",
   "description": "MCP Widget for filesystem operations and file browsing",
   "type": "module",
@@ -22,7 +22,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@mcp-wp/core": "workspace:*"
+    "@mwp/core": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
@@ -36,11 +36,11 @@
     "file-browser",
     "web-component"
   ],
-  "author": "MCP-WP Team",
+  "author": "MWP Team",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/mcp-wp.git",
+    "url": "https://github.com/your-org/mwp.git",
     "directory": "packages/widgets/filesystem"
   }
 }

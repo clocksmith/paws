@@ -1,7 +1,7 @@
 /**
- * @mcp-wp/testing
+ * @mwp/testing
  *
- * Testing utilities for MCP-WP widget development
+ * Testing utilities for MWP widget development
  */
 
 // Re-export everything from submodules

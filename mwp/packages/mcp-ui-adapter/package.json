@@ -1,0 +1,40 @@
+{
+  "name": "@mwp/mcp-ui-adapter",
+  "version": "1.0.0",
+  "description": "Adapter to run MWP widgets in mcp-ui's iframe environment",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc && vite build",
+    "test": "vitest",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-ui",
+    "mwp",
+    "adapter",
+    "widget"
+  ],
+  "author": "MWP Contributors",
+  "license": "MIT",
+  "dependencies": {
+    "@mwp/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "peerDependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}

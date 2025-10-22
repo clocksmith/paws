@@ -171,15 +171,6 @@ cats "src/**/*.js" -o turn-0.cats.md
 dogs turn-0.dogs.md --verify "npm test"
 ```
 
-### With Project Hermes
-
-The Node.js server uses the PAWS CLI tools:
-
-```javascript
-const { main: createCatsBundle } = require('@paws/cli-js/src/cats');
-const { main: applyDogsBundle } = require('@paws/cli-js/src/dogs');
-```
-
 ### In CI/CD Pipelines
 
 ```yaml

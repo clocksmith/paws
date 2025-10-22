@@ -4,7 +4,7 @@
  * Handles MCP resource reading with caching support.
  */
 
-import type { EventBus, ResourceContent } from '@mcp-wp/core';
+import type { EventBus, ResourceContent } from '@mwp/core';
 import type { ClientManager } from './client-manager.js';
 import { ResourceReadError } from './errors.js';
 

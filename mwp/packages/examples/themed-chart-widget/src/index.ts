@@ -8,9 +8,9 @@
  * 4. Color adaptation helpers
  */
 
-import type { Dependencies, ThemeInterface } from '@mcp-wp/core/types/dependencies';
-import type { MCPWidgetMetadata } from '@mcp-wp/core/types/metadata';
-import { ThemeUtils } from '@mcp-wp/core/utils/theme-helpers';
+import type { Dependencies, ThemeInterface } from '@mwp/core/types/dependencies';
+import type { MCPWidgetMetadata } from '@mwp/core/types/metadata';
+import { ThemeUtils } from '@mwp/core/utils/theme-helpers';
 
 interface ChartData {
   label: string;

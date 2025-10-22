@@ -1,11 +1,11 @@
-# @mcp-wp/testing
+# @mwp/testing
 
-Comprehensive testing utilities for MCP-WP widget development. Includes mocks, fixtures, helpers, and test utilities for building robust widget tests.
+Comprehensive testing utilities for MWP widget development. Includes mocks, fixtures, helpers, and test utilities for building robust widget tests.
 
 ## Installation
 
 ```bash
-pnpm add -D @mcp-wp/testing vitest happy-dom
+pnpm add -D @mwp/testing vitest happy-dom
 ```
 
 ## Features
@@ -23,7 +23,7 @@ pnpm add -D @mcp-wp/testing vitest happy-dom
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { createMockDependencies, mountWidget, waitForRender } from '@mcp-wp/testing';
+import { createMockDependencies, mountWidget, waitForRender } from '@mwp/testing';
 import { MyWidget } from '../src/widget';
 
 describe('MyWidget', () => {
@@ -411,7 +411,7 @@ Create `test/setup.ts`:
 
 ```typescript
 import { beforeAll, afterEach } from 'vitest';
-import { cleanup } from '@mcp-wp/testing';
+import { cleanup } from '@mwp/testing';
 
 beforeAll(() => {
   // Global setup
@@ -437,7 +437,7 @@ afterEach(() => {
 Full TypeScript support with proper typings:
 
 ```typescript
-import type { MockEventBus, MockMCPBridge } from '@mcp-wp/testing';
+import type { MockEventBus, MockMCPBridge } from '@mwp/testing';
 
 const eventBus: MockEventBus = mockEventBus();
 const bridge: MockMCPBridge = mockMCPBridge();

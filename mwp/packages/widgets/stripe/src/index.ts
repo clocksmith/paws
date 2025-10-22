@@ -3,7 +3,7 @@ import type {
   MCPServerInfo,
   WidgetFactory,
   WidgetFactoryFunction,
-} from '@mcp-wp/core';
+} from '@mwp/core';
 import { StripeWidget } from './widget.js';
 
 const TAG = 'mcp-stripe-widget';
@@ -54,7 +54,7 @@ const createStripeWidget: WidgetFactoryFunction = (
         prompts: true,
       },
       author: {
-        name: 'MCP-WP Team',
+        name: 'MWP Team',
       },
       permissions: {
         tools: {

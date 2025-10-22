@@ -4,7 +4,7 @@
  * Handles MCP tool invocation with validation and error handling.
  */
 
-import type { EventBus, ToolResult } from '@mcp-wp/core';
+import type { EventBus, ToolResult } from '@mwp/core';
 import type { ClientManager } from './client-manager.js';
 import { ToolExecutionError, TimeoutError } from './errors.js';
 

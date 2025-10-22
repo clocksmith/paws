@@ -10,23 +10,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial monorepo structure with pnpm workspaces
 - Core packages:
-  - `@mcp-wp/core` - Core widget protocol interfaces
-  - `@mcp-wp/bridge` - MCP bridge implementation
-  - `@mcp-wp/eventbus` - Event bus system
-  - `@mcp-wp/dashboard` - Dashboard orchestrator
-  - `@mcp-wp/server` - MCP server implementation
+  - `@mwp/core` - Core widget protocol interfaces
+  - `@mwp/bridge` - MCP bridge implementation
+  - `@mwp/eventbus` - Event bus system
+  - `@mwp/dashboard` - Dashboard orchestrator
+  - `@mwp/server` - MCP server implementation
 - Widget packages:
-  - `@mcp-wp/github-widget` - GitHub integration
-  - `@mcp-wp/playwright-widget` - Browser automation
-  - `@mcp-wp/filesystem-widget` - File system access
-  - `@mcp-wp/brave-widget` - Brave Search integration
-  - `@mcp-wp/sequential-thinking-widget` - Reasoning chains
-  - `@mcp-wp/memory-widget` - Context persistence
-  - `@mcp-wp/fetch-widget` - HTTP requests
+  - `@mwp/github-widget` - GitHub integration
+  - `@mwp/playwright-widget` - Browser automation
+  - `@mwp/filesystem-widget` - File system access
+  - `@mwp/brave-widget` - Brave Search integration
+  - `@mwp/sequential-thinking-widget` - Reasoning chains
+  - `@mwp/memory-widget` - Context persistence
+  - `@mwp/fetch-widget` - HTTP requests
 - Development tools:
-  - `@mcp-wp/create-mcp-widget` - Widget scaffolding CLI
-  - `@mcp-wp/validator` - Protocol conformance validator
-  - `@mcp-wp/testing` - Testing utilities package
+  - `@mwp/create-mwp-widget` - Widget scaffolding CLI
+  - `@mwp/validator` - Protocol conformance validator
+  - `@mwp/testing` - Testing utilities package
 - GitHub infrastructure:
   - Issue templates (bug reports, feature requests, widget proposals, documentation)
   - Pull request template
@@ -82,4 +82,4 @@ Clarifications, bug fixes, documentation improvements.
 
 ---
 
-For detailed commit history, see [Git commit log](https://github.com/your-org/mcp-wp/commits/).
+For detailed commit history, see [Git commit log](https://github.com/your-org/mwp/commits/).

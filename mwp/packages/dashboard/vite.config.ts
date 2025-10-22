@@ -10,12 +10,12 @@ export default defineConfig({
       fileName: 'index',
     },
     rollupOptions: {
-      external: ['@mcp-wp/core', '@mcp-wp/bridge', '@mcp-wp/eventbus'],
+      external: ['@mwp/core', '@mwp/bridge', '@mwp/eventbus'],
       output: {
         globals: {
-          '@mcp-wp/core': 'MCPCore',
-          '@mcp-wp/bridge': 'MCPBridge',
-          '@mcp-wp/eventbus': 'MCPEventBus',
+          '@mwp/core': 'MCPCore',
+          '@mwp/bridge': 'MCPBridge',
+          '@mwp/eventbus': 'MCPEventBus',
         },
       },
     },
@@ -24,7 +24,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@mcp-wp/dashboard': resolve(__dirname, 'src'),
+      '@mwp/dashboard': resolve(__dirname, 'src'),
     },
   },
 });

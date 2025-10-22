@@ -33,8 +33,8 @@
     "isolatedModules": true,
     "baseUrl": ".",
     "paths": {
-      "@mcp-wp/widget-everything": ["./src/index.ts"],
-      "@mcp-wp/widget-everything/*": ["./src/*"]
+      "@mwp/widget-everything": ["./src/index.ts"],
+      "@mwp/widget-everything/*": ["./src/*"]
     }
   },
   "include": ["src/**/*"],

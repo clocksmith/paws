@@ -1,5 +1,5 @@
 {
-  "name": "@mcp-wp/dashboard",
+  "name": "@mwp/dashboard",
   "version": "1.0.0",
   "description": "MCP Widget Protocol Dashboard - Reference host implementation for loading and displaying widgets",
   "type": "module",
@@ -24,9 +24,9 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@mcp-wp/core": "workspace:*",
-    "@mcp-wp/bridge": "workspace:*",
-    "@mcp-wp/eventbus": "workspace:*"
+    "@mwp/core": "workspace:*",
+    "@mwp/bridge": "workspace:*",
+    "@mwp/eventbus": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
@@ -40,11 +40,11 @@
     "widget-host",
     "web-components"
   ],
-  "author": "MCP-WP Team",
+  "author": "MWP Team",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/mcp-wp.git",
+    "url": "https://github.com/your-org/mwp.git",
     "directory": "packages/dashboard"
   }
 }

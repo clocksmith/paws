@@ -1,10 +1,10 @@
 {
-  "name": "@mcp-wp/validator",
+  "name": "@mwp/validator",
   "version": "1.0.0",
-  "description": "MCP-WP protocol conformance validator",
+  "description": "MWP protocol conformance validator",
   "type": "module",
   "bin": {
-    "mcp-wp-validate": "./bin/cli.js"
+    "mwp-validate": "./bin/cli.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -26,7 +26,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@mcp-wp/core": "workspace:*",
+    "@mwp/core": "workspace:*",
     "chalk": "^5.3.0",
     "commander": "^11.1.0",
     "glob": "^10.3.10",
@@ -45,11 +45,11 @@
     "conformance",
     "lint"
   ],
-  "author": "MCP-WP Team",
+  "author": "MWP Team",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/mcp-wp.git",
+    "url": "https://github.com/your-org/mwp.git",
     "directory": "packages/tools/validator"
   }
 }

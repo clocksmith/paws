@@ -1,6 +1,6 @@
-# create-mcp-widget
+# create-mwp-widget
 
-Interactive CLI for scaffolding new MCP-WP widgets.
+Interactive CLI for scaffolding new MWP widgets.
 
 ## Usage
 
@@ -11,10 +11,10 @@ Interactive CLI for scaffolding new MCP-WP widgets.
 npm create mcp-widget
 
 # With npx
-npx create-mcp-widget
+npx create-mwp-widget
 
 # With specific name
-npx create-mcp-widget my-awesome-widget
+npx create-mwp-widget my-awesome-widget
 ```
 
 ### Interactive Mode
@@ -49,7 +49,7 @@ my-widget/
 - ✅ **Interactive prompts** - Guided widget creation
 - ✅ **TypeScript templates** - Full type safety out of the box
 - ✅ **Build configuration** - Vite setup for fast development
-- ✅ **Best practices** - Follows MCP-WP conventions
+- ✅ **Best practices** - Follows MWP conventions
 - ✅ **Dependency injection** - Pre-configured EventBus, MCPBridge, Configuration
 - ✅ **Shadow DOM** - Scoped styles and encapsulation
 - ✅ **Examples** - Commented code showing common patterns
@@ -104,7 +104,7 @@ pnpm typecheck
 ## CLI Options
 
 ```bash
-create-mcp-widget [name] [options]
+create-mwp-widget [name] [options]
 
 Options:
   -t, --template <type>    Template to use (basic|advanced|data-viz)
@@ -120,25 +120,25 @@ Options:
 ### Create with specific template
 
 ```bash
-npx create-mcp-widget my-widget --template advanced
+npx create-mwp-widget my-widget --template advanced
 ```
 
 ### Create in specific directory
 
 ```bash
-npx create-mcp-widget my-widget --directory ./widgets
+npx create-mwp-widget my-widget --directory ./widgets
 ```
 
 ### Skip installation
 
 ```bash
-npx create-mcp-widget my-widget --no-install
+npx create-mwp-widget my-widget --no-install
 ```
 
 ### Use all defaults
 
 ```bash
-npx create-mcp-widget my-widget --yes
+npx create-mwp-widget my-widget --yes
 ```
 
 ## Widget Development Guide
@@ -180,7 +180,7 @@ const createMyWidget: WidgetFactoryFunction = (deps, serverInfo) => {
 Use the testing utilities:
 
 ```typescript
-import { mockEventBus, mockMCPBridge } from '@mcp-wp/testing';
+import { mockEventBus, mockMCPBridge } from '@mwp/testing';
 
 const widget = new MyWidget();
 widget.setDependencies(mockEventBus(), mockMCPBridge(), mockConfig());
@@ -210,7 +210,7 @@ npm publish
 ### Build errors
 - Run `pnpm install` to ensure dependencies are installed
 - Check TypeScript version compatibility
-- Verify `tsconfig.json` extends from `@mcp-wp/core`
+- Verify `tsconfig.json` extends from `@mwp/core`
 
 ## Contributing
 

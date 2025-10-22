@@ -44,8 +44,8 @@
     // Paths
     "baseUrl": ".",
     "paths": {
-      "@mcp-wp/widget-memory": ["./src/index.ts"],
-      "@mcp-wp/widget-memory/*": ["./src/*"]
+      "@mwp/widget-memory": ["./src/index.ts"],
+      "@mwp/widget-memory/*": ["./src/*"]
     }
   },
   "include": [

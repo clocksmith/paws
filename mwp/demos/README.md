@@ -1,6 +1,6 @@
-# MCP-WP Demo Applications
+# MWP Demo Applications
 
-This directory contains complete demo applications showcasing MCP-WP in real-world scenarios.
+This directory contains complete demo applications showcasing MWP in real-world scenarios.
 
 ## 🎯 Demos
 
@@ -80,7 +80,7 @@ See [GETTING-STARTED.md](../GETTING-STARTED.md) for detailed instructions.
 
 ## 📚 Resources
 
-- [MCP-WP Specification](../specification/MWP.md)
+- [MWP Specification](../specification/MWP.md)
 - [Widget Development](../WIDGET-ROADMAP.md)
 - [Dashboard API](../packages/dashboard/README.md)
 - [Example Dashboards](../packages/examples/dashboards/README.md)

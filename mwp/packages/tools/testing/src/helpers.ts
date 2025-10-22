@@ -1,8 +1,8 @@
 /**
- * Test helpers for MCP-WP widget testing
+ * Test helpers for MWP widget testing
  */
 
-import type { MCPServerInfo } from '@mcp-wp/core';
+import type { MCPServerInfo } from '@mwp/core';
 import { createMockDependencies, type MockDependencies } from './mocks.js';
 import { createMockServerInfo } from './fixtures.js';
 

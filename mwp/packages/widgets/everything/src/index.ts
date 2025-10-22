@@ -3,7 +3,7 @@ import type {
   WidgetFactory,
   Dependencies,
   MCPServerInfo,
-} from '@mcp-wp/core';
+} from '@mwp/core';
 import { EverythingWidget } from './widget.js';
 
 const ELEMENT_TAG = 'mcp-everything-widget';
@@ -54,7 +54,7 @@ const createEverythingWidget: WidgetFactoryFunction = (
         prompts: true,
       },
       author: {
-        name: 'MCP-WP Team',
+        name: 'MWP Team',
       },
       permissions: {
         tools: {

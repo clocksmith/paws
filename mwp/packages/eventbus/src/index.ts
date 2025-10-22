@@ -1,5 +1,5 @@
 /**
- * @mcp-wp/eventbus
+ * @mwp/eventbus
  *
  * EventBus implementation for MCP Widget Protocol.
  *

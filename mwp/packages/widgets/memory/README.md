@@ -1,4 +1,4 @@
-# @mcp-wp/widget-memory
+# @mwp/widget-memory
 
 **Knowledge Graph and Entity Management Widget**
 
@@ -18,7 +18,7 @@ A Web Component widget for the Memory MCP server, providing visualization and ma
 ## Installation
 
 ```bash
-pnpm add @mcp-wp/widget-memory
+pnpm add @mwp/widget-memory
 ```
 
 ## Usage
@@ -26,8 +26,8 @@ pnpm add @mcp-wp/widget-memory
 ### Basic Setup
 
 ```typescript
-import { Dashboard } from '@mcp-wp/dashboard';
-import createMemoryWidget from '@mcp-wp/widget-memory';
+import { Dashboard } from '@mwp/dashboard';
+import createMemoryWidget from '@mwp/widget-memory';
 
 const dashboard = new Dashboard({
   container: document.getElementById('app')!,
@@ -482,7 +482,7 @@ import type {
   Relation,
   Observation,
   KnowledgeGraph,
-} from '@mcp-wp/widget-memory';
+} from '@mwp/widget-memory';
 
 const config: MemoryWidgetConfig = {
   defaultView: 'graph',
@@ -513,6 +513,6 @@ MIT
 
 ## Related
 
-- [@mcp-wp/core](../core) - Core types and utilities
-- [@mcp-wp/dashboard](../dashboard) - Widget host
+- [@mwp/core](../core) - Core types and utilities
+- [@mwp/dashboard](../dashboard) - Widget host
 - [Memory MCP Server](https://github.com/modelcontextprotocol/servers/tree/main/src/memory) - Official server

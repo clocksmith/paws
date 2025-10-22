@@ -1,4 +1,4 @@
-# @mcp-wp/widget-brave
+# @mwp/widget-brave
 
 **Brave Search Widget**
 
@@ -18,7 +18,7 @@ A Web Component widget for the Brave Search MCP server, providing web search cap
 ## Installation
 
 ```bash
-pnpm add @mcp-wp/widget-brave
+pnpm add @mwp/widget-brave
 ```
 
 ## Usage
@@ -26,8 +26,8 @@ pnpm add @mcp-wp/widget-brave
 ### Basic Setup
 
 ```typescript
-import { Dashboard } from '@mcp-wp/dashboard';
-import createBraveWidget from '@mcp-wp/widget-brave';
+import { Dashboard } from '@mwp/dashboard';
+import createBraveWidget from '@mwp/widget-brave';
 
 const dashboard = new Dashboard({
   container: document.getElementById('app')!,
@@ -438,7 +438,7 @@ import type {
   BraveWidgetConfig,
   SearchResult,
   SearchFilters,
-} from '@mcp-wp/widget-brave';
+} from '@mwp/widget-brave';
 
 const config: BraveWidgetConfig = {
   defaultCount: 20,
@@ -452,7 +452,7 @@ MIT
 
 ## Related
 
-- [@mcp-wp/core](../core) - Core types and utilities
-- [@mcp-wp/dashboard](../dashboard) - Widget host
+- [@mwp/core](../core) - Core types and utilities
+- [@mwp/dashboard](../dashboard) - Widget host
 - [Brave Search API](https://brave.com/search/api/) - API documentation
 - [Brave Search MCP Server](https://github.com/modelcontextprotocol/servers/tree/main/src/brave-search) - Official server

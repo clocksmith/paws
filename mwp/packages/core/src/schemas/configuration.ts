@@ -463,7 +463,7 @@ export function createExampleHttpServerConfiguration(): ServerConfiguration {
 export function createExampleWidgetConfiguration(): WidgetConfiguration {
   return {
     id: 'widget-1',
-    package: '@mcp-wp/widget-github',
+    package: '@mwp/widget-github',
     serverName: 'github',
     displayName: 'GitHub Issues',
     position: { x: 0, y: 0 },

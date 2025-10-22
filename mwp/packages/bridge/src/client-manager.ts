@@ -6,9 +6,9 @@
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import type { EventBus } from '@mcp-wp/core';
-import type { MCPServerInfo, MCPCapabilities } from '@mcp-wp/core';
-import type { ServerConfiguration } from '@mcp-wp/core';
+import type { EventBus } from '@mwp/core';
+import type { MCPServerInfo, MCPCapabilities } from '@mwp/core';
+import type { ServerConfiguration } from '@mwp/core';
 import type { BridgeConfiguration } from './bridge.js';
 import { ConnectionError } from './errors.js';
 
@@ -72,7 +72,7 @@ export class ClientManager {
       // Create MCP client
       const client = new Client(
         {
-          name: 'mcp-wp-bridge',
+          name: 'mwp-bridge',
           version: '1.0.0',
         },
         {

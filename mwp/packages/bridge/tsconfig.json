@@ -44,8 +44,8 @@
     // Paths
     "baseUrl": ".",
     "paths": {
-      "@mcp-wp/bridge": ["./src/index.ts"],
-      "@mcp-wp/bridge/*": ["./src/*"]
+      "@mwp/bridge": ["./src/index.ts"],
+      "@mwp/bridge/*": ["./src/*"]
     }
   },
   "include": [

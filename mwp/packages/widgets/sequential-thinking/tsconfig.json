@@ -44,8 +44,8 @@
     // Paths
     "baseUrl": ".",
     "paths": {
-      "@mcp-wp/widget-sequential-thinking": ["./src/index.ts"],
-      "@mcp-wp/widget-sequential-thinking/*": ["./src/*"]
+      "@mwp/widget-sequential-thinking": ["./src/index.ts"],
+      "@mwp/widget-sequential-thinking/*": ["./src/*"]
     }
   },
   "include": [

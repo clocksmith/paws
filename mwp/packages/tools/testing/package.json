@@ -1,7 +1,7 @@
 {
-  "name": "@mcp-wp/testing",
+  "name": "@mwp/testing",
   "version": "1.0.0",
-  "description": "Testing utilities for MCP-WP widget development",
+  "description": "Testing utilities for MWP widget development",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -35,7 +35,7 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@mcp-wp/core": "workspace:*"
+    "@mwp/core": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
@@ -55,11 +55,11 @@
     "fixtures",
     "test-utils"
   ],
-  "author": "MCP-WP Team",
+  "author": "MWP Team",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/mcp-wp.git",
+    "url": "https://github.com/your-org/mwp.git",
     "directory": "packages/tools/testing"
   }
 }

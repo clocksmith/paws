@@ -2,13 +2,13 @@
 
 ### 8.1 Event Pattern
 
-**MCP-WP-8.1.1:** All MCP widget events MUST use the `mcp:` domain prefix.
+**MWP-8.1.1:** All MCP widget events MUST use the `mcp:` domain prefix.
 
-**MCP-WP-8.1.2:** Event format: `mcp:<subject>:<action>`
+**MWP-8.1.2:** Event format: `mcp:<subject>:<action>`
 
 ### 8.2 Standard MCP Events
 
-**MCP-WP-8.2.1:** The following events are REQUIRED for MCP operations:
+**MWP-8.2.1:** The following events are REQUIRED for MCP operations:
 
 | Event Name                  | Data Schema                                                                   | Emitted By | Description                     |
 | --------------------------- | ----------------------------------------------------------------------------- | ---------- | ------------------------------- |

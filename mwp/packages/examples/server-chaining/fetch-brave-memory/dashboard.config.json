@@ -33,7 +33,7 @@
   ],
   "widgets": [
     {
-      "package": "@mcp-wp/widget-brave",
+      "package": "@mwp/widget-brave",
       "serverName": "brave",
       "id": "brave-search",
       "position": { "x": 0, "y": 0 },
@@ -50,7 +50,7 @@
       }
     },
     {
-      "package": "@mcp-wp/widget-fetch",
+      "package": "@mwp/widget-fetch",
       "serverName": "fetch",
       "id": "fetch-reader",
       "position": { "x": 4, "y": 0 },
@@ -72,7 +72,7 @@
       }
     },
     {
-      "package": "@mcp-wp/widget-memory",
+      "package": "@mwp/widget-memory",
       "serverName": "memory",
       "id": "research-notebook",
       "position": { "x": 9, "y": 0 },

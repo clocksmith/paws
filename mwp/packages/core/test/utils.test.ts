@@ -254,9 +254,9 @@ describe('Parsing Utilities', () => {
 
   describe('parsePackageName', () => {
     it('should parse scoped package names', () => {
-      const pkg = parsePackageName('@mcp-wp/widget-github');
+      const pkg = parsePackageName('@mwp/widget-github');
 
-      expect(pkg.scope).toBe('mcp-wp');
+      expect(pkg.scope).toBe('mwp');
       expect(pkg.name).toBe('widget-github');
     });
 

@@ -1,13 +1,13 @@
-# @mcp-wp/server
+# @mwp/server
 
-MCP server implementation for the MCP-WP (Model Context Protocol Widget Protocol) dashboard. This package provides a production-ready server that connects MCP servers to web-based widget dashboards.
+MCP server implementation for the MWP (Model Context Protocol Widget Protocol) dashboard. This package provides a production-ready server that connects MCP servers to web-based widget dashboards.
 
 ## Features
 
 - **WebSocket Support** - Real-time bidirectional communication
 - **REST API** - HTTP endpoints for widget management
 - **Multi-Protocol Support** - Stdio, SSE, and WebSocket transports
-- **Dashboard Integration** - Seamless integration with @mcp-wp/dashboard
+- **Dashboard Integration** - Seamless integration with @mwp/dashboard
 - **Widget Hot-Reloading** - Dynamic widget loading and updates
 - **Security** - CORS, Helmet, rate limiting
 - **Logging** - Comprehensive Winston-based logging
@@ -18,9 +18,9 @@ MCP server implementation for the MCP-WP (Model Context Protocol Widget Protocol
 ## Installation
 
 ```bash
-npm install @mcp-wp/server
+npm install @mwp/server
 # or
-pnpm add @mcp-wp/server
+pnpm add @mwp/server
 ```
 
 ## Quick Start
@@ -29,22 +29,22 @@ pnpm add @mcp-wp/server
 
 ```bash
 # Start the server
-npx mcp-wp-server start
+npx mwp-server start
 
 # Start with custom port
-npx mcp-wp-server start --port 8080
+npx mwp-server start --port 8080
 
 # Start with configuration file
-npx mcp-wp-server start --config ./config.json
+npx mwp-server start --config ./config.json
 
 # Show help
-npx mcp-wp-server --help
+npx mwp-server --help
 ```
 
 ### Programmatic Usage
 
 ```typescript
-import { MCPServer } from '@mcp-wp/server';
+import { MCPServer } from '@mwp/server';
 
 const server = new MCPServer({
   port: 3000,
@@ -358,8 +358,8 @@ Connect to the WebSocket endpoint at `ws://localhost:3000/ws`.
 ## Dashboard Integration
 
 ```typescript
-import { Dashboard } from '@mcp-wp/dashboard';
-import { MCPServer } from '@mcp-wp/server';
+import { Dashboard } from '@mwp/dashboard';
+import { MCPServer } from '@mwp/server';
 
 // Create and start the server
 const server = new MCPServer({ port: 3000 });
@@ -384,7 +384,7 @@ await dashboard.addWidget('github', {
 ### Basic Server
 
 ```typescript
-import { MCPServer } from '@mcp-wp/server';
+import { MCPServer } from '@mwp/server';
 
 const server = new MCPServer({
   port: 3000,
@@ -476,7 +476,7 @@ await server.start();
 The server uses Winston for structured logging:
 
 ```typescript
-import { MCPServer, logger } from '@mcp-wp/server';
+import { MCPServer, logger } from '@mwp/server';
 
 const server = new MCPServer({
   port: 3000,
@@ -597,8 +597,8 @@ Error: listen EADDRINUSE: address already in use :::3000
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/mcp-wp.git
-cd mcp-wp/packages/mcp-server
+git clone https://github.com/your-org/mwp.git
+cd mwp/packages/mcp-server
 
 # Install dependencies
 pnpm install
@@ -623,14 +623,14 @@ MIT
 
 ## Related Packages
 
-- [@mcp-wp/core](../core) - Core widget protocol
-- [@mcp-wp/bridge](../bridge) - MCP bridge implementation
-- [@mcp-wp/dashboard](../dashboard) - Dashboard orchestrator
-- [@mcp-wp/eventbus](../eventbus) - Event bus system
+- [@mwp/core](../core) - Core widget protocol
+- [@mwp/bridge](../bridge) - MCP bridge implementation
+- [@mwp/dashboard](../dashboard) - Dashboard orchestrator
+- [@mwp/eventbus](../eventbus) - Event bus system
 
 ## Support
 
-- [Documentation](https://docs.mcp-wp.dev)
-- [Discord Community](https://discord.gg/mcp-wp)
-- [GitHub Issues](https://github.com/your-org/mcp-wp/issues)
-- [Stack Overflow](https://stackoverflow.com/questions/tagged/mcp-wp)
+- [Documentation](https://docs.mwp.dev)
+- [Discord Community](https://discord.gg/mwp)
+- [GitHub Issues](https://github.com/your-org/mwp/issues)
+- [Stack Overflow](https://stackoverflow.com/questions/tagged/mwp)

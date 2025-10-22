@@ -1,11 +1,11 @@
 /**
  * Playwright Widget Tests
  *
- * Unit tests for @mcp-wp/widget-playwright
+ * Unit tests for @mwp/widget-playwright
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import type { types } from '@mcp-wp/core';
+import type { types } from '@mwp/core';
 import createPlaywrightWidget from '../src/index.js';
 import { PlaywrightWidget } from '../src/widget.js';
 

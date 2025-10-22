@@ -1,8 +1,8 @@
 /**
  * Event System Types
  *
- * Defines all event types and payloads for the MCP-WP event system.
- * Based on MCP-WP Specification Section 8 (Event System)
+ * Defines all event types and payloads for the MWP event system.
+ * Based on MWP Specification Section 8 (Event System)
  */
 
 import type { ToolResult, ResourceContent, PromptMessages } from './dependencies.js';
@@ -11,7 +11,7 @@ import type { MCPServerInfo, MCPTool, MCPResource, MCPPrompt } from './mcp.js';
 /**
  * MCP Event Names
  *
- * All possible event names in the MCP-WP system.
+ * All possible event names in the MWP system.
  */
 export type MCPEvent =
   // Tool events

@@ -1,9 +1,23 @@
-# Contributing to MCP-WP
+# Contributing to MWP
 
-Thank you for your interest in contributing to MCP-WP (Model Context Protocol Widget Protocol)! This document provides guidelines and instructions for contributing to the project.
+Thank you for your interest in contributing to MWP (Model Context Protocol Widget Protocol)! This document provides guidelines and instructions for contributing to the project.
+
+## Our Philosophy
+
+**MWP enhances existing solutions rather than replacing them.**
+
+We're collaborating with [mcp-ui](https://github.com/idosal/mcp-ui) and the broader MCP ecosystem to bring security, observability, and type safety to MCP visualizations. Our goal is to:
+
+- **Collaborate, not compete** - We build on what works (like mcp-ui's simplicity)
+- **Security first** - Add user confirmation and audit trails
+- **Stay simple** - Avoid over-engineering, ship working code
+- **Community driven** - Work with Anthropic, mcp-ui maintainers, and developers
+
+All contributions should align with this philosophy.
 
 ## Table of Contents
 
+- [Our Philosophy](#our-philosophy)
 - [Code of Conduct](#code-of-conduct)
 - [Getting Started](#getting-started)
 - [Development Setup](#development-setup)
@@ -33,13 +47,13 @@ This project adheres to a Code of Conduct that all contributors are expected to 
 1. **Fork the repository** on GitHub
 2. **Clone your fork** locally:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/mcp-wp.git
-   cd mcp-wp
+   git clone https://github.com/YOUR_USERNAME/mwp.git
+   cd mwp
    ```
 
 3. **Add upstream remote**:
    ```bash
-   git remote add upstream https://github.com/ORIGINAL_OWNER/mcp-wp.git
+   git remote add upstream https://github.com/ORIGINAL_OWNER/mwp.git
    ```
 
 4. **Install dependencies**:
@@ -95,14 +109,14 @@ pnpm type-check
 pnpm validate
 
 # Run specific package script
-pnpm --filter @mcp-wp/core build
-pnpm --filter @mcp-wp/github-widget test
+pnpm --filter @mwp/core build
+pnpm --filter @mwp/github-widget test
 ```
 
 ## Project Structure
 
 ```
-mcp-wp/
+mwp/
 ├── packages/
 │   ├── core/              # Core widget protocol
 │   ├── bridge/            # MCP bridge implementation
@@ -114,7 +128,7 @@ mcp-wp/
 │   │   ├── filesystem/
 │   │   └── ...
 │   ├── tools/             # Development tools
-│   │   ├── create-mcp-widget/
+│   │   ├── create-mwp-widget/
 │   │   ├── validator/
 │   │   └── testing/
 │   ├── examples/          # Example implementations
@@ -203,8 +217,8 @@ pnpm lint:fix
 
 ```typescript
 // 1. Imports - grouped and sorted
-import { EventBus } from '@mcp-wp/eventbus';
-import { MCPBridge } from '@mcp-wp/bridge';
+import { EventBus } from '@mwp/eventbus';
+import { MCPBridge } from '@mwp/bridge';
 
 // 2. Type definitions
 interface WidgetConfig {
@@ -280,11 +294,11 @@ async function fetchRepositories(
 
 ### Writing Tests
 
-Use the `@mcp-wp/testing` package for widget testing:
+Use the `@mwp/testing` package for widget testing:
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { mountWidget, waitForRender } from '@mcp-wp/testing';
+import { mountWidget, waitForRender } from '@mwp/testing';
 import { MyWidget } from './widget';
 
 describe('MyWidget', () => {
@@ -317,7 +331,7 @@ describe('MyWidget', () => {
 pnpm test
 
 # Run tests for specific package
-pnpm --filter @mcp-wp/core test
+pnpm --filter @mwp/core test
 
 # Run tests in watch mode
 pnpm test:watch
@@ -499,6 +513,42 @@ and best practices for widget testing.
 3. **Address feedback** by pushing new commits
 4. **PR is approved** and merged
 
+## Contributing to Ecosystem Compatibility
+
+### Working with mcp-ui
+
+We're actively collaborating with mcp-ui. Here's how you can help:
+
+**1. Test MWP widgets in mcp-ui**
+```bash
+# Use the mcp-ui adapter
+import { adaptMWPForMcpUI } from '@mwp/mcp-ui-adapter';
+const html = adaptMWPForMcpUI(createMyWidget, serverInfo);
+```
+
+**2. Report compatibility issues**
+- Open issues tagged with `mcp-ui-compatibility`
+- Include both MWP and mcp-ui versions
+- Provide reproduction steps
+
+**3. Contribute to the adapter**
+- Improve postMessage protocol translation
+- Add support for new mcp-ui features
+- Enhance theme compatibility
+
+**4. Submit improvements to mcp-ui**
+- Security enhancements (user confirmation UI)
+- Governance features (audit logging)
+- Theming system improvements
+
+### Working with Anthropic MCP Team
+
+Before adding major features:
+
+1. **Check with MCP team** - Open a discussion about alignment with MCP roadmap
+2. **Follow MCP spec** - All widgets must work with standard MCP servers
+3. **Contribute back** - Submit security best practices to MCP documentation
+
 ## Widget Development
 
 ### Creating a New Widget
@@ -506,7 +556,7 @@ and best practices for widget testing.
 Use the CLI tool to scaffold a new widget:
 
 ```bash
-npx create-mcp-widget my-widget
+npx create-mwp-widget my-widget
 ```
 
 ### Widget Requirements
@@ -514,7 +564,7 @@ npx create-mcp-widget my-widget
 All widgets must:
 
 1. **Extend HTMLElement** or use Custom Elements API
-2. **Implement widget interface** from `@mcp-wp/core`
+2. **Implement widget interface** from `@mwp/core`
 3. **Include all required files**:
    - `src/widget.ts` - Widget implementation
    - `src/index.ts` - Entry point
@@ -525,7 +575,7 @@ All widgets must:
    - `README.md` - Documentation
    - `tsconfig.json` - TypeScript config
 
-4. **Follow naming convention**: `@mcp-wp/[name]-widget`
+4. **Follow naming convention**: `@mwp/[name]-widget`
 5. **Include comprehensive tests**
 6. **Provide documentation** with examples
 7. **Pass validation**: `pnpm validate`
@@ -533,9 +583,9 @@ All widgets must:
 ### Widget Implementation Pattern
 
 ```typescript
-import { EventBus } from '@mcp-wp/eventbus';
-import { MCPBridge } from '@mcp-wp/bridge';
-import { Configuration } from '@mcp-wp/core';
+import { EventBus } from '@mwp/eventbus';
+import { MCPBridge } from '@mwp/bridge';
+import { Configuration } from '@mwp/core';
 
 export class MyWidget extends HTMLElement {
   private eventBus: EventBus;
@@ -596,7 +646,7 @@ export class MyWidget extends HTMLElement {
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { mountWidget, testData } from '@mcp-wp/testing';
+import { mountWidget, testData } from '@mwp/testing';
 import { MyWidget } from './widget';
 
 describe('MyWidget', () => {
@@ -622,18 +672,29 @@ describe('MyWidget', () => {
 
 ### Getting Help
 
-- **Discord**: Join our [Discord community](https://discord.gg/mcp-wp)
-- **Stack Overflow**: Tag questions with `mcp-wp`
-- **GitHub Discussions**: For general questions and ideas
+- **GitHub Discussions**: For general questions and ideas - https://github.com/[org]/mwp/discussions
 - **GitHub Issues**: For bug reports and feature requests
+- **mcp-ui Community**: https://github.com/idosal/mcp-ui - For questions about compatibility
+- **MCP Forum**: https://github.com/modelcontextprotocol/mcp/discussions - For MCP spec questions
 
 ### Communication Guidelines
 
-- Be respectful and constructive
-- Search existing issues/discussions before posting
-- Provide clear reproduction steps for bugs
-- Include relevant code and error messages
-- Follow up on your issues and PRs
+- **Be collaborative** - Seek to enhance existing work, not replace it
+- **Be respectful and constructive** - Remember we're all learning
+- **Search before posting** - Check existing issues/discussions first
+- **Provide clear reproduction steps** - Help others help you
+- **Credit others' work** - Acknowledge mcp-ui, Anthropic, and community contributors
+- **Follow up** - Respond to questions on your issues and PRs
+
+### Priority Areas for Contribution
+
+We especially welcome help in these areas:
+
+1. **mcp-ui Compatibility** - Test widgets in mcp-ui, report issues, improve adapter
+2. **Security Enhancements** - Audit confirmation flows, test CSP policies, document best practices
+3. **Widget Development** - Build widgets for popular MCP servers (GitHub, Filesystem, etc.)
+4. **Documentation** - Examples, tutorials, video demos
+5. **Testing** - Integration tests, accessibility tests, performance benchmarks
 
 ### Recognition
 
@@ -641,5 +702,18 @@ Contributors are recognized in:
 - README.md contributors section
 - Release notes
 - Project documentation
+- mcp-ui collaboration notes (for cross-project contributions)
 
-Thank you for contributing to MCP-WP! Your efforts help make this project better for everyone.
+### Related Projects
+
+We're part of a larger ecosystem:
+
+- **mcp-ui** - https://github.com/idosal/mcp-ui - The original MCP visualization project
+- **Model Context Protocol** - https://github.com/modelcontextprotocol/mcp - The underlying protocol
+- **Claude Desktop** - Where many users experience MCP
+
+When contributing, consider how your work can benefit the entire ecosystem, not just MWP.
+
+---
+
+Thank you for contributing to MWP! Your efforts help make MCP more secure, observable, and accessible for everyone.

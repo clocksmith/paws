@@ -2,7 +2,7 @@
  * Permission Model Types
  *
  * Defines permission system for widgets accessing MCP server capabilities.
- * Based on MCP-WP Specification Section 10 (Security & Permissions)
+ * Based on MWP Specification Section 10 (Security & Permissions)
  */
 
 /**

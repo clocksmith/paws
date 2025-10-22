@@ -1,10 +1,10 @@
-# @mcp-wp/bridge
+# @mwp/bridge
 
 MCPBridge implementation for connecting to MCP servers.
 
 ## Overview
 
-This package provides a production-ready implementation of the MCPBridge interface defined in `@mcp-wp/core`. It handles:
+This package provides a production-ready implementation of the MCPBridge interface defined in `@mwp/core`. It handles:
 
 - **MCP Server Connections** - Connect to stdio and HTTP MCP servers
 - **Tool Invocation** - Call MCP tools with argument validation
@@ -17,7 +17,7 @@ This package provides a production-ready implementation of the MCPBridge interfa
 ## Installation
 
 ```bash
-pnpm add @mcp-wp/bridge
+pnpm add @mwp/bridge
 ```
 
 ## Usage
@@ -25,8 +25,8 @@ pnpm add @mcp-wp/bridge
 ### Basic Usage
 
 ```typescript
-import { MCPBridge } from '@mcp-wp/bridge';
-import { EventBus } from '@mcp-wp/eventbus';
+import { MCPBridge } from '@mwp/bridge';
+import { EventBus } from '@mwp/eventbus';
 
 // Create EventBus instance
 const eventBus = new EventBus();
@@ -250,7 +250,7 @@ interface BridgeConfiguration {
 
 ### ServerConfiguration
 
-See `@mcp-wp/core` for complete ServerConfiguration type definition.
+See `@mwp/core` for complete ServerConfiguration type definition.
 
 ```typescript
 interface ServerConfiguration {
@@ -277,7 +277,7 @@ interface CacheConfiguration {
 The bridge throws typed errors for different failure scenarios:
 
 ```typescript
-import { MCPBridgeError, ConnectionError, ToolExecutionError } from '@mcp-wp/bridge';
+import { MCPBridgeError, ConnectionError, ToolExecutionError } from '@mwp/bridge';
 
 try {
   await bridge.callTool('github', 'create_issue', args);

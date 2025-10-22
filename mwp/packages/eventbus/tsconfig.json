@@ -44,8 +44,8 @@
     // Paths
     "baseUrl": ".",
     "paths": {
-      "@mcp-wp/eventbus": ["./src/index.ts"],
-      "@mcp-wp/eventbus/*": ["./src/*"]
+      "@mwp/eventbus": ["./src/index.ts"],
+      "@mwp/eventbus/*": ["./src/*"]
     }
   },
   "include": [

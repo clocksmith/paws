@@ -49,7 +49,7 @@ node packaging/split-protocol.js
 cat > protocol-sections/19-new-section.md << 'EOF'
 ## 19. New Feature (Normative)
 
-**MCP-WP-19.1.1:** Description of new requirement.
+**MWP-19.1.1:** Description of new requirement.
 EOF
 
 # 3. Edit manifest.json to add section metadata

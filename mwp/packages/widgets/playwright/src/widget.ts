@@ -4,7 +4,7 @@
  * Web Component for Playwright MCP server interaction.
  */
 
-import type { types } from '@mcp-wp/core';
+import type { types } from '@mwp/core';
 
 type EventBus = types.EventBus;
 type MCPBridge = types.MCPBridge;

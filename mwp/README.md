@@ -1,4 +1,4 @@
-# MCP Widget Protocol (MCP-WP)
+# MCP Widget Protocol (MWP)
 
 **Make Model Context Protocol servers visual, interactive, and safe**
 
@@ -8,7 +8,7 @@ Version 1.0.0 | [Full Specification](./specification/MWP.md)
 
 ## What & Why
 
-MCP-WP standardizes how to build **visual dashboards** for Anthropic's [Model Context Protocol](https://modelcontextprotocol.io/) servers. It transforms MCP's headless backend into an interactive, observable UI layer while enforcing security controls.
+MWP standardizes how to build **visual dashboards** for Anthropic's [Model Context Protocol](https://modelcontextprotocol.io/) servers. It transforms MCP's headless backend into an interactive, observable UI layer while enforcing security controls.
 
 **The Problem:** MCP servers expose powerful tools (GitHub issue creation, Slack messaging, database queries) but have no standard visual interface.
 
@@ -85,22 +85,22 @@ export default function createWidget({ EventBus, MCPBridge, Configuration }, mcp
 
 ## Relationship to REPLOID's Internal Module Widget Protocol
 
-**Important Distinction:** MCP Widget Protocol (MCP-WP) is for **external MCP servers**. REPLOID has a separate **internal "Module Widget Protocol"** for its own modules:
+**Important Distinction:** MCP Widget Protocol (MWP) is for **external MCP servers**. REPLOID has a separate **internal "Module Widget Protocol"** for its own modules:
 
-| Aspect | MCP Widget Protocol (MCP-WP) | REPLOID Module Widget Protocol |
+| Aspect | MCP Widget Protocol (MWP) | REPLOID Module Widget Protocol |
 |--------|------------------------------|--------------------------------|
 | **Purpose** | Visualize external MCP servers | Visualize internal REPLOID modules |
 | **Audience** | GitHub, Slack, Supabase servers | ToolRunner, StateManager, 75+ upgrades |
 | **Communication** | JSON-RPC via MCPBridge | Direct closure access |
 | **Security** | User confirmation required | Trusted (same origin) |
-| **Documentation** | This repository | `packages/reploid/docs/MODULE_WIDGET_PROTOCOL.md` |
+| **Documentation** | This repository | `reploid/docs/MODULE_WIDGET_PROTOCOL.md` |
 
-**Integration:** REPLOID can show both widget types in the same dashboard using a hybrid approach. See `packages/reploid/docs/MWP_INTEGRATION_GUIDE.md` for the complete integration guide showing how to:
+**Integration:** REPLOID can show both widget types in the same dashboard using a hybrid approach. See `reploid/docs/MWP_INTEGRATION_GUIDE.md` for the complete integration guide showing how to:
 - Add MCP Bridge to connect external MCP servers
-- Create MCP-WP widgets for those servers
+- Create MWP widgets for those servers
 - Display them alongside internal REPLOID module widgets
 
-**Conversion Path:** Internal REPLOID modules can be converted to MCP servers (making them reusable outside REPLOID) and then visualized with MCP-WP widgets. The integration guide includes examples.
+**Conversion Path:** Internal REPLOID modules can be converted to MCP servers (making them reusable outside REPLOID) and then visualized with MWP widgets. The integration guide includes examples.
 
 ---
 
@@ -126,7 +126,7 @@ export default function createWidget({ EventBus, MCPBridge, Configuration }, mcp
 
 **Supabase Widget:** Execute database queries, CRUD operations on tables/rows, schema introspection
 
-**REPLOID Widget (Potential):** Visual interface for [PAWS REPLOID MCP server](../packages/reploid/mcp-server/README.md)
+**REPLOID Widget (Potential):** Visual interface for [PAWS REPLOID MCP server](../reploid/mcp-server/README.md)
 - Interactive VFS browser with syntax highlighting
 - Blueprint gallery with search and filtering
 - Side-by-side visual diff viewer for code modifications

@@ -1,7 +1,7 @@
 /**
- * @mcp-wp/core Types
+ * @mwp/core Types
  *
- * Re-exports all type definitions from the MCP-WP core package.
+ * Re-exports all type definitions from the MWP core package.
  */
 
 // Widget types

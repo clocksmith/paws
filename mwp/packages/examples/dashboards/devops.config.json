@@ -31,7 +31,7 @@
   ],
   "widgets": [
     {
-      "package": "@mcp-wp/widget-github",
+      "package": "@mwp/widget-github",
       "serverName": "github",
       "id": "github-ci",
       "position": { "x": 0, "y": 0 },
@@ -43,7 +43,7 @@
       }
     },
     {
-      "package": "@mcp-wp/widget-playwright",
+      "package": "@mwp/widget-playwright",
       "serverName": "playwright",
       "id": "playwright-tests",
       "position": { "x": 5, "y": 0 },
@@ -60,7 +60,7 @@
       }
     },
     {
-      "package": "@mcp-wp/widget-filesystem",
+      "package": "@mwp/widget-filesystem",
       "serverName": "filesystem",
       "id": "deployment-logs",
       "position": { "x": 9, "y": 0 },

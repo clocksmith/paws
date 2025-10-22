@@ -2,12 +2,12 @@
 
 ### 4.1 Required Fields
 
-**MCP-WP-4.1.1:** The widget object MUST contain the following fields:
+**MWP-4.1.1:** The widget object MUST contain the following fields:
 
 ```typescript
 interface MCPWidgetMetadata {
-  // Core MCP-WP fields
-  protocolVersion: '1.0.0';  // MCP-WP spec version
+  // Core MWP fields
+  protocolVersion: '1.0.0';  // MWP spec version
   element: string;                      // Custom element tag name
   displayName: string;                  // Human-readable name
   icon: string;                         // Emoji or SVG
@@ -98,35 +98,35 @@ interface WidgetRepository {
 
 ### 4.2 Field Constraints
 
-**MCP-WP-4.2.1:** protocolVersion MUST be "1.0.0".
+**MWP-4.2.1:** protocolVersion MUST be "1.0.0".
 
-**MCP-WP-4.2.2:** element MUST match pattern `^mcp-[a-z0-9-]+-widget$` (e.g., `mcp-github-widget`).
+**MWP-4.2.2:** element MUST match pattern `^mcp-[a-z0-9-]+-widget$` (e.g., `mcp-github-widget`).
 
-**MCP-WP-4.2.3:** category MUST be exactly the string "MCP Servers".
+**MWP-4.2.3:** category MUST be exactly the string "MCP Servers".
 
-**MCP-WP-4.2.4:** mcpServerName MUST match the server name provided in MCPServerInfo.
+**MWP-4.2.4:** mcpServerName MUST match the server name provided in MCPServerInfo.
 
-**MCP-WP-4.2.5:** transport MUST match the transport provided in MCPServerInfo.
+**MWP-4.2.5:** transport MUST match the transport provided in MCPServerInfo.
 
-**MCP-WP-4.2.6:** mcpProtocolVersion MUST be a valid MCP protocol version string (e.g., "2025-06-18"). Hosts **SHOULD** verify the value returned during initialization matches a version they support before activating the widget.
+**MWP-4.2.6:** mcpProtocolVersion MUST be a valid MCP protocol version string (e.g., "2025-06-18"). Hosts **SHOULD** verify the value returned during initialization matches a version they support before activating the widget.
 
-**MCP-WP-4.2.7:** widgetType if present SHOULD guide the host's layout decisions.
+**MWP-4.2.7:** widgetType if present SHOULD guide the host's layout decisions.
 
-**MCP-WP-4.2.8:** If `permissions` is present, it MUST conform to the `WidgetPermissions` schema.
+**MWP-4.2.8:** If `permissions` is present, it MUST conform to the `WidgetPermissions` schema.
 
-**MCP-WP-4.2.9:** If `trustLevel` is `'verified'`, the `signature` field MUST be present and valid.
+**MWP-4.2.9:** If `trustLevel` is `'verified'`, the `signature` field MUST be present and valid.
 
-**MCP-WP-4.2.10:** If `integrity` is present, it MUST be a SHA256 hash in the format: `sha256-<base64>`.
+**MWP-4.2.10:** If `integrity` is present, it MUST be a SHA256 hash in the format: `sha256-<base64>`.
 
-**MCP-WP-4.2.11:** If `mcpUICompatible` is `true`, the widget MUST implement the `toMCPUI()` adapter method (see Section 15).
+**MWP-4.2.11:** If `mcpUICompatible` is `true`, the widget MUST implement the `toMCPUI()` adapter method (see Section 15).
 
 ### 4.3 Optional Features
 
-**MCP-WP-4.3.1:** Advanced features (Theme, WidgetMessaging, A11yHelper) are OPTIONAL for hosts. Widgets SHOULD gracefully degrade if:
+**MWP-4.3.1:** Advanced features (Theme, WidgetMessaging, A11yHelper) are OPTIONAL for hosts. Widgets SHOULD gracefully degrade if:
 - `Theme` dependency is undefined → Use fallback CSS
 - `WidgetMessaging` is undefined → Disable inter-widget communication
 - `A11yHelper` is undefined → Implement basic accessibility manually
 
-**MCP-WP-4.3.2:** If optional features are not provided, widgets MUST still function with core capabilities (EventBus, MCPBridge, Configuration).
+**MWP-4.3.2:** If optional features are not provided, widgets MUST still function with core capabilities (EventBus, MCPBridge, Configuration).
 
 ---

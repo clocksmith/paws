@@ -1,4 +1,4 @@
-# @mcp-wp/dashboard
+# @mwp/dashboard
 
 **Reference MCP Widget Dashboard Implementation**
 
@@ -18,7 +18,7 @@ A production-ready widget host for loading and displaying MCP widgets. This pack
 ## Installation
 
 ```bash
-pnpm add @mcp-wp/dashboard
+pnpm add @mwp/dashboard
 ```
 
 ## Quick Start
@@ -32,7 +32,7 @@ pnpm add @mcp-wp/dashboard
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MCP Dashboard</title>
-  <link rel="stylesheet" href="node_modules/@mcp-wp/dashboard/dist/styles.css">
+  <link rel="stylesheet" href="node_modules/@mwp/dashboard/dist/styles.css">
 </head>
 <body>
   <div id="dashboard"></div>
@@ -44,8 +44,8 @@ pnpm add @mcp-wp/dashboard
 ### JavaScript
 
 ```typescript
-import { Dashboard } from '@mcp-wp/dashboard';
-import createGitHubWidget from '@mcp-wp/widget-github';
+import { Dashboard } from '@mwp/dashboard';
+import createGitHubWidget from '@mwp/widget-github';
 
 // Create dashboard instance
 const dashboard = new Dashboard({
@@ -306,7 +306,7 @@ dashboard.setLayout({
 ### Built-in Themes
 
 ```typescript
-import { Dashboard, themes } from '@mcp-wp/dashboard';
+import { Dashboard, themes } from '@mwp/dashboard';
 
 const dashboard = new Dashboard({
   container,
@@ -474,10 +474,10 @@ const dashboard = new Dashboard({
 ### Multi-Widget Dashboard
 
 ```typescript
-import { Dashboard } from '@mcp-wp/dashboard';
-import createGitHubWidget from '@mcp-wp/widget-github';
-import createFilesystemWidget from '@mcp-wp/widget-filesystem';
-import createBraveWidget from '@mcp-wp/widget-brave';
+import { Dashboard } from '@mwp/dashboard';
+import createGitHubWidget from '@mwp/widget-github';
+import createFilesystemWidget from '@mwp/widget-filesystem';
+import createBraveWidget from '@mwp/widget-brave';
 
 const dashboard = new Dashboard({
   container: document.getElementById('app')!,
@@ -598,8 +598,8 @@ window.addEventListener('beforeunload', async () => {
 ```typescript
 // Lazy load widgets
 const widgets = [
-  { factory: () => import('@mcp-wp/widget-github'), serverName: 'github' },
-  { factory: () => import('@mcp-wp/widget-brave'), serverName: 'brave' },
+  { factory: () => import('@mwp/widget-github'), serverName: 'github' },
+  { factory: () => import('@mwp/widget-brave'), serverName: 'brave' },
 ];
 
 for (const { factory, serverName } of widgets) {
@@ -624,7 +624,7 @@ import type {
   LayoutConfiguration,
   ThemeConfiguration,
   WidgetMetrics,
-} from '@mcp-wp/dashboard';
+} from '@mwp/dashboard';
 ```
 
 ## Browser Support
@@ -645,7 +645,7 @@ See [CONTRIBUTING.md](../../CONTRIBUTING.md) for development setup and guideline
 
 ## Related Packages
 
-- [@mcp-wp/core](../core) - Core types and utilities
-- [@mcp-wp/bridge](../bridge) - MCP server bridge
-- [@mcp-wp/eventbus](../eventbus) - Event system
-- [@mcp-wp/widget-*](../widgets) - Widget implementations
+- [@mwp/core](../core) - Core types and utilities
+- [@mwp/bridge](../bridge) - MCP server bridge
+- [@mwp/eventbus](../eventbus) - Event system
+- [@mwp/widget-*](../widgets) - Widget implementations

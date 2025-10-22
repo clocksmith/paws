@@ -1,4 +1,4 @@
-# @mcp-wp/widget-filesystem
+# @mwp/widget-filesystem
 
 **Filesystem Operations Widget**
 
@@ -18,7 +18,7 @@ A Web Component widget for the Filesystem MCP server, providing file browsing, r
 ## Installation
 
 ```bash
-pnpm add @mcp-wp/widget-filesystem
+pnpm add @mwp/widget-filesystem
 ```
 
 ## Usage
@@ -26,8 +26,8 @@ pnpm add @mcp-wp/widget-filesystem
 ### Basic Setup
 
 ```typescript
-import { Dashboard } from '@mcp-wp/dashboard';
-import createFilesystemWidget from '@mcp-wp/widget-filesystem';
+import { Dashboard } from '@mwp/dashboard';
+import createFilesystemWidget from '@mwp/widget-filesystem';
 
 const dashboard = new Dashboard({
   container: document.getElementById('app')!,
@@ -492,7 +492,7 @@ import type {
   FilesystemWidgetConfig,
   FileEntry,
   DirectoryEntry,
-} from '@mcp-wp/widget-filesystem';
+} from '@mwp/widget-filesystem';
 
 const config: FilesystemWidgetConfig = {
   initialPath: '/project',
@@ -514,6 +514,6 @@ MIT
 
 ## Related
 
-- [@mcp-wp/core](../core) - Core types and utilities
-- [@mcp-wp/dashboard](../dashboard) - Widget host
+- [@mwp/core](../core) - Core types and utilities
+- [@mwp/dashboard](../dashboard) - Widget host
 - [Filesystem MCP Server](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem) - Official server

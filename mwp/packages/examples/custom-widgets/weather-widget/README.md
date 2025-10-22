@@ -1,6 +1,6 @@
 # Weather Widget Example
 
-A fully annotated example MCP-WP widget that renders current weather conditions and a 12-hour forecast.
+A fully annotated example MWP widget that renders current weather conditions and a 12-hour forecast.
 
 ## Features
 

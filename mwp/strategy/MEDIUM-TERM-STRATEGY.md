@@ -84,4 +84,4 @@ With launch traction established, the medium-term focus is scaling the ecosystem
 **Enterprise Pipeline:**
 - 10 pilot programs by Month 6, 3 podcast appearances, conference talk delivered.
 
-These milestones ensure MCP-WP matures into a vibrant, self-sustaining ecosystem before the long-term marketplace and governance initiatives take over.
+These milestones ensure MWP matures into a vibrant, self-sustaining ecosystem before the long-term marketplace and governance initiatives take over.

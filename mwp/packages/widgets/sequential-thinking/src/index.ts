@@ -4,7 +4,7 @@
  * Creates Sequential Thinking MCP widget for AI reasoning visualization.
  */
 
-import type { types } from '@mcp-wp/core';
+import type { types } from '@mwp/core';
 
 type WidgetFactoryFunction = types.WidgetFactoryFunction;
 type WidgetFactory = types.WidgetFactory;
@@ -78,7 +78,7 @@ const createSequentialThinkingWidget: WidgetFactoryFunction = (
       tags: ['thinking', 'reasoning', 'chain-of-thought', 'ai', 'visualization'],
       version: '1.0.0',
       author: {
-        name: 'MCP-WP Team',
+        name: 'MWP Team',
       },
       permissions: {
         tools: {

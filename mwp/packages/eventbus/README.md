@@ -1,4 +1,4 @@
-# @mcp-wp/eventbus
+# @mwp/eventbus
 
 Production-ready EventBus implementation for MCP Widget Protocol.
 
@@ -18,7 +18,7 @@ This package provides a robust, type-safe event bus with:
 ## Installation
 
 ```bash
-pnpm add @mcp-wp/eventbus
+pnpm add @mwp/eventbus
 ```
 
 ## Usage
@@ -26,7 +26,7 @@ pnpm add @mcp-wp/eventbus
 ### Basic Usage
 
 ```typescript
-import { EventBus } from '@mcp-wp/eventbus';
+import { EventBus } from '@mwp/eventbus';
 
 // Create EventBus instance
 const eventBus = new EventBus();
@@ -50,7 +50,7 @@ unsubscribe();
 ### Typed Events
 
 ```typescript
-import type { MCPEvent, EventPayload } from '@mcp-wp/core';
+import type { MCPEvent, EventPayload } from '@mwp/core';
 
 // Type-safe event handling
 eventBus.on('mcp:tool:invoked', (data: EventPayload<'mcp:tool:invoked'>) => {
@@ -330,7 +330,7 @@ The EventBus is optimized for high-frequency events:
 ### 1. Type Your Handlers
 
 ```typescript
-import type { EventPayload } from '@mcp-wp/core';
+import type { EventPayload } from '@mwp/core';
 
 eventBus.on('mcp:tool:invoked', (data: EventPayload<'mcp:tool:invoked'>) => {
   // Fully typed!

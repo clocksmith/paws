@@ -2,15 +2,15 @@
 
 ### 5.1 Component Registration
 
-**MCP-WP-5.1.1:** The widget MUST register a custom element with tag name matching widget.element.
+**MWP-5.1.1:** The widget MUST register a custom element with tag name matching widget.element.
 
-**MCP-WP-5.1.2:** The tag name MUST start with `mcp-` prefix to indicate MCP widget.
+**MWP-5.1.2:** The tag name MUST start with `mcp-` prefix to indicate MCP widget.
 
-**MCP-WP-5.1.3:** Registration MUST be idempotent using `customElements.get()` check.
+**MWP-5.1.3:** Registration MUST be idempotent using `customElements.get()` check.
 
 ### 5.2 getStatus() Method
 
-**MCP-WP-5.2.1:** The custom element MUST implement `getStatus()` returning:
+**MWP-5.2.1:** The custom element MUST implement `getStatus()` returning:
 
 ```typescript
 interface MCPWidgetStatus {
@@ -22,7 +22,7 @@ interface MCPWidgetStatus {
 }
 ```
 
-**MCP-WP-5.2.2:** State semantics for MCP widgets:
+**MWP-5.2.2:** State semantics for MCP widgets:
 
 | State    | Meaning                                     | Visual        |
 | -------- | ------------------------------------------- | ------------- |
@@ -32,15 +32,15 @@ interface MCPWidgetStatus {
 | loading  | Server initializing or performing handshake | Yellow        |
 | disabled | Server disabled in configuration            | Gray (dotted) |
 
-**MCP-WP-5.2.3:** primaryMetric SHOULD display the count of available primitives (e.g., "5 tools, 3 resources").
+**MWP-5.2.3:** primaryMetric SHOULD display the count of available primitives (e.g., "5 tools, 3 resources").
 
-**MCP-WP-5.2.4:** secondaryMetric SHOULD display connection info (e.g., "stdio" or "http://localhost:3000").
+**MWP-5.2.4:** secondaryMetric SHOULD display connection info (e.g., "stdio" or "http://localhost:3000").
 
-**MCP-WP-5.2.5:** lastActivity SHOULD reflect the timestamp of the last tool call, resource read, or prompt invocation.
+**MWP-5.2.5:** lastActivity SHOULD reflect the timestamp of the last tool call, resource read, or prompt invocation.
 
 ### 5.3 getMCPInfo() Method (NEW)
 
-**MCP-WP-5.3.1:** The custom element SHOULD implement a public method `getMCPInfo()` returning:
+**MWP-5.3.1:** The custom element SHOULD implement a public method `getMCPInfo()` returning:
 
 ```typescript
 interface MCPInfo {
@@ -57,17 +57,17 @@ This allows the host to query MCP-specific details without parsing status string
 
 ### 5.4 Rendering Requirements
 
-**MCP-WP-5.4.1:** Widgets MUST use safe rendering patterns (`textContent` or manual DOM construction).
+**MWP-5.4.1:** Widgets MUST use safe rendering patterns (`textContent` or manual DOM construction).
 
-**MCP-WP-5.4.2:** When rendering tool names, resource URIs, or prompt arguments received from MCP servers, widgets MUST treat them as untrusted data and apply XSS prevention (see Section 11.1).
+**MWP-5.4.2:** When rendering tool names, resource URIs, or prompt arguments received from MCP servers, widgets MUST treat them as untrusted data and apply XSS prevention (see Section 11.1).
 
-**MCP-WP-5.4.3:** Widgets SHOULD provide visual distinction between different MCP primitive types (tools, resources, prompts).
+**MWP-5.4.3:** Widgets SHOULD provide visual distinction between different MCP primitive types (tools, resources, prompts).
 
 ### 5.5 Theme Contract
 
-**MCP-WP-5.5.1:** Hosts SHOULD provide a `Theme` dependency for design system integration.
+**MWP-5.5.1:** Hosts SHOULD provide a `Theme` dependency for design system integration.
 
-**MCP-WP-5.5.2:** Widgets SHOULD use CSS custom properties (design tokens) for styling:
+**MWP-5.5.2:** Widgets SHOULD use CSS custom properties (design tokens) for styling:
 
 ```typescript
 interface Theme {
@@ -106,7 +106,7 @@ interface ColorAdaptationOptions {
 }
 ```
 
-**MCP-WP-5.5.3:** Standard design tokens (18 base + 42 extended = 60 total):
+**MWP-5.5.3:** Standard design tokens (18 base + 42 extended = 60 total):
 
 #### Base Tokens (Required)
 
@@ -166,7 +166,7 @@ interface ColorAdaptationOptions {
 | `--mcp-info-medium` | Info state (medium) | `#3b82f6` |
 | `--mcp-info-dark` | Info state (dark) | `#1e40af` |
 
-**MCP-WP-5.5.4:** Widgets SHOULD apply tokens in shadow DOM:
+**MWP-5.5.4:** Widgets SHOULD apply tokens in shadow DOM:
 
 ```css
 :host {
@@ -202,7 +202,7 @@ button {
 }
 ```
 
-**MCP-WP-5.5.5:** Dynamic theme switching:
+**MWP-5.5.5:** Dynamic theme switching:
 
 ```javascript
 // Widget reacts to theme changes
@@ -215,7 +215,7 @@ const unsubscribe = Theme.onThemeChange((newTokens, mode) => {
 });
 ```
 
-**MCP-WP-5.5.6:** Scoped Theming (for widgets with custom color requirements):
+**MWP-5.5.6:** Scoped Theming (for widgets with custom color requirements):
 
 Widgets MAY use scoped theming to separate chrome styling from content styling:
 
@@ -251,7 +251,7 @@ interface WidgetMetadata {
 }
 ```
 
-**MCP-WP-5.5.7:** Color Adaptation Helpers (for custom widget colors):
+**MWP-5.5.7:** Color Adaptation Helpers (for custom widget colors):
 
 Widgets with custom colors MAY use Theme helper methods to adapt colors to current mode:
 
@@ -274,20 +274,20 @@ const colorScale = Theme.generateColorScale?.(brandColor, 5);
 // Returns: ['#lightest', '#lighter', '#base', '#darker', '#darkest']
 ```
 
-**MCP-WP-5.5.8:** Hosts implementing theming MUST:
+**MWP-5.5.8:** Hosts implementing theming MUST:
 - Inject CSS custom properties into widget shadow roots
 - Provide at least `light` and `dark` themes
 - Update tokens dynamically when user changes theme
 - Persist theme preference across sessions
 - Provide all 18 base tokens
 
-**MCP-WP-5.5.9:** Hosts implementing theming SHOULD:
+**MWP-5.5.9:** Hosts implementing theming SHOULD:
 - Provide extended tokens (accent, data, semantic gradients)
 - Implement Theme helper methods (getContrastRatio, adaptColor, etc.)
 - Support scoped theming configuration
 - Respect system-level theme preferences
 
-**MCP-WP-5.5.10:** Widget theming benefits:
+**MWP-5.5.10:** Widget theming benefits:
 - **Visual consistency:** Widgets match host application design
 - **White-label support:** Hosts can rebrand dashboards
 - **Accessibility:** High-contrast themes for visual impairments

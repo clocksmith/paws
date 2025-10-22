@@ -1,12 +1,12 @@
 name: Feature Request
-description: Suggest a new feature or enhancement for MCP-WP
+description: Suggest a new feature or enhancement for MWP
 title: "[Feature]: "
 labels: ["enhancement", "triage"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for suggesting a new feature! Please describe what you'd like to see added to MCP-WP.
+        Thanks for suggesting a new feature! Please describe what you'd like to see added to MWP.
 
   - type: dropdown
     id: component
@@ -14,10 +14,10 @@ body:
       label: Component
       description: Which component should this feature be added to?
       options:
-        - Core (@mcp-wp/core)
-        - Bridge (@mcp-wp/bridge)
-        - EventBus (@mcp-wp/eventbus)
-        - Dashboard (@mcp-wp/dashboard)
+        - Core (@mwp/core)
+        - Bridge (@mwp/bridge)
+        - EventBus (@mwp/eventbus)
+        - Dashboard (@mwp/dashboard)
         - New Widget
         - Existing Widget (specify below)
         - CLI Tool

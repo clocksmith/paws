@@ -7,6 +7,6 @@
   "types": "./src/index.ts",
   "private": true,
   "dependencies": {
-    "@mcp-wp/core": "workspace:*"
+    "@mwp/core": "workspace:*"
   }
 }

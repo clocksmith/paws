@@ -4,7 +4,7 @@
  * Handles MCP prompt retrieval.
  */
 
-import type { EventBus, PromptMessages } from '@mcp-wp/core';
+import type { EventBus, PromptMessages } from '@mwp/core';
 import type { ClientManager } from './client-manager.js';
 import { PromptGetError } from './errors.js';
 

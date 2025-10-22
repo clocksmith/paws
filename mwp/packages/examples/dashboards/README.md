@@ -1,6 +1,6 @@
 # Dashboard Examples
 
-Example dashboard applications demonstrating different MCP-WP configurations and use cases.
+Example dashboard applications demonstrating different MWP configurations and use cases.
 
 ## Examples
 
@@ -174,8 +174,8 @@ FILESYSTEM_ROOT=/path/to/allowed/directory
 ### Adding a Widget
 
 ```typescript
-import { Dashboard } from '@mcp-wp/dashboard';
-import createGitHubWidget from '@mcp-wp/widget-github';
+import { Dashboard } from '@mwp/dashboard';
+import createGitHubWidget from '@mwp/widget-github';
 
 const dashboard = new Dashboard({
   container: document.getElementById('app')!,
@@ -295,8 +295,8 @@ All dashboards support these shortcuts:
 1. **Lazy Load Widgets**
    ```typescript
    const widgets = {
-     github: () => import('@mcp-wp/widget-github'),
-     brave: () => import('@mcp-wp/widget-brave'),
+     github: () => import('@mwp/widget-github'),
+     brave: () => import('@mwp/widget-brave'),
    };
 
    // Load on demand

@@ -44,8 +44,8 @@
     // Paths
     "baseUrl": ".",
     "paths": {
-      "@mcp-wp/widget-fetch": ["./src/index.ts"],
-      "@mcp-wp/widget-fetch/*": ["./src/*"]
+      "@mwp/widget-fetch": ["./src/index.ts"],
+      "@mwp/widget-fetch/*": ["./src/*"]
     }
   },
   "include": [

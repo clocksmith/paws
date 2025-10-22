@@ -33,7 +33,7 @@
   ],
   "widgets": [
     {
-      "package": "@mcp-wp/widget-github",
+      "package": "@mwp/widget-github",
       "serverName": "github",
       "id": "github-review",
       "position": { "x": 0, "y": 0 },
@@ -52,7 +52,7 @@
       }
     },
     {
-      "package": "@mcp-wp/widget-memory",
+      "package": "@mwp/widget-memory",
       "serverName": "memory",
       "id": "memory-archive",
       "position": { "x": 6, "y": 0 },
@@ -63,7 +63,7 @@
       }
     },
     {
-      "package": "@mcp-wp/widget-sequential-thinking",
+      "package": "@mwp/widget-sequential-thinking",
       "serverName": "sequential-thinking",
       "id": "critique-assistant",
       "position": { "x": 9, "y": 0 },

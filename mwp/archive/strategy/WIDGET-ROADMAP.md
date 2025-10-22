@@ -1,10 +1,10 @@
-# MCP-WP Widget Roadmap
+# MWP Widget Roadmap
 
 This document tracks the development of official MCP server widgets for the MCP Widget Protocol.
 
 ## Overview
 
-**Goal**: Ship production-ready widgets for the most popular MCP servers, demonstrating MCP-WP capabilities and providing immediate value to users.
+**Goal**: Ship production-ready widgets for the most popular MCP servers, demonstrating MWP capabilities and providing immediate value to users.
 
 **Success Metrics**:
 - 50+ widgets in registry by Month 3
@@ -19,18 +19,18 @@ This document tracks the development of official MCP server widgets for the MCP 
 ### Tier 1: Launch Widgets (Weeks 1-4) 🚀
 
 **Target**: 8 widgets by launch (Week 4)
-**Purpose**: Demonstrate core MCP-WP capabilities, cover most popular servers
+**Purpose**: Demonstrate core MWP capabilities, cover most popular servers
 
 | Widget | MCP Server | Status | Package | Priority | Notes |
 |--------|------------|--------|---------|----------|-------|
-| **GitHub** | `@modelcontextprotocol/server-github` | 🔴 Not Started | `@mcp-wp/widget-github` | P0 | Most popular MCP server |
-| **Playwright** | `@modelcontextprotocol/server-playwright` | 🔴 Not Started | `@mcp-wp/widget-playwright` | P0 | Browser automation |
-| **Sequential Thinking** | `@modelcontextprotocol/server-sequential-thinking` | 🔴 Not Started | `@mcp-wp/widget-sequential-thinking` | P0 | AI reasoning visualization |
-| **Brave Search** | `@modelcontextprotocol/server-brave-search` | 🔴 Not Started | `@mcp-wp/widget-brave` | P0 | Web search |
-| **Filesystem** | `@modelcontextprotocol/server-filesystem` | 🔴 Not Started | `@mcp-wp/widget-filesystem` | P0 | File operations |
-| **Memory** | `@modelcontextprotocol/server-memory` | 🔴 Not Started | `@mcp-wp/widget-memory` | P0 | Knowledge graph (official ref) |
-| **Fetch** | `@modelcontextprotocol/server-fetch` | 🔴 Not Started | `@mcp-wp/widget-fetch` | P0 | Web content (official ref) |
-| **Everything** | `@modelcontextprotocol/server-everything` | 🟢 Complete | `@mcp-wp/widget-everything` | P1 | Demo all MCP features |
+| **GitHub** | `@modelcontextprotocol/server-github` | 🔴 Not Started | `@mwp/widget-github` | P0 | Most popular MCP server |
+| **Playwright** | `@modelcontextprotocol/server-playwright` | 🔴 Not Started | `@mwp/widget-playwright` | P0 | Browser automation |
+| **Sequential Thinking** | `@modelcontextprotocol/server-sequential-thinking` | 🔴 Not Started | `@mwp/widget-sequential-thinking` | P0 | AI reasoning visualization |
+| **Brave Search** | `@modelcontextprotocol/server-brave-search` | 🔴 Not Started | `@mwp/widget-brave` | P0 | Web search |
+| **Filesystem** | `@modelcontextprotocol/server-filesystem` | 🔴 Not Started | `@mwp/widget-filesystem` | P0 | File operations |
+| **Memory** | `@modelcontextprotocol/server-memory` | 🔴 Not Started | `@mwp/widget-memory` | P0 | Knowledge graph (official ref) |
+| **Fetch** | `@modelcontextprotocol/server-fetch` | 🔴 Not Started | `@mwp/widget-fetch` | P0 | Web content (official ref) |
+| **Everything** | `@modelcontextprotocol/server-everything` | 🟢 Complete | `@mwp/widget-everything` | P1 | Demo all MCP features |
 
 **Tier 1 Requirements**:
 - ✅ Full MCP specification compliance
@@ -49,12 +49,12 @@ This document tracks the development of official MCP server widgets for the MCP 
 
 | Widget | MCP Server | Status | Package | Priority | Notes |
 |--------|------------|--------|---------|----------|-------|
-| **Supabase** | `@modelcontextprotocol/server-supabase` | 🟢 Complete | `@mcp-wp/widget-supabase` | P1 | Database + Auth |
-| **Stripe** | Community server | 🟢 Complete | `@mcp-wp/widget-stripe` | P1 | Payments |
-| **Notion** | Community server | 🔴 Not Started | `@mcp-wp/widget-notion` | P1 | Productivity |
-| **Slack** | `@modelcontextprotocol/server-slack` | 🔴 Not Started | `@mcp-wp/widget-slack` | P1 | Communication |
-| **AWS** | `@modelcontextprotocol/server-aws-kb-retrieval` | 🔴 Not Started | `@mcp-wp/widget-aws` | P2 | Cloud infra |
-| **Git** | `@modelcontextprotocol/server-git` | 🔴 Not Started | `@mcp-wp/widget-git` | P2 | Version control |
+| **Supabase** | `@modelcontextprotocol/server-supabase` | 🟢 Complete | `@mwp/widget-supabase` | P1 | Database + Auth |
+| **Stripe** | Community server | 🟢 Complete | `@mwp/widget-stripe` | P1 | Payments |
+| **Notion** | Community server | 🔴 Not Started | `@mwp/widget-notion` | P1 | Productivity |
+| **Slack** | `@modelcontextprotocol/server-slack` | 🔴 Not Started | `@mwp/widget-slack` | P1 | Communication |
+| **AWS** | `@modelcontextprotocol/server-aws-kb-retrieval` | 🔴 Not Started | `@mwp/widget-aws` | P2 | Cloud infra |
+| **Git** | `@modelcontextprotocol/server-git` | 🔴 Not Started | `@mwp/widget-git` | P2 | Version control |
 
 **Tier 2 Requirements**:
 - ✅ Same as Tier 1
@@ -90,7 +90,7 @@ This document tracks the development of official MCP server widgets for the MCP 
 
 ```bash
 cd packages/widgets
-pnpm create-mcp-widget <widget-name>
+pnpm create-mwp-widget <widget-name>
 
 # This creates:
 # packages/widgets/<widget-name>/
@@ -112,7 +112,7 @@ pnpm create-mcp-widget <widget-name>
 
 ```typescript
 // packages/widgets/<name>/src/index.ts
-import type { WidgetFactory, Dependencies, MCPServerInfo } from '@mcp-wp/core';
+import type { WidgetFactory, Dependencies, MCPServerInfo } from '@mwp/core';
 import { MyMCPWidget } from './widget.js';
 
 export default function createMCPWidget(
@@ -157,7 +157,7 @@ export default function createMCPWidget(
 
 ```typescript
 // packages/widgets/<name>/src/widget.ts
-import { EventBus, MCPBridge } from '@mcp-wp/core';
+import { EventBus, MCPBridge } from '@mwp/core';
 
 export class MyMCPWidget extends HTMLElement {
   private eventBus: EventBus;
@@ -234,20 +234,20 @@ describe('MyMCPWidget', () => {
 ### Step 5: Documentation
 
 ```markdown
-# @mcp-wp/widget-<name>
+# @mwp/widget-<name>
 
-MCP-WP widget for [MCP Server Name].
+MWP widget for [MCP Server Name].
 
 ## Installation
 
 \`\`\`bash
-pnpm add @mcp-wp/widget-<name>
+pnpm add @mwp/widget-<name>
 \`\`\`
 
 ## Usage
 
 \`\`\`javascript
-import createWidget from '@mcp-wp/widget-<name>';
+import createWidget from '@mwp/widget-<name>';
 
 const widget = createWidget(dependencies, serverInfo);
 await widget.api.initialize();
@@ -275,10 +275,10 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md)
 
 ### 1. Self-Assessment
 
-Use `@mcp-wp/validator` to check compliance:
+Use `@mwp/validator` to check compliance:
 
 ```bash
-pnpm mcp-wp-validator validate packages/widgets/my-widget
+pnpm mwp-validator validate packages/widgets/my-widget
 ```
 
 **Checks**:
@@ -307,7 +307,7 @@ Create PR with:
 ### 4. Certification Badge
 
 Certified widgets receive:
-- Badge in README (`[![MCP-WP Certified](https://img.shields.io/badge/MCP--WP-Certified-green)]()`)
+- Badge in README (`[![MWP Certified](https://img.shields.io/badge/MCP--WP-Certified-green)]()`)
 - Listing in official widget directory
 - Featured in dashboard widget picker
 
@@ -320,7 +320,7 @@ Certified widgets receive:
 ```json
 {
   "dependencies": {
-    "@mcp-wp/core": "workspace:*"
+    "@mwp/core": "workspace:*"
   },
   "peerDependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0"
@@ -333,8 +333,8 @@ Certified widgets receive:
 ```json
 {
   "dependencies": {
-    "@mcp-wp/bridge": "workspace:*",    // If using shared bridge
-    "@mcp-wp/eventbus": "workspace:*",  // If using shared eventbus
+    "@mwp/bridge": "workspace:*",    // If using shared bridge
+    "@mwp/eventbus": "workspace:*",  // If using shared eventbus
     "lit": "^3.0.0",                    // If using Lit for components
     "chart.js": "^4.0.0"                // If rendering charts
   }
@@ -345,7 +345,7 @@ Certified widgets receive:
 
 ## Performance Budgets
 
-Per MCP-WP Section 18:
+Per MWP Section 18:
 
 | Metric | Required | Target | Measurement |
 |--------|----------|--------|-------------|
@@ -358,7 +358,7 @@ Per MCP-WP Section 18:
 
 ## Accessibility Checklist
 
-Per MCP-WP Section 11.5 (WCAG 2.1 AA):
+Per MWP Section 11.5 (WCAG 2.1 AA):
 
 - [ ] All interactive elements keyboard accessible
 - [ ] Focus indicators visible

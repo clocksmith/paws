@@ -10,10 +10,10 @@ export default defineConfig({
       fileName: 'index',
     },
     rollupOptions: {
-      external: ['@mcp-wp/core'],
+      external: ['@mwp/core'],
       output: {
         globals: {
-          '@mcp-wp/core': 'MCPCore',
+          '@mwp/core': 'MCPCore',
         },
       },
     },
@@ -22,7 +22,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@mcp-wp/widget-supabase': resolve(__dirname, 'src'),
+      '@mwp/widget-supabase': resolve(__dirname, 'src'),
     },
   },
 });

@@ -1,4 +1,4 @@
-import type { MCPPrompt, MCPResource, MCPTool } from '@mcp-wp/core';
+import type { MCPPrompt, MCPResource, MCPTool } from '@mwp/core';
 
 export type EverythingTab = 'overview' | 'tools' | 'resources' | 'prompts' | 'search';
 

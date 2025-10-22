@@ -1,4 +1,4 @@
-# @mcp-wp/widget-supabase
+# @mwp/widget-supabase
 
 Supabase dashboard widget for the MCP Widget Protocol. Surfaces database, auth, and storage primitives from the Supabase MCP server (official or community variants).
 
@@ -40,7 +40,7 @@ Example dashboard wiring:
   "widgets": [
     {
       "id": "supabase-admin",
-      "package": "@mcp-wp/widget-supabase",
+      "package": "@mwp/widget-supabase",
       "serverName": "supabase",
       "position": { "x": 6, "y": 0 },
       "size": { "w": 6, "h": 5 }
@@ -52,7 +52,7 @@ Example dashboard wiring:
 ## Usage
 
 ```ts
-import createSupabaseWidget from '@mcp-wp/widget-supabase';
+import createSupabaseWidget from '@mwp/widget-supabase';
 
 const { api, widget } = createSupabaseWidget({ EventBus, MCPBridge, Configuration }, bridge.getServerInfo('supabase'));
 await api.initialize();

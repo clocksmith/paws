@@ -1,5 +1,5 @@
 /**
- * Main entry point for @mcp-wp/server
+ * Main entry point for @mwp/server
  */
 
 export { MCPServer } from './server.js';

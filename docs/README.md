@@ -15,7 +15,7 @@ Welcome to the PAWS documentation hub.
 - **[@paws/core](../packages/core/README.md)** - Shared resources (personas, sys prompts, configs)
 - **[@paws/cli-js](../packages/cli-js/README.md)** - JavaScript CLI tools (cats, dogs, session)
 - **[@paws/cli-py](../packages/cli-py/README.md)** - Python CLI tools
-- **[@paws/reploid](../packages/reploid/README.md)** - Browser interface with visual workflows
+- **[@paws/reploid](../reploid/README.md)** - Browser interface with visual workflows
 
 ## Integration Guides
 

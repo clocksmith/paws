@@ -6,7 +6,7 @@ import type {
   ResourceUsage,
   UnsubscribeFunction,
   WidgetStatus,
-} from '@mcp-wp/core';
+} from '@mwp/core';
 import { styles } from './styles.js';
 import type { ForecastEntry, WeatherSnapshot, WeatherState } from './types.js';
 

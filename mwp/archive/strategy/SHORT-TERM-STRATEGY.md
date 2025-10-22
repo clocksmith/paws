@@ -2,12 +2,12 @@
 
 ## Executive Summary
 
-The Model Context Protocol (MCP) ecosystem has a critical gap: developers and end users lack a consistent way to visualize MCP server activity. MCP Widget Protocol (MCP-WP) fills that gap by standardizing secure, observable dashboards so Claude Desktop users, server maintainers, and enterprises can trust what their agents are doing. The launch plan focuses on shipping production-grade assets within the first eight weeks to prove value, win mindshare, and establish MCP-WP as the default visualization layer before competing approaches solidify.
+The Model Context Protocol (MCP) ecosystem has a critical gap: developers and end users lack a consistent way to visualize MCP server activity. MCP Widget Protocol (MWP) fills that gap by standardizing secure, observable dashboards so Claude Desktop users, server maintainers, and enterprises can trust what their agents are doing. The launch plan focuses on shipping production-grade assets within the first eight weeks to prove value, win mindshare, and establish MWP as the default visualization layer before competing approaches solidify.
 
 ### Strategic Approach
 
 The initial deployment concentrates on four thrusts:
-1. **Product-first validation** – Deliver reference dashboards and certified widgets that showcase MCP-WP’s capabilities.
+1. **Product-first validation** – Deliver reference dashboards and certified widgets that showcase MWP’s capabilities.
 2. **User penetration** – Reach the largest MCP user base (Claude Desktop) with a turnkey extension.
 3. **Developer activation** – Slash time-to-first-widget with tooling, documentation, and support programs.
 4. **Trust building** – Lead with third-party security validation and public reporting.
@@ -16,9 +16,9 @@ The initial deployment concentrates on four thrusts:
 
 By the end of Month 3 the launch should deliver:
 - 50+ widgets published in the registry
-- 10,000+ `create-mcp-widget` npm downloads
+- 10,000+ `create-mwp-widget` npm downloads
 - 5,000+ Claude Desktop extension installations
-- 20+ MCP server maintainers actively promoting MCP-WP
+- 20+ MCP server maintainers actively promoting MWP
 
 ### Market Reality (October 2025)
 
@@ -27,7 +27,7 @@ By the end of Month 3 the launch should deliver:
 - mcp-ui (3,000 GitHub stars, Shopify production usage) proves demand but lacks formal security, permissions, or governance.
 - Platform momentum (Grafana, VS Code, Material UI, Chakra UI) signals an expanding opportunity window that may close quickly.
 
-MCP-WP positions itself as a **formalization partner**, not a competitor—backward-compatible with mcp-ui, enterprise-ready, and governed by the community.
+MWP positions itself as a **formalization partner**, not a competitor—backward-compatible with mcp-ui, enterprise-ready, and governed by the community.
 
 ## Strengths, Gaps, and Immediate Risks
 
@@ -46,7 +46,7 @@ MCP-WP positions itself as a **formalization partner**, not a competitor—backw
 
 **Launch-Critical Risks (Weeks 1–8)**
 1. **Anthropic ships an official visualization layer** – Mitigate with early outreach, joint working group proposal, and vendor-neutral messaging.
-2. **mcp-ui fragmentation** – Collaborate publicly, offer governance seats, and ship the compatibility layer specified in MCP-WP Section 15.
+2. **mcp-ui fragmentation** – Collaborate publicly, offer governance seats, and ship the compatibility layer specified in MWP Section 15.
 3. **Low developer adoption** – Incentivize creation via bounties, “widget of the month,” university partnerships, and corporate contribution programs.
 4. **Security incident** – Complete audit pre-launch, publish results, and open a $50k bug bounty via HackerOne.
 
@@ -59,7 +59,7 @@ MCP-WP positions itself as a **formalization partner**, not a competitor—backw
 - Budget: $5,000 | Timeline: Weeks 1–3.
 
 ### Step 2 – Developer Experience Infrastructure
-- Release `create-mcp-widget` CLI, `mcp-wp-validator`, VS Code extension, CodeSandbox templates, and tutorial series.
+- Release `create-mwp-widget` CLI, `mwp-validator`, VS Code extension, CodeSandbox templates, and tutorial series.
 - Equip CI pipelines with certification badges.
 - Budget: $3,000 | Timeline: Weeks 2–4 (parallel with Step 1).
 
@@ -71,7 +71,7 @@ MCP-WP positions itself as a **formalization partner**, not a competitor—backw
 ## Phase 2: Market Penetration (Weeks 3–8)
 
 ### Step 3 – Claude Desktop Extension
-- Provide browser extension that auto-discovers MCP servers, injects MCP-WP dashboards, and monitors tools/resources.
+- Provide browser extension that auto-discovers MCP servers, injects MWP dashboards, and monitors tools/resources.
 - Distribute via Chrome Web Store, Firefox Add-ons, Product Hunt, and targeted subreddits.
 - Success targets: 5K installs Month 1, 20K by Month 3.
 - Budget: $2,000 | Timeline: Weeks 3–5.

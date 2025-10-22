@@ -13,8 +13,8 @@ import { logger } from './logger.js';
 const program = new Command();
 
 program
-  .name('mcp-wp-server')
-  .description('MCP server for MCP-WP dashboard')
+  .name('mwp-server')
+  .description('MCP server for MWP dashboard')
   .version('1.0.0');
 
 /**
@@ -29,7 +29,7 @@ program
   .option('-d, --daemon', 'Run as daemon')
   .action(async (options) => {
     try {
-      console.log(chalk.blue('🚀 Starting MCP-WP Server...\n'));
+      console.log(chalk.blue('🚀 Starting MWP Server...\n'));
 
       // Load configuration
       const config = options.config

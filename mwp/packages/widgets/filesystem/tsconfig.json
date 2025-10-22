@@ -44,8 +44,8 @@
     // Paths
     "baseUrl": ".",
     "paths": {
-      "@mcp-wp/widget-filesystem": ["./src/index.ts"],
-      "@mcp-wp/widget-filesystem/*": ["./src/*"]
+      "@mwp/widget-filesystem": ["./src/index.ts"],
+      "@mwp/widget-filesystem/*": ["./src/*"]
     }
   },
   "include": [

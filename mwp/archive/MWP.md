@@ -1,4 +1,4 @@
-# MCP Widget Protocol (MCP-WP)
+# MCP Widget Protocol (MWP)
 
 **Specification Version 1.0.0**
 
@@ -19,7 +19,7 @@
 
 ## Abstract
 
-This specification defines the MCP Widget Protocol (MCP-WP), a contract-based system for creating visual dashboard widgets that represent Model Context Protocol servers. MCP-WP establishes strict interfaces for widget lifecycle, MCP server communication, and visual rendering of MCP primitives (tools, resources, prompts). Widgets are implemented as Web Components with Shadow DOM encapsulation and integrate with host-provided services via dependency injection.
+This specification defines the MCP Widget Protocol (MWP), a contract-based system for creating visual dashboard widgets that represent Model Context Protocol servers. MWP establishes strict interfaces for widget lifecycle, MCP server communication, and visual rendering of MCP primitives (tools, resources, prompts). Widgets are implemented as Web Components with Shadow DOM encapsulation and integrate with host-provided services via dependency injection.
 
 ---
 
@@ -162,16 +162,16 @@ The communication mechanism for MCP JSON-RPC messages. Either stdio (standard in
 
 ### 3.1 Export Requirements
 
-MCP-WP-3.1.1: An MCP widget module MUST export a default function (the "widget factory").
+MWP-3.1.1: An MCP widget module MUST export a default function (the "widget factory").
 
-MCP-WP-3.1.2: The widget factory MUST accept exactly two arguments:
+MWP-3.1.2: The widget factory MUST accept exactly two arguments:
 
 1. dependencies: Host-provided services object
 2. mcpServerInfo: MCP server information object
 
-MCP-WP-3.1.3: The widget factory MAY be declared as async.
+MWP-3.1.3: The widget factory MAY be declared as async.
 
-MCP-WP-3.1.4: The widget factory MUST return a value conforming to the MCPWidgetInterface schema (Section 3.3).
+MWP-3.1.4: The widget factory MUST return a value conforming to the MCPWidgetInterface schema (Section 3.3).
 
 ### 3.2 Widget Factory Signature
 
@@ -260,24 +260,24 @@ agent?: AgentAPI; // Optional agent collaboration contract
 
 ### 3.4 Lifecycle Methods
 
-MCP-WP-3.4.1: If api.initialize() is present, it MUST be an async function returning Promise<void>.
+MWP-3.4.1: If api.initialize() is present, it MUST be an async function returning Promise<void>.
 
-MCP-WP-3.4.2: If api.destroy() is present, it MUST perform complete cleanup including:
+MWP-3.4.2: If api.destroy() is present, it MUST perform complete cleanup including:
 
 - Removal of all EventBus listeners
 - Cancellation of all timers and intervals
 - Cleanup of all MCP server subscriptions
 
-MCP-WP-3.4.3: If api.refresh() is present, it MUST re-fetch MCP server data (tools/resources/prompts) and update the
+MWP-3.4.3: If api.refresh() is present, it MUST re-fetch MCP server data (tools/resources/prompts) and update the
 widget UI.
 
-MCP-WP-3.4.4: api.destroy() MUST complete within 5000 milliseconds.
+MWP-3.4.4: api.destroy() MUST complete within 5000 milliseconds.
 
 ### 3.5 Agent Collaboration Contract
 
-MCP-WP-3.5.1: Widgets that expose automation hooks **MUST** surface them through the optional `agent` field on `WidgetAPI`.
+MWP-3.5.1: Widgets that expose automation hooks **MUST** surface them through the optional `agent` field on `WidgetAPI`.
 
-MCP-WP-3.5.2: If present, the `agent` object **MUST** conform to the following interface:
+MWP-3.5.2: If present, the `agent` object **MUST** conform to the following interface:
 
 ```typescript
 interface AgentAPI {
@@ -311,9 +311,9 @@ interface ActionResult {
 }
 ```
 
-MCP-WP-3.5.3: Hosts **MUST** apply the same confirmation and logging policies to agent-triggered actions as to human-triggered actions.
+MWP-3.5.3: Hosts **MUST** apply the same confirmation and logging policies to agent-triggered actions as to human-triggered actions.
 
-MCP-WP-3.5.4: Widgets **SHOULD** guard agent actions behind capability flags so hosts can decide whether to expose them in sensitive environments.
+MWP-3.5.4: Widgets **SHOULD** guard agent actions behind capability flags so hosts can decide whether to expose them in sensitive environments.
 
 ---
 
@@ -321,12 +321,12 @@ MCP-WP-3.5.4: Widgets **SHOULD** guard agent actions behind capability flags so 
 
 ### 4.1 Required Fields
 
-**MCP-WP-4.1.1:** The widget object MUST contain the following fields:
+**MWP-4.1.1:** The widget object MUST contain the following fields:
 
 ```typescript
 interface MCPWidgetMetadata {
-  // Core MCP-WP fields
-  protocolVersion: '1.0.0';  // MCP-WP spec version
+  // Core MWP fields
+  protocolVersion: '1.0.0';  // MWP spec version
   element: string;                      // Custom element tag name
   displayName: string;                  // Human-readable name
   icon: string;                         // Emoji or SVG
@@ -417,36 +417,36 @@ interface WidgetRepository {
 
 ### 4.2 Field Constraints
 
-**MCP-WP-4.2.1:** protocolVersion MUST be "1.0.0".
+**MWP-4.2.1:** protocolVersion MUST be "1.0.0".
 
-**MCP-WP-4.2.2:** element MUST match pattern `^mcp-[a-z0-9-]+-widget$` (e.g., `mcp-github-widget`).
+**MWP-4.2.2:** element MUST match pattern `^mcp-[a-z0-9-]+-widget$` (e.g., `mcp-github-widget`).
 
-**MCP-WP-4.2.3:** category MUST be exactly the string "MCP Servers".
+**MWP-4.2.3:** category MUST be exactly the string "MCP Servers".
 
-**MCP-WP-4.2.4:** mcpServerName MUST match the server name provided in MCPServerInfo.
+**MWP-4.2.4:** mcpServerName MUST match the server name provided in MCPServerInfo.
 
-**MCP-WP-4.2.5:** transport MUST match the transport provided in MCPServerInfo.
+**MWP-4.2.5:** transport MUST match the transport provided in MCPServerInfo.
 
-**MCP-WP-4.2.6:** mcpProtocolVersion MUST be a valid MCP protocol version string (e.g., "2025-06-18"). Hosts **SHOULD** verify the value returned during initialization matches a version they support before activating the widget.
+**MWP-4.2.6:** mcpProtocolVersion MUST be a valid MCP protocol version string (e.g., "2025-06-18"). Hosts **SHOULD** verify the value returned during initialization matches a version they support before activating the widget.
 
-**MCP-WP-4.2.7:** widgetType if present SHOULD guide the host's layout decisions.
+**MWP-4.2.7:** widgetType if present SHOULD guide the host's layout decisions.
 
-**MCP-WP-4.2.8:** If `permissions` is present, it MUST conform to the `WidgetPermissions` schema.
+**MWP-4.2.8:** If `permissions` is present, it MUST conform to the `WidgetPermissions` schema.
 
-**MCP-WP-4.2.9:** If `trustLevel` is `'verified'`, the `signature` field MUST be present and valid.
+**MWP-4.2.9:** If `trustLevel` is `'verified'`, the `signature` field MUST be present and valid.
 
-**MCP-WP-4.2.10:** If `integrity` is present, it MUST be a SHA256 hash in the format: `sha256-<base64>`.
+**MWP-4.2.10:** If `integrity` is present, it MUST be a SHA256 hash in the format: `sha256-<base64>`.
 
-**MCP-WP-4.2.11:** If `mcpUICompatible` is `true`, the widget MUST implement the `toMCPUI()` adapter method (see Section 15).
+**MWP-4.2.11:** If `mcpUICompatible` is `true`, the widget MUST implement the `toMCPUI()` adapter method (see Section 15).
 
 ### 4.3 Optional Features
 
-**MCP-WP-4.3.1:** Advanced features (Theme, WidgetMessaging, A11yHelper) are OPTIONAL for hosts. Widgets SHOULD gracefully degrade if:
+**MWP-4.3.1:** Advanced features (Theme, WidgetMessaging, A11yHelper) are OPTIONAL for hosts. Widgets SHOULD gracefully degrade if:
 - `Theme` dependency is undefined → Use fallback CSS
 - `WidgetMessaging` is undefined → Disable inter-widget communication
 - `A11yHelper` is undefined → Implement basic accessibility manually
 
-**MCP-WP-4.3.2:** If optional features are not provided, widgets MUST still function with core capabilities (EventBus, MCPBridge, Configuration).
+**MWP-4.3.2:** If optional features are not provided, widgets MUST still function with core capabilities (EventBus, MCPBridge, Configuration).
 
 ---
 
@@ -454,15 +454,15 @@ interface WidgetRepository {
 
 ### 5.1 Component Registration
 
-**MCP-WP-5.1.1:** The widget MUST register a custom element with tag name matching widget.element.
+**MWP-5.1.1:** The widget MUST register a custom element with tag name matching widget.element.
 
-**MCP-WP-5.1.2:** The tag name MUST start with `mcp-` prefix to indicate MCP widget.
+**MWP-5.1.2:** The tag name MUST start with `mcp-` prefix to indicate MCP widget.
 
-**MCP-WP-5.1.3:** Registration MUST be idempotent using `customElements.get()` check.
+**MWP-5.1.3:** Registration MUST be idempotent using `customElements.get()` check.
 
 ### 5.2 getStatus() Method
 
-**MCP-WP-5.2.1:** The custom element MUST implement `getStatus()` returning:
+**MWP-5.2.1:** The custom element MUST implement `getStatus()` returning:
 
 ```typescript
 interface MCPWidgetStatus {
@@ -474,7 +474,7 @@ interface MCPWidgetStatus {
 }
 ```
 
-**MCP-WP-5.2.2:** State semantics for MCP widgets:
+**MWP-5.2.2:** State semantics for MCP widgets:
 
 | State    | Meaning                                     | Visual        |
 | -------- | ------------------------------------------- | ------------- |
@@ -484,15 +484,15 @@ interface MCPWidgetStatus {
 | loading  | Server initializing or performing handshake | Yellow        |
 | disabled | Server disabled in configuration            | Gray (dotted) |
 
-**MCP-WP-5.2.3:** primaryMetric SHOULD display the count of available primitives (e.g., "5 tools, 3 resources").
+**MWP-5.2.3:** primaryMetric SHOULD display the count of available primitives (e.g., "5 tools, 3 resources").
 
-**MCP-WP-5.2.4:** secondaryMetric SHOULD display connection info (e.g., "stdio" or "http://localhost:3000").
+**MWP-5.2.4:** secondaryMetric SHOULD display connection info (e.g., "stdio" or "http://localhost:3000").
 
-**MCP-WP-5.2.5:** lastActivity SHOULD reflect the timestamp of the last tool call, resource read, or prompt invocation.
+**MWP-5.2.5:** lastActivity SHOULD reflect the timestamp of the last tool call, resource read, or prompt invocation.
 
 ### 5.3 getMCPInfo() Method (NEW)
 
-**MCP-WP-5.3.1:** The custom element SHOULD implement a public method `getMCPInfo()` returning:
+**MWP-5.3.1:** The custom element SHOULD implement a public method `getMCPInfo()` returning:
 
 ```typescript
 interface MCPInfo {
@@ -509,17 +509,17 @@ This allows the host to query MCP-specific details without parsing status string
 
 ### 5.4 Rendering Requirements
 
-**MCP-WP-5.4.1:** Widgets MUST use safe rendering patterns (`textContent` or manual DOM construction).
+**MWP-5.4.1:** Widgets MUST use safe rendering patterns (`textContent` or manual DOM construction).
 
-**MCP-WP-5.4.2:** When rendering tool names, resource URIs, or prompt arguments received from MCP servers, widgets MUST treat them as untrusted data and apply XSS prevention (see Section 11.1).
+**MWP-5.4.2:** When rendering tool names, resource URIs, or prompt arguments received from MCP servers, widgets MUST treat them as untrusted data and apply XSS prevention (see Section 11.1).
 
-**MCP-WP-5.4.3:** Widgets SHOULD provide visual distinction between different MCP primitive types (tools, resources, prompts).
+**MWP-5.4.3:** Widgets SHOULD provide visual distinction between different MCP primitive types (tools, resources, prompts).
 
 ### 5.5 Theme Contract
 
-**MCP-WP-5.5.1:** Hosts SHOULD provide a `Theme` dependency for design system integration.
+**MWP-5.5.1:** Hosts SHOULD provide a `Theme` dependency for design system integration.
 
-**MCP-WP-5.5.2:** Widgets SHOULD use CSS custom properties (design tokens) for styling:
+**MWP-5.5.2:** Widgets SHOULD use CSS custom properties (design tokens) for styling:
 
 ```typescript
 interface Theme {
@@ -558,7 +558,7 @@ interface ColorAdaptationOptions {
 }
 ```
 
-**MCP-WP-5.5.3:** Standard design tokens (18 base + 42 extended = 60 total):
+**MWP-5.5.3:** Standard design tokens (18 base + 42 extended = 60 total):
 
 #### Base Tokens (Required)
 
@@ -618,7 +618,7 @@ interface ColorAdaptationOptions {
 | `--mcp-info-medium` | Info state (medium) | `#3b82f6` |
 | `--mcp-info-dark` | Info state (dark) | `#1e40af` |
 
-**MCP-WP-5.5.4:** Widgets SHOULD apply tokens in shadow DOM:
+**MWP-5.5.4:** Widgets SHOULD apply tokens in shadow DOM:
 
 ```css
 :host {
@@ -654,7 +654,7 @@ button {
 }
 ```
 
-**MCP-WP-5.5.5:** Dynamic theme switching:
+**MWP-5.5.5:** Dynamic theme switching:
 
 ```javascript
 // Widget reacts to theme changes
@@ -667,7 +667,7 @@ const unsubscribe = Theme.onThemeChange((newTokens, mode) => {
 });
 ```
 
-**MCP-WP-5.5.6:** Scoped Theming (for widgets with custom color requirements):
+**MWP-5.5.6:** Scoped Theming (for widgets with custom color requirements):
 
 Widgets MAY use scoped theming to separate chrome styling from content styling:
 
@@ -703,7 +703,7 @@ interface WidgetMetadata {
 }
 ```
 
-**MCP-WP-5.5.7:** Color Adaptation Helpers (for custom widget colors):
+**MWP-5.5.7:** Color Adaptation Helpers (for custom widget colors):
 
 Widgets with custom colors MAY use Theme helper methods to adapt colors to current mode:
 
@@ -726,20 +726,20 @@ const colorScale = Theme.generateColorScale?.(brandColor, 5);
 // Returns: ['#lightest', '#lighter', '#base', '#darker', '#darkest']
 ```
 
-**MCP-WP-5.5.8:** Hosts implementing theming MUST:
+**MWP-5.5.8:** Hosts implementing theming MUST:
 - Inject CSS custom properties into widget shadow roots
 - Provide at least `light` and `dark` themes
 - Update tokens dynamically when user changes theme
 - Persist theme preference across sessions
 - Provide all 18 base tokens
 
-**MCP-WP-5.5.9:** Hosts implementing theming SHOULD:
+**MWP-5.5.9:** Hosts implementing theming SHOULD:
 - Provide extended tokens (accent, data, semantic gradients)
 - Implement Theme helper methods (getContrastRatio, adaptColor, etc.)
 - Support scoped theming configuration
 - Respect system-level theme preferences
 
-**MCP-WP-5.5.10:** Widget theming benefits:
+**MWP-5.5.10:** Widget theming benefits:
 - **Visual consistency:** Widgets match host application design
 - **White-label support:** Hosts can rebrand dashboards
 - **Accessibility:** High-contrast themes for visual impairments
@@ -755,11 +755,11 @@ Hosts MUST supply the core dependencies described in Sections 6.1–6.3. Section
 
 ### 6.1 EventBus Interface
 
-**MCP-WP-6.1.1:** Same as generic spec (Section 6.1 from MWP).
+**MWP-6.1.1:** Same as generic spec (Section 6.1 from MWP).
 
 ### 6.2 MCPBridge Interface (NEW)
 
-**MCP-WP-6.2.1:** The host MUST provide an MCPBridge instance conforming to:
+**MWP-6.2.1:** The host MUST provide an MCPBridge instance conforming to:
 
 Widgets rely on the bridge to access every MCP primitive advertised in `MCPServerInfo.capabilities`. When a server exposes the `sampling` capability declared in Section 3, the bridge MUST surface the sampling helpers defined below.
 
@@ -857,21 +857,21 @@ interface MCPError extends Error {
 }
 ```
 
-**MCP-WP-6.2.2:** `callTool()` MUST send a `tools/call` JSON-RPC request to the specified MCP server.
+**MWP-6.2.2:** `callTool()` MUST send a `tools/call` JSON-RPC request to the specified MCP server.
 
-**MCP-WP-6.2.3:** `readResource()` MUST send a `resources/read` JSON-RPC request.
+**MWP-6.2.3:** `readResource()` MUST send a `resources/read` JSON-RPC request.
 
-**MCP-WP-6.2.4:** `getPrompt()` MUST send a `prompts/get` JSON-RPC request.
+**MWP-6.2.4:** `getPrompt()` MUST send a `prompts/get` JSON-RPC request.
 
-**MCP-WP-6.2.5:** All MCP operations MUST handle JSON-RPC errors and translate them to JavaScript exceptions.
+**MWP-6.2.5:** All MCP operations MUST handle JSON-RPC errors and translate them to JavaScript exceptions.
 
-**MCP-WP-6.2.6:** MCPBridge MUST emit events on the EventBus for all MCP operations (see Section 8.2).
+**MWP-6.2.6:** MCPBridge MUST emit events on the EventBus for all MCP operations (see Section 8.2).
 
-**MCP-WP-6.2.7:** `createMessage()` MUST send a `sampling/createMessage` JSON-RPC request as defined in the MCP specification and resolve with the content that the user (or host policy) approves.
+**MWP-6.2.7:** `createMessage()` MUST send a `sampling/createMessage` JSON-RPC request as defined in the MCP specification and resolve with the content that the user (or host policy) approves.
 
-**MCP-WP-6.2.8:** Hosts **SHOULD** reuse human-in-the-loop workflows for agent or widget initiated sampling actions (see Section 17) before forwarding responses to servers.
+**MWP-6.2.8:** Hosts **SHOULD** reuse human-in-the-loop workflows for agent or widget initiated sampling actions (see Section 17) before forwarding responses to servers.
 
-**MCP-WP-6.2.9:** The `SamplingRequest` and `SamplingResult` interfaces mirror the MCP 2025-06-18 schema. Widgets MUST treat unknown fields as opaque and pass them through unchanged so hosts can adopt future MCP extensions.
+**MWP-6.2.9:** The `SamplingRequest` and `SamplingResult` interfaces mirror the MCP 2025-06-18 schema. Widgets MUST treat unknown fields as opaque and pass them through unchanged so hosts can adopt future MCP extensions.
 
 | JSON-RPC Code | Name              | Recommended Host Behaviour                                  |
 | ------------- | ----------------- | ------------------------------------------------------------ |
@@ -882,17 +882,17 @@ interface MCPError extends Error {
 | -32603        | Internal error    | Allow manual retry or escalate to server operator           |
 | -32000..-32099| Server error      | Inspect `error.data` and apply backoff before retrying      |
 
-**MCP-WP-6.2.10:** Hosts MAY wrap raw JSON-RPC errors in an `MCPError` so widgets can display consistent messaging while preserving the original `jsonrpcCode` and any attached data.
+**MWP-6.2.10:** Hosts MAY wrap raw JSON-RPC errors in an `MCPError` so widgets can display consistent messaging while preserving the original `jsonrpcCode` and any attached data.
 
 <Note>
-Batch JSON-RPC operations remain out of scope for MCP-WP v1.0. Hosts SHOULD dispatch one request at a time so consent, auditing, and UI state stay predictable.
+Batch JSON-RPC operations remain out of scope for MWP v1.0. Hosts SHOULD dispatch one request at a time so consent, auditing, and UI state stay predictable.
 </Note>
 
 ### 6.3 Configuration Interface
 
-**MCP-WP-6.3.1:** Same as generic spec, with MCP-specific keys:
+**MWP-6.3.1:** Same as generic spec, with MCP-specific keys:
 
-**MCP-WP-6.3.2:** Standard configuration keys:
+**MWP-6.3.2:** Standard configuration keys:
 
 | Key                  | Type    | Description                            |
 | -------------------- | ------- | -------------------------------------- |
@@ -903,7 +903,7 @@ Batch JSON-RPC operations remain out of scope for MCP-WP v1.0. Hosts SHOULD disp
 
 ### 6.4 Theme Interface (Optional)
 
-**MCP-WP-6.4.1:** Hosts implementing theming **SHOULD** provide a `Theme` dependency with the following interface:
+**MWP-6.4.1:** Hosts implementing theming **SHOULD** provide a `Theme` dependency with the following interface:
 
 ```typescript
 interface Theme {
@@ -1005,25 +1005,25 @@ interface ColorAdaptationOptions {
 }
 ```
 
-**MCP-WP-6.4.2:** Hosts providing `Theme` **MUST**:
+**MWP-6.4.2:** Hosts providing `Theme` **MUST**:
 - Inject all 18 base CSS custom properties (as defined in Section 5.5.3) into widget shadow roots
 - Provide at least `light` and `dark` theme modes
 - Update theme tokens dynamically when user changes theme preferences
 - Persist theme preference across sessions
 
-**MCP-WP-6.4.3:** Hosts providing `Theme` **SHOULD**:
+**MWP-6.4.3:** Hosts providing `Theme` **SHOULD**:
 - Provide extended color palettes (`accentColors`, `dataColors`, `semanticColors`)
 - Implement optional helper methods (`getContrastRatio`, `adaptColor`, `generateColorScale`)
 - Support scoped theming configuration for widgets with custom branding requirements
 - Respect system-level theme preferences (e.g., `prefers-color-scheme`)
 
-**MCP-WP-6.4.4:** Widgets using `Theme` **MUST**:
+**MWP-6.4.4:** Widgets using `Theme` **MUST**:
 - Detect the presence of the `Theme` dependency at runtime
 - Gracefully degrade to fallback styling if `Theme` is undefined
 - Use CSS custom properties for all themeable elements
 - Subscribe to theme changes via `onChange` if real-time updates are needed
 
-**MCP-WP-6.4.5:** Extended theming for complex widgets:
+**MWP-6.4.5:** Extended theming for complex widgets:
 
 Widgets with extensive custom styling (e.g., data visualizations, branded components) **MAY** use:
 
@@ -1063,14 +1063,14 @@ Widgets with extensive custom styling (e.g., data visualizations, branded compon
    }
    ```
 
-**MCP-WP-6.4.6:** Accessibility requirements for theming:
+**MWP-6.4.6:** Accessibility requirements for theming:
 
 Hosts implementing `Theme` with `getContrastRatio` **SHOULD**:
 - Ensure all theme color combinations meet WCAG 2.1 Level AA (4.5:1 for normal text, 3:1 for large text)
 - Provide `accessible` color scheme option with enhanced contrast ratios (7:1 for AAA compliance)
 - Support high-contrast mode detection via `mode: 'high-contrast'`
 
-**MCP-WP-6.4.7:** Theme configuration example:
+**MWP-6.4.7:** Theme configuration example:
 
 ```typescript
 // Dashboard configuration with extended theming
@@ -1095,11 +1095,11 @@ const themeConfig = {
 
 ### 6.5 Inter-Widget Communication Bus
 
-**MCP-WP-6.5.1:** Hosts MAY extend the EventBus to support widget-to-widget communication.
+**MWP-6.5.1:** Hosts MAY extend the EventBus to support widget-to-widget communication.
 
-**MCP-WP-6.5.2:** Widget communication uses dedicated event channels: `mcp:widget:<targetWidget>:message`
+**MWP-6.5.2:** Widget communication uses dedicated event channels: `mcp:widget:<targetWidget>:message`
 
-**MCP-WP-6.5.3:** Inter-widget communication interface:
+**MWP-6.5.3:** Inter-widget communication interface:
 
 ```typescript
 interface WidgetMessaging {
@@ -1123,13 +1123,13 @@ interface WidgetMessage {
 type MessageHandler = (message: WidgetMessage) => void;
 ```
 
-**MCP-WP-6.5.4:** Hosts implementing widget messaging MUST:
+**MWP-6.5.4:** Hosts implementing widget messaging MUST:
 - Validate message schema before delivery
 - Enforce rate limits (default: 10 messages/second per widget)
 - Provide sender verification (prevent spoofing)
 - Log all inter-widget messages for debugging
 
-**MCP-WP-6.5.5:** Example composite workflow:
+**MWP-6.5.5:** Example composite workflow:
 
 ```javascript
 // GitHub widget emits PR created event
@@ -1151,12 +1151,12 @@ EventBus.on('mcp:widget:slack-widget:message', (event) => {
 });
 ```
 
-**MCP-WP-6.5.6:** Security considerations:
+**MWP-6.5.6:** Security considerations:
 - Widgets MUST declare `widgetCommunication` permission to send messages
 - Recipients MAY implement allowlists for trusted senders
 - Hosts SHOULD sanitize all message payloads to prevent XSS
 
-**MCP-WP-6.5.7:** Message schema validation:
+**MWP-6.5.7:** Message schema validation:
 
 ```typescript
 interface WidgetCommunicationPermission {
@@ -1169,9 +1169,9 @@ interface WidgetCommunicationPermission {
 
 ### 6.6 Offline Capability Contract
 
-**MCP-WP-6.6.1:** Hosts that advertise offline support **MUST** provide an `OfflineCache` dependency.
+**MWP-6.6.1:** Hosts that advertise offline support **MUST** provide an `OfflineCache` dependency.
 
-**MCP-WP-6.6.2:** Widgets **MAY** inspect the dependency list to detect offline availability and **MUST** degrade gracefully if it is absent.
+**MWP-6.6.2:** Widgets **MAY** inspect the dependency list to detect offline availability and **MUST** degrade gracefully if it is absent.
 
 ```typescript
 interface OfflineCache {
@@ -1192,11 +1192,11 @@ interface QueuedOperation {
 }
 ```
 
-**MCP-WP-6.6.3:** Hosts providing `OfflineCache` **MUST** ensure queued operations are executed in order once connectivity returns and **MUST** present conflicts to the user if execution fails.
+**MWP-6.6.3:** Hosts providing `OfflineCache` **MUST** ensure queued operations are executed in order once connectivity returns and **MUST** present conflicts to the user if execution fails.
 
 ### 6.7 Telemetry Interface
 
-**MCP-WP-6.7.1:** Hosts collecting usage analytics **MUST** expose a `Telemetry` dependency and obtain user consent before forwarding any events.
+**MWP-6.7.1:** Hosts collecting usage analytics **MUST** expose a `Telemetry` dependency and obtain user consent before forwarding any events.
 
 ```typescript
 interface Telemetry {
@@ -1206,13 +1206,13 @@ interface Telemetry {
 }
 ```
 
-**MCP-WP-6.7.2:** Widgets **MUST NOT** send personally identifiable information through `Telemetry` unless explicitly required permissions are granted.
+**MWP-6.7.2:** Widgets **MUST NOT** send personally identifiable information through `Telemetry` unless explicitly required permissions are granted.
 
-**MCP-WP-6.7.3:** Hosts **SHOULD** provide no-op implementations when telemetry collection is disabled.
+**MWP-6.7.3:** Hosts **SHOULD** provide no-op implementations when telemetry collection is disabled.
 
 ### 6.8 Internationalization Interface
 
-**MCP-WP-6.8.1:** Hosts targeting multiple locales **SHOULD** provide an `I18n` dependency.
+**MWP-6.8.1:** Hosts targeting multiple locales **SHOULD** provide an `I18n` dependency.
 
 ```typescript
 interface I18n {
@@ -1223,9 +1223,9 @@ interface I18n {
 }
 ```
 
-**MCP-WP-6.8.2:** Widgets using `I18n` **MUST** fall back to built-in strings when the dependency is not present.
+**MWP-6.8.2:** Widgets using `I18n` **MUST** fall back to built-in strings when the dependency is not present.
 
-**MCP-WP-6.8.3:** Hosts **MUST** keep locale data and user preference storage in sync so widgets receive timely updates via configuration change notifications.
+**MWP-6.8.3:** Hosts **MUST** keep locale data and user preference storage in sync so widgets receive timely updates via configuration change notifications.
 
 ---
 
@@ -1233,21 +1233,21 @@ interface I18n {
 
 ### 7.1 Tool Rendering
 
-**MCP-WP-7.1.1:** Widgets that display MCP tools MUST show:
+**MWP-7.1.1:** Widgets that display MCP tools MUST show:
 
 - Tool name (or `title` when provided)
 - Tool description (if provided)
 - Input schema summary (e.g., "Requires: owner, repo")
 
-**MCP-WP-7.1.2:** Widgets that provide tool invocation UI MUST:
+**MWP-7.1.2:** Widgets that provide tool invocation UI MUST:
 
 - Generate forms from the tool's inputSchema (JSON Schema)
 - Validate user input against the schema before invocation
 - Display validation errors inline
 
-**MCP-WP-7.1.2a:** Widgets SHOULD expose any declared `outputSchema` and `annotations` (e.g., `readOnlyHint`, `idempotentHint`) to help users and agents understand tool behaviour.
+**MWP-7.1.2a:** Widgets SHOULD expose any declared `outputSchema` and `annotations` (e.g., `readOnlyHint`, `idempotentHint`) to help users and agents understand tool behaviour.
 
-**MCP-WP-7.1.3:** Tool invocation MUST emit events rather than calling MCPBridge directly:
+**MWP-7.1.3:** Tool invocation MUST emit events rather than calling MCPBridge directly:
 
 ```javascript
 // CORRECT: Emit event for host to handle
@@ -1263,33 +1263,33 @@ await MCPBridge.callTool('github', 'create_issue', args); // ❌
 
 ### 7.2 Resource Rendering
 
-**MCP-WP-7.2.1:** Widgets that display MCP resources MUST show:
+**MWP-7.2.1:** Widgets that display MCP resources MUST show:
 
 - Resource URI
 - A human-friendly label, preferring `title` when present and falling back to `name`
 - MIME type (if available)
 
-**MCP-WP-7.2.1a:** Widgets SHOULD surface additional metadata when provided, such as `annotations` (`audience`, `priority`, `lastModified`) and `size`.
+**MWP-7.2.1a:** Widgets SHOULD surface additional metadata when provided, such as `annotations` (`audience`, `priority`, `lastModified`) and `size`.
 
-**MCP-WP-7.2.2:** Widgets SHOULD provide preview for common MIME types:
+**MWP-7.2.2:** Widgets SHOULD provide preview for common MIME types:
 
 - `text/*`: Show text content
 - `image/*`: Show thumbnail
 - `application/json`: Pretty-print JSON
 
-**MCP-WP-7.2.3:** Resource URIs with templates (e.g., `file:///{path}`) SHOULD render as interactive forms.
+**MWP-7.2.3:** Resource URIs with templates (e.g., `file:///{path}`) SHOULD render as interactive forms.
 
 ### 7.3 Prompt Rendering
 
-**MCP-WP-7.3.1:** Widgets that display MCP prompts MUST show:
+**MWP-7.3.1:** Widgets that display MCP prompts MUST show:
 
 - Prompt name (and `title` when provided)
 - Prompt description (if provided)
 - Required vs optional arguments
 
-**MCP-WP-7.3.2:** Prompt invocation SHOULD generate forms for arguments.
+**MWP-7.3.2:** Prompt invocation SHOULD generate forms for arguments.
 
-**MCP-WP-7.3.3:** Prompt results SHOULD display the generated messages in a readable format.
+**MWP-7.3.3:** Prompt results SHOULD display the generated messages in a readable format.
 
 ---
 
@@ -1297,13 +1297,13 @@ await MCPBridge.callTool('github', 'create_issue', args); // ❌
 
 ### 8.1 Event Pattern
 
-**MCP-WP-8.1.1:** All MCP widget events MUST use the `mcp:` domain prefix.
+**MWP-8.1.1:** All MCP widget events MUST use the `mcp:` domain prefix.
 
-**MCP-WP-8.1.2:** Event format: `mcp:<subject>:<action>`
+**MWP-8.1.2:** Event format: `mcp:<subject>:<action>`
 
 ### 8.2 Standard MCP Events
 
-**MCP-WP-8.2.1:** The following events are REQUIRED for MCP operations:
+**MWP-8.2.1:** The following events are REQUIRED for MCP operations:
 
 | Event Name                  | Data Schema                                                                   | Emitted By | Description                     |
 | --------------------------- | ----------------------------------------------------------------------------- | ---------- | ------------------------------- |
@@ -1323,23 +1323,23 @@ await MCPBridge.callTool('github', 'create_issue', args); // ❌
 
 ## 9. Error Handling Requirements (Normative)
 
-**MCP-WP-9.1.1:** Widgets MUST handle MCP JSON-RPC errors gracefully.
+**MWP-9.1.1:** Widgets MUST handle MCP JSON-RPC errors gracefully.
 
-**MCP-WP-9.1.2:** When a tool call fails, widgets SHOULD display:
+**MWP-9.1.2:** When a tool call fails, widgets SHOULD display:
 
 - Error code (if JSON-RPC error)
 - Error message
 - Failed arguments (for debugging)
 
-**MCP-WP-9.1.3:** Widgets MUST NOT crash when MCP server returns unexpected response formats.
+**MWP-9.1.3:** Widgets MUST NOT crash when MCP server returns unexpected response formats.
 
-**MCP-WP-9.1.4:** Widgets listening for `mcp:*:error` events SHOULD update their UI to reflect the error state.
+**MWP-9.1.4:** Widgets listening for `mcp:*:error` events SHOULD update their UI to reflect the error state.
 
-**MCP-WP-9.1.5:** Widgets SHOULD map JSON-RPC error codes to actionable guidance for users using the lookup in Section 6.2. Examples include prompting the user to adjust invalid parameters (`-32602`) or retrying transient server errors (`-32000` through `-32099`) after a short backoff.
+**MWP-9.1.5:** Widgets SHOULD map JSON-RPC error codes to actionable guidance for users using the lookup in Section 6.2. Examples include prompting the user to adjust invalid parameters (`-32602`) or retrying transient server errors (`-32000` through `-32099`) after a short backoff.
 
-**MCP-WP-9.1.6:** When retries are appropriate, widgets MUST cap attempts and surface the final error with troubleshooting information rather than looping indefinitely.
+**MWP-9.1.6:** When retries are appropriate, widgets MUST cap attempts and surface the final error with troubleshooting information rather than looping indefinitely.
 
-**MCP-WP-9.1.7:** Widgets SHOULD log structured error details (including `jsonrpcCode` and any `error.data`) through the Telemetry or logging facilities so hosts can monitor stability without exposing sensitive payloads to end users.
+**MWP-9.1.7:** Widgets SHOULD log structured error details (including `jsonrpcCode` and any `error.data`) through the Telemetry or logging facilities so hosts can monitor stability without exposing sensitive payloads to end users.
 
 ---
 
@@ -1347,9 +1347,9 @@ await MCPBridge.callTool('github', 'create_issue', args); // ❌
 
 ### 10.1 MCP Server Discovery
 
-**MCP-WP-10.1.1:** The host MUST load MCP server configurations from `Configuration.get('mcp.servers')`.
+**MWP-10.1.1:** The host MUST load MCP server configurations from `Configuration.get('mcp.servers')`.
 
-**MCP-WP-10.1.2:** For each server, the host MUST:
+**MWP-10.1.2:** For each server, the host MUST:
 
 1. Spawn the server process (stdio) or connect to HTTP endpoint
 2. Send `initialize` JSON-RPC request
@@ -1358,11 +1358,11 @@ await MCPBridge.callTool('github', 'create_issue', args); // ❌
 5. Create MCPServerInfo object
 6. Invoke widget factory with dependencies and server info
 
-**MCP-WP-10.1.3:** The host SHOULD support hot-reload when `mcp.servers` configuration changes.
+**MWP-10.1.3:** The host SHOULD support hot-reload when `mcp.servers` configuration changes.
 
 ### 10.2 Widget Lifecycle
 
-**MCP-WP-10.2.1:** Widget creation sequence:
+**MWP-10.2.1:** Widget creation sequence:
 
 1. Connect to MCP server
 2. Discover tools/resources/prompts
@@ -1370,7 +1370,7 @@ await MCPBridge.callTool('github', 'create_issue', args); // ❌
 4. Call `api.initialize()` if present
 5. Render widget to DOM
 
-**MCP-WP-10.2.2:** Widget destruction sequence:
+**MWP-10.2.2:** Widget destruction sequence:
 
 1. Call `api.destroy()` if present
 2. Remove widget from DOM (triggers `disconnectedCallback`)
@@ -1378,13 +1378,13 @@ await MCPBridge.callTool('github', 'create_issue', args); // ❌
 
 ### 10.3 Resilience, Telemetry, and Localization Hooks
 
-**MCP-WP-10.3.1:** When an `OfflineCache` is provided, the host **MUST** keep its connectivity status in sync with the widget by emitting `mcp:host:connectivity` notifications.
+**MWP-10.3.1:** When an `OfflineCache` is provided, the host **MUST** keep its connectivity status in sync with the widget by emitting `mcp:host:connectivity` notifications.
 
-**MCP-WP-10.3.2:** Hosts **MUST** flush queued operations automatically after reconnect and **MUST** surface failures through `mcp:host:offline-error` events so widgets can update their UI.
+**MWP-10.3.2:** Hosts **MUST** flush queued operations automatically after reconnect and **MUST** surface failures through `mcp:host:offline-error` events so widgets can update their UI.
 
-**MCP-WP-10.3.3:** If telemetry is enabled, the host **MUST** enrich events with anonymized session identifiers and enforce any user consent toggles before forwarding them outside the runtime.
+**MWP-10.3.3:** If telemetry is enabled, the host **MUST** enrich events with anonymized session identifiers and enforce any user consent toggles before forwarding them outside the runtime.
 
-**MCP-WP-10.3.4:** Hosts **SHOULD** propagate locale changes by emitting `mcp:host:locale-changed` with the new locale identifier; widgets SHOULD update rendered strings when received.
+**MWP-10.3.4:** Hosts **SHOULD** propagate locale changes by emitting `mcp:host:locale-changed` with the new locale identifier; widgets SHOULD update rendered strings when received.
 
 ---
 
@@ -1392,17 +1392,17 @@ await MCPBridge.callTool('github', 'create_issue', args); // ❌
 
 ### 11.1 XSS Prevention
 
-**MCP-WP-11.1.1:** MCP tool names, resource URIs, and prompt arguments received from servers MUST be treated as untrusted.
+**MWP-11.1.1:** MCP tool names, resource URIs, and prompt arguments received from servers MUST be treated as untrusted.
 
-**MCP-WP-11.1.2:** Widgets MUST use `textContent` when rendering MCP server data.
+**MWP-11.1.2:** Widgets MUST use `textContent` when rendering MCP server data.
 
-**MCP-WP-11.1.3:** Tool result content of type `text` MUST be sanitized before rendering as HTML.
+**MWP-11.1.3:** Tool result content of type `text` MUST be sanitized before rendering as HTML.
 
 ### 11.2 Tool Invocation Security
 
-**MCP-WP-11.2.1:** The host MUST require user confirmation before executing any tool.
+**MWP-11.2.1:** The host MUST require user confirmation before executing any tool.
 
-**MCP-WP-11.2.2:** Confirmation dialog MUST display:
+**MWP-11.2.2:** Confirmation dialog MUST display:
 
 ```
 Invoke tool: github:create_issue
@@ -1419,28 +1419,28 @@ Arguments:
 [Cancel] [Confirm]
 ```
 
-**MCP-WP-11.2.3:** The host MUST validate arguments against `inputSchema` before sending to MCP server.
+**MWP-11.2.3:** The host MUST validate arguments against `inputSchema` before sending to MCP server.
 
-**MCP-WP-11.2.4:** Widgets MUST NOT bypass confirmation by calling `MCPBridge.callTool()` directly.
+**MWP-11.2.4:** Widgets MUST NOT bypass confirmation by calling `MCPBridge.callTool()` directly.
 
 ### 11.3 Resource URI Validation
 
-**MCP-WP-11.3.1:** Before reading a resource, the host SHOULD validate the URI scheme against an allowlist.
+**MWP-11.3.1:** Before reading a resource, the host SHOULD validate the URI scheme against an allowlist.
 
-**MCP-WP-11.3.2:** URIs with `file://` scheme SHOULD be restricted to server-declared paths.
+**MWP-11.3.2:** URIs with `file://` scheme SHOULD be restricted to server-declared paths.
 
 ### 11.4 Widget Permission Model 
 
-**MCP-WP-11.4.1:** Widgets MAY declare required permissions in the `permissions` field of widget metadata.
+**MWP-11.4.1:** Widgets MAY declare required permissions in the `permissions` field of widget metadata.
 
-**MCP-WP-11.4.2:** If `permissions` is undefined, the widget MUST be treated as having no permissions (maximum restriction).
+**MWP-11.4.2:** If `permissions` is undefined, the widget MUST be treated as having no permissions (maximum restriction).
 
-**MCP-WP-11.4.3:** Hosts MUST enforce permissions via:
+**MWP-11.4.3:** Hosts MUST enforce permissions via:
 - Content Security Policy (CSP) headers
 - API gate enforcement on `MCPBridge`, storage, clipboard, and network APIs
 - Runtime validation before sensitive operations
 
-**MCP-WP-11.4.4:** Permission enforcement by trust level:
+**MWP-11.4.4:** Permission enforcement by trust level:
 
 | Trust Level | Network | Storage | MCP Operations | Confirmation Required |
 |-------------|---------|---------|----------------|----------------------|
@@ -1449,25 +1449,25 @@ Arguments:
 | verified    | Declared domains | Persistent allowed | With confirmation | First-time only |
 | enterprise  | Full (within declared) | Full | No confirmation | Never |
 
-**MCP-WP-11.4.5:** Before widget installation, hosts MUST display requested permissions to user for consent.
+**MWP-11.4.5:** Before widget installation, hosts MUST display requested permissions to user for consent.
 
-**MCP-WP-11.4.6:** Hosts SHOULD maintain audit logs of permission grants, revocations, and violations for compliance purposes (SOC2, ISO 27001, GDPR).
+**MWP-11.4.6:** Hosts SHOULD maintain audit logs of permission grants, revocations, and violations for compliance purposes (SOC2, ISO 27001, GDPR).
 
-**MCP-WP-11.4.7:** Widgets requiring additional permissions in updates MUST trigger re-consent flow.
+**MWP-11.4.7:** Widgets requiring additional permissions in updates MUST trigger re-consent flow.
 
-**MCP-WP-11.4.8:** For verified widgets (`trustLevel: 'verified'`), hosts MUST validate code signatures before granting elevated permissions.
+**MWP-11.4.8:** For verified widgets (`trustLevel: 'verified'`), hosts MUST validate code signatures before granting elevated permissions.
 
 ### 11.5 Accessibility Requirements (WCAG 2.1 Level AA)
 
-**MCP-WP-11.5.1:** All MCP-WP widgets MUST conform to WCAG 2.1 Level AA accessibility standards.
+**MWP-11.5.1:** All MWP widgets MUST conform to WCAG 2.1 Level AA accessibility standards.
 
-**MCP-WP-11.5.2:** Widgets MUST provide keyboard navigation for all interactive elements:
+**MWP-11.5.2:** Widgets MUST provide keyboard navigation for all interactive elements:
 - **Tab:** Focus next element
 - **Shift+Tab:** Focus previous element
 - **Enter/Space:** Activate focused element
 - **Escape:** Close modals/dialogs
 
-**MCP-WP-11.5.3:** Widgets MUST include appropriate ARIA labels and roles:
+**MWP-11.5.3:** Widgets MUST include appropriate ARIA labels and roles:
 
 ```html
 <button aria-label="Invoke create_issue tool" role="button">
@@ -1479,9 +1479,9 @@ Arguments:
 </div>
 ```
 
-**MCP-WP-11.5.4:** Dynamic content changes MUST be announced to screen readers via ARIA live regions (`aria-live="polite"` or `aria-live="assertive"`).
+**MWP-11.5.4:** Dynamic content changes MUST be announced to screen readers via ARIA live regions (`aria-live="polite"` or `aria-live="assertive"`).
 
-**MCP-WP-11.5.5:** Hosts SHOULD provide an `A11yHelper` dependency for accessibility utilities:
+**MWP-11.5.5:** Hosts SHOULD provide an `A11yHelper` dependency for accessibility utilities:
 
 ```typescript
 interface A11yHelper {
@@ -1508,41 +1508,41 @@ interface A11yPreferences {
 type ReleaseTrapFunction = () => void;
 ```
 
-**MCP-WP-11.5.6:** Widgets MUST respect user accessibility preferences:
+**MWP-11.5.6:** Widgets MUST respect user accessibility preferences:
 - Honor `prefers-reduced-motion` (disable animations)
 - Honor `prefers-contrast` (adjust colors)
 - Support browser zoom (use relative units like `rem`, `em`)
 
-**MCP-WP-11.5.7:** Color MUST NOT be the only means of conveying information:
+**MWP-11.5.7:** Color MUST NOT be the only means of conveying information:
 - Use icons + color for status indicators
 - Provide text labels in addition to color coding
 - Example: Error state = red color + "✗" icon + "Error" text
 
-**MCP-WP-11.5.8:** Widgets MUST maintain minimum color contrast ratios:
+**MWP-11.5.8:** Widgets MUST maintain minimum color contrast ratios:
 - Normal text: 4.5:1
 - Large text (18pt+): 3:1
 - UI components and graphics: 3:1
 
-**MCP-WP-11.5.9:** Form inputs MUST have associated labels:
+**MWP-11.5.9:** Form inputs MUST have associated labels:
 
 ```html
 <label for="tool-arg-repo">Repository Name</label>
 <input id="tool-arg-repo" type="text" aria-required="true" />
 ```
 
-**MCP-WP-11.5.10:** Error messages MUST be programmatically associated with form fields:
+**MWP-11.5.10:** Error messages MUST be programmatically associated with form fields:
 
 ```html
 <input id="repo" aria-invalid="true" aria-describedby="repo-error" />
 <span id="repo-error" role="alert">Repository name is required</span>
 ```
 
-**MCP-WP-11.5.11:** Widgets SHOULD integrate automated accessibility testing:
+**MWP-11.5.11:** Widgets SHOULD integrate automated accessibility testing:
 - Use `axe-core` library for runtime validation
 - Include accessibility tests in conformance test suite (Section 17)
 - Report violations to host for debugging
 
-**MCP-WP-11.5.12:** Host confirmation dialogs (e.g., tool invocation) MUST be accessible:
+**MWP-11.5.12:** Host confirmation dialogs (e.g., tool invocation) MUST be accessible:
 - Focus trap within dialog
 - Announce dialog opening to screen readers
 - Escape key to dismiss
@@ -1552,7 +1552,7 @@ type ReleaseTrapFunction = () => void;
 
 ### 11.6 HTTP Authorization (Informative)
 
-The MCP 2025-06-18 specification introduces an HTTP authorization framework that hosts **MAY** adopt when communicating with servers over HTTP transports. MCP-WP does not mandate a specific authentication scheme, but hosts that implement OAuth 2.0 or similar mechanisms SHOULD:
+The MCP 2025-06-18 specification introduces an HTTP authorization framework that hosts **MAY** adopt when communicating with servers over HTTP transports. MWP does not mandate a specific authentication scheme, but hosts that implement OAuth 2.0 or similar mechanisms SHOULD:
 
 - Store credentials securely and scope tokens to the minimum permissions required by each server.
 - Inject authorization headers only for transports that require them; STDIO transports SHOULD source credentials from the process environment per the MCP spec.
@@ -1776,15 +1776,15 @@ export default function createMCPWidget(
 
 ### 15.1 Purpose and Scope
 
-**MCP-WP-16.1.1:** This section defines the protocol for discovering, distributing, installing, and updating MCP-WP widgets across host applications.
+**MWP-16.1.1:** This section defines the protocol for discovering, distributing, installing, and updating MWP widgets across host applications.
 
-**MCP-WP-16.1.2:** The registry protocol enables npm-style widget distribution: `mcpwp install @org/github-widget`
+**MWP-16.1.2:** The registry protocol enables npm-style widget distribution: `mcpwp install @org/github-widget`
 
-**MCP-WP-16.1.3:** Registries MAY be centralized (npm, official registry) or decentralized (GitHub releases, self-hosted).
+**MWP-16.1.3:** Registries MAY be centralized (npm, official registry) or decentralized (GitHub releases, self-hosted).
 
 ### 15.2 Widget Package Manifest
 
-**MCP-WP-16.2.1:** Every widget package MUST include a `widget.json` manifest:
+**MWP-16.2.1:** Every widget package MUST include a `widget.json` manifest:
 
 ```json
 {
@@ -1813,7 +1813,7 @@ export default function createMCPWidget(
 }
 ```
 
-**MCP-WP-16.2.2:** Manifest fields:
+**MWP-16.2.2:** Manifest fields:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -1821,27 +1821,27 @@ export default function createMCPWidget(
 | `version` | string | Yes | Semantic version |
 | `bundle` | string | Yes | HTTPS URL to widget JavaScript bundle |
 | `integrity` | string | Yes | SHA256 hash for integrity verification |
-| `mcpwpVersion` | string | Yes | Minimum MCP-WP protocol version |
+| `mcpwpVersion` | string | Yes | Minimum MWP protocol version |
 | `dependencies` | object | No | Other widget dependencies |
 | `repository` | object | No | Source code location |
 | `mcpServers` | string[] | No | Compatible MCP server names |
 
 ### 15.3 Registry Discovery
 
-**MCP-WP-16.3.1:** Hosts SHOULD support multiple registry sources:
+**MWP-16.3.1:** Hosts SHOULD support multiple registry sources:
 
 1. **Official Registry**: `https://registry.mcpwidgets.dev`
 2. **npm Registry**: `https://registry.npmjs.org` (packages with `mcp-widget` keyword)
 3. **GitHub Releases**: Direct from GitHub releases API
 4. **Custom Registry**: User-configured registry URL
 
-**MCP-WP-16.3.2:** Registry API endpoint: `GET /widgets/{name}` returns widget manifest.
+**MWP-16.3.2:** Registry API endpoint: `GET /widgets/{name}` returns widget manifest.
 
-**MCP-WP-16.3.3:** Search endpoint: `GET /widgets?q={query}&server={mcpServer}` returns matching widgets.
+**MWP-16.3.3:** Search endpoint: `GET /widgets?q={query}&server={mcpServer}` returns matching widgets.
 
 ### 15.4 Installation Process
 
-**MCP-WP-16.4.1:** Widget installation sequence:
+**MWP-16.4.1:** Widget installation sequence:
 
 ```bash
 mcpwp install @mcpwp/github-widget
@@ -1856,53 +1856,53 @@ mcpwp install @mcpwp/github-widget
 7. Store bundle in local cache (`~/.mcpwp/widgets/`)
 8. Register widget in host configuration
 
-**MCP-WP-16.4.2:** Dependency resolution MUST use semantic versioning ranges.
+**MWP-16.4.2:** Dependency resolution MUST use semantic versioning ranges.
 
-**MCP-WP-16.4.3:** Circular dependencies MUST be detected and rejected.
+**MWP-16.4.3:** Circular dependencies MUST be detected and rejected.
 
-**MCP-WP-16.4.4:** If integrity verification fails, installation MUST abort with error.
+**MWP-16.4.4:** If integrity verification fails, installation MUST abort with error.
 
 ### 15.5 Update Mechanism
 
-**MCP-WP-16.5.1:** Hosts SHOULD check for widget updates periodically (default: daily).
+**MWP-16.5.1:** Hosts SHOULD check for widget updates periodically (default: daily).
 
-**MCP-WP-16.5.2:** Update check: Compare local version with latest registry version.
+**MWP-16.5.2:** Update check: Compare local version with latest registry version.
 
-**MCP-WP-16.5.3:** Widget updates MAY be:
+**MWP-16.5.3:** Widget updates MAY be:
 - **Automatic** (patch versions: 1.2.3 → 1.2.4)
 - **Notify User** (minor versions: 1.2.0 → 1.3.0)
 - **Manual Approval** (major versions: 1.0.0 → 2.0.0)
 
-**MCP-WP-16.5.4:** Breaking changes (major version bumps) MUST NOT auto-update.
+**MWP-16.5.4:** Breaking changes (major version bumps) MUST NOT auto-update.
 
 ### 15.6 Integrity Verification
 
-**MCP-WP-16.6.1:** The `integrity` field MUST contain a SHA256 hash:
+**MWP-16.6.1:** The `integrity` field MUST contain a SHA256 hash:
 
 ```
 sha256-<base64-encoded-hash>
 ```
 
-**MCP-WP-16.6.2:** Hosts MUST verify downloaded bundle matches hash before execution.
+**MWP-16.6.2:** Hosts MUST verify downloaded bundle matches hash before execution.
 
-**MCP-WP-16.6.3:** Verification failure MUST prevent widget loading and log security event.
+**MWP-16.6.3:** Verification failure MUST prevent widget loading and log security event.
 
 ### 15.7 Caching and Offline Support
 
-**MCP-WP-16.7.1:** Hosts SHOULD cache downloaded widgets locally in:
+**MWP-16.7.1:** Hosts SHOULD cache downloaded widgets locally in:
 
 ```
 ~/.mcpwp/widgets/{name}/{version}/bundle.js
 ~/.mcpwp/widgets/{name}/{version}/widget.json
 ```
 
-**MCP-WP-16.7.2:** Cached widgets MUST remain available offline.
+**MWP-16.7.2:** Cached widgets MUST remain available offline.
 
-**MCP-WP-16.7.3:** Cache invalidation: Remove versions older than 90 days if not actively used.
+**MWP-16.7.3:** Cache invalidation: Remove versions older than 90 days if not actively used.
 
 ### 15.8 Uninstallation
 
-**MCP-WP-16.8.1:** Widget removal:
+**MWP-16.8.1:** Widget removal:
 
 ```bash
 mcpwp uninstall @mcpwp/github-widget
@@ -1919,15 +1919,15 @@ mcpwp uninstall @mcpwp/github-widget
 
 ### 16.1 Purpose and Scope
 
-**MCP-WP-16.1.1:** This section defines bidirectional compatibility between MCP-WP and the community-driven mcp-ui protocol.
+**MWP-16.1.1:** This section defines bidirectional compatibility between MWP and the community-driven mcp-ui protocol.
 
-**MCP-WP-16.1.2:** Strategic positioning: MCP-WP aims to formalize the concepts pioneered by mcp-ui, not replace it. This interoperability enables gradual migration while preserving ecosystem investments.
+**MWP-16.1.2:** Strategic positioning: MWP aims to formalize the concepts pioneered by mcp-ui, not replace it. This interoperability enables gradual migration while preserving ecosystem investments.
 
-**MCP-WP-16.1.3:** This interoperability is OPTIONAL. Hosts MAY choose to support only MCP-WP native format.
+**MWP-16.1.3:** This interoperability is OPTIONAL. Hosts MAY choose to support only MWP native format.
 
 ### 15.2 mcp-ui Protocol Overview
 
-**MCP-WP-16.2.1:** The mcp-ui protocol defines a `UIResource` payload format:
+**MWP-16.2.1:** The mcp-ui protocol defines a `UIResource` payload format:
 
 ```typescript
 interface UIResource {
@@ -1937,7 +1937,7 @@ interface UIResource {
 }
 ```
 
-**MCP-WP-16.2.2:** Supported MIME types:
+**MWP-16.2.2:** Supported MIME types:
 
 | MIME Type | Rendering Method |
 |-----------|------------------|
@@ -1945,9 +1945,9 @@ interface UIResource {
 | `text/uri-list` | Sandboxed iframe loading external URL |
 | `application/vnd.mcp-ui.remote-dom` | Shopify remote-dom execution in sandbox |
 
-### 15.3 Converting mcp-ui to MCP-WP
+### 15.3 Converting mcp-ui to MWP
 
-**MCP-WP-16.3.1:** Hosts supporting mcp-ui compatibility SHOULD implement a `UIResourceAdapter`:
+**MWP-16.3.1:** Hosts supporting mcp-ui compatibility SHOULD implement a `UIResourceAdapter`:
 
 ```typescript
 interface UIResourceAdapter {
@@ -1957,73 +1957,73 @@ interface UIResourceAdapter {
 }
 ```
 
-**MCP-WP-16.3.2:** When converting `text/html` UIResource:
+**MWP-16.3.2:** When converting `text/html` UIResource:
 - Create custom element extending `HTMLElement`
 - Render content in sandboxed `<iframe>` with `srcdoc` attribute
 - Apply CSP: `default-src 'self'; script-src 'unsafe-inline';`
 - Set `mcpUICompatible: true` in widget metadata
 
-**MCP-WP-16.3.3:** When converting `text/uri-list` UIResource:
+**MWP-16.3.3:** When converting `text/uri-list` UIResource:
 - Validate URL is HTTPS (reject `http://` URLs)
 - Load URL in sandboxed `<iframe>` with `src` attribute
 - Apply same sandbox restrictions as `text/html`
 
-**MCP-WP-16.3.4:** When converting `application/vnd.mcp-ui.remote-dom`:
+**MWP-16.3.4:** When converting `application/vnd.mcp-ui.remote-dom`:
 - Execute script in sandboxed environment
 - Use Shopify's `@remote-dom/core` library for message-passing
 - Render UI changes via host's native components
 - Requires `permissions.network` due to message-passing requirements
 
-### 15.4 Converting MCP-WP to mcp-ui
+### 15.4 Converting MWP to mcp-ui
 
-**MCP-WP-16.4.1:** Widgets MAY export to mcp-ui format by setting `mcpUICompatible: true` in metadata.
+**MWP-16.4.1:** Widgets MAY export to mcp-ui format by setting `mcpUICompatible: true` in metadata.
 
-**MCP-WP-16.4.2:** Export options:
+**MWP-16.4.2:** Export options:
 - **As `text/html`**: Serialize widget's rendered shadow DOM to static HTML
 - **As `text/uri-list`**: Provide hosted URL if widget has `repository.url` field
 - **As remote-dom**: Implement full remote-dom protocol (advanced, optional)
 
-**MCP-WP-16.4.3:** Limitations of mcp-ui export:
+**MWP-16.4.3:** Limitations of mcp-ui export:
 - Static HTML export loses interactivity and event handlers
-- No access to MCP-WP host dependencies (EventBus, MCPBridge)
+- No access to MWP host dependencies (EventBus, MCPBridge)
 - Widget updates require re-export and re-distribution
 
 ### 15.5 Discovery and Negotiation
 
-**MCP-WP-16.5.1:** When connecting to an MCP server, hosts SHOULD:
+**MWP-16.5.1:** When connecting to an MCP server, hosts SHOULD:
 1. Check if server provides mcp-ui resources via `resources/list`
 2. If found and host supports mcp-ui, use `UIResourceAdapter.fromMCPUI()`
-3. Otherwise, fall back to generic MCP-WP widget
+3. Otherwise, fall back to generic MWP widget
 
-**MCP-WP-16.5.2:** This allows MCP-WP hosts to consume existing mcp-ui widgets without modification.
+**MWP-16.5.2:** This allows MWP hosts to consume existing mcp-ui widgets without modification.
 
 ### 15.6 Security Considerations
 
-**MCP-WP-16.6.1:** mcp-ui widgets MUST be treated with `trustLevel: 'untrusted'` unless explicitly verified.
+**MWP-16.6.1:** mcp-ui widgets MUST be treated with `trustLevel: 'untrusted'` unless explicitly verified.
 
-**MCP-WP-16.6.2:** Sandboxed iframes MUST include these attributes:
+**MWP-16.6.2:** Sandboxed iframes MUST include these attributes:
 - `sandbox="allow-scripts allow-same-origin"`
 - Content Security Policy enforcement
 - No access to host DOM or storage
 
-**MCP-WP-16.6.3:** Remote DOM scripts MUST execute in isolated contexts with message-passing validation.
+**MWP-16.6.3:** Remote DOM scripts MUST execute in isolated contexts with message-passing validation.
 
 ### 15.7 Migration Path
 
-**MCP-WP-16.7.1:** Recommended migration strategy (3 phases):
+**MWP-16.7.1:** Recommended migration strategy (3 phases):
 
 **Phase 1: Compatibility Layer**
-- Deploy MCP-WP host with `UIResourceAdapter` support
+- Deploy MWP host with `UIResourceAdapter` support
 - Existing mcp-ui widgets work without changes
 - No ecosystem disruption
 
 **Phase 2: Hybrid Enhancement**
-- Add MCP-WP features to widgets: permissions, `getStatus()`, `getMCPInfo()`
+- Add MWP features to widgets: permissions, `getStatus()`, `getMCPInfo()`
 - Maintain backward compatibility via `toMCPUI()` export
 - Widgets support both protocols
 
-**Phase 3: Full MCP-WP Native**
-- Rewrite using MCP-WP APIs (EventBus, MCPBridge)
+**Phase 3: Full MWP Native**
+- Rewrite using MWP APIs (EventBus, MCPBridge)
 - Leverage advanced features (trust levels, audit logs, widget composition)
 - Optionally maintain mcp-ui export for backward compatibility
 
@@ -2033,15 +2033,15 @@ interface UIResourceAdapter {
 
 ### 17.1 Purpose and Scope
 
-**MCP-WP-17.1.1:** This section defines requirements for widget conformance testing and quality assurance.
+**MWP-17.1.1:** This section defines requirements for widget conformance testing and quality assurance.
 
-**MCP-WP-17.1.2:** Widgets MAY use the official `@mcpwp/test-kit` package for automated validation.
+**MWP-17.1.2:** Widgets MAY use the official `@mcpwp/test-kit` package for automated validation.
 
-**MCP-WP-17.1.3:** Passing conformance tests is REQUIRED for "MCP-WP Certified" marketplace badge.
+**MWP-17.1.3:** Passing conformance tests is REQUIRED for "MWP Certified" marketplace badge.
 
 ### 17.2 Test Kit Interface
 
-**MCP-WP-17.2.1:** The official test kit MUST provide the following test categories:
+**MWP-17.2.1:** The official test kit MUST provide the following test categories:
 
 ```typescript
 interface ConformanceTestSuite {
@@ -2076,7 +2076,7 @@ interface TestResult {
 }
 
 interface TestFailure {
-  rule: string;                // e.g., "MCP-WP-3.4.2"
+  rule: string;                // e.g., "MWP-3.4.2"
   description: string;
   severity: 'critical' | 'error';
   location?: string;           // Code location if available
@@ -2101,68 +2101,68 @@ interface ConformanceReport {
 
 ### 17.3 Lifecycle Correctness Tests
 
-**MCP-WP-17.3.1:** Test that `api.initialize()` completes successfully within 5000ms.
+**MWP-17.3.1:** Test that `api.initialize()` completes successfully within 5000ms.
 
-**MCP-WP-17.3.2:** Test that `api.destroy()` removes all EventBus listeners.
+**MWP-17.3.2:** Test that `api.destroy()` removes all EventBus listeners.
 
-**MCP-WP-17.3.3:** Test that `api.destroy()` completes within 5000ms.
+**MWP-17.3.3:** Test that `api.destroy()` completes within 5000ms.
 
-**MCP-WP-17.3.4:** Test that `api.refresh()` updates widget UI with new data.
+**MWP-17.3.4:** Test that `api.refresh()` updates widget UI with new data.
 
-**MCP-WP-17.3.5:** Test that widget custom element defines `getStatus()` method.
+**MWP-17.3.5:** Test that widget custom element defines `getStatus()` method.
 
-**MCP-WP-17.3.6:** Test that `getStatus()` returns valid `MCPWidgetStatus` schema.
+**MWP-17.3.6:** Test that `getStatus()` returns valid `MCPWidgetStatus` schema.
 
 ### 17.4 Event Contract Tests
 
-**MCP-WP-17.4.1:** Test that widgets emit events with correct naming (`mcp:<subject>:<action>`).
+**MWP-17.4.1:** Test that widgets emit events with correct naming (`mcp:<subject>:<action>`).
 
-**MCP-WP-17.4.2:** Test that `mcp:tool:invoke-requested` events include required fields (`serverName`, `toolName`, `args`).
+**MWP-17.4.2:** Test that `mcp:tool:invoke-requested` events include required fields (`serverName`, `toolName`, `args`).
 
-**MCP-WP-17.4.3:** Test that widgets listen for appropriate response events (`mcp:tool:result`, `mcp:tool:error`).
+**MWP-17.4.3:** Test that widgets listen for appropriate response events (`mcp:tool:result`, `mcp:tool:error`).
 
-**MCP-WP-17.4.4:** Test that widgets do NOT call `MCPBridge.callTool()` directly (security violation).
+**MWP-17.4.4:** Test that widgets do NOT call `MCPBridge.callTool()` directly (security violation).
 
 ### 17.5 Accessibility Tests
 
-**MCP-WP-17.5.1:** Run `axe-core` automated accessibility audit on widget DOM.
+**MWP-17.5.1:** Run `axe-core` automated accessibility audit on widget DOM.
 
-**MCP-WP-17.5.2:** Test keyboard navigation:
+**MWP-17.5.2:** Test keyboard navigation:
 - All interactive elements reachable via Tab
 - Enter/Space activates focused element
 - Escape dismisses modals
 
-**MCP-WP-17.5.3:** Test ARIA labels presence on all buttons and form inputs.
+**MWP-17.5.3:** Test ARIA labels presence on all buttons and form inputs.
 
-**MCP-WP-17.5.4:** Test color contrast ratios meet WCAG AA standards (4.5:1 for text).
+**MWP-17.5.4:** Test color contrast ratios meet WCAG AA standards (4.5:1 for text).
 
-**MCP-WP-17.5.5:** Test focus indicators are visible (outline or alternative styling).
+**MWP-17.5.5:** Test focus indicators are visible (outline or alternative styling).
 
-**MCP-WP-17.5.6:** Test that error messages are associated with form fields via `aria-describedby`.
+**MWP-17.5.6:** Test that error messages are associated with form fields via `aria-describedby`.
 
 ### 17.6 Performance Tests
 
-**MCP-WP-17.6.1:** Measure widget bundle size (gzipped):
+**MWP-17.6.1:** Measure widget bundle size (gzipped):
 - **MUST** be ≤ 500KB including all assets
 - **SHOULD** be ≤ 100KB for core logic
 - **Warn** if > 200KB
 
-**MCP-WP-17.6.2:** Measure initial render time:
+**MWP-17.6.2:** Measure initial render time:
 - **MUST** be ≤ 500ms from `connectedCallback()` to first paint
 - **SHOULD** be ≤ 200ms
 - **Warn** if > 300ms
 
-**MCP-WP-17.6.3:** Measure memory usage after initialization:
+**MWP-17.6.3:** Measure memory usage after initialization:
 - **MUST** be ≤ 20MB
 - **SHOULD** be ≤ 10MB
 - **Warn** if > 15MB
 
-**MCP-WP-17.6.4:** Test for memory leaks:
+**MWP-17.6.4:** Test for memory leaks:
 - Create widget → destroy → measure memory
 - Repeat 10 times
 - Memory MUST NOT increase by more than 10% over baseline
 
-**MCP-WP-17.6.5:** Measure `getResourceUsage()` if implemented:
+**MWP-17.6.5:** Measure `getResourceUsage()` if implemented:
 
 ```typescript
 interface WidgetResourceUsage {
@@ -2174,21 +2174,21 @@ interface WidgetResourceUsage {
 
 ### 17.7 Security Tests
 
-**MCP-WP-17.7.1:** Test that widgets use `textContent` for untrusted data (not `innerHTML`).
+**MWP-17.7.1:** Test that widgets use `textContent` for untrusted data (not `innerHTML`).
 
-**MCP-WP-17.7.2:** Test that widgets do not execute `eval()` or `new Function()`.
+**MWP-17.7.2:** Test that widgets do not execute `eval()` or `new Function()`.
 
-**MCP-WP-17.7.3:** Test Content Security Policy compliance (no inline scripts in production).
+**MWP-17.7.3:** Test Content Security Policy compliance (no inline scripts in production).
 
-**MCP-WP-17.7.4:** Test that widgets declare permissions in metadata if accessing restricted APIs.
+**MWP-17.7.4:** Test that widgets declare permissions in metadata if accessing restricted APIs.
 
-**MCP-WP-17.7.5:** Test that code signature is valid if `trustLevel: 'verified'`.
+**MWP-17.7.5:** Test that code signature is valid if `trustLevel: 'verified'`.
 
 ### 17.8 Visual Regression Testing
 
-**MCP-WP-17.8.1:** Hosts MAY implement visual regression testing via screenshot comparison.
+**MWP-17.8.1:** Hosts MAY implement visual regression testing via screenshot comparison.
 
-**MCP-WP-17.8.2:** Test kit SHOULD provide utilities for capturing widget screenshots:
+**MWP-17.8.2:** Test kit SHOULD provide utilities for capturing widget screenshots:
 
 ```typescript
 interface VisualTesting {
@@ -2203,11 +2203,11 @@ interface VisualDiff {
 }
 ```
 
-**MCP-WP-17.8.3:** Visual diffs > 5% SHOULD trigger review.
+**MWP-17.8.3:** Visual diffs > 5% SHOULD trigger review.
 
 ### 17.9 Integration Test Utilities
 
-**MCP-WP-17.9.1:** Test kit MUST provide mock implementations:
+**MWP-17.9.1:** Test kit MUST provide mock implementations:
 
 ```typescript
 interface MockDependencies {
@@ -2234,7 +2234,7 @@ class MockMCPBridge implements MCPBridgeInterface {
 
 ### 17.10 Certification Badge Requirements
 
-**MCP-WP-17.10.1:** To qualify for "MCP-WP Certified v1.2.0" badge, widgets MUST:
+**MWP-17.10.1:** To qualify for "MWP Certified v1.2.0" badge, widgets MUST:
 - Pass all lifecycle tests (100%)
 - Pass all event contract tests (100%)
 - Pass all security tests (100%)
@@ -2242,18 +2242,18 @@ class MockMCPBridge implements MCPBridgeInterface {
 - Pass ≥ 80% of performance tests
 - Overall conformance score ≥ 85/100
 
-**MCP-WP-17.10.2:** Certification is version-specific. Widget updates require re-certification.
+**MWP-17.10.2:** Certification is version-specific. Widget updates require re-certification.
 
-**MCP-WP-17.10.3:** Hosts MAY display certification badges in widget marketplace UI.
+**MWP-17.10.3:** Hosts MAY display certification badges in widget marketplace UI.
 
 ### 17.11 Continuous Testing
 
-**MCP-WP-17.11.1:** Widget authors SHOULD integrate conformance tests into CI/CD pipelines.
+**MWP-17.11.1:** Widget authors SHOULD integrate conformance tests into CI/CD pipelines.
 
-**MCP-WP-17.11.2:** Example GitHub Actions workflow:
+**MWP-17.11.2:** Example GitHub Actions workflow:
 
 ```yaml
-name: MCP-WP Conformance Tests
+name: MWP Conformance Tests
 on: [push, pull_request]
 jobs:
   test:
@@ -2267,37 +2267,37 @@ jobs:
       - run: npx @mcpwp/test-kit certify --report ./conformance-report.json
 ```
 
-**MCP-WP-17.11.3:** Failed conformance tests SHOULD block widget releases.
+**MWP-17.11.3:** Failed conformance tests SHOULD block widget releases.
 
 ---
 
 ## 17. Agent Collaboration Protocol (Normative)
 
-**MCP-WP-17.1.1:** Hosts that enable automated control **MUST** mediate all agent requests through the `AgentAPI` surface described in Section 3.5.
+**MWP-17.1.1:** Hosts that enable automated control **MUST** mediate all agent requests through the `AgentAPI` surface described in Section 3.5.
 
-**MCP-WP-17.1.2:** Hosts **MUST** authenticate and authorize the agent prior to delegating to `executeAction` and **MUST** log every invocation for auditability.
+**MWP-17.1.2:** Hosts **MUST** authenticate and authorize the agent prior to delegating to `executeAction` and **MUST** log every invocation for auditability.
 
-**MCP-WP-17.1.3:** Widgets implementing `AgentAPI` **MUST** return deterministic JSON Schema documents so hosts can validate and sanitize agent payloads before execution.
+**MWP-17.1.3:** Widgets implementing `AgentAPI` **MUST** return deterministic JSON Schema documents so hosts can validate and sanitize agent payloads before execution.
 
-**MCP-WP-17.1.4:** Agent-triggered invocations **MUST** emit the same EventBus events as human-triggered invocations, with an additional metadata hint `{ source: 'agent' }`.
+**MWP-17.1.4:** Agent-triggered invocations **MUST** emit the same EventBus events as human-triggered invocations, with an additional metadata hint `{ source: 'agent' }`.
 
-**MCP-WP-17.1.5:** Widgets **SHOULD** default agent access to read-only or idempotent actions and require explicit host permissions for destructive operations.
+**MWP-17.1.5:** Widgets **SHOULD** default agent access to read-only or idempotent actions and require explicit host permissions for destructive operations.
 
-**MCP-WP-17.1.6:** When an agent requires language model assistance, widgets MAY delegate to `MCPBridge.createMessage()` (Section 6.2) using the same human-in-the-loop approval applied to direct user requests. Agent-authored prompts MUST be validated against the `SamplingRequest` schema before execution.
+**MWP-17.1.6:** When an agent requires language model assistance, widgets MAY delegate to `MCPBridge.createMessage()` (Section 6.2) using the same human-in-the-loop approval applied to direct user requests. Agent-authored prompts MUST be validated against the `SamplingRequest` schema before execution.
 
-**MCP-WP-17.1.7:** Hosts **SHOULD** log the resolved `SamplingResult` (including the selected model and `stopReason`) alongside the originating agent action so auditors can trace automated decisions.
+**MWP-17.1.7:** Hosts **SHOULD** log the resolved `SamplingResult` (including the selected model and `stopReason`) alongside the originating agent action so auditors can trace automated decisions.
 
 ## 18. Performance & Resource Budgets (Normative)
 
-**MCP-WP-18.1.1:** Widget bundles **MUST NOT** exceed 500KB gzipped; widgets **SHOULD** stay within 100KB for core logic.
+**MWP-18.1.1:** Widget bundles **MUST NOT** exceed 500KB gzipped; widgets **SHOULD** stay within 100KB for core logic.
 
-**MCP-WP-18.1.2:** Initial render time **MUST NOT** exceed 500ms on reference hardware (2 vCPU, 4GB RAM, slow 3G network throttling); widgets **SHOULD** render within 200ms.
+**MWP-18.1.2:** Initial render time **MUST NOT** exceed 500ms on reference hardware (2 vCPU, 4GB RAM, slow 3G network throttling); widgets **SHOULD** render within 200ms.
 
-**MCP-WP-18.1.3:** Steady-state memory usage per widget **MUST NOT** exceed 20MB; implementations **SHOULD** target ≤10MB to leave headroom for multiple concurrent widgets.
+**MWP-18.1.3:** Steady-state memory usage per widget **MUST NOT** exceed 20MB; implementations **SHOULD** target ≤10MB to leave headroom for multiple concurrent widgets.
 
-**MCP-WP-18.1.4:** Widgets that implement `getResourceUsage()` **MUST** report metrics in bytes and milliseconds as defined in Section 17.6.5.
+**MWP-18.1.4:** Widgets that implement `getResourceUsage()` **MUST** report metrics in bytes and milliseconds as defined in Section 17.6.5.
 
-**MCP-WP-18.1.5:** Hosts **MUST** enforce these budgets before distributing widgets through marketplaces or enterprise catalogs and **MAY** refuse activation if any limit is breached.
+**MWP-18.1.5:** Hosts **MUST** enforce these budgets before distributing widgets through marketplaces or enterprise catalogs and **MAY** refuse activation if any limit is breached.
 
 ---
 
@@ -2314,11 +2314,11 @@ jobs:
 
 ## Appendix B: Goal Statement
 
-The MCP Widget Protocol (MCP-WP) standardizes visual representation of Anthropic's Model Context Protocol servers in dashboard applications. It defines contracts for creating Web Components that display MCP tools, resources, and prompts with safe rendering, dependency injection for host services (EventBus, MCPBridge, Theme, A11yHelper), and lifecycle management.
+The MCP Widget Protocol (MWP) standardizes visual representation of Anthropic's Model Context Protocol servers in dashboard applications. It defines contracts for creating Web Components that display MCP tools, resources, and prompts with safe rendering, dependency injection for host services (EventBus, MCPBridge, Theme, A11yHelper), and lifecycle management.
 
-Through strict interfaces, MCP-WP ensures security via declarative permission models, user confirmation for tool invocations, XSS prevention for server data, and JSON Schema validation for tool arguments. The protocol includes enterprise-grade features: WCAG 2.1 Level AA accessibility requirements, widget registry protocol for distribution, conformance testing framework for quality assurance, and inter-widget communication for composite workflows.
+Through strict interfaces, MWP ensures security via declarative permission models, user confirmation for tool invocations, XSS prevention for server data, and JSON Schema validation for tool arguments. The protocol includes enterprise-grade features: WCAG 2.1 Level AA accessibility requirements, widget registry protocol for distribution, conformance testing framework for quality assurance, and inter-widget communication for composite workflows.
 
-The protocol formalizes interoperability with the community-driven mcp-ui standard, positioning MCP-WP as a collaborative formalization rather than a competitive replacement. It enables developers to build consistent, reusable widgets for any MCP server (GitHub, Slack, Supabase) that integrate seamlessly with host dashboards while maintaining visual consistency, security, and predictable behavior across the MCP ecosystem.
+The protocol formalizes interoperability with the community-driven mcp-ui standard, positioning MWP as a collaborative formalization rather than a competitive replacement. It enables developers to build consistent, reusable widgets for any MCP server (GitHub, Slack, Supabase) that integrate seamlessly with host dashboards while maintaining visual consistency, security, and predictable behavior across the MCP ecosystem.
 
 ---
 

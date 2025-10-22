@@ -3,7 +3,7 @@ import type {
   MCPServerInfo,
   WidgetFactory,
   WidgetFactoryFunction,
-} from '@mcp-wp/core';
+} from '@mwp/core';
 import { WeatherWidget } from './widget.js';
 
 const TAG = 'mcp-weather-widget';

@@ -1,7 +1,7 @@
 /**
  * Validation Utilities
  *
- * Helper functions for validating MCP-WP data structures.
+ * Helper functions for validating MWP data structures.
  */
 
 import type { JSONSchema } from '../types/dependencies.js';

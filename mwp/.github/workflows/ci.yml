@@ -230,7 +230,7 @@ jobs:
         run: |
           for widget in packages/widgets/*/; do
             echo "Validating $(basename $widget)..."
-            pnpm --filter "@mcp-wp/validator" exec mcp-wp-validate "$widget" || exit 1
+            pnpm --filter "@mwp/validator" exec mwp-validate "$widget" || exit 1
           done
 
   security:

@@ -1,10 +1,10 @@
-# @mcp-wp/core
+# @mwp/core
 
 Core types, JSON schemas, and utilities for the MCP Widget Protocol.
 
 ## Overview
 
-This package provides the foundational types and utilities used by all MCP-WP packages. It defines:
+This package provides the foundational types and utilities used by all MWP packages. It defines:
 
 - **TypeScript Types** - All protocol interfaces and types
 - **JSON Schemas** - Validation schemas for widget metadata, configurations, etc.
@@ -13,7 +13,7 @@ This package provides the foundational types and utilities used by all MCP-WP pa
 ## Installation
 
 ```bash
-pnpm add @mcp-wp/core
+pnpm add @mwp/core
 ```
 
 ## Usage
@@ -28,7 +28,7 @@ import type {
   WidgetMetadata,
   EventBus,
   MCPBridge
-} from '@mcp-wp/core';
+} from '@mwp/core';
 
 // Use in your widget
 export default function createWidget(
@@ -42,7 +42,7 @@ export default function createWidget(
 ### Schemas
 
 ```typescript
-import { WidgetMetadataSchema, validateWidgetMetadata } from '@mcp-wp/core/schemas';
+import { WidgetMetadataSchema, validateWidgetMetadata } from '@mwp/core/schemas';
 
 // Validate widget metadata
 const result = validateWidgetMetadata(metadata);
@@ -54,7 +54,7 @@ if (!result.success) {
 ### Utilities
 
 ```typescript
-import { parseToolSchema, validateToolArgs } from '@mcp-wp/core/utils';
+import { parseToolSchema, validateToolArgs } from '@mwp/core/utils';
 
 // Validate tool arguments against JSON Schema
 const valid = validateToolArgs(args, tool.inputSchema);
@@ -62,7 +62,7 @@ const valid = validateToolArgs(args, tool.inputSchema);
 
 ## Exports
 
-### Main Exports (`@mcp-wp/core`)
+### Main Exports (`@mwp/core`)
 
 All types, schemas, and utilities are available from the main entry point.
 
@@ -70,9 +70,9 @@ All types, schemas, and utilities are available from the main entry point.
 
 For tree-shaking optimization:
 
-- `@mcp-wp/core/types` - TypeScript types only
-- `@mcp-wp/core/schemas` - JSON schemas and validators
-- `@mcp-wp/core/utils` - Utility functions
+- `@mwp/core/types` - TypeScript types only
+- `@mwp/core/schemas` - JSON schemas and validators
+- `@mwp/core/utils` - Utility functions
 
 ## Type Definitions
 

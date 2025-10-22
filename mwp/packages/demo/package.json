@@ -1,0 +1,22 @@
+{
+  "name": "@mwp/demo",
+  "version": "1.0.0",
+  "description": "Demo showcasing MWP GitHub widget with security features",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@mwp/core": "workspace:*",
+    "@mwp/bridge": "workspace:*",
+    "@mwp/eventbus": "workspace:*",
+    "@mwp/widget-github": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0"
+  }
+}

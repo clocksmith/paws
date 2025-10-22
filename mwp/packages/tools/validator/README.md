@@ -1,11 +1,11 @@
-# @mcp-wp/validator
+# @mwp/validator
 
-MCP-WP protocol conformance validator for ensuring widgets follow the specification.
+MWP protocol conformance validator for ensuring widgets follow the specification.
 
 ## Installation
 
 ```bash
-pnpm add -D @mcp-wp/validator
+pnpm add -D @mwp/validator
 ```
 
 ## Usage
@@ -14,19 +14,19 @@ pnpm add -D @mcp-wp/validator
 
 ```bash
 # Validate current directory
-mcp-wp-validate
+mwp-validate
 
 # Validate specific widget
-mcp-wp-validate path/to/widget
+mwp-validate path/to/widget
 
 # Validate all widgets in directory
-mcp-wp-validate widgets/**/*
+mwp-validate widgets/**/*
 ```
 
 ### CLI Options
 
 ```bash
-mcp-wp-validate [path] [options]
+mwp-validate [path] [options]
 
 Options:
   -f, --fix           Auto-fix issues where possible
@@ -44,7 +44,7 @@ Options:
 - ✅ Required files exist (package.json, src/index.ts, src/widget.ts)
 - ✅ Correct TypeScript configuration
 - ✅ Build configuration (vite.config.ts)
-- ✅ Dependencies on @mcp-wp/core
+- ✅ Dependencies on @mwp/core
 
 ### 2. Widget Factory
 - ✅ Exports default WidgetFactoryFunction
@@ -82,7 +82,7 @@ Options:
 ### Run validation
 
 ```bash
-$ mcp-wp-validate
+$ mwp-validate
 
 ✓ Widget structure valid
 ✓ Widget factory valid
@@ -97,7 +97,7 @@ All checks passed!
 ### With errors
 
 ```bash
-$ mcp-wp-validate
+$ mwp-validate
 
 ✗ Widget factory
   - Missing 'refresh' method in API
@@ -113,7 +113,7 @@ $ mcp-wp-validate
 ### Auto-fix
 
 ```bash
-$ mcp-wp-validate --fix
+$ mwp-validate --fix
 
 ✓ Fixed TypeScript configuration
 ✓ Added missing API methods
@@ -124,7 +124,7 @@ $ mcp-wp-validate --fix
 
 ## Configuration
 
-Create `.mcp-wp-validator.json` in your widget root:
+Create `.mwp-validator.json` in your widget root:
 
 ```json
 {
@@ -157,7 +157,7 @@ Create `.mcp-wp-validator.json` in your widget root:
 {
   "husky": {
     "hooks": {
-      "pre-commit": "mcp-wp-validate"
+      "pre-commit": "mwp-validate"
     }
   }
 }
@@ -167,7 +167,7 @@ Create `.mcp-wp-validator.json` in your widget root:
 
 ```yaml
 - name: Validate Widget
-  run: npx @mcp-wp/validator --strict
+  run: npx @mwp/validator --strict
 ```
 
 ### Package.json
@@ -175,8 +175,8 @@ Create `.mcp-wp-validator.json` in your widget root:
 ```json
 {
   "scripts": {
-    "validate": "mcp-wp-validate",
-    "pretest": "mcp-wp-validate"
+    "validate": "mwp-validate",
+    "pretest": "mwp-validate"
   }
 }
 ```

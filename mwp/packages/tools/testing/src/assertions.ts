@@ -1,5 +1,5 @@
 /**
- * Custom assertions for MCP-WP widget testing
+ * Custom assertions for MWP widget testing
  */
 
 import type { MockEventBus, MockMCPBridge } from './mocks.js';

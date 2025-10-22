@@ -331,7 +331,7 @@ mcp-ui has achieved significant momentum **before** being officially standardize
 ### Window of Opportunity Assessment
 
 **MWP's Original Position**:
-> "Crucial but limited window to establish MCP-WP before platforms build widget capabilities"
+> "Crucial but limited window to establish MWP before platforms build widget capabilities"
 
 **Current Status (October 2025)**:
 - ⏰ **6 months since mcp-ui launch**
@@ -361,7 +361,7 @@ If a competing protocol launched today, it would face:
 - **Tooling investment**: VS Code extensions, Grafana panels built for mcp-ui
 - **Production migration**: Shopify would need to rewrite components
 
-**Implication**: Each passing month increases the cost of introducing MCP-WP as a competitor
+**Implication**: Each passing month increases the cost of introducing MWP as a competitor
 
 ---
 
@@ -395,7 +395,7 @@ If a competing protocol launched today, it would face:
 
 **Model**: Browser vendors (Chrome, Firefox, Safari, Edge) collaborated to standardize extension APIs
 
-**Lessons for MCP-WP**:
+**Lessons for MWP**:
 1. **Multi-stakeholder**: Required buy-in from competitors (browsers)
 2. **Existing implementations**: Standardized what was already working
 3. **Interoperability focus**: Goal was cross-browser extensions
@@ -403,7 +403,7 @@ If a competing protocol launched today, it would face:
 
 **Parallel to MCP-UI**:
 - mcp-ui = working implementation (like Chrome's extensions)
-- MCP-WP = proposed standard (like W3C WebExtensions)
+- MWP = proposed standard (like W3C WebExtensions)
 - Need stakeholders: Anthropic, Grafana, VS Code, community
 
 ---
@@ -425,7 +425,7 @@ If a competing protocol launched today, it would face:
 - **Updates**: Automated update mechanism
 
 ### Gap Analysis
-| Security Feature | mcp-ui | Chrome MV3 | MCP-WP (Needed) |
+| Security Feature | mcp-ui | Chrome MV3 | MWP (Needed) |
 |------------------|---------|------------|-----------------|
 | Sandboxing | ✅ iframe | ✅ Process isolation | ✅ Spec'd sandbox |
 | Permission system | ❌ None | ✅ Declarative | ✅ Required |
@@ -446,11 +446,11 @@ If a competing protocol launched today, it would face:
 | **VS Code Extension** | ~15 min | ~20 min | Excellent (official guides) |
 | **Chrome Extension** | ~5 min | ~10 min | Excellent (comprehensive) |
 
-**Target for MCP-WP**: Must achieve <10 min setup, <15 min first widget to compete
+**Target for MWP**: Must achieve <10 min setup, <15 min first widget to compete
 
 ### Developer Tooling Checklist
 
-| Tool | mcp-ui | Grafana | VS Code | MCP-WP (Needed) |
+| Tool | mcp-ui | Grafana | VS Code | MWP (Needed) |
 |------|---------|---------|---------|-----------------|
 | TypeScript SDK | ✅ | ✅ | ✅ | ✅ Required |
 | Hot reload | ❌ | ✅ | ✅ | ✅ Required |
@@ -484,7 +484,7 @@ If a competing protocol launched today, it would face:
    - Shopify claims it's safe, but no third-party audit found
    - Attack surface analysis not published
 
-3. **Can mcp-ui widgets be made backwards-compatible with MCP-WP?**
+3. **Can mcp-ui widgets be made backwards-compatible with MWP?**
    - Depends on spec design
    - Potential adapter layer needed
 
@@ -501,7 +501,7 @@ If a competing protocol launched today, it would face:
 - [ ] Grafana native mcp-ui renderer plugin
 - [ ] VS Code native mcp-ui support
 
-**Each of these would significantly narrow the window for MCP-WP**
+**Each of these would significantly narrow the window for MWP**
 
 ### Long-Term Signals (6-12 Months)
 
@@ -510,7 +510,7 @@ If a competing protocol launched today, it would face:
 - [ ] Security audit of mcp-ui by third party
 - [ ] Alternative protocols emerging (fragmentation signal)
 - [ ] LangSmith/Braintrust adding widget extensibility
-- [ ] Anthropic building official UI framework (kills mcp-ui and MCP-WP)
+- [ ] Anthropic building official UI framework (kills mcp-ui and MWP)
 
 ---
 
@@ -538,9 +538,9 @@ If a competing protocol launched today, it would face:
 
 ### Final Data-Driven Verdict
 
-**If MCP-WP launches as a competitor**: 60% chance of ecosystem fragmentation, 30% chance of being ignored, 10% chance of overtaking mcp-ui
+**If MWP launches as a competitor**: 60% chance of ecosystem fragmentation, 30% chance of being ignored, 10% chance of overtaking mcp-ui
 
-**If MCP-WP launches as collaborator**: 70% chance of successful formalization, 20% chance of being unnecessary, 10% chance of political deadlock
+**If MWP launches as collaborator**: 70% chance of successful formalization, 20% chance of being unnecessary, 10% chance of political deadlock
 
 **Recommendation**: **Collaborate, don't compete**. Data shows mcp-ui has achieved critical momentum that would be costly to displace.
 

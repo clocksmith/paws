@@ -1,5 +1,5 @@
 {
-  "name": "@mcp-wp/example-themed-chart-widget",
+  "name": "@mwp/example-themed-chart-widget",
   "version": "1.0.0",
   "description": "Example widget demonstrating enhanced theming features",
   "type": "module",
@@ -12,7 +12,7 @@
   },
   "keywords": [
     "mcp",
-    "mcp-wp",
+    "mwp",
     "widget",
     "theming",
     "example",
@@ -20,7 +20,7 @@
     "visualization"
   ],
   "dependencies": {
-    "@mcp-wp/core": "workspace:*"
+    "@mwp/core": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.3.0"

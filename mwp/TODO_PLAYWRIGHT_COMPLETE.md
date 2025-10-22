@@ -2,7 +2,7 @@
 
 ## Summary
 
-The Playwright widget for @mcp-wp/widget-playwright has been successfully implemented and tested.
+The Playwright widget for @mwp/widget-playwright has been successfully implemented and tested.
 
 ## Deliverables
 
@@ -70,7 +70,7 @@ The Playwright widget for @mcp-wp/widget-playwright has been successfully implem
 - **Language**: TypeScript with strict mode
 - **Testing**: Vitest + happy-dom
 - **Build**: Vite + TypeScript compiler
-- **Dependencies**: @mcp-wp/core
+- **Dependencies**: @mwp/core
 
 ## Next Steps (Optional Improvements)
 

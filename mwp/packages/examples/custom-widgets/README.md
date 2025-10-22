@@ -1,12 +1,12 @@
 # Custom Widget Tutorial – Weather Dashboard
 
-This tutorial walks through building a custom MCP-WP widget that fetches weather data from an external API and renders it with Shadow DOM styling.
+This tutorial walks through building a custom MWP widget that fetches weather data from an external API and renders it with Shadow DOM styling.
 
 ## 1. Scaffold
 
 ```bash
 cd packages/examples/custom-widgets
-pnpm create-mcp-widget weather-widget
+pnpm create-mwp-widget weather-widget
 ```
 
 The `weather-widget` example included here mirrors the output of the CLI scaffold with additional wiring and comments.

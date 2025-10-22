@@ -44,8 +44,8 @@
     // Paths
     "baseUrl": ".",
     "paths": {
-      "@mcp-wp/widget-github": ["./src/index.ts"],
-      "@mcp-wp/widget-github/*": ["./src/*"]
+      "@mwp/widget-github": ["./src/index.ts"],
+      "@mwp/widget-github/*": ["./src/*"]
     }
   },
   "include": [

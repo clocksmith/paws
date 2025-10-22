@@ -1,5 +1,5 @@
 {
-  "name": "@mcp-wp/eventbus",
+  "name": "@mwp/eventbus",
   "version": "1.0.0",
   "description": "EventBus implementation for MCP Widget Protocol",
   "type": "module",
@@ -26,14 +26,14 @@
   },
   "keywords": [
     "mcp",
-    "mcp-wp",
+    "mwp",
     "eventbus",
     "events"
   ],
-  "author": "MCP-WP Team",
+  "author": "MWP Team",
   "license": "MIT",
   "dependencies": {
-    "@mcp-wp/core": "workspace:*"
+    "@mwp/core": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

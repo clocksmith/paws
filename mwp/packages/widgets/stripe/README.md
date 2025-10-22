@@ -1,4 +1,4 @@
-# @mcp-wp/widget-stripe
+# @mwp/widget-stripe
 
 Stripe control surface for the MCP Widget Protocol. Gives teams visibility into tools, resources, and prompts exposed by a Stripe MCP server (community implementation required today).
 
@@ -39,7 +39,7 @@ Example dashboard configuration:
   "widgets": [
     {
       "id": "stripe-ops",
-      "package": "@mcp-wp/widget-stripe",
+      "package": "@mwp/widget-stripe",
       "serverName": "stripe",
       "position": { "x": 0, "y": 4 },
       "size": { "w": 6, "h": 5 }
@@ -51,7 +51,7 @@ Example dashboard configuration:
 ## Usage
 
 ```ts
-import createStripeWidget from '@mcp-wp/widget-stripe';
+import createStripeWidget from '@mwp/widget-stripe';
 
 const { api, widget } = createStripeWidget({ EventBus, MCPBridge, Configuration }, bridge.getServerInfo('stripe'));
 await api.initialize();

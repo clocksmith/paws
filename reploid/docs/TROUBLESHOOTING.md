@@ -80,12 +80,6 @@ node --version
 # 4. Reinstall dependencies
 rm -rf node_modules package-lock.json
 npm install
-
-# 5. For Hermes server issues
-cd hermes
-rm -rf node_modules
-npm install
-npm start
 ```
 
 ---

@@ -1,7 +1,7 @@
 /**
- * create-mcp-widget CLI
+ * create-mwp-widget CLI
  *
- * Interactive tool for scaffolding new MCP-WP widgets.
+ * Interactive tool for scaffolding new MWP widgets.
  */
 
 import { Command } from 'commander';
@@ -42,8 +42,8 @@ export async function main(args: string[]): Promise<void> {
   const program = new Command();
 
   program
-    .name('create-mcp-widget')
-    .description('Create a new MCP-WP widget')
+    .name('create-mwp-widget')
+    .description('Create a new MWP widget')
     .argument('[name]', 'Widget package name')
     .option('-t, --template <type>', 'Template to use (basic|advanced|data-viz)', 'basic')
     .option('-d, --directory <path>', 'Target directory')
@@ -242,7 +242,7 @@ function formatDisplayName(name: string): string {
  */
 function generatePackageJson(targetDir: string, config: WidgetConfig): void {
   const pkg = {
-    name: `@mcp-wp/widget-${config.name}`,
+    name: `@mwp/widget-${config.name}`,
     version: '1.0.0',
     description: config.description,
     type: 'module',
@@ -262,7 +262,7 @@ function generatePackageJson(targetDir: string, config: WidgetConfig): void {
       clean: 'rm -rf dist',
     },
     dependencies: {
-      '@mcp-wp/core': 'workspace:*',
+      '@mwp/core': 'workspace:*',
     },
     devDependencies: {
       '@types/node': '^20.11.0',
@@ -281,21 +281,21 @@ function generatePackageJson(targetDir: string, config: WidgetConfig): void {
  * Generate README.md
  */
 function generateReadme(targetDir: string, config: WidgetConfig): void {
-  const readme = `# @mcp-wp/widget-${config.name}
+  const readme = `# @mwp/widget-${config.name}
 
 ${config.description}
 
 ## Installation
 
 \`\`\`bash
-pnpm add @mcp-wp/widget-${config.name}
+pnpm add @mwp/widget-${config.name}
 \`\`\`
 
 ## Usage
 
 \`\`\`typescript
-import { Dashboard } from '@mcp-wp/dashboard';
-import create${formatClassName(config.name)}Widget from '@mcp-wp/widget-${config.name}';
+import { Dashboard } from '@mwp/dashboard';
+import create${formatClassName(config.name)}Widget from '@mwp/widget-${config.name}';
 
 const dashboard = new Dashboard({
   container: document.getElementById('app')!,
@@ -366,8 +366,8 @@ function generateTsConfig(targetDir: string, config: WidgetConfig): void {
       isolatedModules: true,
       baseUrl: '.',
       paths: {
-        [`@mcp-wp/widget-${config.name}`]: ['./src/index.ts'],
-        [`@mcp-wp/widget-${config.name}/*`]: ['./src/*'],
+        [`@mwp/widget-${config.name}`]: ['./src/index.ts'],
+        [`@mwp/widget-${config.name}/*`]: ['./src/*'],
       },
     },
     include: ['src/**/*'],
@@ -393,10 +393,10 @@ export default defineConfig({
       fileName: 'index',
     },
     rollupOptions: {
-      external: ['@mcp-wp/core'],
+      external: ['@mwp/core'],
       output: {
         globals: {
-          '@mcp-wp/core': 'MCPCore',
+          '@mwp/core': 'MCPCore',
         },
       },
     },
@@ -405,7 +405,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@mcp-wp/widget-${config.name}': resolve(__dirname, 'src'),
+      '@mwp/widget-${config.name}': resolve(__dirname, 'src'),
     },
   },
 });
@@ -428,7 +428,7 @@ import type {
   WidgetFactory,
   Dependencies,
   MCPServerInfo,
-} from '@mcp-wp/core';
+} from '@mwp/core';
 import { ${className}Widget } from './widget.js';
 
 const create${className}Widget: WidgetFactoryFunction = (
@@ -536,7 +536,7 @@ import type {
   WidgetStatus,
   ResourceUsage,
   UnsubscribeFunction,
-} from '@mcp-wp/core';
+} from '@mwp/core';
 import { styles } from './styles.js';
 import type { ${className}WidgetConfig } from './types.js';
 

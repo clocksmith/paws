@@ -2,7 +2,7 @@
 
 The MCP specification reference documentation previously located in `mcp-spec-20250618/` is external reference material.
 
-## MCP-WP Documentation Locations
+## MWP Documentation Locations
 
 - **Protocol Specification**: [`../specification/MWP.md`](../specification/MWP.md)
 - **Getting Started**: [`../GETTING-STARTED.md`](../GETTING-STARTED.md)

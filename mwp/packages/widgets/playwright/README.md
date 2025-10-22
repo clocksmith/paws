@@ -1,4 +1,4 @@
-# @mcp-wp/widget-playwright
+# @mwp/widget-playwright
 
 **Playwright Browser Automation Widget**
 
@@ -18,7 +18,7 @@ A Web Component widget for the Playwright MCP server, providing browser automati
 ## Installation
 
 ```bash
-pnpm add @mcp-wp/widget-playwright
+pnpm add @mwp/widget-playwright
 ```
 
 ## Usage
@@ -26,8 +26,8 @@ pnpm add @mcp-wp/widget-playwright
 ### Basic Setup
 
 ```typescript
-import { Dashboard } from '@mcp-wp/dashboard';
-import createPlaywrightWidget from '@mcp-wp/widget-playwright';
+import { Dashboard } from '@mwp/dashboard';
+import createPlaywrightWidget from '@mwp/widget-playwright';
 
 const dashboard = new Dashboard({
   container: document.getElementById('app')!,
@@ -442,7 +442,7 @@ screenshots.forEach(screenshot => {
 Full TypeScript support with complete type definitions.
 
 ```typescript
-import type { PlaywrightWidgetConfig } from '@mcp-wp/widget-playwright';
+import type { PlaywrightWidgetConfig } from '@mwp/widget-playwright';
 
 const config: PlaywrightWidgetConfig = {
   browser: 'chromium',
@@ -456,6 +456,6 @@ MIT
 
 ## Related
 
-- [@mcp-wp/core](../core) - Core types and utilities
-- [@mcp-wp/dashboard](../dashboard) - Widget host
+- [@mwp/core](../core) - Core types and utilities
+- [@mwp/dashboard](../dashboard) - Widget host
 - [Playwright MCP Server](https://github.com/modelcontextprotocol/servers/tree/main/src/playwright) - Official server

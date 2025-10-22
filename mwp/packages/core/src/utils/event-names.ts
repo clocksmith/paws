@@ -1,7 +1,7 @@
 /**
  * Event Name Utilities
  *
- * Helper functions for working with MCP-WP event names.
+ * Helper functions for working with MWP event names.
  */
 
 import type { MCPEvent } from '../types/events.js';

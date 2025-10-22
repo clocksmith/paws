@@ -1,5 +1,5 @@
 {
-  "name": "@mcp-wp/widget-playwright",
+  "name": "@mwp/widget-playwright",
   "version": "1.0.0",
   "description": "MCP Widget for Playwright browser automation server",
   "type": "module",
@@ -25,7 +25,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@mcp-wp/core": "workspace:*"
+    "@mwp/core": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
@@ -42,11 +42,11 @@
     "browser-automation",
     "web-component"
   ],
-  "author": "MCP-WP Team",
+  "author": "MWP Team",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/mcp-wp.git",
+    "url": "https://github.com/your-org/mwp.git",
     "directory": "packages/widgets/playwright"
   }
 }

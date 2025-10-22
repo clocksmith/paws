@@ -1,4 +1,4 @@
-# MCP Widget Protocol (MCP-WP)
+# MCP Widget Protocol (MWP)
 
 **Specification Version 1.0.0**
 

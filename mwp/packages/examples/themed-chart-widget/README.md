@@ -1,6 +1,6 @@
 # Themed Chart Widget Example
 
-This example widget demonstrates all **four enhanced theming features** introduced in MCP-WP v1.1:
+This example widget demonstrates all **four enhanced theming features** introduced in MWP v1.1:
 
 ## Features Demonstrated
 

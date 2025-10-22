@@ -8,7 +8,7 @@ import type {
   ThemeConfiguration,
   WidgetStatus,
   ResourceUsage,
-} from '@mcp-wp/core';
+} from '@mwp/core';
 
 /**
  * Dashboard Options

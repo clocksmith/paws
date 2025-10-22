@@ -1,4 +1,4 @@
-# Getting Started with MCP-WP
+# Getting Started with MWP
 
 Complete guide to building dashboard applications with MCP widgets.
 
@@ -8,8 +8,8 @@ Complete guide to building dashboard applications with MCP widgets.
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/mcp-wp.git
-cd mcp-wp
+git clone https://github.com/your-org/mwp.git
+cd mwp
 
 # Install dependencies
 pnpm install
@@ -37,8 +37,8 @@ pnpm dev
 ### 3. Add Your First Widget
 
 ```typescript
-import { Dashboard } from '@mcp-wp/dashboard';
-import createGitHubWidget from '@mcp-wp/widget-github';
+import { Dashboard } from '@mwp/dashboard';
+import createGitHubWidget from '@mwp/widget-github';
 
 const dashboard = new Dashboard({
   container: document.getElementById('app')!,
@@ -66,7 +66,7 @@ That's it! You now have a working MCP widget dashboard.
 The **Dashboard** is the host application that manages widgets:
 
 ```typescript
-import { Dashboard } from '@mcp-wp/dashboard';
+import { Dashboard } from '@mwp/dashboard';
 
 const dashboard = new Dashboard({
   container: HTMLElement,      // Where to render
@@ -88,7 +88,7 @@ const dashboard = new Dashboard({
 **Widgets** are Web Components that interact with MCP servers:
 
 ```typescript
-import createGitHubWidget from '@mcp-wp/widget-github';
+import createGitHubWidget from '@mwp/widget-github';
 
 const widgetId = await dashboard.addWidget({
   factory: createGitHubWidget,
@@ -99,10 +99,10 @@ const widgetId = await dashboard.addWidget({
 ```
 
 **Available Widgets:**
-- `@mcp-wp/widget-github` - GitHub repositories, issues, PRs
-- `@mcp-wp/widget-playwright` - Browser automation
-- `@mcp-wp/widget-filesystem` - File browsing and editing
-- `@mcp-wp/widget-brave` - Web search
+- `@mwp/widget-github` - GitHub repositories, issues, PRs
+- `@mwp/widget-playwright` - Browser automation
+- `@mwp/widget-filesystem` - File browsing and editing
+- `@mwp/widget-brave` - Web search
 
 ### 3. MCP Servers
 
@@ -161,8 +161,8 @@ Create a simple dashboard with one widget.
 **2. Create `main.js`:**
 
 ```javascript
-import { Dashboard } from '@mcp-wp/dashboard';
-import createGitHubWidget from '@mcp-wp/widget-github';
+import { Dashboard } from '@mwp/dashboard';
+import createGitHubWidget from '@mwp/widget-github';
 
 const dashboard = new Dashboard({
   container: document.getElementById('app'),
@@ -503,7 +503,7 @@ const dashboard = new Dashboard({
 
 // Lazy load widgets
 const widgets = {
-  github: () => import('@mcp-wp/widget-github'),
+  github: () => import('@mwp/widget-github'),
 };
 
 const module = await widgets.github();
@@ -568,6 +568,6 @@ updateLayout();
 
 ## Support
 
-- Issues: https://github.com/your-org/mcp-wp/issues
-- Discussions: https://github.com/your-org/mcp-wp/discussions
-- Documentation: https://docs.mcp-wp.dev
+- Issues: https://github.com/your-org/mwp/issues
+- Discussions: https://github.com/your-org/mwp/discussions
+- Documentation: https://docs.mwp.dev

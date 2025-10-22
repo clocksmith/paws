@@ -2,7 +2,7 @@
 
 ## Objective
 
-The long-term plan ensures MCP-WP remains the de facto visualization layer as the ecosystem scales. It covers marketplace infrastructure, governance, financial sustainability, detailed risk management, and twelve-month milestones.
+The long-term plan ensures MWP remains the de facto visualization layer as the ecosystem scales. It covers marketplace infrastructure, governance, financial sustainability, detailed risk management, and twelve-month milestones.
 
 ## Marketplace & Governance (Phase 4, Weeks 12–16)
 
@@ -59,7 +59,7 @@ Phase 4: Weeks 9–16 – Discovery saturation, influencers, registry/governance
 ## Comprehensive Risk Management
 
 ### Critical Risks & Mitigations
-1. **Anthropic ships a competing visualization layer** – Engage product leadership in Week 1, propose joint working group, emphasize vendor-neutral governance, and position MCP-WP as enterprise-hardened alternative if necessary.
+1. **Anthropic ships a competing visualization layer** – Engage product leadership in Week 1, propose joint working group, emphasize vendor-neutral governance, and position MWP as enterprise-hardened alternative if necessary.
 2. **mcp-ui ecosystem fragmentation** – Offer collaboration agreement, compatibility layers, and governance seats to mcp-ui maintainers; publish joint messaging to avoid split communities.
 3. **Low developer adoption** – Fund bounty programs, "Widget of the Month" awards, university partnerships, and corporate contribution incentives; monitor leading indicators weekly.
 4. **Security incident** – Complete audit pre-launch, run $50K bug bounty, automate dependency scanning, and maintain a documented CVE response plan (<24h SLA).
@@ -92,4 +92,4 @@ Phase 4: Weeks 9–16 – Discovery saturation, influencers, registry/governance
 - Expand monetization experiments (premium widgets, enterprise registry, sponsorships).
 - Maintain quarterly security reviews and publish transparency reports.
 
-Long-term execution locks in MCP-WP as the trusted visualization layer for MCP, balancing neutral governance, thriving marketplace economics, and enterprise-grade assurance.
+Long-term execution locks in MWP as the trusted visualization layer for MCP, balancing neutral governance, thriving marketplace economics, and enterprise-grade assurance.

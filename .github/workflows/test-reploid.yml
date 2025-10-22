@@ -4,13 +4,13 @@ on:
   push:
     branches: [ main, develop ]
     paths:
-      - 'packages/reploid/**'
+      - 'reploid/**'
       - 'packages/cli-js/**'
       - 'packages/core/**'
   pull_request:
     branches: [ main, develop ]
     paths:
-      - 'packages/reploid/**'
+      - 'reploid/**'
       - 'packages/cli-js/**'
       - 'packages/core/**'
 
@@ -72,5 +72,5 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: playwright-report
-          path: packages/reploid/playwright-report/
+          path: reploid/playwright-report/
           retention-days: 30

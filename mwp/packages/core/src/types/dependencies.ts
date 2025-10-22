@@ -2,7 +2,7 @@
  * Dependencies Interface Types
  *
  * Defines the Dependencies object that hosts inject into widget factories.
- * Based on MCP-WP Specification Section 6 (Dependencies)
+ * Based on MWP Specification Section 6 (Dependencies)
  */
 
 /**

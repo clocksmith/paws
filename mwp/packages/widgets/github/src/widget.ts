@@ -13,7 +13,7 @@
  * events for host confirmation and auditing.
  */
 
-import type { types } from '@mcp-wp/core';
+import type { types } from '@mwp/core';
 
 type Configuration = types.Configuration;
 type EventBus = types.EventBus;

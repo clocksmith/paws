@@ -35,7 +35,7 @@
   ],
   "widgets": [
     {
-      "package": "@mcp-wp/widget-supabase",
+      "package": "@mwp/widget-supabase",
       "serverName": "supabase",
       "id": "supabase-analytics",
       "position": { "x": 0, "y": 0 },
@@ -47,7 +47,7 @@
       }
     },
     {
-      "package": "@mcp-wp/widget-memory",
+      "package": "@mwp/widget-memory",
       "serverName": "memory",
       "id": "insight-notes",
       "position": { "x": 5, "y": 0 },
@@ -58,7 +58,7 @@
       }
     },
     {
-      "package": "@mcp-wp/example-themed-chart-widget",
+      "package": "@mwp/example-themed-chart-widget",
       "serverName": "charts",
       "id": "bi-visual",
       "position": { "x": 8, "y": 0 },

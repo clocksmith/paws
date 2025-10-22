@@ -200,7 +200,7 @@ function generateJsonSchema(definition: SchemaDefinition): object {
   // Add metadata
   return {
     $schema: 'http://json-schema.org/draft-07/schema#',
-    $id: `https://mcp-wp.dev/schemas/${definition.name}.json`,
+    $id: `https://mwp.dev/schemas/${definition.name}.json`,
     title: definition.name
       .split('-')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -245,7 +245,7 @@ function main() {
   // Generate index file
   const indexContent = {
     $schema: 'http://json-schema.org/draft-07/schema#',
-    $id: 'https://mcp-wp.dev/schemas/index.json',
+    $id: 'https://mwp.dev/schemas/index.json',
     title: 'MCP Widget Protocol Schemas',
     description: 'JSON Schema definitions for the MCP Widget Protocol',
     version: '1.0.0',
@@ -253,7 +253,7 @@ function main() {
       name: def.name,
       description: def.description,
       file: `${def.name}.schema.json`,
-      url: `https://mcp-wp.dev/schemas/${def.name}.json`,
+      url: `https://mwp.dev/schemas/${def.name}.json`,
     })),
   };
 

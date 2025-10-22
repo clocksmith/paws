@@ -1,5 +1,5 @@
 /**
- * @mcp-wp/core Schemas
+ * @mwp/core Schemas
  *
  * Re-exports all Zod schemas and validation functions.
  */

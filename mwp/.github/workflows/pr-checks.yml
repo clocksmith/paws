@@ -136,7 +136,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run core package tests
-        run: pnpm --filter "@mcp-wp/core" test
+        run: pnpm --filter "@mwp/core" test
 
       - name: Run integration tests
         run: pnpm test:integration
@@ -271,5 +271,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: pr.number,
-              body: `## Widget Preview\n\nOnce this PR is merged, you can test the widget using:\n\n\`\`\`bash\nnpx create-mcp-widget --template ${pr.head.ref}\n\`\`\`\n\n📚 [Widget Development Guide](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/docs/widgets.md)`
+              body: `## Widget Preview\n\nOnce this PR is merged, you can test the widget using:\n\n\`\`\`bash\nnpx create-mwp-widget --template ${pr.head.ref}\n\`\`\`\n\n📚 [Widget Development Guide](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/docs/widgets.md)`
             });

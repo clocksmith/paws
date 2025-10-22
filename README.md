@@ -16,7 +16,7 @@ This approach provides streamlined workflows for multi-agent coordination and te
 
 ## REPLOID: Recursive Self-Improvement in the Browser
 
-**[REPLOID](packages/reploid/README.md)** is an experimental framework for LLM-driven recursive self-improvement that runs entirely in the browser. Unlike traditional AI tools that treat the browser as just an interface, REPLOID uses it as a complete development ecosystem where agents can introspect, modify, test, and evolve their own architecture.
+**[REPLOID](reploid/README.md)** is an experimental framework for LLM-driven recursive self-improvement that runs entirely in the browser. Unlike traditional AI tools that treat the browser as just an interface, REPLOID uses it as a complete development ecosystem where agents can introspect, modify, test, and evolve their own architecture.
 
 **Key capabilities:**
 - **Self-modification** - Agent reads its own source code from a virtual filesystem and proposes architectural improvements
@@ -32,7 +32,7 @@ REPLOID is independently capable but shares the DOGS/CATS bundle format with PAW
 - **[@paws/core](packages/core/README.md)** - Shared resources (personas, system prompts, configs)
 - **[@paws/cli-js](packages/cli-js/README.md)** - JavaScript CLI tools (cats, dogs, paws-session)
 - **[@paws/cli-py](packages/cli-py/README.md)** - Python CLI tools (paws-cats, paws-dogs, paws-paxos)
-- **[@paws/reploid](packages/reploid/README.md)** - Browser-native recursive self-improvement framework
+- **[@paws/reploid](reploid/README.md)** - Browser-native recursive self-improvement framework
 
 ## Integrations
 
@@ -80,7 +80,7 @@ The **[MCP Widget Protocol](mwp/README.md)** is a separate project in this repos
   - Interactive checkpoint timeline
   - Visual approval UI for destructive operations
 - **Hybrid Architecture**: REPLOID dashboard can show both internal widgets (Module Widget Protocol) and external widgets (MCP Widget Protocol) side-by-side
-- Complete integration guide: `packages/reploid/docs/MWP_INTEGRATION_GUIDE.md`
+- Complete integration guide: `reploid/docs/MWP_INTEGRATION_GUIDE.md`
 - Shares monorepo for convenience but maintains separate package ecosystems
 
 See [mwp/README.md](mwp/README.md) for full documentation.

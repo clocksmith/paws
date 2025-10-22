@@ -27,7 +27,6 @@
     "reploid:start": "pnpm --filter @paws/reploid start",
     "reploid:cli": "pnpm --filter @paws/reploid cli",
     "reploid:dev": "pnpm --filter @paws/reploid dev",
-    "hermes": "cd packages/reploid/hermes && node index.js",
     "check:reploid-sync": "node scripts/check-reploid-sync.js"
   },
   "keywords": [

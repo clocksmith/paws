@@ -7,7 +7,7 @@
 
 **Prerequisites:** 0x000007, 0x00000D, 0x000019
 
-**Affected Artifacts:** `/js/cats.js`, `/js/dogs.js`, `/js/progress-bus.js`, `/py/paws_paxos.py`, `/reploid/hermes/index.js`, `/reploid/upgrades/ui-manager.js`, `/reploid/upgrades/penteract-visualizer.js`
+**Affected Artifacts:** `/js/cats.js`, `/js/dogs.js`, `/js/progress-bus.js`, `/py/paws_paxos.py`, `/reploid/upgrades/ui-manager.js`, `/reploid/upgrades/penteract-visualizer.js`
 
 ---
 
@@ -60,7 +60,7 @@ class PenteractAnalyticsWidget extends HTMLElement {
 
 Data flow:
 - `cats`/`dogs` publish structured events via **ProgressBus** (`.paws/cache/progress-stream.ndjson`).
-- Hermes' **ProgressWatcher** tails the log and broadcasts `PROGRESS_EVENT` frames over WebSocket.
+- **ProgressWatcher** tails the log and broadcasts `PROGRESS_EVENT` frames.
 - UI manager converts those into `progress:event` and `paxos:analytics` signals.
 - **PenteractAnalytics** listens to `EventBus.on('paxos:analytics')` and processes snapshots.
 - Widget renders consensus state (status badges, agent metrics) and historical analytics.
@@ -115,6 +115,6 @@ Data flow:
    - Clear history button empties array and persists.
 10. **Integration Points**
     - Emit telemetry from `cats`, `dogs`, Paxos orchestrator.
-    - Transport via Hermes ProgressWatcher over WebSocket.
+    - Transport via ProgressWatcher.
     - Bridge to EventBus in UI manager.
     - Widget auto-updates on new analytics events.

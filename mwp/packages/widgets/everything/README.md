@@ -1,4 +1,4 @@
-# @mcp-wp/widget-everything
+# @mwp/widget-everything
 
 Dashboard widget for the official [Everything MCP server](https://github.com/modelcontextprotocol/server-everything). Surface desktop search tools, resources, and prompts through the MCP Widget Protocol.
 
@@ -35,7 +35,7 @@ Example dashboard configuration:
   "widgets": [
     {
       "id": "everything-inspector",
-      "package": "@mcp-wp/widget-everything",
+      "package": "@mwp/widget-everything",
       "serverName": "everything",
       "position": { "x": 0, "y": 0 },
       "size": { "w": 6, "h": 4 }
@@ -47,7 +47,7 @@ Example dashboard configuration:
 ## Usage
 
 ```ts
-import createEverythingWidget from '@mcp-wp/widget-everything';
+import createEverythingWidget from '@mwp/widget-everything';
 
 const { api, widget } = createEverythingWidget({
   EventBus,

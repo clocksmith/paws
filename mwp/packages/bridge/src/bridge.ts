@@ -18,15 +18,15 @@ import type {
   UnsubscribeFunction,
   SamplingRequest,
   SamplingResult,
-} from '@mcp-wp/core';
+} from '@mwp/core';
 import type {
   MCPServerInfo,
   MCPCapabilities,
   MCPTool,
   MCPResource,
   MCPPrompt,
-} from '@mcp-wp/core';
-import type { ServerConfiguration } from '@mcp-wp/core';
+} from '@mwp/core';
+import type { ServerConfiguration } from '@mwp/core';
 import { ClientManager } from './client-manager.js';
 import { ToolExecutor } from './tool-executor.js';
 import { ResourceReader } from './resource-reader.js';

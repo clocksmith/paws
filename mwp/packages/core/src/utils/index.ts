@@ -1,5 +1,5 @@
 /**
- * @mcp-wp/core Utilities
+ * @mwp/core Utilities
  *
  * Re-exports all utility functions.
  */

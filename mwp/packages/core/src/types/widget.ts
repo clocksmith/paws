@@ -2,7 +2,7 @@
  * Widget Factory and API Types
  *
  * These types define the contract for widget factories and the APIs they expose.
- * Based on MCP-WP Specification Section 3 (Widget Factory Contract)
+ * Based on MWP Specification Section 3 (Widget Factory Contract)
  */
 
 import type { Dependencies } from './dependencies.js';
@@ -85,7 +85,7 @@ export interface WidgetAPI {
  */
 export interface WidgetMetadata {
   /**
-   * MCP-WP protocol version (e.g., "1.0.0")
+   * MWP protocol version (e.g., "1.0.0")
    */
   protocolVersion: string;
 
@@ -207,7 +207,7 @@ export interface WidgetStatus {
  * Resource Usage
  *
  * Widget resource consumption metrics.
- * Used for performance monitoring per MCP-WP Section 18.
+ * Used for performance monitoring per MWP Section 18.
  */
 export interface ResourceUsage {
   /**

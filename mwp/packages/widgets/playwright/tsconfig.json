@@ -44,8 +44,8 @@
     // Paths
     "baseUrl": ".",
     "paths": {
-      "@mcp-wp/widget-playwright": ["./src/index.ts"],
-      "@mcp-wp/widget-playwright/*": ["./src/*"]
+      "@mwp/widget-playwright": ["./src/index.ts"],
+      "@mwp/widget-playwright/*": ["./src/*"]
     }
   },
   "include": [

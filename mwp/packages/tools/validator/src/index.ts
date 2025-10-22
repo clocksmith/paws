@@ -1,7 +1,7 @@
 /**
- * @mcp-wp/validator
+ * @mwp/validator
  *
- * MCP-WP protocol conformance validator
+ * MWP protocol conformance validator
  */
 
 import { Command } from 'commander';
@@ -35,8 +35,8 @@ export async function main(args: string[]): Promise<void> {
   const program = new Command();
 
   program
-    .name('mcp-wp-validate')
-    .description('Validate MCP-WP widget conformance')
+    .name('mwp-validate')
+    .description('Validate MWP widget conformance')
     .argument('[path]', 'Widget path to validate', '.')
     .option('-f, --fix', 'Auto-fix issues where possible')
     .option('-s, --strict', 'Strict mode (warnings as errors)')
@@ -141,10 +141,10 @@ function validatePackageJson(widgetPath: string, results: ValidationResult): voi
     }
 
     // Check dependencies
-    if (!pkg.dependencies?.['@mcp-wp/core']) {
+    if (!pkg.dependencies?.['@mwp/core']) {
       results.errors.push({
         rule: 'package',
-        message: 'Missing dependency: @mcp-wp/core',
+        message: 'Missing dependency: @mwp/core',
         file: 'package.json',
       });
       results.valid = false;

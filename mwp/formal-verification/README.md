@@ -891,7 +891,7 @@ To contribute formal specifications:
 
 ## License
 
-Formal specifications in this directory are licensed under MIT License, same as MCP-WP protocol.
+Formal specifications in this directory are licensed under MIT License, same as MWP protocol.
 
 ---
 

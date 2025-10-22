@@ -1,5 +1,5 @@
 /**
- * @mcp-wp/core
+ * @mwp/core
  *
  * Core types, schemas, and utilities for MCP Widget Protocol.
  *

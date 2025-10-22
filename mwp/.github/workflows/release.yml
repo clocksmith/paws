@@ -4,7 +4,7 @@ on:
   push:
     tags:
       - 'v*.*.*'
-      - '@mcp-wp/*@*.*.*'
+      - '@mwp/*@*.*.*'
 
 permissions:
   contents: write
@@ -59,7 +59,7 @@ jobs:
       - name: Extract package info
         id: package
         run: |
-          if [[ "${{ github.ref }}" =~ ^refs/tags/@mcp-wp/([^@]+)@(.*)$ ]]; then
+          if [[ "${{ github.ref }}" =~ ^refs/tags/@mwp/([^@]+)@(.*)$ ]]; then
             PACKAGE_NAME="${BASH_REMATCH[1]}"
             VERSION="${BASH_REMATCH[2]}"
           elif [[ "${{ github.ref }}" =~ ^refs/tags/v(.*)$ ]]; then
@@ -116,7 +116,7 @@ jobs:
             Version: ${{ steps.package.outputs.version }}
             Released successfully!
           color: 0x00ff00
-          username: MCP-WP Release Bot
+          username: MWP Release Bot
 
       - name: Update documentation
         if: steps.package.outputs.package_name == 'all'

@@ -55,10 +55,10 @@ export default defineConfig({
 
   resolve: {
     alias: {
-      '@mcp-wp/core': path.resolve(__dirname, './src/index.ts'),
-      '@mcp-wp/core/types': path.resolve(__dirname, './src/types/index.ts'),
-      '@mcp-wp/core/schemas': path.resolve(__dirname, './src/schemas/index.ts'),
-      '@mcp-wp/core/utils': path.resolve(__dirname, './src/utils/index.ts'),
+      '@mwp/core': path.resolve(__dirname, './src/index.ts'),
+      '@mwp/core/types': path.resolve(__dirname, './src/types/index.ts'),
+      '@mwp/core/schemas': path.resolve(__dirname, './src/schemas/index.ts'),
+      '@mwp/core/utils': path.resolve(__dirname, './src/utils/index.ts'),
     },
   },
 });

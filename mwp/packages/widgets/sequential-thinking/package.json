@@ -1,5 +1,5 @@
 {
-  "name": "@mcp-wp/widget-sequential-thinking",
+  "name": "@mwp/widget-sequential-thinking",
   "version": "1.0.0",
   "description": "MCP Widget for Sequential Thinking server - AI reasoning visualization",
   "type": "module",
@@ -25,7 +25,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@mcp-wp/core": "workspace:*"
+    "@mwp/core": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
@@ -43,11 +43,11 @@
     "chain-of-thought",
     "web-component"
   ],
-  "author": "MCP-WP Team",
+  "author": "MWP Team",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/mcp-wp.git",
+    "url": "https://github.com/your-org/mwp.git",
     "directory": "packages/widgets/sequential-thinking"
   }
 }

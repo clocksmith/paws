@@ -504,7 +504,7 @@ export class MCPServer {
       });
 
       const client = new Client({
-        name: 'mcp-wp-server',
+        name: 'mwp-server',
         version: '1.0.0',
       }, {
         capabilities: {},

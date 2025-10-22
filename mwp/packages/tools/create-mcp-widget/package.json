@@ -1,10 +1,10 @@
 {
-  "name": "create-mcp-widget",
+  "name": "create-mwp-widget",
   "version": "1.0.0",
-  "description": "Interactive CLI for scaffolding MCP-WP widgets",
+  "description": "Interactive CLI for scaffolding MWP widgets",
   "type": "module",
   "bin": {
-    "create-mcp-widget": "./bin/cli.js"
+    "create-mwp-widget": "./bin/cli.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -47,11 +47,11 @@
     "generator",
     "create"
   ],
-  "author": "MCP-WP Team",
+  "author": "MWP Team",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/mcp-wp.git",
-    "directory": "packages/tools/create-mcp-widget"
+    "url": "https://github.com/your-org/mwp.git",
+    "directory": "packages/tools/create-mwp-widget"
   }
 }

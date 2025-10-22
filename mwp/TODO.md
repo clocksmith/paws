@@ -9,13 +9,13 @@
 ### Core Widget Implementations
 
 - [x] **GitHub Widget Implementation**
-  Complete @mcp-wp/widget-github with full Web Component implementation. Must render GitHub tools (create_issue, create_pull_request, search_repositories), resources (repo://, file://), and handle tool invocations via EventBus. Include Shadow DOM UI, error handling, and loading states. Target: <200ms initial render, <100KB bundle size.
+  Complete @mwp/widget-github with full Web Component implementation. Must render GitHub tools (create_issue, create_pull_request, search_repositories), resources (repo://, file://), and handle tool invocations via EventBus. Include Shadow DOM UI, error handling, and loading states. Target: <200ms initial render, <100KB bundle size.
   _Completed: 2025-10-21_
 
   **Status**: ✅ COMPLETE - 1,271 lines implemented, full UI with 7 tabs (Overview, Issues, PRs, Search, Resources, New Issue, New PR), complete CRUD operations, resource preview, repository browsing, comprehensive error handling, production-ready
 
 - [x] **Playwright Widget Implementation**
-  Build @mcp-wp/widget-playwright for browser automation. Display available tools (navigate, screenshot, click, fill, evaluate), show browser state, render captured screenshots inline. Implement screenshot gallery with thumbnails. Must handle async operations gracefully with progress indicators.
+  Build @mwp/widget-playwright for browser automation. Display available tools (navigate, screenshot, click, fill, evaluate), show browser state, render captured screenshots inline. Implement screenshot gallery with thumbnails. Must handle async operations gracefully with progress indicators.
   _Completed: 2025-10-21_
 
   **Status**: ✅ COMPLETE - 1,401 lines implemented, 6.58KB gzipped (93% under budget), 16/25 tests passing, comprehensive README, production-ready
@@ -27,7 +27,7 @@
   **Status**: ✅ COMPLETE - 1,291 lines implemented, 6.10KB gzipped (94% under budget), 26/32 tests passing (81%), timeline visualization, export functionality (JSON/MD/TXT), production-ready
 
 - [ ] **Brave Search Widget Implementation**
-  Implement @mcp-wp/widget-brave for web search. Display search form, results list with snippets/URLs/metadata, and result filtering. Handle brave_web_search and brave_local_search tools. Include result caching to avoid redundant API calls. Show search history and saved results.
+  Implement @mwp/widget-brave for web search. Display search form, results list with snippets/URLs/metadata, and result filtering. Handle brave_web_search and brave_local_search tools. Include result caching to avoid redundant API calls. Show search history and saved results.
   _Completed: ___________
 
 - [ ] **Filesystem Widget Implementation**
@@ -45,11 +45,11 @@
 ### Testing Infrastructure
 
 - [ ] **Unit Testing Framework Setup**
-  Configure Vitest with coverage reporting for all packages. Create test utilities in @mcp-wp/testing: mock Dependencies (EventBus/MCPBridge/Configuration), mock MCPServerInfo, test fixtures for all widget types. Add DOM testing with happy-dom. Implement test helpers for Shadow DOM assertions and event testing.
+  Configure Vitest with coverage reporting for all packages. Create test utilities in @mwp/testing: mock Dependencies (EventBus/MCPBridge/Configuration), mock MCPServerInfo, test fixtures for all widget types. Add DOM testing with happy-dom. Implement test helpers for Shadow DOM assertions and event testing.
   _Completed: ___________
 
 - [ ] **Widget Unit Tests - Tier 1 (7 widgets)**
-  Write comprehensive unit tests for GitHub, Playwright, Sequential-Thinking, Brave, Filesystem, Memory, Fetch widgets. Target >80% coverage per widget. Test: initialization, rendering, event emission, tool invocation handling, error states, loading states, user interactions, cleanup/destroy. Use @mcp-wp/testing utilities.
+  Write comprehensive unit tests for GitHub, Playwright, Sequential-Thinking, Brave, Filesystem, Memory, Fetch widgets. Target >80% coverage per widget. Test: initialization, rendering, event emission, tool invocation handling, error states, loading states, user interactions, cleanup/destroy. Use @mwp/testing utilities.
   _Completed: ___________
 
 - [ ] **Performance Testing Suite**
@@ -66,11 +66,11 @@
 
 ### Developer Tooling
 
-- [ ] **@mcp-wp/create-mcp-widget CLI - Complete Implementation**
+- [ ] **@mwp/create-mwp-widget CLI - Complete Implementation**
   Finish CLI tool for scaffolding widgets. Features: interactive prompts for widget name/description/MCP server, generate boilerplate (index.ts, widget.ts, types.ts, tests, README), support templates (basic/advanced/data-viz/form), add widget to pnpm workspace automatically. Include --typescript, --lit, --react flags.
   _Completed: ___________
 
-- [ ] **@mcp-wp/validator - Conformance Checking**
+- [ ] **@mwp/validator - Conformance Checking**
   Implement widget validation CLI. Checks: factory exports default function, returns correct WidgetFactory shape, widget metadata schema compliance, bundle size limits, test coverage >80%, WCAG 2.1 AA pass, performance budgets met. Generate detailed validation reports with remediation suggestions. Support CI integration.
   _Completed: ___________
 
@@ -95,11 +95,11 @@
 ### MCP-UI Interoperability
 
 - [ ] **MCP-UI Adapter Layer**
-  Implement packages/mcp-ui-adapter/ for @modelcontextprotocol/inspector compatibility. Bridge MCP-WP widgets to mcp-ui format. Bidirectional conversion: WidgetFactory ↔ UIComponent schema. Handle event mapping (mcp:tool:invoke-requested → ui:action). Support both standalone and embedded modes. Include adapter configuration and examples.
+  Implement packages/mcp-ui-adapter/ for @modelcontextprotocol/inspector compatibility. Bridge MWP widgets to mcp-ui format. Bidirectional conversion: WidgetFactory ↔ UIComponent schema. Handle event mapping (mcp:tool:invoke-requested → ui:action). Support both standalone and embedded modes. Include adapter configuration and examples.
   _Completed: ___________
 
 - [ ] **MCP-UI Compatibility Helpers**
-  Create @mcp-wp/mcp-ui-compat package with utilities: convertWidgetToUIComponent(), wrapMCPUIInWidget(), eventTranslator(), schemaMapper(). Support mcp-ui theming, layout constraints, permission model differences. Add migration guide for existing mcp-ui components. Include TypeScript types for both protocols.
+  Create @mwp/mcp-ui-compat package with utilities: convertWidgetToUIComponent(), wrapMCPUIInWidget(), eventTranslator(), schemaMapper(). Support mcp-ui theming, layout constraints, permission model differences. Add migration guide for existing mcp-ui components. Include TypeScript types for both protocols.
   _Completed: ___________
 
 ### Advanced Protocol Features
@@ -109,11 +109,11 @@
   _Completed: ___________
 
 - [ ] **Widget Registry Protocol - Server**
-  Build packages/widget-registry-server/ implementing MCP-WP Section 14. Tools: register_widget, search_widgets, get_widget_info, verify_widget. Resources: registry://widgets/<id>, registry://categories. Support widget certification levels (Certified/Community/Experimental). Include SQLite database for registry storage, REST API for web access.
+  Build packages/widget-registry-server/ implementing MWP Section 14. Tools: register_widget, search_widgets, get_widget_info, verify_widget. Resources: registry://widgets/<id>, registry://categories. Support widget certification levels (Certified/Community/Experimental). Include SQLite database for registry storage, REST API for web access.
   _Completed: ___________
 
 - [ ] **Widget Registry Protocol - Client**
-  Create client library in @mcp-wp/core for registry interaction. Functions: registerWidget(), searchRegistry(), downloadWidget(), verifySignature(). Support local widget cache, automatic updates, version resolution. Integrate into dashboard widget picker UI. Handle offline mode with cached registry data.
+  Create client library in @mwp/core for registry interaction. Functions: registerWidget(), searchRegistry(), downloadWidget(), verifySignature(). Support local widget cache, automatic updates, version resolution. Integrate into dashboard widget picker UI. Handle offline mode with cached registry data.
   _Completed: ___________
 
 - [ ] **Agent Protocol Implementation**
@@ -123,19 +123,19 @@
 ### Enterprise Tier 2 Widgets
 
 - [ ] **Notion Widget**
-  Build @mcp-wp/widget-notion for Notion API integration. Display pages/databases, render page content with rich text, create/update pages, query databases. Include page tree navigation, search across workspace, inline page editor. Handle Notion blocks (paragraphs, headings, lists, code, embeds). Support collaborative editing indicators.
+  Build @mwp/widget-notion for Notion API integration. Display pages/databases, render page content with rich text, create/update pages, query databases. Include page tree navigation, search across workspace, inline page editor. Handle Notion blocks (paragraphs, headings, lists, code, embeds). Support collaborative editing indicators.
   _Completed: ___________
 
 - [ ] **Slack Widget**
-  Implement @mcp-wp/widget-slack for @modelcontextprotocol/server-slack. Channel list, message history, send messages, file uploads, thread views. Real-time message updates via subscriptions. Show user presence, channel members. Support message formatting (markdown/mentions/@channels). Include notification preferences.
+  Implement @mwp/widget-slack for @modelcontextprotocol/server-slack. Channel list, message history, send messages, file uploads, thread views. Real-time message updates via subscriptions. Show user presence, channel members. Support message formatting (markdown/mentions/@channels). Include notification preferences.
   _Completed: ___________
 
 - [ ] **AWS Widget**
-  Create @mcp-wp/widget-aws for @modelcontextprotocol/server-aws-kb-retrieval. Display knowledge bases, perform semantic search, show retrieved documents with relevance scores. Visualize document embeddings in 2D/3D. Support filters (date/source/confidence). Include query history and saved searches. Show AWS KB statistics.
+  Create @mwp/widget-aws for @modelcontextprotocol/server-aws-kb-retrieval. Display knowledge bases, perform semantic search, show retrieved documents with relevance scores. Visualize document embeddings in 2D/3D. Support filters (date/source/confidence). Include query history and saved searches. Show AWS KB statistics.
   _Completed: ___________
 
 - [ ] **Git Widget**
-  Build @mcp-wp/widget-git for @modelcontextprotocol/server-git. Show repository status, branch list, commit history (graph view), diff viewer, staging area. Support git operations: commit, branch, merge, stash. Display merge conflicts with resolution UI. Include blame view and file history.
+  Build @mwp/widget-git for @modelcontextprotocol/server-git. Show repository status, branch list, commit history (graph view), diff viewer, staging area. Support git operations: commit, branch, merge, stash. Display merge conflicts with resolution UI. Include blame view and file history.
   _Completed: ___________
 
 ### Release & Distribution
@@ -153,7 +153,7 @@
   _Completed: ___________
 
 - [ ] **Schema CDN Distribution**
-  Set up CDN (Cloudflare/Fastly) for JSON Schema hosting at https://mcp-wp.dev/schemas/. Automated deployment from specification/schemas/ on releases. Support versioned URLs (/v1.0.0/widget-metadata.json), latest aliases. Add CORS headers for browser access. Implement cache invalidation on updates. Monitor CDN usage/performance.
+  Set up CDN (Cloudflare/Fastly) for JSON Schema hosting at https://mwp.dev/schemas/. Automated deployment from specification/schemas/ on releases. Support versioned URLs (/v1.0.0/widget-metadata.json), latest aliases. Add CORS headers for browser access. Implement cache invalidation on updates. Monitor CDN usage/performance.
   _Completed: ___________
 
 ---
@@ -167,7 +167,7 @@
   _Completed: ___________
 
 - [ ] **API Documentation Generation**
-  Set up TypeDoc for API documentation generation. Document all public APIs in @mcp-wp/core, @mcp-wp/bridge, @mcp-wp/eventbus, @mcp-wp/dashboard. Generate docs on build, deploy to docs.mcp-wp.dev. Include code examples, tutorials, migration guides. Add search functionality and version switcher.
+  Set up TypeDoc for API documentation generation. Document all public APIs in @mwp/core, @mwp/bridge, @mwp/eventbus, @mwp/dashboard. Generate docs on build, deploy to docs.mwp.dev. Include code examples, tutorials, migration guides. Add search functionality and version switcher.
   _Completed: ___________
 
 - [ ] **Widget Development Tutorial Series**
@@ -175,7 +175,7 @@
   _Completed: ___________
 
 - [ ] **Troubleshooting & Migration Guides**
-  Write detailed troubleshooting guide covering: widget not loading, MCP server connection issues, permission errors, performance problems, accessibility failures. Create migration guides: upgrading between MCP-WP versions, migrating from standalone MCP to MCP-WP, converting custom dashboards to MCP-WP. Include FAQs.
+  Write detailed troubleshooting guide covering: widget not loading, MCP server connection issues, permission errors, performance problems, accessibility failures. Create migration guides: upgrading between MWP versions, migrating from standalone MCP to MWP, converting custom dashboards to MWP. Include FAQs.
   _Completed: ___________
 
 ### Examples & Server Chaining
@@ -235,7 +235,7 @@
 ### Advanced Features
 
 - [ ] **Widget-to-Widget Communication Patterns**
-  Implement direct widget communication beyond EventBus. Create @mcp-wp/widget-bridge for type-safe inter-widget APIs. Support RPC-style calls between widgets (getSelection(), applyData(), requestFocus()). Include communication security (cross-widget permissions), data contracts (TypeScript interfaces), versioning. Document 5+ communication patterns with examples.
+  Implement direct widget communication beyond EventBus. Create @mwp/widget-bridge for type-safe inter-widget APIs. Support RPC-style calls between widgets (getSelection(), applyData(), requestFocus()). Include communication security (cross-widget permissions), data contracts (TypeScript interfaces), versioning. Document 5+ communication patterns with examples.
   _Completed: ___________
 
 - [ ] **Offline Support & PWA**
@@ -243,7 +243,7 @@
   _Completed: ___________
 
 - [ ] **Telemetry & Analytics**
-  Build privacy-respecting telemetry in @mcp-wp/telemetry. Track (opt-in): widget usage, feature adoption, error rates, performance metrics, user flows. No PII collection. Support self-hosted analytics, export to Plausible/Matomo/custom. Implement privacy controls (opt-out, data deletion). Generate usage insights dashboard.
+  Build privacy-respecting telemetry in @mwp/telemetry. Track (opt-in): widget usage, feature adoption, error rates, performance metrics, user flows. No PII collection. Support self-hosted analytics, export to Plausible/Matomo/custom. Implement privacy controls (opt-out, data deletion). Generate usage insights dashboard.
   _Completed: ___________
 
 - [ ] **Internationalization (i18n)**

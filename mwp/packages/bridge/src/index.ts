@@ -1,5 +1,5 @@
 /**
- * @mcp-wp/bridge
+ * @mwp/bridge
  *
  * MCPBridge implementation for MCP Widget Protocol.
  *

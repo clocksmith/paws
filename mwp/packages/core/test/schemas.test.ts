@@ -246,7 +246,7 @@ describe('Dashboard Configuration Schema', () => {
       widgets: [
         {
           id: 'widget-1',
-          package: '@mcp-wp/widget-github',
+          package: '@mwp/widget-github',
           serverName: 'github',
           position: { x: 0, y: 0 },
           size: { w: 6, h: 4 },
@@ -258,7 +258,7 @@ describe('Dashboard Configuration Schema', () => {
 
     expect(result.success).toBe(true);
     expect(result.data?.widgets[0]?.id).toBe('widget-1');
-    expect(result.data?.widgets[0]?.package).toBe('@mcp-wp/widget-github');
+    expect(result.data?.widgets[0]?.package).toBe('@mwp/widget-github');
   });
 });
 

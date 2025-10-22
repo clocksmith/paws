@@ -9,7 +9,7 @@ import type {
   WidgetFactory,
   Dependencies,
   MCPServerInfo,
-} from '@mcp-wp/core';
+} from '@mwp/core';
 import { BraveWidget } from './widget.js';
 
 /**
@@ -92,7 +92,7 @@ const createBraveWidget: WidgetFactoryFunction = (
       tags: ['brave', 'search', 'web', 'privacy', 'discovery'],
       version: '1.0.0',
       author: {
-        name: 'MCP-WP Team',
+        name: 'MWP Team',
       },
       permissions: {
         tools: {

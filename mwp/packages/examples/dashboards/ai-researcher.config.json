@@ -42,14 +42,14 @@
   ],
   "widgets": [
     {
-      "package": "@mcp-wp/widget-brave",
+      "package": "@mwp/widget-brave",
       "serverName": "brave",
       "id": "research-search",
       "position": { "x": 0, "y": 0 },
       "size": { "w": 6, "h": 4 }
     },
     {
-      "package": "@mcp-wp/widget-fetch",
+      "package": "@mwp/widget-fetch",
       "serverName": "fetch",
       "id": "research-reader",
       "position": { "x": 6, "y": 0 },
@@ -59,7 +59,7 @@
       }
     },
     {
-      "package": "@mcp-wp/widget-memory",
+      "package": "@mwp/widget-memory",
       "serverName": "memory",
       "id": "research-memory",
       "position": { "x": 0, "y": 4 },
@@ -70,7 +70,7 @@
       }
     },
     {
-      "package": "@mcp-wp/widget-sequential-thinking",
+      "package": "@mwp/widget-sequential-thinking",
       "serverName": "sequential-thinking",
       "id": "research-analyst",
       "position": { "x": 4, "y": 4 },

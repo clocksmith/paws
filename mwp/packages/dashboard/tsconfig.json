@@ -44,8 +44,8 @@
     // Paths
     "baseUrl": ".",
     "paths": {
-      "@mcp-wp/dashboard": ["./src/index.ts"],
-      "@mcp-wp/dashboard/*": ["./src/*"]
+      "@mwp/dashboard": ["./src/index.ts"],
+      "@mwp/dashboard/*": ["./src/*"]
     }
   },
   "include": [

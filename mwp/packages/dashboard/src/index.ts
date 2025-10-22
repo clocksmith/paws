@@ -1,5 +1,5 @@
 /**
- * @mcp-wp/dashboard
+ * @mwp/dashboard
  *
  * Main entry point for the MCP Widget Dashboard
  */

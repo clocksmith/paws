@@ -1,4 +1,4 @@
-# @mcp-wp/widget-github
+# @mwp/widget-github
 
 GitHub widget for MCP Widget Protocol - interact with GitHub repositories through MCP.
 
@@ -16,7 +16,7 @@ This widget provides a UI for interacting with the GitHub MCP server, allowing u
 ## Installation
 
 ```bash
-pnpm add @mcp-wp/widget-github
+pnpm add @mwp/widget-github
 ```
 
 ## Prerequisites
@@ -49,7 +49,7 @@ npm install -g @modelcontextprotocol/server-github
   "widgets": [
     {
       "id": "github-1",
-      "package": "@mcp-wp/widget-github",
+      "package": "@mwp/widget-github",
       "serverName": "github",
       "position": { "x": 0, "y": 0 },
       "size": { "w": 6, "h": 4 }
@@ -61,9 +61,9 @@ npm install -g @modelcontextprotocol/server-github
 ### Programmatic Usage
 
 ```typescript
-import createGitHubWidget from '@mcp-wp/widget-github';
-import { EventBus } from '@mcp-wp/eventbus';
-import { MCPBridge } from '@mcp-wp/bridge';
+import createGitHubWidget from '@mwp/widget-github';
+import { EventBus } from '@mwp/eventbus';
+import { MCPBridge } from '@mwp/bridge';
 
 const eventBus = new EventBus();
 const bridge = new MCPBridge(eventBus, config);

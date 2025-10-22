@@ -1,5 +1,5 @@
 /**
- * Mock implementations of core MCP-WP dependencies
+ * Mock implementations of core MWP dependencies
  */
 
 import type {
@@ -8,7 +8,7 @@ import type {
   Configuration,
   MCPServerInfo,
   UnsubscribeFunction,
-} from '@mcp-wp/core';
+} from '@mwp/core';
 
 /**
  * Mock EventBus implementation
