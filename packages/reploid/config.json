@@ -1448,5 +1448,64 @@
     "enabledPersonas": [
       "multi_mind_architect"
     ]
+  },
+  "server": {
+    "port": 8000,
+    "host": "localhost",
+    "corsOrigins": [
+      "http://localhost:8080",
+      "http://localhost:8000"
+    ],
+    "sessionTimeout": 3600000,
+    "maxSessions": 100
+  },
+  "api": {
+    "provider": "local",
+    "localEndpoint": "http://localhost:11434",
+    "timeout": 180000,
+    "maxRetries": 3
+  },
+  "ollama": {
+    "autoStart": false,
+    "defaultModel": "gpt-oss:120b",
+    "fallbackModel": "gpt-oss:20b",
+    "temperature": 0.7,
+    "maxTokens": 4096
+  },
+  "ui": {
+    "theme": "cyberpunk",
+    "showAdvancedLogs": false,
+    "statusUpdateInterval": 1000,
+    "confirmDestructive": true
+  },
+  "permissions": {
+    "version": 1,
+    "policies": [
+      {
+        "tool": "read",
+        "rule": "allow",
+        "description": "Read operations are safe and allowed by default"
+      },
+      {
+        "tool": "write",
+        "rule": "ask",
+        "description": "Allowing the agent to write or modify files can have unintended consequences. Please review the requested path and content carefully."
+      },
+      {
+        "tool": "bash",
+        "rule": "deny",
+        "description": "Executing shell commands is disabled by default for security reasons."
+      },
+      {
+        "tool": "delete",
+        "rule": "ask",
+        "description": "File deletion requires user confirmation"
+      },
+      {
+        "tool": "execute_python",
+        "rule": "allow",
+        "description": "Python execution in Pyodide sandbox is safe"
+      }
+    ]
   }
 }

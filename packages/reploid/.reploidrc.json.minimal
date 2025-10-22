@@ -1,0 +1,16 @@
+{
+  "providers": {
+    "default": "gemini"
+  },
+  "ui": {
+    "theme": "neon"
+  },
+  "permissions": {
+    "policies": [
+      {
+        "tool": "bash",
+        "rule": "ask"
+      }
+    ]
+  }
+}

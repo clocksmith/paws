@@ -1,0 +1,25 @@
+{
+  "servers": [
+    {
+      "name": "weather",
+      "transport": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-weather"],
+        "env": {
+          "WEATHER_API_KEY": "${WEATHER_API_KEY}",
+          "WEATHER_DEFAULT_LOCATION": "San Francisco, CA"
+        }
+      }
+    }
+  ],
+  "widgets": [
+    {
+      "package": "@examples/weather-widget",
+      "serverName": "weather",
+      "id": "weather-widget",
+      "position": { "x": 0, "y": 0 },
+      "size": { "w": 3, "h": 3 }
+    }
+  ]
+}

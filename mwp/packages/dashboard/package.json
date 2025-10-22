@@ -1,0 +1,50 @@
+{
+  "name": "@mcp-wp/dashboard",
+  "version": "1.0.0",
+  "description": "MCP Widget Protocol Dashboard - Reference host implementation for loading and displaying widgets",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc && vite build",
+    "dev": "vite",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@mcp-wp/core": "workspace:*",
+    "@mcp-wp/bridge": "workspace:*",
+    "@mcp-wp/eventbus": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-widget-protocol",
+    "dashboard",
+    "widget-host",
+    "web-components"
+  ],
+  "author": "MCP-WP Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/mcp-wp.git",
+    "directory": "packages/dashboard"
+  }
+}

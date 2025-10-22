@@ -1,0 +1,275 @@
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  pr-metadata:
+    name: PR Metadata Check
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    steps:
+      - name: Check PR title
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            build
+            ci
+            chore
+            revert
+            widget
+          requireScope: false
+          subjectPattern: ^[A-Z].+$
+          subjectPatternError: |
+            The subject "{subject}" found in the pull request title "{title}"
+            didn't match the configured pattern. Please ensure that the subject
+            starts with an uppercase character.
+
+      - name: Check PR has description
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr.body || pr.body.trim().length < 50) {
+              core.setFailed('PR description is too short. Please provide a detailed description (at least 50 characters).');
+            }
+
+      - name: Check PR is linked to issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const body = pr.body || '';
+            const linkedIssue = body.match(/(closes|fixes|resolves)\s+#\d+/i);
+
+            if (!linkedIssue && !body.includes('[skip-issue-check]')) {
+              core.warning('PR is not linked to any issue. Consider linking it using "Closes #123" or add [skip-issue-check] to bypass this check.');
+            }
+
+  size-label:
+    name: PR Size Label
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add size label
+        uses: codelytv/pr-size-labeler@v1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          xs_label: 'size/xs'
+          xs_max_size: '10'
+          s_label: 'size/s'
+          s_max_size: '100'
+          m_label: 'size/m'
+          m_max_size: '500'
+          l_label: 'size/l'
+          l_max_size: '1000'
+          xl_label: 'size/xl'
+          fail_if_xl: 'false'
+          message_if_xl: >
+            This PR is very large. Consider breaking it down into smaller PRs for easier review.
+
+  changed-files:
+    name: Check Changed Files
+    runs-on: ubuntu-latest
+    outputs:
+      core: ${{ steps.filter.outputs.core }}
+      widgets: ${{ steps.filter.outputs.widgets }}
+      docs: ${{ steps.filter.outputs.docs }}
+      tests: ${{ steps.filter.outputs.tests }}
+      workflows: ${{ steps.filter.outputs.workflows }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check changed files
+        uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            core:
+              - 'packages/core/**'
+              - 'packages/bridge/**'
+              - 'packages/eventbus/**'
+              - 'packages/dashboard/**'
+            widgets:
+              - 'packages/widgets/**'
+            docs:
+              - '**/*.md'
+              - 'docs/**'
+            tests:
+              - '**/*.test.ts'
+              - '**/*.spec.ts'
+              - 'packages/tools/testing/**'
+            workflows:
+              - '.github/**'
+
+  test-core:
+    name: Test Core Changes
+    needs: changed-files
+    if: needs.changed-files.outputs.core == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run core package tests
+        run: pnpm --filter "@mcp-wp/core" test
+
+      - name: Run integration tests
+        run: pnpm test:integration
+
+  test-widgets:
+    name: Test Widget Changes
+    needs: changed-files
+    if: needs.changed-files.outputs.widgets == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Get changed widget packages
+        id: changed-widgets
+        uses: tj-actions/changed-files@v40
+        with:
+          files: packages/widgets/**/
+          dir_names: true
+
+      - name: Test changed widgets
+        run: |
+          for widget in ${{ steps.changed-widgets.outputs.all_changed_files }}; do
+            if [ -f "$widget/package.json" ]; then
+              echo "Testing $widget..."
+              pnpm --filter "$(basename $widget)" test || exit 1
+            fi
+          done
+
+  docs-check:
+    name: Documentation Check
+    needs: changed-files
+    if: needs.changed-files.outputs.docs == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check markdown links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          use-verbose-mode: 'no'
+          config-file: '.github/markdown-link-check-config.json'
+          check-modified-files-only: 'yes'
+
+      - name: Check spelling
+        uses: streetsidesoftware/cspell-action@v5
+        with:
+          files: |
+            **/*.md
+            !**/node_modules/**
+          incremental_files_only: true
+
+  breaking-changes:
+    name: Check Breaking Changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check for breaking changes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const body = pr.body || '';
+            const title = pr.title || '';
+
+            const hasBreakingChange =
+              body.toLowerCase().includes('breaking change') ||
+              title.includes('!') ||
+              body.includes('BREAKING CHANGE:');
+
+            if (hasBreakingChange) {
+              const hasMigrationGuide = body.toLowerCase().includes('migration');
+
+              if (!hasMigrationGuide) {
+                core.setFailed('This PR includes breaking changes but does not provide a migration guide. Please add migration instructions.');
+              }
+
+              // Add breaking-change label
+              github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: ['breaking-change']
+              });
+
+              // Post warning comment
+              github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: '⚠️ **This PR includes breaking changes.** Please ensure:\n\n1. Migration guide is provided\n2. CHANGELOG.md is updated\n3. Version bump is appropriate (major version)\n4. Documentation is updated'
+              });
+            }
+
+  comment-preview:
+    name: Comment Preview Link
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'widget')
+    steps:
+      - name: Add preview comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body: `## Widget Preview\n\nOnce this PR is merged, you can test the widget using:\n\n\`\`\`bash\nnpx create-mcp-widget --template ${pr.head.ref}\n\`\`\`\n\n📚 [Widget Development Guide](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/docs/widgets.md)`
+            });

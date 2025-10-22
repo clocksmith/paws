@@ -1,0 +1,243 @@
+/**
+ * MCP Dashboard Styles
+ *
+ * Base styles for the dashboard container and widget slots.
+ * Theme-specific colors are applied via CSS variables.
+ */
+
+/* Dashboard Container */
+.mcp-dashboard {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  padding: var(--theme-spacing-md, 16px);
+  overflow: auto;
+}
+
+.mcp-dashboard *,
+.mcp-dashboard *::before,
+.mcp-dashboard *::after {
+  box-sizing: border-box;
+}
+
+/* Widget Slots */
+.widget-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--theme-surface, #ffffff);
+  border: 1px solid var(--theme-border, #d0d7de);
+  border-radius: var(--theme-border-radius, 6px);
+  box-shadow: var(--theme-shadow, 0 1px 3px rgba(0, 0, 0, 0.1));
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+.widget-slot:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.widget-slot:focus-within {
+  outline: 2px solid var(--theme-primary, #0969da);
+  outline-offset: 2px;
+}
+
+/* Widget Content */
+.widget-slot > * {
+  width: 100%;
+  height: 100%;
+}
+
+/* Loading State */
+.widget-slot[data-loading="true"]::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--theme-border, #d0d7de);
+  border-top-color: var(--theme-primary, #0969da);
+  border-radius: 50%;
+  animation: widget-loading-spin 0.8s linear infinite;
+}
+
+@keyframes widget-loading-spin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* Error State */
+.widget-slot[data-error="true"] {
+  border-color: var(--theme-error, #cf222e);
+  background: var(--theme-surface, #ffffff);
+}
+
+.widget-slot[data-error="true"]::before {
+  content: '⚠';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 20px;
+  color: var(--theme-error, #cf222e);
+  z-index: 1;
+}
+
+/* Grid Layout Helpers */
+.mcp-dashboard[data-layout="grid"] {
+  display: grid;
+}
+
+.mcp-dashboard[data-layout="grid"] .widget-slot {
+  min-height: 300px;
+}
+
+/* Flex Layout Helpers */
+.mcp-dashboard[data-layout="flex"] {
+  display: flex;
+}
+
+.mcp-dashboard[data-layout="flex"] .widget-slot {
+  flex: 1 1 auto;
+  min-width: 280px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .mcp-dashboard {
+    padding: var(--theme-spacing-sm, 8px);
+  }
+
+  .mcp-dashboard[data-layout="grid"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .mcp-dashboard[data-layout="flex"] {
+    flex-direction: column !important;
+  }
+
+  .widget-slot {
+    min-height: 250px;
+  }
+}
+
+@media (max-width: 480px) {
+  .mcp-dashboard {
+    padding: var(--theme-spacing-xs, 4px);
+  }
+
+  .widget-slot {
+    min-height: 200px;
+    border-radius: 4px;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .mcp-dashboard {
+    padding: 0;
+    overflow: visible;
+  }
+
+  .widget-slot {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+
+  .widget-slot[data-loading="true"]::after,
+  .widget-slot[data-error="true"]::before {
+    display: none;
+  }
+}
+
+/* Accessibility */
+.mcp-dashboard:focus {
+  outline: 2px solid var(--theme-primary, #0969da);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .widget-slot,
+  .widget-slot::after {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .widget-slot {
+    border-width: 2px;
+  }
+
+  .widget-slot:focus-within {
+    outline-width: 3px;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .mcp-dashboard {
+    --theme-surface: #0d1117;
+    --theme-background: #010409;
+    --theme-text: #c9d1d9;
+    --theme-border: #30363d;
+  }
+}
+
+/* Widget Animations */
+@keyframes widget-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.widget-slot[data-animate="true"] {
+  animation: widget-fade-in 0.3s ease-out;
+}
+
+/* Empty State */
+.mcp-dashboard:empty::after {
+  content: 'No widgets loaded';
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--theme-secondary, #8b949e);
+  font-size: 16px;
+}
+
+/* Scrollbar Styling */
+.mcp-dashboard::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.mcp-dashboard::-webkit-scrollbar-track {
+  background: var(--theme-background, #f6f8fa);
+}
+
+.mcp-dashboard::-webkit-scrollbar-thumb {
+  background: var(--theme-border, #d0d7de);
+  border-radius: 6px;
+  border: 2px solid var(--theme-background, #f6f8fa);
+}
+
+.mcp-dashboard::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-secondary, #8b949e);
+}
+
+/* Firefox Scrollbar */
+.mcp-dashboard {
+  scrollbar-width: thin;
+  scrollbar-color: var(--theme-border, #d0d7de) var(--theme-background, #f6f8fa);
+}

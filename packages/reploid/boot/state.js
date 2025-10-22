@@ -8,7 +8,24 @@ export const state = {
         hasWebGPU: false,
         providers: []
     },
-    activePopover: null
+    activePopover: null,
+    // New: Available models from ModelRegistry
+    availableModels: {
+        cloud: [],
+        ollama: [],
+        webllm: [],
+        metadata: {}
+    },
+    // New: User-selected models configuration
+    selectedModels: [],
+    // New: Consensus strategy (if multiple models)
+    consensusStrategy: 'arena',
+    // New: Provider API keys tracking (for reuse)
+    configuredKeys: {
+        gemini: null,
+        openai: null,
+        anthropic: null
+    }
 };
 
 export const elements = {

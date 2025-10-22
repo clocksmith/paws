@@ -1,0 +1,43 @@
+{
+  "name": "@paws/command-center",
+  "version": "1.0.0",
+  "description": "MCP client/host for orchestrating GAMMA, REPLOID, and external MCP servers",
+  "type": "module",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "bin": {
+    "paws": "build/cli.js"
+  },
+  "scripts": {
+    "build": "tsc && chmod +x build/cli.js",
+    "dev": "tsc --watch",
+    "start": "node build/cli.js",
+    "clean": "rm -rf build"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-client",
+    "ai",
+    "llm",
+    "gamma",
+    "reploid",
+    "orchestration",
+    "agentic"
+  ],
+  "author": "PAWS Team",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.1",
+    "zod": "^3.23.8",
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/inquirer": "^9.0.7",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

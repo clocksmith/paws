@@ -1,0 +1,26 @@
+{
+  "name": "@mcp-wp/example-dashboards",
+  "version": "1.0.0",
+  "description": "Example dashboard applications using MCP-WP widgets",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@mcp-wp/core": "workspace:*",
+    "@mcp-wp/bridge": "workspace:*",
+    "@mcp-wp/eventbus": "workspace:*",
+    "@mcp-wp/dashboard": "workspace:*",
+    "@mcp-wp/widget-github": "workspace:*",
+    "@mcp-wp/widget-playwright": "workspace:*",
+    "@mcp-wp/widget-filesystem": "workspace:*",
+    "@mcp-wp/widget-brave": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11"
+  }
+}

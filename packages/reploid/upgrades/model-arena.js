@@ -1,27 +1,30 @@
 /**
- * @fileoverview Browser-Native Multi-Model Paxos for REPLOID
+ * @fileoverview Browser-Native Model Arena for REPLOID
  *
  * Enables 100% browser-native multi-model competitive testing without requiring
  * Node.js proxy or Python CLI. Uses VFS snapshots, Web Workers, and HybridLLMProvider
  * to run competitive evaluations entirely in the browser.
  *
- * @module MultiModelPaxos
- * @version 1.0.0
+ * Runs multiple models in parallel, scores solutions based on test results,
+ * performance, and code quality, then selects the best solution.
+ *
+ * @module ModelArena
+ * @version 2.0.0
  * @category rsi
  * @blueprint 0x000064
  */
 
-const MultiModelPaxos = {
+const ModelArena = {
   metadata: {
-    id: 'MultiModelPaxos',
-    version: '1.0.0',
-    dependencies: ['Utils', 'EventBus', 'StateManager', 'HybridLLMProvider', 'VerificationManager', 'DIContainer', 'Config'],
+    id: 'ModelArena',
+    version: '2.0.0',
+    dependencies: ['Utils', 'EventBus', 'StateManager', 'HybridLLMProvider', 'VerificationManager', 'DIContainer', 'Config', 'ModelRegistry?'],
     async: true,
     type: 'rsi'
   },
 
   factory: (deps) => {
-    const { Utils, EventBus, StateManager, HybridLLMProvider, VerificationManager, DIContainer, Config } = deps;
+    const { Utils, EventBus, StateManager, HybridLLMProvider, VerificationManager, DIContainer, Config, ModelRegistry } = deps;
     const { logger } = Utils;
 
     // Get all 6 verified cloud models from config (2 per provider)
@@ -113,11 +116,66 @@ Provide a production-ready solution that will pass all tests.`;
     };
 
     /**
-     * Assess code quality heuristics
+     * Assess code quality using LLM judge
+     * @param {string} code - Code to assess
+     * @param {string} objective - Original objective
+     * @param {string} judgeModel - Model to use for evaluation (from available models)
+     * @returns {Promise<number>} Quality score 0-1
+     */
+    const assessCodeQualityLLM = async (code, objective, judgeModel) => {
+      if (!code) return 0;
+
+      try {
+        const evaluationPrompt = `You are an expert code reviewer. Evaluate this solution on a scale of 0-10.
+
+TASK: ${objective}
+
+SOLUTION:
+\`\`\`javascript
+${code}
+\`\`\`
+
+Rate this code on:
+1. Correctness (does it solve the task?)
+2. Code quality (clean, readable, maintainable)
+3. Best practices (error handling, edge cases)
+4. Completeness (fully implemented vs partial)
+5. Performance considerations
+
+Respond with ONLY a number from 0-10 (decimals allowed).
+SCORE:`;
+
+        const response = await HybridLLMProvider.api.generateWithModel(evaluationPrompt, {
+          model: judgeModel,
+          temperature: 0.1, // Low temperature for consistent scoring
+          maxTokens: 10
+        });
+
+        // Parse score from response
+        const match = response.content.match(/(\d+(?:\.\d+)?)/);
+        if (match) {
+          const score = parseFloat(match[1]);
+          // Normalize to 0-1 range
+          return Math.max(0, Math.min(10, score)) / 10;
+        }
+
+        // Fallback to heuristics if parsing fails
+        logger.warn('[Arena] LLM scoring failed to parse, using heuristics');
+        return assessCodeQualityHeuristic(code);
+
+      } catch (error) {
+        logger.error('[Arena] LLM quality assessment failed:', error);
+        // Fallback to heuristics
+        return assessCodeQualityHeuristic(code);
+      }
+    };
+
+    /**
+     * Assess code quality using fast heuristics (fallback)
      * @param {string} code - Code to assess
      * @returns {number} Quality score 0-1
      */
-    const assessCodeQuality = (code) => {
+    const assessCodeQualityHeuristic = (code) => {
       if (!code) return 0;
 
       let score = 0.5; // Base score
@@ -148,7 +206,7 @@ Provide a production-ready solution that will pass all tests.`;
       const startTime = Date.now();
 
       try {
-        logger.info(`[Paxos] Generating solution with ${model}`);
+        logger.info(`[Arena] Generating solution with ${model}`);
 
         const prompt = buildPrompt(objective, workspace);
 
@@ -174,7 +232,7 @@ Provide a production-ready solution that will pass all tests.`;
           failed: false
         };
       } catch (error) {
-        logger.error(`[Paxos] Generation failed for ${model}:`, error);
+        logger.error(`[Arena] Generation failed for ${model}:`, error);
 
         return {
           model,
@@ -197,7 +255,7 @@ Provide a production-ready solution that will pass all tests.`;
      */
     const verifySolution = async (solution, verifyFn, workspace) => {
       try {
-        logger.info(`[Paxos] Verifying solution from ${solution.model}`);
+        logger.info(`[Arena] Verifying solution from ${solution.model}`);
 
         // Create isolated test workspace
         const testWorkspace = workspace.clone ? workspace.clone() : workspace;
@@ -229,7 +287,7 @@ Provide a production-ready solution that will pass all tests.`;
           stderr: result.stderr || ''
         };
       } catch (error) {
-        logger.error(`[Paxos] Verification failed for ${solution.model}:`, error);
+        logger.error(`[Arena] Verification failed for ${solution.model}:`, error);
 
         return {
           passed: false,
@@ -245,29 +303,59 @@ Provide a production-ready solution that will pass all tests.`;
     /**
      * Score a solution based on multiple criteria
      * @param {Object} solution - Solution with verification results
-     * @returns {number} Score 0-1
+     * @param {string} objective - Original competition objective
+     * @param {string} scoringMethod - 'llm', 'hybrid', or 'heuristic'
+     * @param {string} judgeModel - Model to use as judge (required if scoringMethod is 'llm' or 'hybrid')
+     * @returns {Promise<number>} Score 0-1
      */
-    const scoreSolution = (solution) => {
+    const scoreSolution = async (solution, objective, scoringMethod = 'hybrid', judgeModel = null) => {
       if (solution.failed) return 0;
 
       let score = 0;
 
-      // Test passing (60% weight)
+      // Test passing (60% weight) - Always use this
       if (solution.verification?.passed) {
         score += 0.6;
       }
 
-      // Performance (20% weight)
-      // Compare to average duration
+      // Performance (20% weight) - Always use this
       const avgDuration = _stats.averageDuration || 5000;
       if (solution.metadata?.duration) {
         const durationScore = Math.max(0, 1 - (solution.metadata.duration / (avgDuration * 2)));
         score += durationScore * 0.2;
       }
 
-      // Code quality (20% weight)
+      // Code quality (20% weight) - Method varies
       if (solution.code) {
-        const qualityScore = assessCodeQuality(solution.code);
+        let qualityScore;
+
+        switch (scoringMethod) {
+          case 'llm':
+            // Use LLM-based evaluation
+            if (!judgeModel) {
+              logger.warn('[Arena] No judge model specified, falling back to heuristics');
+              qualityScore = assessCodeQualityHeuristic(solution.code);
+            } else {
+              qualityScore = await assessCodeQualityLLM(solution.code, objective, judgeModel);
+            }
+            break;
+
+          case 'hybrid':
+            // Use LLM if tests passed, otherwise use heuristics (save API calls)
+            if (solution.verification?.passed && judgeModel) {
+              qualityScore = await assessCodeQualityLLM(solution.code, objective, judgeModel);
+            } else {
+              qualityScore = assessCodeQualityHeuristic(solution.code);
+            }
+            break;
+
+          case 'heuristic':
+          default:
+            // Use fast heuristics
+            qualityScore = assessCodeQualityHeuristic(solution.code);
+            break;
+        }
+
         score += qualityScore * 0.2;
       }
 
@@ -283,7 +371,7 @@ Provide a production-ready solution that will pass all tests.`;
       const validSolutions = solutions.filter(sol => !sol.failed && sol.score > 0);
 
       if (validSolutions.length === 0) {
-        logger.warn('[Paxos] No valid solutions found');
+        logger.warn('[Arena] No valid solutions found');
         return null;
       }
 
@@ -328,14 +416,14 @@ Provide a production-ready solution that will pass all tests.`;
      */
     const emitTelemetry = (event, data) => {
       // Emit to EventBus
-      EventBus.emit(`paxos:${event}`, data);
+      EventBus.emit(`arena:${event}`, data);
 
       // Emit to PAXA if available
       try {
         const PAXA = DIContainer.resolve('PenteractAnalytics');
         if (PAXA && PAXA.api && PAXA.api.trackEvent) {
           PAXA.api.trackEvent({
-            category: 'paxos',
+            category: 'arena',
             action: event,
             ...data,
             timestamp: Date.now()
@@ -356,10 +444,25 @@ Provide a production-ready solution that will pass all tests.`;
       const startTime = Date.now();
 
       try {
-        logger.info('[Paxos] Starting competition:', objective);
+        logger.info('[Arena] Starting competition:', objective);
 
         // Validate configuration
         const models = config.models || CLOUD_MODELS;
+        const scoringMethod = config.scoringMethod || 'hybrid'; // 'llm', 'hybrid', or 'heuristic'
+
+        // Get judge model: user-specified > ModelRegistry recommendation > config default > hardcoded fallback
+        let judgeModel = config.judgeModel;
+        if (!judgeModel && ModelRegistry && ModelRegistry.api) {
+          try {
+            judgeModel = await ModelRegistry.api.getRecommendedJudge();
+            logger.info(`[Arena] Using recommended judge: ${judgeModel}`);
+          } catch (error) {
+            logger.warn('[Arena] Failed to get recommended judge:', error);
+          }
+        }
+        if (!judgeModel) {
+          judgeModel = Config.api.get('api.anthropicModelBalanced') || 'claude-4-5-sonnet';
+        }
         const verifyFn = config.verificationFn || config.verifyFn || ((solution) => {
           // Default verification: check if code exists and has no syntax errors
           try {
@@ -371,8 +474,10 @@ Provide a production-ready solution that will pass all tests.`;
         });
         const timeout = config.timeout || 60000;
 
+        logger.info(`[Arena] Scoring method: ${scoringMethod}, Judge model: ${judgeModel}`);
+
         // Create competition instance
-        const competitionId = `paxos-${Date.now()}`;
+        const competitionId = `arena-${Date.now()}`;
         _activeCompetition = {
           id: competitionId,
           objective,
@@ -391,21 +496,21 @@ Provide a production-ready solution that will pass all tests.`;
         });
 
         // Create VFS workspace snapshot
-        logger.info('[Paxos] Creating VFS workspace snapshot');
+        logger.info('[Arena] Creating VFS workspace snapshot');
         _activeCompetition.phase = 'workspace_creation';
         const workspace = await StateManager.api.createSnapshot?.() || {};
 
         // Phase 1: Generate solutions in parallel
-        logger.info('[Paxos] Generating solutions from', models.length, 'models');
+        logger.info('[Arena] Generating solutions from', models.length, 'models');
         _activeCompetition.phase = 'generation';
-        EventBus.emit('paxos:phase', { phase: 'generation', progress: 0 });
+        EventBus.emit('arena:phase', { phase: 'generation', progress: 0 });
 
         const solutions = await Promise.all(
           models.map(async (model, idx) => {
             const solution = await generateSolution(objective, model, workspace);
 
             _activeCompetition.progress = Math.floor(((idx + 1) / models.length) * 40);
-            EventBus.emit('paxos:progress', {
+            EventBus.emit('arena:progress', {
               competitionId,
               progress: _activeCompetition.progress,
               phase: 'generation',
@@ -418,9 +523,9 @@ Provide a production-ready solution that will pass all tests.`;
         );
 
         // Phase 2: Verify solutions in parallel
-        logger.info('[Paxos] Verifying', solutions.length, 'solutions');
+        logger.info('[Arena] Verifying', solutions.length, 'solutions');
         _activeCompetition.phase = 'verification';
-        EventBus.emit('paxos:phase', { phase: 'verification', progress: 40 });
+        EventBus.emit('arena:phase', { phase: 'verification', progress: 40 });
 
         const verifiedSolutions = await Promise.all(
           solutions.map(async (solution, idx) => {
@@ -429,7 +534,7 @@ Provide a production-ready solution that will pass all tests.`;
             const result = await verifySolution(solution, verifyFn, workspace);
 
             _activeCompetition.progress = 40 + Math.floor(((idx + 1) / solutions.length) * 40);
-            EventBus.emit('paxos:progress', {
+            EventBus.emit('arena:progress', {
               competitionId,
               progress: _activeCompetition.progress,
               phase: 'verification',
@@ -442,14 +547,17 @@ Provide a production-ready solution that will pass all tests.`;
         );
 
         // Phase 3: Score and select winner
-        logger.info('[Paxos] Scoring solutions and selecting winner');
+        logger.info('[Arena] Scoring solutions and selecting winner');
         _activeCompetition.phase = 'scoring';
-        EventBus.emit('paxos:phase', { phase: 'scoring', progress: 80 });
+        EventBus.emit('arena:phase', { phase: 'scoring', progress: 80 });
 
-        const scoredSolutions = verifiedSolutions.map(sol => ({
-          ...sol,
-          score: scoreSolution(sol)
-        }));
+        // Score solutions sequentially (if using LLM scoring) or in parallel (if heuristic)
+        const scoredSolutions = await Promise.all(
+          verifiedSolutions.map(async (sol) => ({
+            ...sol,
+            score: await scoreSolution(sol, objective, scoringMethod, judgeModel)
+          }))
+        );
 
         const winner = selectWinner(scoredSolutions);
 
@@ -483,7 +591,7 @@ Provide a production-ready solution that will pass all tests.`;
         emitTelemetry('competition_complete', telemetry);
         _activeCompetition = null;
 
-        logger.info('[Paxos] Competition complete. Winner:', winner?.model || 'none');
+        logger.info('[Arena] Competition complete. Winner:', winner?.model || 'none');
 
         return {
           solutions: scoredSolutions,
@@ -492,7 +600,7 @@ Provide a production-ready solution that will pass all tests.`;
         };
 
       } catch (error) {
-        logger.error('[Paxos] Competition failed:', error);
+        logger.error('[Arena] Competition failed:', error);
 
         _activeCompetition = null;
 
@@ -535,13 +643,13 @@ Provide a production-ready solution that will pass all tests.`;
      */
     const clearHistory = () => {
       _competitionHistory = [];
-      logger.info('[Paxos] Competition history cleared');
+      logger.info('[Arena] Competition history cleared');
     };
 
     /**
      * Web Component Widget
      */
-    class MultiModelPaxosWidget extends HTMLElement {
+    class ModelArenaWidget extends HTMLElement {
       constructor() {
         super();
         this.attachShadow({ mode: 'open' });
@@ -590,7 +698,7 @@ Provide a production-ready solution that will pass all tests.`;
               font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
               font-size: 12px;
             }
-            .paxos-panel {
+            .arena-panel {
               background: rgba(0, 0, 0, 0.8);
               padding: 16px;
               border-radius: 4px;
@@ -709,8 +817,8 @@ Provide a production-ready solution that will pass all tests.`;
             }
           </style>
 
-          <div class="paxos-panel">
-            <h4>⚔ Multi-Model Paxos</h4>
+          <div class="arena-panel">
+            <h4>⚔ Model Arena</h4>
 
             ${active ? `
               <div class="active-competition">
@@ -776,7 +884,7 @@ Provide a production-ready solution that will pass all tests.`;
                 timeout: 30000
               });
             } catch (error) {
-              logger.error('[Paxos] Demo competition failed:', error);
+              logger.error('[Arena] Demo competition failed:', error);
             }
           });
         }
@@ -792,18 +900,18 @@ Provide a production-ready solution that will pass all tests.`;
     }
 
     // Register custom element
-    const elementName = 'multi-model-paxos-widget';
+    const elementName = 'model-arena-widget';
     if (!customElements.get(elementName)) {
-      customElements.define(elementName, MultiModelPaxosWidget);
+      customElements.define(elementName, ModelArenaWidget);
     }
 
     /**
      * Module initialization
      */
     const init = () => {
-      logger.info('[MultiModelPaxos] Initialized successfully');
+      logger.info('[ModelArena] Initialized successfully');
 
-      EventBus.emit('paxos:ready', {
+      EventBus.emit('arena:ready', {
         timestamp: Date.now()
       });
     };
@@ -813,11 +921,11 @@ Provide a production-ready solution that will pass all tests.`;
      */
     const cleanup = () => {
       if (_activeCompetition) {
-        logger.warn('[MultiModelPaxos] Cleaning up with active competition');
+        logger.warn('[ModelArena] Cleaning up with active competition');
         _activeCompetition = null;
       }
 
-      logger.info('[MultiModelPaxos] Cleaned up successfully');
+      logger.info('[ModelArena] Cleaned up successfully');
     };
 
     // Return public API
@@ -858,7 +966,7 @@ Provide a production-ready solution that will pass all tests.`;
 
 // Register with module registry if available
 if (typeof window !== 'undefined' && window.ModuleRegistry) {
-  window.ModuleRegistry.register(MultiModelPaxos);
+  window.ModuleRegistry.register(ModelArena);
 }
 
-export default MultiModelPaxos;
+export default ModelArena;

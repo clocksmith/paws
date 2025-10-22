@@ -1,0 +1,44 @@
+{
+  "name": "@mcp-wp/eventbus",
+  "version": "1.0.0",
+  "description": "EventBus implementation for MCP Widget Protocol",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc && tsc-alias",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-wp",
+    "eventbus",
+    "events"
+  ],
+  "author": "MCP-WP Team",
+  "license": "MIT",
+  "dependencies": {
+    "@mcp-wp/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsc-alias": "^1.8.8",
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.0"
+  }
+}

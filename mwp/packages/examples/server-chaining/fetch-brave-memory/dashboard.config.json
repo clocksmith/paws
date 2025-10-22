@@ -1,0 +1,106 @@
+{
+  "servers": [
+    {
+      "name": "brave",
+      "transport": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+        "env": {
+          "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+        }
+      }
+    },
+    {
+      "name": "fetch",
+      "transport": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-fetch"]
+      }
+    },
+    {
+      "name": "memory",
+      "transport": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-memory"],
+        "env": {
+          "MEMORY_STORE_PATH": "./.data/research-memory.json"
+        }
+      }
+    }
+  ],
+  "widgets": [
+    {
+      "package": "@mcp-wp/widget-brave",
+      "serverName": "brave",
+      "id": "brave-search",
+      "position": { "x": 0, "y": 0 },
+      "size": { "w": 4, "h": 5 },
+      "options": {
+        "onResultSelected": {
+          "event": "fetch:url:invoke",
+          "payloadTemplate": {
+            "url": "{{url}}",
+            "selectors": ["article", "main", "#content"],
+            "maxTokens": 2000
+          }
+        }
+      }
+    },
+    {
+      "package": "@mcp-wp/widget-fetch",
+      "serverName": "fetch",
+      "id": "fetch-reader",
+      "position": { "x": 4, "y": 0 },
+      "size": { "w": 5, "h": 5 },
+      "options": {
+        "autoSummarize": true,
+        "summaryStyle": "bullet",
+        "onSummaryGenerated": {
+          "event": "memory.write",
+          "payloadTemplate": {
+            "collection": "research",
+            "tags": ["web", "summary"],
+            "content": "{{summary}}",
+            "metadata": {
+              "sourceUrl": "{{url}}"
+            }
+          }
+        }
+      }
+    },
+    {
+      "package": "@mcp-wp/widget-memory",
+      "serverName": "memory",
+      "id": "research-notebook",
+      "position": { "x": 9, "y": 0 },
+      "size": { "w": 3, "h": 5 },
+      "options": {
+        "collections": ["research"],
+        "view": "timeline"
+      }
+    }
+  ],
+  "eventBridges": [
+    {
+      "source": "brave-search",
+      "on": "brave:result:selected",
+      "emit": "fetch:url:invoke-requested"
+    },
+    {
+      "source": "fetch-reader",
+      "on": "fetch:summary:ready",
+      "emit": "memory:write-requested"
+    }
+  ],
+  "errorHandling": {
+    "onToolError": {
+      "fetch:url:invoke": {
+        "retry": 1,
+        "fallbackEvent": "brave:search:retry"
+      }
+    }
+  }
+}

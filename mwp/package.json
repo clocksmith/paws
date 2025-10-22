@@ -1,0 +1,44 @@
+{
+  "name": "mcp-widget-protocol",
+  "version": "1.0.0",
+  "description": "Model Context Protocol Widget Protocol - Specification and Reference Implementation",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "type-check": "pnpm -r type-check",
+    "dev": "pnpm -r --parallel dev",
+    "clean": "pnpm -r clean && rm -rf node_modules",
+    "validate": "pnpm -r run validate",
+    "protocol:split": "cd specification && node packaging/split-protocol.js",
+    "protocol:assemble": "cd specification && node packaging/assemble-protocol.js --validate"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "widgets",
+    "dashboard",
+    "ui",
+    "web-components"
+  ],
+  "author": "MCP-WP Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.0",
+    "eslint": "^8.55.0",
+    "prettier": "^3.1.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@modelcontextprotocol/sdk": "^1.0.0"
+    }
+  }
+}

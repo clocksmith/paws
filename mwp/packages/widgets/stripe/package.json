@@ -1,0 +1,46 @@
+{
+  "name": "@mcp-wp/widget-stripe",
+  "version": "1.0.0",
+  "description": "MCP Widget for Stripe MCP servers (payments, billing, customers)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc && vite build",
+    "dev": "vite build --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@mcp-wp/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-widget",
+    "stripe",
+    "payments",
+    "web-component"
+  ],
+  "author": "MCP-WP Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/mcp-wp.git",
+    "directory": "packages/widgets/stripe"
+  }
+}

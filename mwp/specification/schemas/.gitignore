@@ -1,0 +1,6 @@
+# JSON Schema files are generated, not checked in
+*.schema.json
+index.json
+
+# Keep the README
+!README.md

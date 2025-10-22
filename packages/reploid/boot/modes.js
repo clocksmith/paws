@@ -828,10 +828,10 @@ function renderHybridConfig(env) {
 }
 
 function renderMultiConfig(env) {
-    const paxosEnabled = localStorage.getItem('ENABLE_PAXOS') === 'true';
-    const paxosPrimary = localStorage.getItem('PAXOS_PRIMARY') || '';
-    const paxosFallback = localStorage.getItem('PAXOS_FALLBACK') || '';
-    const paxosConsensus = localStorage.getItem('PAXOS_CONSENSUS') || '';
+    const consensusType = localStorage.getItem('CONSENSUS_TYPE') || 'arena';
+    const model1 = localStorage.getItem('MULTI_MODEL_1') || '';
+    const model2 = localStorage.getItem('MULTI_MODEL_2') || '';
+    const model3 = localStorage.getItem('MULTI_MODEL_3') || '';
 
     let html = `
         <div class="mode-warning">
@@ -842,16 +842,28 @@ function renderMultiConfig(env) {
 
     html += `
         <div style="margin: 16px 0;">
-            <label style="display: block; margin-bottom: 6px; color: #b9bad6; font-size: 13px;">Primary Model (Fast, cheap):</label>
-            <input type="text" id="mode-paxos-primary" value="${paxosPrimary}" placeholder="e.g., ${CLOUD_MODELS.geminiModelFast}" style="width: 100%; padding: 8px; background: #0d0d14; border: 1px solid #252532; border-radius: 6px; color: #f4f4ff;" />
+            <label style="display: block; margin-bottom: 6px; color: #b9bad6; font-size: 13px; font-weight: bold;">Consensus Strategy:</label>
+            <select id="mode-consensus-type" style="width: 100%; padding: 8px; background: #0d0d14; border: 1px solid #252532; border-radius: 6px; color: #f4f4ff;">
+                <option value="arena" ${consensusType === 'arena' ? 'selected' : ''}>Model Arena (Competition + Scoring)</option>
+            </select>
+            <small style="color: #8e8ea6; display: block; margin-top: 4px;">
+                <strong>Arena:</strong> All models compete, best solution wins based on tests + performance + LLM judge quality
+            </small>
+        </div>
+    `;
+
+    html += `
+        <div style="margin: 16px 0;">
+            <label style="display: block; margin-bottom: 6px; color: #b9bad6; font-size: 13px;">Model 1 (Primary):</label>
+            <input type="text" id="mode-multi-model-1" value="${model1}" placeholder="e.g., ${CLOUD_MODELS.geminiModelBalanced}" style="width: 100%; padding: 8px; background: #0d0d14; border: 1px solid #252532; border-radius: 6px; color: #f4f4ff;" />
         </div>
         <div style="margin: 16px 0;">
-            <label style="display: block; margin-bottom: 6px; color: #b9bad6; font-size: 13px;">Fallback Model (Reliable backup):</label>
-            <input type="text" id="mode-paxos-fallback" value="${paxosFallback}" placeholder="e.g., ${CLOUD_MODELS.openaiModelAdvanced}" style="width: 100%; padding: 8px; background: #0d0d14; border: 1px solid #252532; border-radius: 6px; color: #f4f4ff;" />
+            <label style="display: block; margin-bottom: 6px; color: #b9bad6; font-size: 13px;">Model 2 (Secondary):</label>
+            <input type="text" id="mode-multi-model-2" value="${model2}" placeholder="e.g., ${CLOUD_MODELS.openaiModelAdvanced}" style="width: 100%; padding: 8px; background: #0d0d14; border: 1px solid #252532; border-radius: 6px; color: #f4f4ff;" />
         </div>
         <div style="margin: 16px 0;">
-            <label style="display: block; margin-bottom: 6px; color: #b9bad6; font-size: 13px;">Consensus Model (Quality tiebreaker):</label>
-            <input type="text" id="mode-paxos-consensus" value="${paxosConsensus}" placeholder="e.g., ${CLOUD_MODELS.anthropicModelBalanced}" style="width: 100%; padding: 8px; background: #0d0d14; border: 1px solid #252532; border-radius: 6px; color: #f4f4ff;" />
+            <label style="display: block; margin-bottom: 6px; color: #b9bad6; font-size: 13px;">Model 3 (Tiebreaker):</label>
+            <input type="text" id="mode-multi-model-3" value="${model3}" placeholder="e.g., ${CLOUD_MODELS.anthropicModelBalanced}" style="width: 100%; padding: 8px; background: #0d0d14; border: 1px solid #252532; border-radius: 6px; color: #f4f4ff;" />
         </div>
     `;
 
@@ -1115,19 +1127,27 @@ function saveHybridMode() {
 }
 
 function saveMultiMode() {
-    const primary = document.getElementById('mode-paxos-primary')?.value.trim();
-    const fallback = document.getElementById('mode-paxos-fallback')?.value.trim();
-    const consensus = document.getElementById('mode-paxos-consensus')?.value.trim();
+    const consensusType = document.getElementById('mode-consensus-type')?.value || 'arena';
+    const model1 = document.getElementById('mode-multi-model-1')?.value.trim();
+    const model2 = document.getElementById('mode-multi-model-2')?.value.trim();
+    const model3 = document.getElementById('mode-multi-model-3')?.value.trim();
 
-    if (primary) localStorage.setItem('PAXOS_PRIMARY', primary);
-    if (fallback) localStorage.setItem('PAXOS_FALLBACK', fallback);
-    if (consensus) localStorage.setItem('PAXOS_CONSENSUS', consensus);
+    if (model1) localStorage.setItem('MULTI_MODEL_1', model1);
+    if (model2) localStorage.setItem('MULTI_MODEL_2', model2);
+    if (model3) localStorage.setItem('MULTI_MODEL_3', model3);
 
-    localStorage.setItem('ENABLE_PAXOS', 'true');
-    localStorage.setItem('AI_PROVIDER', 'paxos');
-    localStorage.setItem('SELECTED_MODEL', 'paxos');
+    localStorage.setItem('CONSENSUS_TYPE', consensusType);
+    localStorage.setItem('AI_PROVIDER', 'multi');
+    localStorage.setItem('SELECTED_MODEL', 'multi');
     localStorage.setItem('DEPLOYMENT_MODE', 'multi');
     localStorage.removeItem('OFFLINE_MODE');
+
+    // Clean up old paxos keys
+    localStorage.removeItem('ENABLE_PAXOS');
+    localStorage.removeItem('PAXOS_PRIMARY');
+    localStorage.removeItem('PAXOS_FALLBACK');
+    localStorage.removeItem('PAXOS_CONSENSUS');
+
     return true;
 }
 

@@ -9,37 +9,60 @@ class ConfigLoader {
   constructor() {
     this.config = null;
     this.configPath = null;
-    this.searchPaths = [
+    this.baseConfigPath = path.join(process.cwd(), 'config.json');
+    this.overrideSearchPaths = [
       '.reploidrc.json',
-      '.reploidrc',
       path.join(process.cwd(), '.reploidrc.json'),
       path.join(os.homedir(), '.reploidrc.json'),
-      path.join(os.homedir(), '.config', 'reploid', 'config.json'),
-      '/etc/reploid/config.json'
+      path.join(os.homedir(), '.config', 'reploid', 'reploidrc.json')
     ];
   }
 
   async load() {
-    // Try each search path
-    for (const searchPath of this.searchPaths) {
+    // Load base config.json (required)
+    if (!this.fileExists(this.baseConfigPath)) {
+      console.error(`[Config] Base config.json not found at: ${this.baseConfigPath}`);
+      console.log('[Config] Using built-in defaults');
+      this.config = this.getDefaults();
+      return this.config;
+    }
+
+    try {
+      const baseRaw = fs.readFileSync(this.baseConfigPath, 'utf8');
+      this.config = this.parseConfig(baseRaw);
+      console.log(`[Config] Loaded base config from: ${this.baseConfigPath}`);
+    } catch (err) {
+      console.error(`[Config] Failed to load base config.json:`, err.message);
+      this.config = this.getDefaults();
+      return this.config;
+    }
+
+    // Try to load .reploidrc.json overrides
+    for (const searchPath of this.overrideSearchPaths) {
       const absPath = path.isAbsolute(searchPath) ? searchPath : path.resolve(searchPath);
 
       if (this.fileExists(absPath)) {
         try {
-          const raw = fs.readFileSync(absPath, 'utf8');
-          this.config = this.parseConfig(raw);
+          const overrideRaw = fs.readFileSync(absPath, 'utf8');
+          const overrides = JSON.parse(overrideRaw);
+
+          // Expand environment variables in overrides
+          this.expandEnvVars(overrides);
+
+          // Deep merge overrides into base config
+          this.config = this.deepMerge(this.config, overrides);
           this.configPath = absPath;
-          console.log(`[Config] Loaded from: ${absPath}`);
+
+          console.log(`[Config] Applied overrides from: ${absPath}`);
           return this.config;
         } catch (err) {
-          console.error(`[Config] Failed to load ${absPath}:`, err.message);
+          console.error(`[Config] Failed to load overrides from ${absPath}:`, err.message);
         }
       }
     }
 
-    // No config found, use defaults
-    console.log('[Config] No config file found, using defaults');
-    this.config = this.getDefaults();
+    // No overrides found, use base config only
+    console.log('[Config] No .reploidrc.json overrides found, using base config.json');
     return this.config;
   }
 
@@ -88,6 +111,20 @@ class ConfigLoader {
         this.expandEnvVars(obj[key]);
       }
     }
+  }
+
+  deepMerge(target, source) {
+    const result = { ...target };
+
+    for (const key in source) {
+      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        result[key] = this.deepMerge(result[key] || {}, source[key]);
+      } else {
+        result[key] = source[key];
+      }
+    }
+
+    return result;
   }
 
   getDefaults() {

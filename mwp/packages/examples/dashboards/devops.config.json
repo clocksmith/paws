@@ -1,0 +1,91 @@
+{
+  "title": "Full-Stack DevOps Control Room",
+  "servers": [
+    {
+      "name": "github",
+      "transport": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-github"],
+        "env": {
+          "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+        }
+      }
+    },
+    {
+      "name": "playwright",
+      "transport": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-playwright"]
+      }
+    },
+    {
+      "name": "filesystem",
+      "transport": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "${FILESYSTEM_ROOT:-./logs}"]
+      }
+    }
+  ],
+  "widgets": [
+    {
+      "package": "@mcp-wp/widget-github",
+      "serverName": "github",
+      "id": "github-ci",
+      "position": { "x": 0, "y": 0 },
+      "size": { "w": 5, "h": 6 },
+      "options": {
+        "defaultView": "actions",
+        "repositories": ["owner/service"],
+        "autoRefreshSeconds": 120
+      }
+    },
+    {
+      "package": "@mcp-wp/widget-playwright",
+      "serverName": "playwright",
+      "id": "playwright-tests",
+      "position": { "x": 5, "y": 0 },
+      "size": { "w": 4, "h": 6 },
+      "options": {
+        "showBrowser": true,
+        "onTestRun": {
+          "event": "filesystem:append-log",
+          "payloadTemplate": {
+            "path": "playwright/last-run.log",
+            "content": "[{{timestamp}}] Run {{suite}} finished with status {{status}}\n"
+          }
+        }
+      }
+    },
+    {
+      "package": "@mcp-wp/widget-filesystem",
+      "serverName": "filesystem",
+      "id": "deployment-logs",
+      "position": { "x": 9, "y": 0 },
+      "size": { "w": 3, "h": 6 },
+      "options": {
+        "allowedPaths": ["deployments", "playwright"],
+        "autoRefresh": true
+      }
+    }
+  ],
+  "layout": {
+    "type": "grid",
+    "columns": 12,
+    "gutter": 12
+  },
+  "notifications": {
+    "on": {
+      "github:workflow:failed": {
+        "message": "CI failed on {{repository}}#{{ref}}",
+        "severity": "error"
+      },
+      "playwright:test:failed": {
+        "message": "Playwright suite {{suite}} failed",
+        "severity": "warning"
+      }
+    }
+  }
+}

@@ -1,0 +1,268 @@
+{
+  "version": "1.0.0",
+  "generated": "2025-10-21T23:14:56.605Z",
+  "source": "MWP.md",
+  "totalLines": 2326,
+  "sections": [
+    {
+      "id": "00-front-matter",
+      "filename": "00-front-matter.md",
+      "title": "Front Matter",
+      "startLine": 1,
+      "endLine": 6,
+      "lineCount": 6,
+      "type": "preamble",
+      "checksum": "98653756c38e14958c603cbe5272d5720e6d900ad04392abe47aa0ca42b64845"
+    },
+    {
+      "id": "section-01",
+      "filename": "section-01.md",
+      "title": "Document Metadata",
+      "startLine": 7,
+      "endLine": 19,
+      "lineCount": 13,
+      "type": "other",
+      "checksum": "35a5c24f5e2654cb8613cc21d152d80d0e7e9b87b70c85fff723c0553223817a"
+    },
+    {
+      "id": "section-02",
+      "filename": "section-02.md",
+      "title": "Abstract",
+      "startLine": 20,
+      "endLine": 25,
+      "lineCount": 6,
+      "type": "other",
+      "checksum": "fa01603c625ff12eae1b00c2e9132c30d2c418241d2c746215c6967a49e31550"
+    },
+    {
+      "id": "section-03",
+      "filename": "section-03.md",
+      "title": "Status of This Document",
+      "startLine": 26,
+      "endLine": 31,
+      "lineCount": 6,
+      "type": "other",
+      "checksum": "3fcf0beb7301662d36a18c2241d3b346e0510e03ab265603523f271514c12135"
+    },
+    {
+      "id": "section-04",
+      "filename": "section-04.md",
+      "title": "Conformance Requirements",
+      "startLine": 32,
+      "endLine": 41,
+      "lineCount": 10,
+      "type": "other",
+      "checksum": "9e3e612937a40cda9bd6350eff4c8c5ee434a831d57895800f3273371950d2fb"
+    },
+    {
+      "id": "section-05",
+      "filename": "section-05.md",
+      "title": "Table of Contents",
+      "startLine": 42,
+      "endLine": 70,
+      "lineCount": 29,
+      "type": "other",
+      "checksum": "c26160f5e70dacca3e9a88b2dfc005f1ce270b5d0f6543819217a38fc7b428a4"
+    },
+    {
+      "id": "01-terminology",
+      "filename": "01-terminology.md",
+      "title": "1. Terminology",
+      "startLine": 71,
+      "endLine": 103,
+      "lineCount": 33,
+      "type": "section",
+      "checksum": "2a4d2879abb20a345930fb93d59558410d430cfb4fb1af3028e9735c609c0b5a"
+    },
+    {
+      "id": "02-architecture-overview",
+      "filename": "02-architecture-overview.md",
+      "title": "2. Architecture Overview",
+      "startLine": 104,
+      "endLine": 160,
+      "lineCount": 57,
+      "type": "section",
+      "checksum": "1a1c55f6622b3e41c75babc61bed242fa0c5279df1d1d82c2cd08c61a59d19e1"
+    },
+    {
+      "id": "03-widget-factory-contract-normative",
+      "filename": "03-widget-factory-contract-normative.md",
+      "title": "3. Widget Factory Contract (Normative)",
+      "startLine": 161,
+      "endLine": 319,
+      "lineCount": 159,
+      "type": "section",
+      "checksum": "22382b4ec1be3022bc8ab793d29f90bbf436cea1c5ab4da3de3518ed2b4393d6"
+    },
+    {
+      "id": "04-widget-metadata-schema-normative",
+      "filename": "04-widget-metadata-schema-normative.md",
+      "title": "4. Widget Metadata Schema (Normative)",
+      "startLine": 320,
+      "endLine": 452,
+      "lineCount": 133,
+      "type": "section",
+      "checksum": "00767fe8ee6daa93a964b6ee72c2d08ccdae5bf7f06f47c23da72c85cb738860"
+    },
+    {
+      "id": "05-web-component-contract-normative",
+      "filename": "05-web-component-contract-normative.md",
+      "title": "5. Web Component Contract (Normative)",
+      "startLine": 453,
+      "endLine": 751,
+      "lineCount": 299,
+      "type": "section",
+      "checksum": "d088d499e78a2ad309c7533194cbae3b695d3de91a39111a42e1361ddcf179fb"
+    },
+    {
+      "id": "06-host-provided-dependencies-normative",
+      "filename": "06-host-provided-dependencies-normative.md",
+      "title": "6. Host-Provided Dependencies (Normative)",
+      "startLine": 752,
+      "endLine": 1231,
+      "lineCount": 480,
+      "type": "section",
+      "checksum": "a9ace802069f58d893cea5165c71be1ca8fd81234e5f594bf3d979c1167b19d0"
+    },
+    {
+      "id": "07-mcp-primitives-rendering-normative",
+      "filename": "07-mcp-primitives-rendering-normative.md",
+      "title": "7. MCP Primitives Rendering (Normative)",
+      "startLine": 1232,
+      "endLine": 1295,
+      "lineCount": 64,
+      "type": "section",
+      "checksum": "e263b28ea31bfb7102f1a85f144d4a65c1480f36f713b7eaf44988739bc124c2"
+    },
+    {
+      "id": "08-event-naming-convention-normative",
+      "filename": "08-event-naming-convention-normative.md",
+      "title": "8. Event Naming Convention (Normative)",
+      "startLine": 1296,
+      "endLine": 1323,
+      "lineCount": 28,
+      "type": "section",
+      "checksum": "bb3f2f3df6facc2abbee3ed257b19090d4723850cb4e0047399b13cf17126f11"
+    },
+    {
+      "id": "09-error-handling-requirements-normative",
+      "filename": "09-error-handling-requirements-normative.md",
+      "title": "9. Error Handling Requirements (Normative)",
+      "startLine": 1324,
+      "endLine": 1345,
+      "lineCount": 22,
+      "type": "section",
+      "checksum": "a4574187b9808e5ee536dcf61574bc050ecda4a8c5c2dd4d055edec8d2675484"
+    },
+    {
+      "id": "10-host-integration-requirements-normative",
+      "filename": "10-host-integration-requirements-normative.md",
+      "title": "10. Host Integration Requirements (Normative)",
+      "startLine": 1346,
+      "endLine": 1390,
+      "lineCount": 45,
+      "type": "section",
+      "checksum": "524ad00087d48506ea6d983b568a676b195ec075e3d70658adc8a950f66c4c21"
+    },
+    {
+      "id": "11-security-requirements-normative",
+      "filename": "11-security-requirements-normative.md",
+      "title": "11. Security Requirements (Normative)",
+      "startLine": 1391,
+      "endLine": 1565,
+      "lineCount": 175,
+      "type": "section",
+      "checksum": "cd270f00cc487831788b55b8e7f92c80b5834528d55578f93c3cd4e979f6196d"
+    },
+    {
+      "id": "12-standard-widget-types-informative",
+      "filename": "12-standard-widget-types-informative.md",
+      "title": "12. Standard Widget Types (Informative)",
+      "startLine": 1566,
+      "endLine": 1603,
+      "lineCount": 38,
+      "type": "section",
+      "checksum": "f0eb11e17e04ecb9f8d0f803792d8b69291c720ddc82619ce20879ae0297516d"
+    },
+    {
+      "id": "13-example-implementation-informative",
+      "filename": "13-example-implementation-informative.md",
+      "title": "13. Example Implementation (Informative)",
+      "startLine": 1604,
+      "endLine": 1774,
+      "lineCount": 171,
+      "type": "section",
+      "checksum": "4d0406ab07c5d22415b2d5c809670b851ad0cdc1f60a63746fe6918d5844e63a"
+    },
+    {
+      "id": "14-widget-registry-protocol-normative",
+      "filename": "14-widget-registry-protocol-normative.md",
+      "title": "14. Widget Registry Protocol (Normative)",
+      "startLine": 1775,
+      "endLine": 1917,
+      "lineCount": 143,
+      "type": "section",
+      "checksum": "09b39b6f306ac500ca5cb90fca0f1ea70d129f2454efc7b3a9a0d7ffce87ae73"
+    },
+    {
+      "id": "15-mcp-ui-interoperability-contract-normative",
+      "filename": "15-mcp-ui-interoperability-contract-normative.md",
+      "title": "15. mcp-ui Interoperability Contract (Normative)",
+      "startLine": 1918,
+      "endLine": 2031,
+      "lineCount": 114,
+      "type": "section",
+      "checksum": "3256587d1f81bad1b09eea320edd7e51191735207551ee71234c9c4bc072db2e"
+    },
+    {
+      "id": "16-conformance-test-suite-quality-assurance-normative",
+      "filename": "16-conformance-test-suite-quality-assurance-normative.md",
+      "title": "16. Conformance Test Suite & Quality Assurance (Normative)",
+      "startLine": 2032,
+      "endLine": 2273,
+      "lineCount": 242,
+      "type": "section",
+      "checksum": "c8c610bdca7942c9d1a519bdb784c547d55a5a38c73f73cca44aa3b81267aea5"
+    },
+    {
+      "id": "17-agent-collaboration-protocol-normative",
+      "filename": "17-agent-collaboration-protocol-normative.md",
+      "title": "17. Agent Collaboration Protocol (Normative)",
+      "startLine": 2274,
+      "endLine": 2289,
+      "lineCount": 16,
+      "type": "section",
+      "checksum": "edb3c64f3067414069fa093aa1f48ee190e92257c734573ec7bc37d170a5d7a4"
+    },
+    {
+      "id": "18-performance-resource-budgets-normative",
+      "filename": "18-performance-resource-budgets-normative.md",
+      "title": "18. Performance & Resource Budgets (Normative)",
+      "startLine": 2290,
+      "endLine": 2303,
+      "lineCount": 14,
+      "type": "section",
+      "checksum": "b3db50fb5e04b227f135b9fdaa9118671dd729363cad8f58fb05b7ee3e58b33b"
+    },
+    {
+      "id": "appendix-a-references-informative",
+      "filename": "appendix-a-references-informative.md",
+      "title": "Appendix A: References (Informative)",
+      "startLine": 2304,
+      "endLine": 2314,
+      "lineCount": 11,
+      "type": "appendix",
+      "checksum": "7b45790f355bc9163baa9008bb69bee97f65e5f453543b193a4d4b9994971616"
+    },
+    {
+      "id": "appendix-b-goal-statement",
+      "filename": "appendix-b-goal-statement.md",
+      "title": "Appendix B: Goal Statement",
+      "startLine": 2315,
+      "endLine": 2326,
+      "lineCount": 12,
+      "type": "epilogue",
+      "checksum": "ffc2d0b328d0e50973dfc24e0207121ba2eda4bfc0857073e8600f3c412e313f"
+    }
+  ]
+}

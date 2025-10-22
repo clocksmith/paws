@@ -1,26 +1,6 @@
 {
-  "version": "1.0",
-  "api": {
-    "provider": "local",
-    "localEndpoint": "http://localhost:11434",
-    "timeout": 180000,
-    "maxRetries": 3
-  },
-  "ollama": {
-    "autoStart": false,
-    "defaultModel": "gpt-oss:120b",
-    "fallbackModel": "gpt-oss:20b",
-    "temperature": 0.7,
-    "maxTokens": 4096
-  },
-  "server": {
-    "port": 8000,
-    "host": "localhost",
-    "corsOrigins": ["http://localhost:8080", "http://localhost:8000"]
-  },
+  "_comment": "REPLOID User Overrides - Only includes settings different from config.json defaults",
   "ui": {
-    "theme": "cyberpunk",
-    "showAdvancedLogs": true,
-    "statusUpdateInterval": 1000
+    "showAdvancedLogs": true
   }
 }

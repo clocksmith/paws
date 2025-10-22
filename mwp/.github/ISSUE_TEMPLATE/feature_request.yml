@@ -1,0 +1,123 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for MCP-WP
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please describe what you'd like to see added to MCP-WP.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component should this feature be added to?
+      options:
+        - Core (@mcp-wp/core)
+        - Bridge (@mcp-wp/bridge)
+        - EventBus (@mcp-wp/eventbus)
+        - Dashboard (@mcp-wp/dashboard)
+        - New Widget
+        - Existing Widget (specify below)
+        - CLI Tool
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a problem? Please describe.
+      placeholder: "I'm frustrated when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see
+      placeholder: "I would like to be able to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Describe any alternative solutions or features you've considered
+      placeholder: "I considered..."
+
+  - type: textarea
+    id: benefits
+    attributes:
+      label: Benefits
+      description: What benefits would this feature provide?
+      placeholder: |
+        - Improved developer experience
+        - Better performance
+        - Easier widget development
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Usage Example
+      description: Show how this feature would be used
+      render: typescript
+      placeholder: |
+        // Example usage
+        const widget = await dashboard.addWidget({
+          // Your proposed API
+        });
+
+  - type: textarea
+    id: mockup
+    attributes:
+      label: Design/Mockup
+      description: If this is a UI feature, please provide mockups or sketches
+
+  - type: dropdown
+    id: breaking
+    attributes:
+      label: Breaking Change?
+      description: Would this be a breaking change to existing APIs?
+      options:
+        - "No - Fully backward compatible"
+        - "Yes - Minor breaking change"
+        - "Yes - Major breaking change"
+        - "Unsure"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - "Nice to have"
+        - "Important"
+        - "Critical"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or examples about the feature request
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues to ensure this isn't a duplicate
+          required: true
+        - label: I have clearly described the feature and its benefits
+          required: true
+        - label: I am willing to help implement this feature with a pull request
+          required: false

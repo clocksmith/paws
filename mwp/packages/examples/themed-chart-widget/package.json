@@ -1,0 +1,28 @@
+{
+  "name": "@mcp-wp/example-themed-chart-widget",
+  "version": "1.0.0",
+  "description": "Example widget demonstrating enhanced theming features",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "demo": "echo 'Add this widget to your dashboard to see enhanced theming in action'"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-wp",
+    "widget",
+    "theming",
+    "example",
+    "chart",
+    "visualization"
+  ],
+  "dependencies": {
+    "@mcp-wp/core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  }
+}

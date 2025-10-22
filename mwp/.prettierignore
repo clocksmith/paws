@@ -1,0 +1,27 @@
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Coverage
+coverage/
+
+# Generated files
+*.d.ts
+pnpm-lock.yaml
+package-lock.json
+
+# Specification sections (preserve exact formatting)
+specification/protocol-sections/*.md
+specification/MWP.md
+
+# Formal verification specs
+formal-verification/**/*.tla
+formal-verification/**/*.als
+
+# Markdown that should preserve formatting
+CHANGELOG.md

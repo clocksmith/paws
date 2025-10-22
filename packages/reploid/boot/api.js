@@ -3,6 +3,158 @@ import { state, elements } from './state.js';
 
 const PROXY_BASE_URL = 'http://localhost:8000';
 
+// ModelRegistry integration - discovery of available models
+export async function discoverAvailableModels() {
+    console.log('[API] Discovering available models via ModelRegistry...');
+
+    // Wait for ModelRegistry to be loaded
+    let retries = 0;
+    while (!window.ModelRegistry && retries < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        retries++;
+    }
+
+    if (!window.ModelRegistry) {
+        console.warn('[API] ModelRegistry not available, falling back to basic detection');
+        return await fallbackModelDiscovery();
+    }
+
+    try {
+        const registry = await window.ModelRegistry.api.discoverModels(true); // force refresh
+        console.log('[API] ModelRegistry discovered:', registry);
+
+        state.availableModels = {
+            cloud: [
+                ...(registry.gemini || []),
+                ...(registry.openai || []),
+                ...(registry.anthropic || [])
+            ],
+            ollama: registry.ollama || [],
+            webllm: registry.webllm || [],
+            metadata: registry.metadata || {}
+        };
+
+        return state.availableModels;
+    } catch (error) {
+        console.warn('[API] ModelRegistry discovery failed:', error);
+        return await fallbackModelDiscovery();
+    }
+}
+
+// Fallback model discovery if ModelRegistry not available
+async function fallbackModelDiscovery() {
+    const models = {
+        cloud: [],
+        ollama: [],
+        webllm: [],
+        metadata: { providers: [], timestamp: Date.now() }
+    };
+
+    // Check cloud models via proxy status
+    try {
+        const response = await fetch(`${PROXY_BASE_URL}/api/proxy-status`, {
+            method: 'GET',
+            signal: AbortSignal.timeout(3000)
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const providers = data.providers || {};
+
+            // Add cloud models based on available providers
+            if (providers.gemini) {
+                models.cloud.push(
+                    { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', provider: 'gemini', tier: 'fast', available: true },
+                    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'gemini', tier: 'balanced', available: true }
+                );
+                models.metadata.providers.push('gemini');
+            }
+            if (providers.openai) {
+                models.cloud.push(
+                    { id: 'gpt-5-2025-08-07-mini', name: 'GPT-5 Mini', provider: 'openai', tier: 'fast', available: true },
+                    { id: 'gpt-5-2025-08-07', name: 'GPT-5', provider: 'openai', tier: 'advanced', available: true }
+                );
+                models.metadata.providers.push('openai');
+            }
+            if (providers.anthropic) {
+                models.cloud.push(
+                    { id: 'claude-4-5-haiku', name: 'Claude 4.5 Haiku', provider: 'anthropic', tier: 'fast', available: true },
+                    { id: 'claude-4-5-sonnet', name: 'Claude 4.5 Sonnet', provider: 'anthropic', tier: 'balanced', available: true }
+                );
+                models.metadata.providers.push('anthropic');
+            }
+        }
+    } catch (error) {
+        console.warn('[API] Proxy status check failed:', error);
+
+        // Check localStorage for browser-direct keys
+        const localStorageKeys = {
+            gemini: !!localStorage.getItem('GEMINI_API_KEY'),
+            openai: !!localStorage.getItem('OPENAI_API_KEY'),
+            anthropic: !!localStorage.getItem('ANTHROPIC_API_KEY')
+        };
+
+        if (localStorageKeys.gemini) {
+            models.cloud.push(
+                { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', provider: 'gemini', tier: 'fast', available: true },
+                { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'gemini', tier: 'balanced', available: true }
+            );
+            models.metadata.providers.push('gemini');
+        }
+        if (localStorageKeys.openai) {
+            models.cloud.push(
+                { id: 'gpt-5-2025-08-07-mini', name: 'GPT-5 Mini', provider: 'openai', tier: 'fast', available: true },
+                { id: 'gpt-5-2025-08-07', name: 'GPT-5', provider: 'openai', tier: 'advanced', available: true }
+            );
+            models.metadata.providers.push('openai');
+        }
+        if (localStorageKeys.anthropic) {
+            models.cloud.push(
+                { id: 'claude-4-5-haiku', name: 'Claude 4.5 Haiku', provider: 'anthropic', tier: 'fast', available: true },
+                { id: 'claude-4-5-sonnet', name: 'Claude 4.5 Sonnet', provider: 'anthropic', tier: 'balanced', available: true }
+            );
+            models.metadata.providers.push('anthropic');
+        }
+    }
+
+    // Check Ollama models
+    if (state.detectedEnv.hasServer) {
+        try {
+            const response = await fetch(`${PROXY_BASE_URL}/api/ollama/models`, {
+                method: 'GET',
+                signal: AbortSignal.timeout(5000)
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                models.ollama = (data.models || []).map(model => ({
+                    id: model.name,
+                    name: model.name,
+                    provider: 'ollama',
+                    tier: 'local',
+                    size: model.size,
+                    modified: model.modified,
+                    available: true
+                }));
+            }
+        } catch (error) {
+            console.warn('[API] Ollama check failed:', error);
+        }
+    }
+
+    // Check WebLLM/WebGPU
+    if (navigator.gpu) {
+        models.webllm = [
+            { id: 'Qwen2.5-1.5B-Instruct', name: 'Qwen2.5-1.5B-Instruct', provider: 'webllm', tier: 'browser', size: '1.5GB', available: true },
+            { id: 'Phi-3.5-mini-instruct', name: 'Phi-3.5-mini-instruct', provider: 'webllm', tier: 'browser', size: '2.3GB', available: true },
+            { id: 'Llama-3.2-1B-Instruct', name: 'Llama-3.2-1B-Instruct', provider: 'webllm', tier: 'browser', size: '1.2GB', available: true }
+        ];
+    }
+
+    state.availableModels = models;
+    return models;
+}
+
 export async function checkAPIStatus() {
     console.log('[API] Checking server status...');
 

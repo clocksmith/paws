@@ -56,6 +56,35 @@ pnpm --filter @paws/reploid start  # http://localhost:8080
 
 See package READMEs for detailed documentation and examples.
 
+## Related Projects
+
+### MCP Widget Protocol (mwp/)
+
+The **[MCP Widget Protocol](mwp/README.md)** is a separate project in this repository that standardizes visual dashboards for Model Context Protocol servers.
+
+**What it does:**
+- Provides a protocol for building interactive Web Component widgets for MCP servers
+- Enables visual representation of MCP primitives (tools, resources, prompts)
+- Includes reference dashboard implementation and official widgets
+- Enforces security controls with user confirmation flows
+
+**Relationship to PAWS:**
+- Complementary but independent project
+- MWP focuses on visual dashboards for **external MCP servers**, PAWS/REPLOID focuses on multi-agent workflows
+- **Important:** REPLOID has its own internal "Module Widget Protocol" for visualizing internal modules (75+ upgrades like ToolRunner, StateManager, EventBus) - this is separate from MCP Widget Protocol
+- **Integration Potential**: REPLOID modules can be converted to MCP servers and visualized with MWP widgets
+  - Visual VFS browser with syntax highlighting
+  - Blueprint gallery instead of text search
+  - Side-by-side diff viewer for proposed modifications
+  - Test results dashboard with visual pass/fail indicators
+  - Interactive checkpoint timeline
+  - Visual approval UI for destructive operations
+- **Hybrid Architecture**: REPLOID dashboard can show both internal widgets (Module Widget Protocol) and external widgets (MCP Widget Protocol) side-by-side
+- Complete integration guide: `packages/reploid/docs/MWP_INTEGRATION_GUIDE.md`
+- Shares monorepo for convenience but maintains separate package ecosystems
+
+See [mwp/README.md](mwp/README.md) for full documentation.
+
 ## License
 
 MIT

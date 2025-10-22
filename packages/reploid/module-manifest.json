@@ -10,7 +10,8 @@
         { "id": "DIContainer", "path": "/upgrades/di-container.js" },
         { "id": "StateHelpersPure", "path": "/upgrades/state-helpers-pure.js" },
         { "id": "ToolRunnerPureHelpers", "path": "/upgrades/tool-runner-pure-helpers.js" },
-        { "id": "AgentLogicPure", "path": "/upgrades/agent-logic-pure.js" }
+        { "id": "AgentLogicPure", "path": "/upgrades/agent-logic-pure.js" },
+        { "id": "Config", "path": "/upgrades/config.js" }
       ]
     },
     {
@@ -18,7 +19,8 @@
       "modules": [
         { "id": "Storage", "path": "/upgrades/storage-indexeddb.js" },
         { "id": "AuditLogger", "path": "/upgrades/audit-logger.js" },
-        { "id": "RateLimiter", "path": "/upgrades/rate-limiter.js" }
+        { "id": "RateLimiter", "path": "/upgrades/rate-limiter.js" },
+        { "id": "ModelRegistry", "path": "/upgrades/model-registry.js" }
       ]
     },
     {
@@ -111,7 +113,8 @@
         { "id": "WebRTCCoordinator", "path": "/upgrades/webrtc-coordinator.js" },
         { "id": "SentinelFSM", "path": "/upgrades/sentinel-fsm.js" },
         { "id": "MetaToolCreator", "path": "/upgrades/meta-tool-creator.js" },
-        { "id": "MultiModelPaxos", "path": "/upgrades/multi-model-paxos.js" }
+        { "id": "ModelArena", "path": "/upgrades/model-arena.js" },
+        { "id": "PeerReviewConsensus", "path": "/upgrades/peer-review-consensus.js" }
       ]
     }
   ]

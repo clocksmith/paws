@@ -1,0 +1,154 @@
+name: Widget Proposal
+description: Propose a new widget for an MCP server
+title: "[Widget]: "
+labels: ["widget", "enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing a new widget! Please provide details about the MCP server and widget functionality.
+
+  - type: input
+    id: widget-name
+    attributes:
+      label: Widget Name
+      description: Proposed name for the widget
+      placeholder: "my-awesome-widget"
+    validations:
+      required: true
+
+  - type: input
+    id: mcp-server
+    attributes:
+      label: MCP Server
+      description: Which MCP server would this widget connect to?
+      placeholder: "@modelcontextprotocol/server-example"
+    validations:
+      required: true
+
+  - type: input
+    id: server-link
+    attributes:
+      label: MCP Server Link
+      description: Link to the MCP server repository or documentation
+      placeholder: "https://github.com/..."
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Widget Description
+      description: Describe what this widget would do
+      placeholder: "This widget would allow users to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: features
+    attributes:
+      label: Key Features
+      description: List the main features this widget would provide
+      placeholder: |
+        - Feature 1
+        - Feature 2
+        - Feature 3
+    validations:
+      required: true
+
+  - type: textarea
+    id: tools
+    attributes:
+      label: MCP Tools Used
+      description: List the MCP tools this widget would use
+      placeholder: |
+        - tool_one
+        - tool_two
+        - tool_three
+
+  - type: textarea
+    id: resources
+    attributes:
+      label: MCP Resources Used
+      description: List any MCP resources this widget would access
+      placeholder: |
+        - resource_one
+        - resource_two
+
+  - type: textarea
+    id: ui-mockup
+    attributes:
+      label: UI Mockup
+      description: Describe or sketch the widget's user interface
+      placeholder: |
+        Header: Widget title with refresh button
+        Body: Main content area showing...
+        Footer: Actions (save, export, etc.)
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Widget Category
+      description: Which category does this widget belong to?
+      options:
+        - Data Management
+        - Development Tools
+        - AI Tools
+        - Web Tools
+        - Productivity
+        - General
+    validations:
+      required: true
+
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: Implementation Complexity
+      description: How complex do you think this widget would be to implement?
+      options:
+        - Simple (Similar to existing widgets)
+        - Moderate (Some new patterns needed)
+        - Complex (Significant new functionality)
+    validations:
+      required: true
+
+  - type: textarea
+    id: similar-widgets
+    attributes:
+      label: Similar Widgets
+      description: Are there any existing widgets similar to this one?
+      placeholder: "Similar to the GitHub widget, but for..."
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority/Demand
+      description: How much demand do you think there is for this widget?
+      options:
+        - "High - Many users would benefit"
+        - "Medium - Some users would benefit"
+        - "Low - Niche use case"
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-cases
+    attributes:
+      label: Use Cases
+      description: Describe specific use cases for this widget
+      placeholder: |
+        1. A developer wants to...
+        2. A team needs to...
+        3. An organization could...
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing widgets to ensure this doesn't already exist
+          required: true
+        - label: I have verified the MCP server exists and is publicly available
+          required: true
+        - label: I am willing to help implement this widget with a pull request
+          required: false
+        - label: I am willing to maintain this widget long-term
+          required: false

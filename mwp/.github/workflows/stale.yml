@@ -1,0 +1,67 @@
+name: Stale Issues and PRs
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Run daily at midnight UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    name: Mark Stale Issues and PRs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Stale issues and PRs
+        uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+          # Stale issues
+          stale-issue-message: |
+            This issue has been automatically marked as stale because it has not had recent activity.
+            It will be closed in 7 days if no further activity occurs.
+
+            If this issue is still relevant, please:
+            - Comment to keep it open
+            - Provide additional context or information
+            - Update the issue with current status
+
+            Thank you for your contributions!
+          stale-issue-label: 'stale'
+          days-before-issue-stale: 60
+          days-before-issue-close: 7
+          exempt-issue-labels: 'pinned,security,roadmap,help-wanted,good-first-issue'
+
+          # Stale PRs
+          stale-pr-message: |
+            This pull request has been automatically marked as stale because it has not had recent activity.
+            It will be closed in 14 days if no further activity occurs.
+
+            If this PR is still relevant, please:
+            - Rebase on the latest main branch
+            - Resolve any merge conflicts
+            - Address review comments
+            - Comment to keep it open
+
+            Thank you for your contributions!
+          stale-pr-label: 'stale'
+          days-before-pr-stale: 45
+          days-before-pr-close: 14
+          exempt-pr-labels: 'pinned,security,in-progress,blocked'
+
+          # Close messages
+          close-issue-message: |
+            This issue has been automatically closed due to inactivity.
+            If you believe this issue is still relevant, please reopen it or create a new issue with updated information.
+          close-pr-message: |
+            This pull request has been automatically closed due to inactivity.
+            If you would like to continue working on this PR, please reopen it or create a new PR.
+
+          # Additional configuration
+          operations-per-run: 100
+          remove-stale-when-updated: true
+          exempt-all-milestones: true
+          exempt-draft-pr: true

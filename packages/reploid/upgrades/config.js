@@ -110,14 +110,34 @@ const Config = {
     };
 
     /**
-     * Load configuration from config.json file
+     * Deep merge two objects (for override support)
+     * @param {Object} target - Base object
+     * @param {Object} source - Override object
+     * @returns {Object} Merged object
+     */
+    const deepMerge = (target, source) => {
+      const result = { ...target };
+
+      for (const key in source) {
+        if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+          result[key] = deepMerge(result[key] || {}, source[key]);
+        } else {
+          result[key] = source[key];
+        }
+      }
+
+      return result;
+    };
+
+    /**
+     * Load configuration from config.json file with optional .reploidrc.json overrides
      * @returns {Promise<Object>} Loaded and validated configuration
      */
     const loadConfig = async () => {
       try {
         logger.info('[Config] Loading configuration from config.json...');
 
-        // Fetch config.json
+        // Fetch config.json (base configuration with defaults)
         const response = await fetch('/config.json');
         if (!response.ok) {
           throw new ConfigError('Failed to fetch config.json', {
@@ -126,7 +146,25 @@ const Config = {
           });
         }
 
-        const config = await response.json();
+        let config = await response.json();
+
+        // Attempt to load .reploidrc.json for user overrides
+        try {
+          logger.info('[Config] Checking for .reploidrc.json overrides...');
+          const overrideResponse = await fetch('/.reploidrc.json');
+
+          if (overrideResponse.ok) {
+            const overrides = await overrideResponse.json();
+            logger.info('[Config] Found .reploidrc.json, applying overrides...');
+            config = deepMerge(config, overrides);
+            logger.info('[Config] Overrides applied successfully');
+          } else {
+            logger.info('[Config] No .reploidrc.json found, using defaults from config.json');
+          }
+        } catch (overrideError) {
+          // .reploidrc.json is optional, so this is not a fatal error
+          logger.info('[Config] No user overrides found (this is normal)');
+        }
 
         // Validate against schema
         validateConfig(config);
@@ -135,7 +173,8 @@ const Config = {
         _loadTime = Date.now();
 
         logger.info('[Config] Configuration loaded successfully', {
-          timestamp: new Date(_loadTime).toISOString()
+          timestamp: new Date(_loadTime).toISOString(),
+          hasOverrides: config._hasOverrides || false
         });
 
         return _config;
@@ -241,6 +280,94 @@ const Config = {
       };
     };
 
+    /**
+     * Get permission rule for a specific tool
+     * @param {string} toolName - Name of the tool (e.g., 'read', 'write', 'bash')
+     * @returns {Object|null} Permission policy object or null if not found
+     */
+    const getPermission = (toolName) => {
+      const policies = get('permissions.policies', []);
+      return policies.find(p => p.tool === toolName) || null;
+    };
+
+    /**
+     * Check if a tool is allowed (does not require user confirmation)
+     * @param {string} toolName - Name of the tool
+     * @returns {boolean} True if tool is allowed without confirmation
+     */
+    const isToolAllowed = (toolName) => {
+      const permission = getPermission(toolName);
+      return permission && permission.rule === 'allow';
+    };
+
+    /**
+     * Check if a tool requires user confirmation
+     * @param {string} toolName - Name of the tool
+     * @returns {boolean} True if tool requires confirmation
+     */
+    const isToolAsk = (toolName) => {
+      const permission = getPermission(toolName);
+      return permission && permission.rule === 'ask';
+    };
+
+    /**
+     * Check if a tool is denied
+     * @param {string} toolName - Name of the tool
+     * @returns {boolean} True if tool is denied
+     */
+    const isToolDenied = (toolName) => {
+      const permission = getPermission(toolName);
+      return permission && permission.rule === 'deny';
+    };
+
+    /**
+     * Get server configuration
+     * @returns {Object} Server config object
+     */
+    const getServer = () => {
+      return get('server', {
+        port: 8000,
+        host: 'localhost',
+        corsOrigins: ['http://localhost:8080']
+      });
+    };
+
+    /**
+     * Get API configuration
+     * @returns {Object} API config object
+     */
+    const getApi = () => {
+      return get('api', {
+        provider: 'local',
+        timeout: 180000,
+        maxRetries: 3
+      });
+    };
+
+    /**
+     * Get Ollama configuration
+     * @returns {Object} Ollama config object
+     */
+    const getOllama = () => {
+      return get('ollama', {
+        autoStart: false,
+        defaultModel: 'gpt-oss:120b',
+        temperature: 0.7
+      });
+    };
+
+    /**
+     * Get UI configuration
+     * @returns {Object} UI config object
+     */
+    const getUi = () => {
+      return get('ui', {
+        theme: 'cyberpunk',
+        showAdvancedLogs: false,
+        statusUpdateInterval: 1000
+      });
+    };
+
     return {
       init: loadConfig,
 
@@ -251,7 +378,17 @@ const Config = {
         getUpgrade,
         getBlueprint,
         isLoaded,
-        getMetadata
+        getMetadata,
+        // New: Permission checking
+        getPermission,
+        isToolAllowed,
+        isToolAsk,
+        isToolDenied,
+        // New: Section getters
+        getServer,
+        getApi,
+        getOllama,
+        getUi
       },
 
       // Web Component Widget
