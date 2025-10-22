@@ -1,8 +1,8 @@
-# Blueprint 0x00006E: Browser-Native Multi-Model Paxos
+# Blueprint 0x00006E: Browser-Native Multi-Model Arena
 
-**Objective:** Enable browser-native multi-model competitive testing for REPLOID without requiring Node.js proxy or Python CLI, making Paxos a first-class citizen in the RSI workflow.
+**Objective:** Enable browser-native multi-model competitive testing for REPLOID without requiring Node.js proxy or Python CLI, making Arena a first-class citizen in the RSI workflow.
 
-**Target Upgrade:** PAXO (`multi-model-paxos.js`)
+**Target Upgrade:** AREN (`multi-model-arena.js`)
 
 **Prerequisites:**
 - **0x00004E** (Module Widget Protocol) - REQUIRED for widget implementation
@@ -22,15 +22,15 @@
 
 **The Problem:**
 
-Current Paxos implementation (`paxos_tool.js`) is NOT truly browser-native:
+Current Arena implementation (`arena_tool.js`) is NOT truly browser-native:
 
 ```javascript
-// Current approach (paxos_tool.js):
-async function runPawsPaxosWorkflow(objective) {
+// Current approach (arena_tool.js):
+async function runPawsArenaWorkflow(objective) {
   // 1. Call Node.js proxy server
-  const response = await fetch('/api/paxos', { method: 'POST', body: JSON.stringify({ objective }) });
+  const response = await fetch('/api/arena', { method: 'POST', body: JSON.stringify({ objective }) });
 
-  // 2. Server spawns Python CLI: paws-paxos
+  // 2. Server spawns Python CLI: paws-arena
   // 3. Python script:
   //    - Creates 3+ real git worktrees
   //    - Runs LLM models via API
@@ -54,11 +54,11 @@ async function runPawsPaxosWorkflow(objective) {
 
 **The Vision:**
 
-Make Paxos a **first-class RSI capability** that runs entirely in the browser:
+Make Arena a **first-class RSI capability** that runs entirely in the browser:
 
 ```javascript
-// New approach (multi-model-paxos.js):
-async function runBrowserPaxos(objective, config) {
+// New approach (multi-model-arena.js):
+async function runBrowserArena(objective, config) {
   // 1. Create VFS snapshots (no git needed)
   const snapshot = await StateManager.createSnapshot();
 
@@ -101,11 +101,11 @@ async function runBrowserPaxos(objective, config) {
 
 ### 2.1 Core Architecture
 
-**Paxos Workflow (Browser-Native):**
+**Arena Workflow (Browser-Native):**
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                   MULTI-MODEL PAXOS ENGINE                  │
+│                   MULTI-MODEL ARENA ENGINE                  │
 └─────────────────────────────────────────────────────────────┘
                               │
                 ┌─────────────┴─────────────┐
@@ -154,7 +154,7 @@ async function runBrowserPaxos(objective, config) {
 ### 2.2 Module API
 
 ```javascript
-const MultiModelPaxos = {
+const MultiModelArena = {
   api: {
     // Core competition
     runCompetition: async (objective, config) => {
@@ -201,17 +201,17 @@ const MultiModelPaxos = {
 
 ### 2.3 Verification Strategy
 
-**Traditional Paxos (Git worktrees + Shell):**
+**Traditional Arena (Git worktrees + Shell):**
 ```bash
 # Python CLI approach:
-git worktree add /tmp/paxos-workspace-1 HEAD
-cd /tmp/paxos-workspace-1
+git worktree add /tmp/arena-workspace-1 HEAD
+cd /tmp/arena-workspace-1
 # Apply changes
 npm test  # Real shell execution
-git worktree remove /tmp/paxos-workspace-1
+git worktree remove /tmp/arena-workspace-1
 ```
 
-**Browser Paxos (VFS + Web Workers):**
+**Browser Arena (VFS + Web Workers):**
 ```javascript
 // Browser approach:
 const workspace = await StateManager.createSnapshot();  // ~1ms
@@ -269,7 +269,7 @@ const generateSolutions = async (objective, models) => {
 ### 2.5 Widget Interface
 
 ```javascript
-class MultiModelPaxosWidget extends HTMLElement {
+class MultiModelArenaWidget extends HTMLElement {
   getStatus() {
     const activeCompetition = competitionInProgress();
     const history = getCompetitionHistory();
@@ -298,9 +298,9 @@ class MultiModelPaxosWidget extends HTMLElement {
 ```javascript
 // @blueprint 0x00006E
 
-const MultiModelPaxos = {
+const MultiModelArena = {
   metadata: {
-    id: 'MultiModelPaxos',
+    id: 'MultiModelArena',
     version: '1.0.0',
     dependencies: ['Utils', 'EventBus', 'StateManager', 'HybridLLMProvider', 'VerificationManager'],
     async: true,
@@ -341,7 +341,7 @@ const runCompetition = async (objective, config = {}) => {
     const timeout = config.timeout || 60000;
 
     // 2. Create competition instance
-    const competitionId = `paxos-${Date.now()}`;
+    const competitionId = `arena-${Date.now()}`;
     _activeCompetition = {
       id: competitionId,
       objective,
@@ -351,7 +351,7 @@ const runCompetition = async (objective, config = {}) => {
       startTime
     };
 
-    EventBus.emit('paxos:competition:start', {
+    EventBus.emit('arena:competition:start', {
       competitionId,
       objective,
       models
@@ -361,21 +361,21 @@ const runCompetition = async (objective, config = {}) => {
     const workspace = await StateManager.createSnapshot();
 
     // 4. Generate solutions in parallel
-    EventBus.emit('paxos:phase', { phase: 'generation', progress: 0 });
+    EventBus.emit('arena:phase', { phase: 'generation', progress: 0 });
 
     const solutions = await Promise.all(
       models.map(async (model, idx) => {
         const solution = await generateSolution(objective, model, workspace);
 
         _activeCompetition.progress = Math.floor(((idx + 1) / models.length) * 50);
-        EventBus.emit('paxos:progress', { progress: _activeCompetition.progress });
+        EventBus.emit('arena:progress', { progress: _activeCompetition.progress });
 
         return solution;
       })
     );
 
     // 5. Verify solutions in parallel
-    EventBus.emit('paxos:phase', { phase: 'verification', progress: 50 });
+    EventBus.emit('arena:phase', { phase: 'verification', progress: 50 });
 
     const verifiedSolutions = await Promise.all(
       solutions.map(async (solution, idx) => {
@@ -384,14 +384,14 @@ const runCompetition = async (objective, config = {}) => {
         const result = await verifySolution(solution, verifyFn, workspace);
 
         _activeCompetition.progress = 50 + Math.floor(((idx + 1) / models.length) * 40);
-        EventBus.emit('paxos:progress', { progress: _activeCompetition.progress });
+        EventBus.emit('arena:progress', { progress: _activeCompetition.progress });
 
         return { ...solution, verification: result };
       })
     );
 
     // 6. Score and select winner
-    EventBus.emit('paxos:phase', { phase: 'scoring', progress: 90 });
+    EventBus.emit('arena:phase', { phase: 'scoring', progress: 90 });
 
     const scored = verifiedSolutions.map(sol => ({
       ...sol,
@@ -429,7 +429,7 @@ const runCompetition = async (objective, config = {}) => {
 
     // 10. Cleanup
     _activeCompetition = null;
-    EventBus.emit('paxos:competition:complete', telemetry);
+    EventBus.emit('arena:competition:complete', telemetry);
 
     return {
       solutions: scored,
@@ -440,12 +440,12 @@ const runCompetition = async (objective, config = {}) => {
   } catch (error) {
     _activeCompetition = null;
 
-    EventBus.emit('paxos:competition:error', {
+    EventBus.emit('arena:competition:error', {
       error: error.message,
       objective
     });
 
-    throw Utils.createError('PaxosCompetitionError', error.message);
+    throw Utils.createError('ArenaCompetitionError', error.message);
   }
 };
 ```
@@ -573,12 +573,12 @@ const selectWinner = (solutions) => {
 ```javascript
 const emitTelemetry = (event, data) => {
   // Emit to EventBus for general consumption
-  EventBus.emit(`paxos:${event}`, data);
+  EventBus.emit(`arena:${event}`, data);
 
   // Emit to PAXA for analytics
   const PAXA = DIContainer.resolve('PenteractAnalytics');
   if (PAXA) {
-    PAXA.api.trackPaxosEvent({
+    PAXA.api.trackArenaEvent({
       event,
       ...data,
       timestamp: Date.now()
@@ -590,7 +590,7 @@ const emitTelemetry = (event, data) => {
 ### Step 7: Implement Web Component Widget
 
 ```javascript
-class MultiModelPaxosWidget extends HTMLElement {
+class MultiModelArenaWidget extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
@@ -707,8 +707,8 @@ class MultiModelPaxosWidget extends HTMLElement {
         }
       </style>
 
-      <div class="paxos-panel">
-        <h4>⚔ Multi-Model Paxos</h4>
+      <div class="arena-panel">
+        <h4>⚔ Multi-Model Arena</h4>
 
         ${active ? `
           <div>
@@ -766,9 +766,9 @@ class MultiModelPaxosWidget extends HTMLElement {
 }
 
 // Register custom element
-const elementName = 'multi-model-paxos-widget';
+const elementName = 'multi-model-arena-widget';
 if (!customElements.get(elementName)) {
-  customElements.define(elementName, MultiModelPaxosWidget);
+  customElements.define(elementName, MultiModelArenaWidget);
 }
 ```
 
@@ -798,7 +798,7 @@ return {
 
   widget: {
     element: elementName,
-    displayName: 'Multi-Model Paxos',
+    displayName: 'Multi-Model Arena',
     icon: '⚔',
     category: 'rsi',
     updateInterval: 1000,
@@ -817,7 +817,7 @@ return {
 ### Unit Test Structure
 
 ```javascript
-describe('MultiModelPaxos Module', () => {
+describe('MultiModelArena Module', () => {
   describe('Competition Flow', () => {
     it('should run competition with multiple models', async () => {});
     it('should generate solutions in parallel', async () => {});
@@ -880,9 +880,9 @@ describe('MultiModelPaxos Module', () => {
 
 ---
 
-## 6. Comparison: Traditional vs Browser Paxos
+## 6. Comparison: Traditional vs Browser Arena
 
-| Feature | Traditional Paxos (paxos_tool.js) | Browser Paxos (PAXO) |
+| Feature | Traditional Arena (arena_tool.js) | Browser Arena (AREN) |
 |---------|-----------------------------------|-----------------------|
 | **Environment** | Node.js + Python + Git | 100% Browser |
 | **Workspace** | Real git worktrees | VFS snapshots (~1ms) |
@@ -896,6 +896,6 @@ describe('MultiModelPaxos Module', () => {
 
 ---
 
-**Remember:** This module makes Paxos a first-class RSI capability in REPLOID, enabling true browser-native multi-model competitive testing without any external dependencies.
+**Remember:** This module makes Arena a first-class RSI capability in REPLOID, enabling true browser-native multi-model competitive testing without any external dependencies.
 
 **Status:** Ready for implementation - architecture fully designed.

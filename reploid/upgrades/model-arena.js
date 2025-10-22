@@ -50,13 +50,59 @@ const ModelArena = {
     };
 
     /**
+     * Generate shared test suite using judge model
+     * @param {string} objective - Competition objective
+     * @param {string} judgeModel - Model to use for test generation
+     * @returns {Promise<string>} Test code
+     */
+    const generateSharedTests = async (objective, judgeModel) => {
+      try {
+        logger.info(`[Arena] Generating shared tests with ${judgeModel}`);
+
+        const testPrompt = `You are a test engineer. Create comprehensive tests for this task.
+
+TASK: ${objective}
+
+Requirements:
+1. Write thorough test cases covering normal cases, edge cases, and error cases
+2. Tests should be objective and unbiased
+3. Use JavaScript/Node.js test format
+4. Include at least 5-10 diverse test cases
+
+Format your response as:
+\`\`\`javascript
+// Your test code here
+// Use describe/it or similar test structure
+\`\`\`
+
+Provide only the test code.`;
+
+        const response = await HybridLLMProvider.api.generateWithModel(testPrompt, {
+          model: judgeModel,
+          temperature: 0.3, // Low temperature for consistent tests
+          maxTokens: 2000
+        });
+
+        return extractTests(response.content) || extractCode(response.content);
+
+      } catch (error) {
+        logger.error('[Arena] Failed to generate shared tests:', error);
+        // Fallback: basic test structure
+        return `// Fallback tests\nif (typeof solution === 'undefined') throw new Error('Solution not defined');`;
+      }
+    };
+
+    /**
      * Build prompt for solution generation
      * @param {string} objective - Competition objective
      * @param {Object} workspace - VFS snapshot workspace
+     * @param {boolean} includeTests - Whether to ask for tests (deprecated, for backward compatibility)
      * @returns {string} Formatted prompt
      */
-    const buildPrompt = (objective, workspace) => {
-      return `You are participating in a multi-model competitive coding challenge.
+    const buildPrompt = (objective, workspace, includeTests = false) => {
+      if (includeTests) {
+        // Legacy mode: models write their own tests (has self-grading problem)
+        return `You are participating in a multi-model competitive coding challenge.
 
 Objective: ${objective}
 
@@ -78,6 +124,26 @@ Format your response as:
 \`\`\`
 
 Provide a production-ready solution that will pass all tests.`;
+      }
+
+      // New mode: models only write implementation, shared tests verify all solutions
+      return `You are participating in a multi-model competitive coding challenge.
+
+Objective: ${objective}
+
+Requirements:
+1. Provide a complete, working implementation
+2. Follow best practices and coding standards
+3. Optimize for both correctness and performance
+4. Your solution will be tested against a comprehensive test suite
+
+Format your response as:
+## Implementation
+\`\`\`javascript
+// Your code here
+\`\`\`
+
+Provide a production-ready, well-tested solution.`;
     };
 
     /**
@@ -449,6 +515,7 @@ SCORE:`;
         // Validate configuration
         const models = config.models || CLOUD_MODELS;
         const scoringMethod = config.scoringMethod || 'hybrid'; // 'llm', 'hybrid', or 'heuristic'
+        const useSharedTests = config.useSharedTests !== false; // Default: true (fixes self-grading)
 
         // Get judge model: user-specified > ModelRegistry recommendation > config default > hardcoded fallback
         let judgeModel = config.judgeModel;
@@ -474,7 +541,7 @@ SCORE:`;
         });
         const timeout = config.timeout || 60000;
 
-        logger.info(`[Arena] Scoring method: ${scoringMethod}, Judge model: ${judgeModel}`);
+        logger.info(`[Arena] Scoring method: ${scoringMethod}, Judge model: ${judgeModel}, Shared tests: ${useSharedTests}`);
 
         // Create competition instance
         const competitionId = `arena-${Date.now()}`;
@@ -499,6 +566,16 @@ SCORE:`;
         logger.info('[Arena] Creating VFS workspace snapshot');
         _activeCompetition.phase = 'workspace_creation';
         const workspace = await StateManager.api.createSnapshot?.() || {};
+
+        // Phase 0: Generate shared tests (if enabled)
+        let sharedTests = null;
+        if (useSharedTests) {
+          logger.info('[Arena] Generating shared test suite');
+          _activeCompetition.phase = 'test_generation';
+          EventBus.emit('arena:phase', { phase: 'test_generation', progress: 0 });
+          sharedTests = await generateSharedTests(objective, judgeModel);
+          logger.info(`[Arena] Shared tests generated (${sharedTests.length} chars)`);
+        }
 
         // Phase 1: Generate solutions in parallel
         logger.info('[Arena] Generating solutions from', models.length, 'models');
@@ -531,7 +608,9 @@ SCORE:`;
           solutions.map(async (solution, idx) => {
             if (solution.failed) return solution;
 
-            const result = await verifySolution(solution, verifyFn, workspace);
+            // Use shared tests if available, otherwise fall back to model tests or verifyFn
+            const testSource = sharedTests || verifyFn;
+            const result = await verifySolution(solution, testSource, workspace);
 
             _activeCompetition.progress = 40 + Math.floor(((idx + 1) / solutions.length) * 40);
             EventBus.emit('arena:progress', {

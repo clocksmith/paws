@@ -241,7 +241,8 @@ export function getStoredDeploymentMode() {
         'web': 'web-llm',
         'browser': 'browser',
         'hybrid': 'hybrid',
-        'paxos': 'multi',
+        'arena': 'multi',
+        'paxos': 'multi', // backward compatibility
         'distributed': 'multi',
         'custom': 'custom',
         'offline': 'offline'
@@ -1042,7 +1043,12 @@ function saveBrowserMode() {
     localStorage.setItem('AI_PROVIDER', 'web');
     localStorage.setItem('SELECTED_MODEL', 'web-llm');
     localStorage.setItem('DEPLOYMENT_MODE', 'browser');
+    // Clean up old paxos keys
     localStorage.removeItem('ENABLE_PAXOS');
+    localStorage.removeItem('PAXOS_PRIMARY');
+    localStorage.removeItem('PAXOS_FALLBACK');
+    localStorage.removeItem('PAXOS_CONSENSUS');
+    localStorage.removeItem('PAXOS_STRATEGY');
     localStorage.removeItem('OFFLINE_MODE');
     if (elements.multiModelToggle) {
         elements.multiModelToggle.checked = false;
@@ -1066,7 +1072,12 @@ function saveWebLLMMode() {
     localStorage.setItem('DEPLOYMENT_MODE', 'web-llm');
     localStorage.removeItem('OFFLINE_MODE');
 
+    // Clean up old paxos keys
     localStorage.removeItem('ENABLE_PAXOS');
+    localStorage.removeItem('PAXOS_PRIMARY');
+    localStorage.removeItem('PAXOS_FALLBACK');
+    localStorage.removeItem('PAXOS_CONSENSUS');
+    localStorage.removeItem('PAXOS_STRATEGY');
     if (elements.multiModelToggle) {
         elements.multiModelToggle.checked = false;
     }

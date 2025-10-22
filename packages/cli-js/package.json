@@ -8,7 +8,7 @@
     "cats": "./bin/cats.js",
     "dogs": "./bin/dogs.js",
     "paws-session": "./bin/paws-session.js",
-    "paws-paxos": "./bin/paws-paxos.js",
+    "paws-arena": "./bin/paws-arena.js",
     "paws-swarm": "./bin/paws-swarm.js",
     "paws-context-optimizer": "./bin/paws-context-optimizer.js",
     "paws-benchmark": "./bin/paws-benchmark.js"

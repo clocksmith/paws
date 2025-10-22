@@ -15,14 +15,14 @@
 
 ## Outreach Timeline
 
-- **Week 2**: Initial post in MCP Discussions (after mcp-ui outreach)
-- **Week 2-3**: Monitor for responses
-- **Week 3**: Follow-up if needed
-- **Week 4**: Make GO/NO-GO decision based on response
+- **Week 1**: Initial post in MCP Discussions
+- **Week 1-2**: Monitor for responses
+- **Week 2**: Follow-up if needed
+- **Week 3**: Make GO/NO-GO decision based on response
 
 ## Message Template: GitHub Discussions Post
 
-**Title**: Proposal: Security Best Practices for MCP Client UIs
+**Title**: Proposal: Dashboard Observability Layer for MCP Servers
 
 **Category**: Ideas / Enhancements
 
@@ -32,96 +32,111 @@
 
 Hi MCP Team,
 
-We've been building client-side visualizations for MCP servers and wanted to share our approach to security and observability, in case it's useful for the broader ecosystem or MCP specification.
+We've been building a **dashboard/observability protocol** for MCP servers and wanted to share our approach with you, in case it's useful for the broader ecosystem.
 
 ### Background
 
-We noticed that many MCP client implementations lack:
-1. **User confirmation** before tool execution (especially for write operations)
-2. **Audit logging** of MCP operations
-3. **Visual feedback** about what tools are being invoked
+**Context**: This is separate from [mcp-ui](https://github.com/idosal/mcp-ui), which delivers rich UI **in** MCP responses. We're focused on external dashboards **about** MCP servers—like Grafana for observability.
 
-This creates potential security and trust issues, particularly for enterprise deployments.
+We noticed that MCP deployments lack standardized dashboards for:
+1. **Operational monitoring** - Real-time view of tool invocations across servers
+2. **User confirmation** - Approval workflows before executing dangerous operations
+3. **Audit logging** - Compliance trails showing what operations occurred when
+4. **Administrative control** - Centralized management of multiple MCP servers
+
+This creates operational and security gaps, particularly for enterprise deployments.
 
 ### What We've Built
 
-We created **MCP Widget Protocol (MWP)**, a client-side framework that adds:
+We created **MCP Widget Protocol (MWP)**, a client-side dashboard standard that provides:
 
-1. **Security Layer**
-   - User confirmation dialogs before tool execution
+1. **Dashboard Widgets** for MCP servers
+   - Web Components that visualize server operations
+   - Real-time display of tool invocations, resources, prompts
+   - Works with **any standard MCP server** (no modifications needed)
+
+2. **User Confirmation Layer**
+   - Approval dialogs before tool execution
    - Visual display of tool names and arguments
    - Explicit approve/reject flow
 
-2. **Observability**
+3. **Observability**
    - Event-driven architecture for logging all MCP operations
-   - Audit trails for compliance
-   - Real-time monitoring of tool invocations
+   - Audit trails for compliance requirements
+   - Real-time monitoring across multiple servers
 
-3. **Example Implementation**
-   - Working GitHub widget with confirmation flow
+4. **Example Implementation**
+   - Working GitHub dashboard widget showing tool activity
    - Demo: [link]
-   - Spec: [link to MWP-SIMPLE.md]
+   - Simplified Spec: [link to MWP-SIMPLE.md]
 
 ### Example Flow
 
 ```
-User clicks "Create Issue"
+Dashboard shows GitHub MCP server widget
+User clicks "Create Issue" in dashboard
   ↓
-Widget requests tool execution
+Dashboard requests tool execution via standard MCP
   ↓
-MCP Bridge intercepts and emits event
-  ↓
-Client shows confirmation dialog:
-  "GitHub wants to create_issue with:
+MWP layer intercepts and shows confirmation:
+  "GitHub server wants to create_issue with:
    repo: owner/repo
    title: Bug report
    [Cancel] [Approve]"
   ↓
-On approval: Tool executes
+On approval: Tool executes via standard MCP protocol
 On cancel: Operation rejected
   ↓
 Result logged to audit trail
+Dashboard updates to show completed operation
 ```
 
 ### Questions for MCP Team
 
 We'd love your thoughts on:
 
-1. **MCP Spec Alignment**
-   - Should user confirmation be part of MCP client implementation guidance?
-   - Would MCP spec benefit from documenting security best practices?
-   - Are there plans for official MCP client UI guidelines?
+1. **MCP Ecosystem Alignment**
+   - Is there value in standardizing dashboard/observability for MCP?
+   - Would MCP spec benefit from documenting operational best practices?
+   - Are there plans for official dashboard guidance?
 
-2. **Collaboration Opportunities**
-   - Would Anthropic be interested in co-authoring security guidance?
-   - Should this be proposed as an RFC enhancement to MCP spec?
-   - Are there enterprise security requirements we should address?
+2. **Relationship to mcp-ui**
+   - We see mcp-ui and MWP as complementary (response UI vs dashboards)
+   - Should we clarify this distinction in both projects' docs?
+   - Any concerns about ecosystem confusion?
 
-3. **Direction Check**
-   - Is this the right direction for MCP client UIs?
+3. **Collaboration Opportunities**
+   - Would Anthropic be interested in co-authoring observability guidance?
+   - Should this be proposed as an RFC or ecosystem resource?
+   - Are there enterprise operational requirements we should address?
+
+4. **Direction Check**
+   - Is dashboard observability a real ecosystem need?
    - Are there concerns we haven't considered?
-   - Would official endorsement of these patterns be appropriate?
+   - Any conflicts with Anthropic's plans?
 
 ### Not Asking For
 
 We're **not** proposing:
 - Changes to MCP protocol itself
-- New MCP message types
-- Modifications to server behavior
+- New MCP message types or primitives
+- Modifications to MCP server behavior
 - Official Anthropic maintenance of our code
+- Anything that conflicts with mcp-ui (different use case)
 
 We **are** proposing:
-- Document security best practices for MCP clients
-- Provide reference implementation (MWP)
-- Collaborate on security guidance
+- Standardized dashboards for MCP operational monitoring
+- Reference implementation for observability patterns
+- Client-side only (works with any standard MCP server)
+- Complementary to mcp-ui (not competitive)
 
 ### GO/NO-GO Decision
 
 Based on your response, we'll either:
 
 **GO** - You see value, we proceed with:
-- Submitting security best practices to MCP docs
-- Co-authoring client implementation guide
+- Documenting observability patterns for MCP ecosystem
+- Co-authoring dashboard implementation guidance
 - Positioning MWP as reference implementation
 - Continuing active development
 
@@ -136,14 +151,14 @@ We respect that Anthropic may have different plans for MCP ecosystem, and we don
 
 You can try the working demo here: [link]
 
-It shows a GitHub widget with user confirmation before tool execution, audit logging, and full TypeScript integration.
+It shows a GitHub MCP server dashboard with tool monitoring, user confirmation before execution, audit logging, and full TypeScript integration.
 
 ### Links
 
 - **Simplified Spec**: [MWP-SIMPLE.md]
 - **GitHub Repo**: [link]
 - **Demo**: [link]
-- **Compatibility with mcp-ui**: [link to adapter]
+- **Distinction from mcp-ui**: Explained in spec
 
 What do you think? Is this a direction worth pursuing?
 

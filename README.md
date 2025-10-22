@@ -4,34 +4,45 @@ Multi-agent AI development toolkit built around **context engineering**. The cor
 
 ## What is PAWS?
 
-**Goal:** Generate robust solutions through structured cognitive diversity. Rather than relying on a single AI perspective, PAWS orchestrates multiple specialized agents that compete, synthesize, and reach consensus.
+**Goal:** Generate robust solutions through structured cognitive diversity. Rather than relying on a single AI perspective, PAWS orchestrates multiple specialized agents that compete, collaborate, and verify solutions through testing.
 
 **How it works:**
 1. **`cats`** - Curate context bundles by scoring files, pruning irrelevant code, and using AI-assisted selection to create focused input.
 2. **`dogs`** - Apply changes with interactive approval and git-native safety. Every change is auditable and reversible.
-3. **Multi-agent Paxos** - Run competing agents in parallel to generate solutions. The best solution is selected through consensus and test verification.
+3. **Multi-agent Arena** - Run competing agents in parallel to generate solutions. The best solution is selected through test-driven verification (not Paxos consensus - it's competitive testing where tests determine the winner).
 4. **Session state** - Maintain state outside the model to prevent context degradation across multiple turns.
 
-This approach provides streamlined workflows for multi-agent coordination and test-driven consensus selection.
+This approach provides streamlined workflows for multi-agent coordination and test-driven solution selection. **PAWS is optimized for CLI-based multi-agent code generation with loose, file-based coordination. It's like Unix pipes for AI agents.**
 
-## REPLOID: Recursive Self-Improvement in the Browser
+## REPLOID: Browser-Native AI Agent Environment
 
-**[REPLOID](reploid/README.md)** is an experimental framework for LLM-driven recursive self-improvement that runs entirely in the browser. Unlike traditional AI tools that treat the browser as just an interface, REPLOID uses it as a complete development ecosystem where agents can introspect, modify, test, and evolve their own architecture.
+**[REPLOID](reploid/README.md)** is a browser-native AI agent framework with a focus on **meta-tool creation** (tools that create tools) and **multi-model mixing**. It runs entirely in the browser with no backend required.
 
-**Key capabilities:**
-- **Self-modification** - Agent reads its own source code from a virtual filesystem and proposes architectural improvements
-- **Blueprint-guided evolution** - 70+ architectural guides teach the agent implementation patterns for self-improvement
-- **Human-supervised safety** - All changes require approval, with git checkpoints and automatic rollback on test failures
-- **100% browser-native** - Runs without Node.js using IndexedDB storage, WebGPU inference, and Web Workers for isolation
-- **Multi-provider intelligence** - Supports cloud APIs (Gemini, Claude, GPT-4), local Ollama, and WebGPU models
+**Core Philosophy:**
+1. **Meta-Tool Creation** - Agents that can create new tools for themselves
+2. **Multi-Model Mixing** - Combining different LLMs (Gemini, GPT, Claude, local) for hybrid intelligence
+3. **Browser-Native** - 100% browser runtime using IndexedDB, WebGPU, and Web Workers
+4. **Recursive Self-Improvement (RSI)** - Agents can improve their own code with human oversight
 
-REPLOID is independently capable but shares the DOGS/CATS bundle format with PAWS CLI tools for optional interoperability.
+**4-Tier Progressive Architecture:**
+- ★ **Essential Core** (8 modules, ~500ms) - Basic agent runtime
+- ☥ **Meta-RSI Core** (15 modules, ~1s) - **RECOMMENDED** - Meta-tools + multi-model mixing
+- ☇ **Full-Featured** (28 modules, ~2s) - Production ready with monitoring and testing
+- ⛉ **Experimental Suite** (76 modules, ~5s) - All features (visualization, Python, local LLM, WebRTC)
+
+**Key Features:**
+- **76 modular upgrades** - Each tagged by tier (essential/meta/full/experimental)
+- **67+ architectural blueprints** - Design docs teaching implementation patterns
+- **Human-supervised safety** - Approval gates, git checkpoints, automatic rollback on test failures
+- **Multi-provider support** - Cloud APIs (Gemini, Claude, GPT-4), local Ollama, and WebGPU models
+
+**REPLOID is optimized for browser-native agent environments with modular architecture. Start simple (8 modules), scale to production (28 modules), or use everything (76 modules).** REPLOID is independently capable but shares the DOGS/CATS bundle format with PAWS CLI tools for optional interoperability.
 
 ## Packages
 
 - **[@paws/core](packages/core/README.md)** - Shared resources (personas, system prompts, configs)
 - **[@paws/cli-js](packages/cli-js/README.md)** - JavaScript CLI tools (cats, dogs, paws-session)
-- **[@paws/cli-py](packages/cli-py/README.md)** - Python CLI tools (paws-cats, paws-dogs, paws-paxos)
+- **[@paws/cli-py](packages/cli-py/README.md)** - Python CLI tools (paws-cats, paws-dogs, paws-arena, paws-swarm)
 - **[@paws/reploid](reploid/README.md)** - Browser-native recursive self-improvement framework
 
 ## Integrations
@@ -71,7 +82,7 @@ The **[MCP Widget Protocol](mwp/README.md)** is a separate project in this repos
 **Relationship to PAWS:**
 - Complementary but independent project
 - MWP focuses on visual dashboards for **external MCP servers**, PAWS/REPLOID focuses on multi-agent workflows
-- **Important:** REPLOID has its own internal "Module Widget Protocol" for visualizing internal modules (75+ upgrades like ToolRunner, StateManager, EventBus) - this is separate from MCP Widget Protocol
+- **Important:** REPLOID has its own internal "Module Widget Protocol" for visualizing internal modules (76 upgrades like ToolRunner, StateManager, EventBus) - this is separate from MCP Widget Protocol
 - **Integration Potential**: REPLOID modules can be converted to MCP servers and visualized with MWP widgets
   - Visual VFS browser with syntax highlighting
   - Blueprint gallery instead of text search

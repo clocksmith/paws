@@ -2,7 +2,7 @@
 /**
  * PAWS Swarm - Swarm Intelligence Coordinator
  *
- * Unlike Paxos (competitive), Swarm enables agents to collaborate:
+ * Unlike Arena (competitive), Swarm enables agents to collaborate:
  * - Hierarchical task decomposition
  * - Real-time agent communication
  * - Multi-round consensus voting
@@ -15,8 +15,8 @@ const path = require('path');
 const { Command } = require('commander');
 const chalk = require('chalk');
 
-// Import from paxos module
-const { LLMClient, CompetitorConfig } = require('./paxos');
+// Import from arena module
+const { LLMClient, CompetitorConfig } = require('./arena');
 
 /**
  * Specialized roles for swarm agents
@@ -425,7 +425,7 @@ async function main() {
     .description('PAWS Swarm - Collaborative multi-agent problem solving')
     .argument('[task]', 'Task description')
     .argument('[context_bundle]', 'Context bundle path')
-    .option('--config <path>', 'Agent config file', 'packages/core/configs/paxos_config.json')
+    .option('--config <path>', 'Agent config file', 'packages/core/configs/arena_config.json')
     .option('--output-dir <path>', 'Output directory', 'workspace/swarm')
     .option('--rounds <number>', 'Max collaboration rounds', '3')
     .parse(process.argv);

@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-PAWS Paxos - Multi-Agent Competitive Verification Orchestrator
+PAWS Arena - Multi-Agent Competitive Verification Orchestrator
 
 Runs multiple LLM agents in parallel on the same task with:
 - Isolated git worktree environments
 - Automated test-driven verification
-- Consensus-based solution selection
+- Test-driven solution selection (best solution determined by passing tests)
 - Performance metrics and benchmarking
+
+NOTE: This is NOT the Paxos distributed consensus algorithm.
+It's competitive testing where multiple agents generate solutions and tests determine the winner.
 """
 
 import argparse
@@ -67,6 +70,84 @@ class CompetitionResult:
     execution_time: float = 0.0
     token_count: int = 0
     error_message: Optional[str] = None
+    quality_score: float = 0.0  # LLM judge quality score (0-1)
+    composite_score: float = 0.0  # Final composite score (0-1)
+
+
+class LLMJudge:
+    """LLM-based code quality judge for ranking solutions"""
+
+    def __init__(self, model: str = "claude-3-5-sonnet-20241022",
+                 provider: str = "claude"):
+        """
+        Initialize the LLM judge
+
+        Args:
+            model: Model ID to use for judging (default: Claude Sonnet)
+            provider: Provider name (gemini, claude, openai)
+        """
+        self.config = CompetitorConfig(
+            name="judge",
+            model_id=model,
+            provider=provider,
+            temperature=0.1,  # Low temperature for consistent scoring
+            max_tokens=50
+        )
+        self.client = None
+
+    def assess_quality(self, code: str, task: str) -> float:
+        """
+        Assess code quality using LLM
+
+        Args:
+            code: The code to assess
+            task: The original task description
+
+        Returns:
+            Quality score from 0.0 to 1.0
+        """
+        if not code:
+            return 0.0
+
+        try:
+            if self.client is None:
+                self.client = LLMClient(self.config)
+
+            prompt = f"""You are an expert code reviewer. Rate this solution on a scale of 0-10.
+
+TASK: {task}
+
+SOLUTION:
+```
+{code}
+```
+
+Rate on:
+1. Correctness (does it solve the task?)
+2. Code quality (clean, readable, maintainable)
+3. Best practices (error handling, edge cases)
+4. Completeness (fully implemented vs partial)
+5. Performance considerations
+
+Respond with ONLY a number from 0-10 (decimals allowed).
+SCORE:"""
+
+            response, _ = self.client.generate(prompt)
+
+            # Parse score from response
+            import re
+            match = re.search(r'(\d+(?:\.\d+)?)', response)
+            if match:
+                score = float(match.group(1))
+                # Normalize to 0-1 range
+                return max(0.0, min(10.0, score)) / 10.0
+
+            # Fallback if parsing fails
+            return 0.5
+
+        except Exception as e:
+            print(f"[Judge] LLM quality assessment failed: {e}")
+            return 0.5  # Neutral score on failure
 
 
 class LLMClient:
@@ -159,16 +240,35 @@ class LLMClient:
         return text, token_count
 
 
-class PaxosOrchestrator:
-    """Orchestrates multi-agent competition with Paxos-style consensus"""
+class ArenaOrchestrator:
+    """Orchestrates multi-agent competition with test-driven selection"""
 
     def __init__(self, task: str, context_bundle: str, verify_cmd: Optional[str],
-                 output_dir: str = "workspace/competition"):
+                 output_dir: str = "workspace/competition",
+                 judge_model: Optional[str] = None,
+                 scoring_method: str = "tests-only"):
         self.task = task
         self.context_bundle = context_bundle
         self.verify_cmd = verify_cmd
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.scoring_method = scoring_method  # 'tests-only', 'llm-only', or 'hybrid'
+
+        # Initialize LLM judge if scoring method requires it
+        self.judge = None
+        if judge_model and scoring_method in ('llm-only', 'hybrid'):
+            # Infer provider from model name
+            model_lower = judge_model.lower()
+            if 'claude' in model_lower:
+                provider = 'claude'
+            elif 'gpt' in model_lower:
+                provider = 'openai'
+            elif 'gemini' in model_lower:
+                provider = 'gemini'
+            else:
+                provider = 'claude'  # default
+
+            self.judge = LLMJudge(model=judge_model, provider=provider)
 
         # Load context
         with open(context_bundle, 'r', encoding='utf-8') as f:
@@ -310,7 +410,7 @@ class PaxosOrchestrator:
     def verify_solution(self, competitor_name: str, solution_path: Path) -> str:
         """Verify a solution in an isolated environment"""
         # Create a temporary worktree for verification
-        session_id = f"paxos-{competitor_name}-{uuid.uuid4().hex[:6]}"
+        session_id = f"arena-{competitor_name}-{uuid.uuid4().hex[:6]}"
         worktree_path = Path(f".paws_sessions/{session_id}")
 
         try:
@@ -410,7 +510,7 @@ class PaxosOrchestrator:
         try:
             cache_dir = Path('.paws/cache')
             cache_dir.mkdir(parents=True, exist_ok=True)
-            analytics_path = cache_dir / 'paxos-analytics.json'
+            analytics_path = cache_dir / 'arena-analytics.json'
 
             entry = {
                 "task": self.task,
@@ -451,7 +551,7 @@ class PaxosOrchestrator:
 
             progress_stream = cache_dir / 'progress-stream.ndjson'
             progress_line = json.dumps({
-                "source": "paxos",
+                "source": "arena",
                 "event": "analytics",
                 "timestamp": entry["timestamp"],
                 "payload": entry
@@ -459,7 +559,86 @@ class PaxosOrchestrator:
             with open(progress_stream, 'a', encoding='utf-8') as stream:
                 stream.write(progress_line + '\n')
         except Exception as err:
-            print(f"[analytics] Failed to record Paxos analytics: {err}")
+            print(f"[analytics] Failed to record Arena analytics: {err}")
+
+    def score_solution(self, result: CompetitionResult) -> float:
+        """
+        Calculate composite score for a solution
+
+        Scoring methods:
+        - tests-only: 100% based on test pass/fail (no LLM judge)
+        - llm-only: 100% based on LLM quality assessment
+        - hybrid: 70% test pass + 30% LLM quality (default recommended)
+
+        Returns:
+            Composite score from 0.0 to 1.0
+        """
+        if self.scoring_method == "tests-only":
+            # Original behavior: binary pass/fail
+            return 1.0 if result.status == "PASS" else 0.0
+
+        elif self.scoring_method == "llm-only":
+            # Use only LLM quality score
+            return result.quality_score
+
+        else:  # hybrid
+            # Composite: 70% test pass + 30% quality
+            test_score = 0.7 if result.status == "PASS" else 0.0
+            quality_score = result.quality_score * 0.3
+            return test_score + quality_score
+
+    def rank_solutions(self, results: List[CompetitionResult]) -> List[CompetitionResult]:
+        """
+        Rank solutions by composite score
+
+        1. Extract code from solution files
+        2. Assess quality with LLM judge (if enabled)
+        3. Calculate composite scores
+        4. Sort by score descending
+
+        Returns:
+            Results sorted by score (best first)
+        """
+        if self.judge is None or self.scoring_method == "tests-only":
+            # No ranking needed - just return passing solutions first
+            passing = [r for r in results if r.status == "PASS"]
+            failing = [r for r in results if r.status != "PASS"]
+            return passing + failing
+
+        print(f"\n{'='*60}")
+        print(f"⚖ PHASE: QUALITY ASSESSMENT")
+        print(f"{'='*60}\n")
+
+        # Assess quality for each solution
+        for result in results:
+            if result.status == "PASS" and result.solution_path:
+                try:
+                    # Extract code from DOGS file
+                    with open(result.solution_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+
+                    # Simple code extraction (get content between ``` markers)
+                    import re
+                    code_blocks = re.findall(r'```(?:\w+)?\n(.*?)```', content, re.DOTALL)
+                    code = '\n\n'.join(code_blocks) if code_blocks else content
+
+                    print(f"[{result.name}] Assessing code quality...")
+                    result.quality_score = self.judge.assess_quality(code, self.task)
+                    print(f"[{result.name}] Quality score: {result.quality_score:.2f}/1.0")
+                except Exception as e:
+                    print(f"[{result.name}] Quality assessment failed: {e}")
+                    result.quality_score = 0.5  # Neutral score
+            else:
+                result.quality_score = 0.0
+
+            # Calculate composite score
+            result.composite_score = self.score_solution(result)
+
+        # Sort by composite score descending
+        ranked = sorted(results, key=lambda r: r.composite_score, reverse=True)
+
+        print()
+        return ranked
 
     def generate_report(self, results: List[CompetitionResult]):
         """Generate and display final consensus report"""
@@ -467,24 +646,32 @@ class PaxosOrchestrator:
         print(f"♃ PHASE: CONSENSUS REPORT")
         print(f"{'='*60}\n")
 
-        passing = [r for r in results if r.status == "PASS"]
-        failing = [r for r in results if r.status == "FAIL"]
-        errors = [r for r in results if r.status == "ERROR"]
+        # Rank solutions if judge is enabled
+        ranked_results = self.rank_solutions(results)
+
+        passing = [r for r in ranked_results if r.status == "PASS"]
+        failing = [r for r in ranked_results if r.status == "FAIL"]
+        errors = [r for r in ranked_results if r.status == "ERROR"]
 
         # Summary table
         print("Summary:")
-        print(f"  Total agents: {len(results)}")
+        print(f"  Total agents: {len(ranked_results)}")
         print(f"  ☉ Passed: {len(passing)}")
         print(f"  ☋ Failed: {len(failing)}")
         print(f"  ☊ Errors: {len(errors)}")
+        if self.judge:
+            print(f"  Scoring method: {self.scoring_method}")
         print()
 
-        # Individual results
-        print("Individual Results:")
-        for result in results:
+        # Individual results (sorted by score)
+        print("Individual Results (ranked by score):")
+        for idx, result in enumerate(ranked_results, 1):
             status_symbol = {"PASS": "☉", "FAIL": "☋", "ERROR": "☊"}[result.status]
-            print(f"  {status_symbol} {result.name} ({result.model_id})")
+            print(f"  #{idx} {status_symbol} {result.name} ({result.model_id})")
             print(f"     Status: {result.status}")
+            if self.judge and result.quality_score > 0:
+                print(f"     Quality: {result.quality_score:.2f}/1.0")
+                print(f"     Composite Score: {result.composite_score:.2f}/1.0")
             print(f"     Time: {result.execution_time:.2f}s")
             print(f"     Tokens: {result.token_count}")
             if result.solution_path:
@@ -493,7 +680,7 @@ class PaxosOrchestrator:
                 print(f"     Error: {result.error_message}")
             print()
 
-        self.write_analytics_snapshot(results, passing)
+        self.write_analytics_snapshot(ranked_results, passing)
 
         # Consensus outcome
         if not passing:
@@ -504,18 +691,19 @@ class PaxosOrchestrator:
         else:
             print("☉ CONSENSUS REACHED")
             print(f"\n{len(passing)} solution(s) passed verification:")
-            for result in passing:
-                print(f"  ☉ {result.name}: {result.solution_path}")
+            for idx, result in enumerate(passing, 1):
+                score_str = f" (score: {result.composite_score:.2f})" if self.judge else ""
+                print(f"  #{idx} ☉ {result.name}: {result.solution_path}{score_str}")
 
             print(f"\n♲ NEXT STEP: Review and apply the best solution:")
-            best = passing[0]  # Could add ranking logic here
+            best = passing[0]  # Now ranked by composite score
             print(f"  python py/dogs.py {best.solution_path} --interactive")
             return 0
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="PAWS Paxos - Multi-Agent Competitive Verification Orchestrator"
+        description="PAWS Arena - Multi-Agent Competitive Verification Orchestrator"
     )
 
     parser.add_argument(
@@ -534,7 +722,7 @@ def main():
     )
     parser.add_argument(
         "--config",
-        default="py/paxos_config.json",
+        default="py/arena_config.json",
         help="Path to competitor config file"
     )
     parser.add_argument(
@@ -546,6 +734,16 @@ def main():
         "--sequential",
         action="store_true",
         help="Run competitors sequentially instead of in parallel"
+    )
+    parser.add_argument(
+        "--judge-model",
+        help="Model to use as judge for quality scoring (e.g., 'claude-3-5-sonnet-20241022')"
+    )
+    parser.add_argument(
+        "--scoring-method",
+        choices=["tests-only", "llm-only", "hybrid"],
+        default="tests-only",
+        help="Scoring method: tests-only (default), llm-only, or hybrid (70%% tests + 30%% quality)"
     )
 
     args = parser.parse_args()
@@ -566,11 +764,13 @@ def main():
             verify_cmd = None
 
     # Create orchestrator
-    orchestrator = PaxosOrchestrator(
+    orchestrator = ArenaOrchestrator(
         task=task,
         context_bundle=context_bundle,
         verify_cmd=verify_cmd,
-        output_dir=args.output_dir
+        output_dir=args.output_dir,
+        judge_model=args.judge_model,
+        scoring_method=args.scoring_method
     )
 
     # Load competitors
@@ -601,6 +801,9 @@ def main():
     print(f"Task: {task[:80]}...")
     print(f"Competitors: {len(competitors)}")
     print(f"Verification: {'Yes' if verify_cmd else 'No'}")
+    if args.judge_model:
+        print(f"Judge Model: {args.judge_model}")
+        print(f"Scoring Method: {args.scoring_method}")
 
     # Run competition
     results = orchestrator.run_competition(

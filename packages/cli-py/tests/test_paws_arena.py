@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Test suite for paws_paxos.py
+Test suite for paws_arena.py
 """
 
 import unittest
@@ -15,11 +15,11 @@ import os
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from paws.paxos import (
+from paws.arena import (
     CompetitorConfig,
     CompetitionResult,
     LLMClient,
-    PaxosOrchestrator,
+    ArenaOrchestrator,
     GEMINI_AVAILABLE,
     CLAUDE_AVAILABLE,
     OPENAI_AVAILABLE
@@ -113,8 +113,8 @@ class TestLLMClient(unittest.TestCase):
             provider="gemini",
             api_key="test-key"
         )
-        with patch('paws.paxos.genai.configure'):
-            with patch('paws.paxos.genai.GenerativeModel') as mock_model:
+        with patch('paws.arena.genai.configure'):
+            with patch('paws.arena.genai.GenerativeModel') as mock_model:
                 client = LLMClient(config)
                 mock_model.assert_called_once_with("gemini-pro")
 
@@ -139,8 +139,8 @@ class TestLLMClient(unittest.TestCase):
             api_key="test-key"
         )
 
-        with patch('paws.paxos.genai.configure'):
-            with patch('paws.paxos.genai.GenerativeModel') as mock_model_class:
+        with patch('paws.arena.genai.configure'):
+            with patch('paws.arena.genai.GenerativeModel') as mock_model_class:
                 mock_client = MagicMock()
                 mock_response = MagicMock()
                 mock_response.text = "Generated solution"
@@ -155,12 +155,12 @@ class TestLLMClient(unittest.TestCase):
                 self.assertGreater(tokens, 0)
 
 
-class TestPaxosOrchestrator(unittest.TestCase):
-    """Test PaxosOrchestrator class"""
+class TestArenaOrchestrator(unittest.TestCase):
+    """Test ArenaOrchestrator class"""
 
     def setUp(self):
         """Set up test environment"""
-        self.temp_dir = Path(tempfile.mkdtemp(prefix="paws_paxos_test_"))
+        self.temp_dir = Path(tempfile.mkdtemp(prefix="paws_arena_test_"))
 
         # Create a test context bundle
         self.context_file = self.temp_dir / "context.md"
@@ -184,7 +184,7 @@ class TestPaxosOrchestrator(unittest.TestCase):
         self.config_file.write_text(json.dumps(self.config_data))
 
         self.output_dir = self.temp_dir / "output"
-        self.orchestrator = PaxosOrchestrator(
+        self.orchestrator = ArenaOrchestrator(
             task="Write a hello world function",
             context_bundle=str(self.context_file),
             verify_cmd="python -m pytest",
@@ -255,11 +255,11 @@ class TestPaxosOrchestrator(unittest.TestCase):
 
 
 class TestIntegration(unittest.TestCase):
-    """Integration tests for paws_paxos"""
+    """Integration tests for paws_arena"""
 
     def test_full_workflow_dry_run(self):
         """Test a complete workflow without actual LLM calls"""
-        with tempfile.TemporaryDirectory(prefix="paws_integration_") as temp_dir:
+        with tempfile.TemporaryDirectory(prefix="paws_arena_integration_") as temp_dir:
             temp_path = Path(temp_dir)
 
             # Create context
@@ -277,7 +277,7 @@ class TestIntegration(unittest.TestCase):
 
             # Create orchestrator
             output_dir = temp_path / "output"
-            orchestrator = PaxosOrchestrator(
+            orchestrator = ArenaOrchestrator(
                 task="Test task",
                 context_bundle=str(context_file),
                 verify_cmd=None,
@@ -302,7 +302,7 @@ def suite():
     suite.addTests(loader.loadTestsFromTestCase(TestCompetitorConfig))
     suite.addTests(loader.loadTestsFromTestCase(TestCompetitionResult))
     suite.addTests(loader.loadTestsFromTestCase(TestLLMClient))
-    suite.addTests(loader.loadTestsFromTestCase(TestPaxosOrchestrator))
+    suite.addTests(loader.loadTestsFromTestCase(TestArenaOrchestrator))
     suite.addTests(loader.loadTestsFromTestCase(TestIntegration))
 
     return suite

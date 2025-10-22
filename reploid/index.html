@@ -427,7 +427,7 @@
                                 <optgroup label="Local Models (No API Key)">
                                     <!-- Ollama models will be dynamically populated from your system -->
                                     <option value="web-llm" data-provider="web">Web LLM (Browser-based)</option>
-                                    <option value="paxos" data-provider="paxos">Paxos (Requires Upgrade)</option>
+                                    <option value="arena" data-provider="arena">Arena (Requires Upgrade)</option>
                                 </optgroup>
                                 <optgroup label="Advanced">
                                     <option value="custom-proxy" data-provider="custom">Custom Proxy/Endpoint</option>
@@ -472,9 +472,9 @@
                             </div>
                         </div>
 
-                        <!-- Paxos Notice -->
-                        <div id="paxos-notice" class="paxos-notice hidden">
-                            <p>⚠ Paxos requires the PAXS upgrade to be loaded. Make sure to include it in your boot configuration.</p>
+                        <!-- Arena Notice -->
+                        <div id="arena-notice" class="arena-notice hidden">
+                            <p>⚠ Arena requires the multi-model competitive testing upgrade to be loaded. Make sure to include it in your boot configuration.</p>
                         </div>
 
                         </div>
@@ -653,19 +653,29 @@
                     </p>
 
                     <div class="boot-mode-options">
-                        <button class="boot-mode-btn selected" data-mode="minimal" onclick="selectBootMode('minimal')">
-                            <div class="boot-mode-label">Standard RSI</div>
-                            <div class="boot-mode-desc">23 modules — Complete RSI with streaming, context management, hybrid LLM, and tool creation.</div>
+                        <button class="boot-mode-btn" data-mode="essential" onclick="selectBootMode('essential')">
+                            <div class="boot-mode-icon">★</div>
+                            <div class="boot-mode-label">Essential Core</div>
+                            <div class="boot-mode-desc">8 modules (~500ms) — Bare minimum to run an agent. Perfect for learning REPLOID basics.</div>
                         </button>
 
-                        <button class="boot-mode-btn" data-mode="all-blueprints" onclick="selectBootMode('all-blueprints')">
-                            <div class="boot-mode-label">RSI + Guides</div>
-                            <div class="boot-mode-desc">23 modules + 100 blueprints — Standard RSI plus all architectural guides and patterns.</div>
+                        <button class="boot-mode-btn selected recommended" data-mode="meta" onclick="selectBootMode('meta')">
+                            <div class="boot-mode-badge">RECOMMENDED</div>
+                            <div class="boot-mode-icon">☥</div>
+                            <div class="boot-mode-label">Meta-RSI Core</div>
+                            <div class="boot-mode-desc">15 modules (~1s) — YOUR ORIGINAL VISION: Tools that create tools + multi-model mixing + self-improvement.</div>
                         </button>
 
-                        <button class="boot-mode-btn" data-mode="all-upgrades" onclick="selectBootMode('all-upgrades')">
-                            <div class="boot-mode-label">Complete System</div>
-                            <div class="boot-mode-desc">87 modules + 100 blueprints — Full stack with visualization, Python, monitoring, swarm, multi-provider.</div>
+                        <button class="boot-mode-btn" data-mode="full" onclick="selectBootMode('full')">
+                            <div class="boot-mode-icon">☇</div>
+                            <div class="boot-mode-label">Full-Featured</div>
+                            <div class="boot-mode-desc">28 modules (~2s) — Production-ready with monitoring, testing, and browser API integration.</div>
+                        </button>
+
+                        <button class="boot-mode-btn" data-mode="experimental" onclick="selectBootMode('experimental')">
+                            <div class="boot-mode-icon">⛉</div>
+                            <div class="boot-mode-label">Experimental Suite</div>
+                            <div class="boot-mode-desc">All 76 modules (~5s) — Every feature: visualization, analytics, Python, local LLM, WebRTC, and more. For power users.</div>
                         </button>
                     </div>
                 </div>
@@ -743,22 +753,22 @@
                     <button type="button" class="close-btn" id="close-multi-model">×</button>
                 </div>
                 <div class="modal-body">
-                    <p class="settings-description">Define primary, fallback, and consensus models for Paxos orchestration.</p>
-                    <div class="paxos-field">
-                        <label for="paxos-primary">Primary Model</label>
-                        <input type="text" id="paxos-primary" placeholder="e.g., gemini-2.5-flash-lite" />
+                    <p class="settings-description">Define primary, fallback, and consensus models for Arena competitive testing.</p>
+                    <div class="arena-field">
+                        <label for="arena-primary">Primary Model</label>
+                        <input type="text" id="arena-primary" placeholder="e.g., gemini-2.5-flash-lite" />
                     </div>
-                    <div class="paxos-field">
-                        <label for="paxos-fallback">Fallback Model</label>
-                        <input type="text" id="paxos-fallback" placeholder="e.g., gpt-5-2025-08-07" />
+                    <div class="arena-field">
+                        <label for="arena-fallback">Fallback Model</label>
+                        <input type="text" id="arena-fallback" placeholder="e.g., gpt-5-2025-08-07" />
                     </div>
-                    <div class="paxos-field">
-                        <label for="paxos-consensus">Consensus Model</label>
-                        <input type="text" id="paxos-consensus" placeholder="e.g., claude-4-5-sonnet" />
+                    <div class="arena-field">
+                        <label for="arena-consensus">Consensus Model</label>
+                        <input type="text" id="arena-consensus" placeholder="e.g., claude-4-5-sonnet" />
                     </div>
-                    <div class="paxos-field">
-                        <label for="paxos-strategy">Strategy</label>
-                        <select id="paxos-strategy">
+                    <div class="arena-field">
+                        <label for="arena-strategy">Strategy</label>
+                        <select id="arena-strategy">
                             <option value="fastest">Fastest First</option>
                             <option value="consensus">Consensus Vote</option>
                             <option value="fallback">Fallback Chain</option>

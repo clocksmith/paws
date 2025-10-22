@@ -1,6 +1,6 @@
 {
   "name": "paws",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "description": "PAWS (Prepare Artifacts With SWAP) - Multi-agent AI development toolkit with CLI and browser interface (REPLOID)",
   "private": true,
   "type": "commonjs",
@@ -43,7 +43,9 @@
     "interactive",
     "bundle",
     "multi-agent",
-    "paxos",
+    "arena",
+    "competitive-testing",
+    "test-driven-selection",
     "rsi",
     "recursive-self-improvement",
     "mcp",

@@ -14,7 +14,7 @@ export ANTHROPIC_API_KEY="your-key"
 export OPENAI_API_KEY="your-key"
 
 # Create config file
-cat > paxos_config.json <<EOF
+cat > arena_config.json <<EOF
 {
   "competitors": [
     {
@@ -50,11 +50,11 @@ paws-cats \
   -o context.md
 
 # Step 2: Run multi-agent competition
-paws-paxos \
+paws-arena \
   "Refactor the authentication module to use OAuth2 with proper token refresh" \
   context.md \
   --verify-cmd "pytest tests/test_auth.py" \
-  --config paxos_config.json
+  --config arena_config.json
 
 # Step 3: Review winning solution
 paws-dogs \
@@ -80,7 +80,7 @@ paws-dogs \
 paws-swarm \
   "Implement a Redis-based caching layer with TTL, invalidation, and monitoring" \
   context.md \
-  --config paxos_config.json
+  --config arena_config.json
 
 # What happens:
 # 1. Architect (gemini-pro) breaks task into subtasks:
@@ -130,7 +130,7 @@ EOF
 # Run benchmark
 paws-benchmark \
   --suite benchmark_suite.json \
-  --config paxos_config.json
+  --config arena_config.json
 
 # Results saved to workspace/benchmarks/benchmark_report.json
 ```
@@ -172,7 +172,7 @@ paws-context-optimizer \
 #   Estimated tokens: 82,156
 
 # Step 2: Use optimized context
-paws-paxos \
+paws-arena \
   "Migrate Flask app to FastAPI while maintaining all API endpoints" \
   optimized_context.md \
   --verify-cmd "pytest tests/"
@@ -206,7 +206,7 @@ cat > deterministic_config.json <<EOF
 EOF
 
 # Run with explicit context bundle (checked into git)
-paws-paxos \
+paws-arena \
   "$(cat task_description.txt)" \
   context.md \
   --config deterministic_config.json \

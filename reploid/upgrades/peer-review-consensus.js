@@ -42,7 +42,7 @@ const PeerReviewConsensus = {
       totalReviews: 0,
       consensusReached: 0,
       tiesEncountered: 0,
-      paxosTiebreakers: 0,
+      pluralityVotingTiebreakers: 0,
       autoRaterTiebreakers: 0,
       averageReviewScore: 0
     };
@@ -360,15 +360,15 @@ BEST SOLUTION NUMBER:`;
     };
 
     /**
-     * Paxos-style consensus tiebreaker: Use voting among models to select best solution
-     * Implements simplified Paxos: 3 models vote, majority wins
+     * Plurality voting tiebreaker: Use voting among models to select best solution
+     * NOT Paxos consensus - just simple vote counting (majority or plurality wins)
      * @param {Array<Object>} tiedSolutions - Solutions that are tied
      * @param {string} originalPrompt - Original task prompt
      * @returns {Promise<Object>} Winning solution
      */
-    const paxosTiebreaker = async (tiedSolutions, originalPrompt) => {
-      logger.info('[PeerReview] Advanced tiebreaker: Paxos-style voting');
-      _stats.paxosTiebreakers++;
+    const pluralityVotingTiebreaker = async (tiedSolutions, originalPrompt) => {
+      logger.info('[PeerReview] Advanced tiebreaker: Plurality voting');
+      _stats.pluralityVotingTiebreakers++;
 
       try {
         // Get 3 voting models (prefer diverse providers)
@@ -438,12 +438,12 @@ Respond with ONLY the number (1-${tiedSolutions.length}) of the best solution.`;
         const winnerIndex = parseInt(winner[0]);
         const voteCount = winner[1];
 
-        logger.info(`[PeerReview] Paxos voting complete: Solution ${winnerIndex + 1} won with ${voteCount}/${validVotes.length} votes`);
+        logger.info(`[PeerReview] Plurality voting complete: Solution ${winnerIndex + 1} won with ${voteCount}/${validVotes.length} votes`);
 
         return tiedSolutions[winnerIndex];
 
       } catch (error) {
-        logger.error('[PeerReview] Paxos tiebreaker failed:', error);
+        logger.error('[PeerReview] Plurality voting tiebreaker failed:', error);
         // Fallback to auto-rater
         return await autoRaterTiebreaker(tiedSolutions, originalPrompt);
       }
@@ -455,10 +455,10 @@ Respond with ONLY the number (1-${tiedSolutions.length}) of the best solution.`;
      * @param {Array<Object>} reviews - All peer reviews
      * @param {number} n - Number of models
      * @param {string} originalPrompt - Original task prompt
-     * @param {string} tiebreakerMethod - Tiebreaker method ('paxos', 'auto-rater', or 'heuristic')
+     * @param {string} tiebreakerMethod - Tiebreaker method ('plurality-voting', 'auto-rater', or 'heuristic')
      * @returns {Promise<Object>} Winning solution
      */
-    const selectWinner = async (solutions, reviews, n, originalPrompt, tiebreakerMethod = 'paxos') => {
+    const selectWinner = async (solutions, reviews, n, originalPrompt, tiebreakerMethod = 'plurality-voting') => {
       logger.info(`[PeerReview] Selecting winner from ${n} solutions based on ${reviews.length} reviews`);
 
       // Calculate average score for each solution
@@ -487,10 +487,13 @@ Respond with ONLY the number (1-${tiedSolutions.length}) of the best solution.`;
         _stats.tiesEncountered++;
 
         // Apply advanced tiebreaker based on configuration
-        if (tiebreakerMethod === 'paxos') {
-          logger.info('[PeerReview] Using Paxos consensus for tiebreaker');
-          return await paxosTiebreaker(tiedSolutions, originalPrompt);
-        } else if (tiebreakerMethod === 'auto-rater') {
+        // Support 'paxos' for backward compatibility (maps to plurality-voting)
+        const normalizedMethod = tiebreakerMethod === 'paxos' ? 'plurality-voting' : tiebreakerMethod;
+
+        if (normalizedMethod === 'plurality-voting') {
+          logger.info('[PeerReview] Using plurality voting for tiebreaker');
+          return await pluralityVotingTiebreaker(tiedSolutions, originalPrompt);
+        } else if (normalizedMethod === 'auto-rater') {
           logger.info('[PeerReview] Using auto-rater for tiebreaker');
           return await autoRaterTiebreaker(tiedSolutions, originalPrompt);
         } else {
@@ -523,7 +526,7 @@ Respond with ONLY the number (1-${tiedSolutions.length}) of the best solution.`;
     const runConsensus = async (prompt, options = {}) => {
       const startTime = Date.now();
       const models = options.models || DEFAULT_MODELS;
-      const tiebreakerMethod = options.tiebreakerMethod || 'paxos'; // 'paxos', 'auto-rater', or 'heuristic'
+      const tiebreakerMethod = options.tiebreakerMethod || 'plurality-voting'; // 'plurality-voting', 'auto-rater', or 'heuristic'
       const n = models.length;
 
       logger.info(`[PeerReview] Starting N=${n} peer review consensus (tiebreaker: ${tiebreakerMethod})`);
@@ -654,6 +657,8 @@ Respond with ONLY the number (1-${tiedSolutions.length}) of the best solution.`;
         totalReviews: 0,
         consensusReached: 0,
         tiesEncountered: 0,
+        pluralityVotingTiebreakers: 0,
+        autoRaterTiebreakers: 0,
         averageReviewScore: 0
       };
       logger.info('[PeerReview] Statistics reset');

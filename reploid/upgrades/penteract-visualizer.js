@@ -83,7 +83,7 @@ const PenteractVisualizer = {
           <section class="penteract-panel">
             <header>
               <h3>Penteract Analytics</h3>
-              <p>Awaiting Paxos runs...</p>
+              <p>Awaiting Arena runs...</p>
             </header>
           </section>
         `;
@@ -157,8 +157,8 @@ const PenteractVisualizer = {
       render();
     };
 
-    const unsubscribeProcessed = EventBus.on('paxos:analytics:processed', handleAnalytics, 'PenteractVisualizer');
-    const unsubscribeRaw = EventBus.on('paxos:analytics', () => refreshFromStore(), 'PenteractVisualizer');
+    const unsubscribeProcessed = EventBus.on('arena:analytics:processed', handleAnalytics, 'PenteractVisualizer');
+    const unsubscribeRaw = EventBus.on('arena:analytics', () => refreshFromStore(), 'PenteractVisualizer');
 
     const dispose = () => {
       unsubscribeProcessed?.();
@@ -181,12 +181,12 @@ const PenteractVisualizer = {
           connectedCallback() {
             this.render();
             this._updateListener = () => this.render();
-            EventBus.on('paxos:analytics:processed', this._updateListener, 'PenteractVisualizerWidget');
+            EventBus.on('arena:analytics:processed', this._updateListener, 'PenteractVisualizerWidget');
           }
 
           disconnectedCallback() {
             if (this._updateListener) {
-              EventBus.off('paxos:analytics:processed', this._updateListener);
+              EventBus.off('arena:analytics:processed', this._updateListener);
             }
           }
 
@@ -352,7 +352,7 @@ const PenteractVisualizer = {
           element: 'penteract-visualizer-widget',
           displayName: 'Penteract Visualizer',
           icon: '◎',
-          category: 'paxos',
+          category: 'arena',
           order: 90
         };
       })()

@@ -1,6 +1,6 @@
 // @blueprint 0x00001E - Outlines Penteract analytics and visualization pipeline.
 // Penteract Analytics Aggregator
-// Consolidates Paxos telemetry into actionable analytics for visualization
+// Consolidates Arena telemetry into actionable analytics for visualization
 
 const PenteractAnalytics = {
   metadata: {
@@ -218,7 +218,7 @@ const PenteractAnalytics = {
 
       await persistHistory();
 
-      EventBus.emit('paxos:analytics:processed', processed);
+      EventBus.emit('arena:analytics:processed', processed);
     };
 
     const handleSnapshot = (snapshot) => {
@@ -229,10 +229,10 @@ const PenteractAnalytics = {
 
     const init = async () => {
       await loadHistory();
-      EventBus.on('paxos:analytics', handleSnapshot, 'PenteractAnalytics');
+      EventBus.on('arena:analytics', handleSnapshot, 'PenteractAnalytics');
 
       if (latest) {
-        EventBus.emit('paxos:analytics:processed', latest);
+        EventBus.emit('arena:analytics:processed', latest);
       }
 
       logger.info('[PenteractAnalytics] Analytics pipeline initialised');
@@ -277,12 +277,12 @@ const PenteractAnalytics = {
           connectedCallback() {
             this.render();
             this._updateListener = () => this.render();
-            EventBus.on('paxos:analytics:processed', this._updateListener, 'PenteractAnalyticsWidget');
+            EventBus.on('arena:analytics:processed', this._updateListener, 'PenteractAnalyticsWidget');
           }
 
           disconnectedCallback() {
             if (this._updateListener) {
-              EventBus.off('paxos:analytics:processed', this._updateListener);
+              EventBus.off('arena:analytics:processed', this._updateListener);
             }
           }
 
@@ -558,7 +558,7 @@ const PenteractAnalytics = {
           element: 'penteract-analytics-widget',
           displayName: 'Penteract Analytics',
           icon: '▤',
-          category: 'paxos',
+          category: 'arena',
           order: 85
         };
       })()

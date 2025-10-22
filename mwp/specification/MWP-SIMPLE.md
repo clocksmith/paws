@@ -11,7 +11,8 @@
 3. [Widget Interface](#widget-interface)
 4. [Security Model](#security-model)
 5. [Example Implementation](#example-implementation)
-6. [Integration with mcp-ui](#integration-with-mcp-ui)
+6. [Relationship to MCP Protocol](#relationship-to-mcp-protocol)
+7. [Relationship to mcp-ui](#relationship-to-mcp-ui)
 
 ---
 
@@ -28,14 +29,15 @@ MCP Widget Protocol (MWP) provides a standardized way to build secure, observabl
 
 ### Why MWP?
 
-MCP servers expose powerful tools (filesystem access, GitHub operations, database queries), but most implementations lack:
+MCP servers expose powerful tools (filesystem access, GitHub operations, database queries), but lack standardized external dashboards for:
 
-1. **Visual confirmation** - Users can't see what tools will be executed
-2. **Audit trails** - No visibility into what happened
-3. **Security boundaries** - Direct tool execution without confirmation
-4. **Consistent UX** - Every MCP server needs custom UI
+1. **Operational monitoring** - No centralized view of tool invocations across servers
+2. **Approval workflows** - Direct tool execution without user confirmation dialogs
+3. **Audit trails** - No visibility into what operations occurred when
+4. **Observability** - No real-time monitoring of MCP server activity
+5. **Control interfaces** - No standardized way to build admin/ops dashboards
 
-MWP solves these problems with a lightweight protocol that enhances existing solutions rather than replacing them.
+MWP provides a protocol for building these external monitoring and control dashboards. Note: This is separate from [mcp-ui](https://github.com/idosal/mcp-ui), which provides UI resources **in** MCP responses.
 
 ### How It Works
 
@@ -512,69 +514,138 @@ class GitHubWidget extends HTMLElement {
 
 ---
 
-## Integration with mcp-ui
+## Relationship to MCP Protocol
 
-### Compatibility Adapter
+### MWP is a Client-Side Layer
 
-MWP widgets can render in mcp-ui's iframe model using an adapter:
+**Critical Understanding:** MWP is a **visualization and observability layer** that sits on top of the Model Context Protocol without modifying it.
 
-```typescript
-// packages/mcp-ui-adapter/src/index.ts
-export function adaptMWPForMcpUI(widgetFactory: WidgetFactory): string {
-  // Generate standalone HTML that mcp-ui can load in iframe
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <script type="module">
-          import createWidget from '${widgetFactory.widget.element}';
+### What MWP Is NOT
 
-          // Mock dependencies for mcp-ui environment
-          const eventBus = window.parent.mcpUIEventBus;
-          const bridge = window.parent.mcpUIBridge;
+MWP does **not**:
+- Change the MCP protocol specification
+- Add new JSON-RPC methods to MCP
+- Require MCP servers to implement MWP-specific features
+- Modify how MCP tools, resources, or prompts work
+- Introduce new MCP primitives
 
-          const widget = createWidget({ EventBus: eventBus, MCPBridge: bridge }, {
-            serverName: window.parent.serverName,
-            capabilities: {}
-          });
+### What MWP IS
 
-          document.body.appendChild(document.createElement(widget.widget.element));
-          await widget.api.initialize();
-        </script>
-      </head>
-      <body></body>
-    </html>
-  `;
-}
+MWP **is**:
+- A standard for building dashboard widgets that visualize MCP operations
+- Purely client-side (runs in dashboard applications, not servers)
+- Protocol-agnostic (works with any standard MCP server)
+- Additive (adds observability without changing server behavior)
+
+### Layer Architecture
+
+```
+┌──────────────────────────────────────────────┐
+│     User's Dashboard Application             │
+│                                              │
+│  ┌────────────────────────────────────────┐ │
+│  │    MWP Layer (Client-side only)        │ │
+│  │  • Widgets (Web Components)            │ │
+│  │  • EventBus (audit logging)            │ │
+│  │  • MCPBridge (standard MCP client)     │ │
+│  └─────────────────┬──────────────────────┘ │
+└────────────────────┼───────────────────────-─┘
+                     │
+                     │ Standard MCP Protocol
+                     │ (unchanged JSON-RPC)
+                     ▼
+┌──────────────────────────────────────────────┐
+│         Standard MCP Servers                 │
+│    (No knowledge of MWP required)            │
+│                                              │
+│  • Implements standard MCP spec              │
+│  • No MWP-specific code needed               │
+│  • Works with any MCP client                 │
+└──────────────────────────────────────────────┘
 ```
 
-### Feature Comparison
+### Practical Implications
 
-| Feature | mcp-ui (iframe) | MWP (Web Components) |
-|---------|----------------|----------------------|
-| Isolation | ✅ iframe sandbox | ✅ Shadow DOM |
-| Styling | ❌ No theming | ✅ CSS custom properties |
-| Security | ❌ No confirmation | ✅ User confirmation |
-| Events | ❌ postMessage only | ✅ EventBus system |
-| Type Safety | ❌ Plain HTML | ✅ TypeScript |
-| Compatibility | ✅ Works everywhere | ✅ Modern browsers |
+**For MCP server developers:**
+- Your server doesn't need to know about MWP
+- Implement standard MCP protocol only
+- MWP widgets are written by widget authors (could be you, but separate concern)
 
-### Migration Path
+**For dashboard developers:**
+- Implement MWP host runtime (EventBus, MCPBridge, Configuration)
+- Load MWP widgets for the MCP servers you want to visualize
+- Communicate with MCP servers using standard MCP protocol
 
-**Phase 1: mcp-ui Enhancement**
-- Contribute security confirmation UI to mcp-ui
-- Add EventBus layer to mcp-ui's backend
-- Maintain backward compatibility
+**For widget developers:**
+- Build Web Components that visualize MCP server operations
+- Use MCPBridge to invoke tools, read resources (standard MCP operations)
+- Your widget is client-side only - no server changes required
 
-**Phase 2: Optional MWP Widgets**
-- Host can choose: iframe HTML OR MWP Web Component
-- MWP adapter translates to iframe when needed
-- Gradual migration, not forced replacement
+### Comparison to Other Layers
 
-**Phase 3: Ecosystem Convergence**
-- mcp-ui adopts MWP patterns (if beneficial)
-- MWP simplifies to match mcp-ui's simplicity
-- Single community, multiple implementation options
+| Layer | Purpose | Location | MCP Changes? |
+|-------|---------|----------|--------------|
+| **MCP Protocol** | Enable AI-server communication | JSON-RPC wire protocol | N/A - this is the base |
+| **mcp-ui** | Rich UI in responses | Server returns UIResource | No - uses MCP resources |
+| **MWP** | Dashboard observability | Client-side widgets | No - purely client-side |
+
+---
+
+## Relationship to mcp-ui
+
+**Important Distinction:** MWP and [mcp-ui](https://github.com/idosal/mcp-ui) serve **different purposes** and are **complementary**.
+
+### Different Use Cases
+
+**mcp-ui** - UI resources **IN** MCP responses:
+- MCP servers deliver interactive UI as part of response content
+- Server-side: Use `createUIResource()` to wrap UI in tool responses
+- Client-side: Render UI inline during conversations
+- Example: Weather server responds with interactive weather widget
+
+**MWP** - External dashboards **ABOUT** MCP servers:
+- Separate observability layer monitoring server operations
+- Dashboard shows real-time tool invocations across all servers
+- Provides approval workflows and audit logs
+- Example: Dashboard displaying GitHub tool activity, approval queue, error timeline
+
+### Complementary Architecture
+
+```
+┌─────────────────────────────────────────────────┐
+│           User's Application                    │
+│                                                 │
+│  ┌──────────────────┐    ┌──────────────────┐ │
+│  │  MCP Client      │    │  MWP Dashboard   │ │
+│  │  (conversation)  │    │  (monitoring)    │ │
+│  └────────┬─────────┘    └────────┬─────────┘ │
+│           │                       │            │
+│           ↓                       ↓            │
+│  ┌──────────────────────────────────────────┐ │
+│  │         MCP Server (GitHub)              │ │
+│  │  • Returns mcp-ui UIResources            │ │
+│  │  • Sends operation events to MWP         │ │
+│  └──────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────┘
+```
+
+### When to Use Each
+
+**Use mcp-ui when:**
+- You want MCP servers to return rich, visual responses
+- The UI is part of the response content itself
+- Users interact with response data directly
+
+**Use MWP when:**
+- You need external monitoring of MCP operations
+- You want approval workflows for dangerous tools
+- You need audit logs and observability
+- You're building control panels or admin dashboards
+
+**Use both when:**
+- Your MCP server provides rich responses (mcp-ui)
+- AND you need operational monitoring (MWP)
+- Example: GitHub MCP server returns issue browser (mcp-ui) + separate dashboard showing all API calls made (MWP)
 
 ---
 
@@ -670,11 +741,13 @@ describe('MyWidget', () => {
 
 ### Why not just use mcp-ui?
 
-We love mcp-ui! MWP adds:
-- Type safety for widget authors
-- User confirmation for security
-- Event system for observability
-- Optional enhancement, not replacement
+MWP and mcp-ui solve **different problems**:
+
+**mcp-ui** is for UI **in responses** - servers return rich, interactive content as part of their response (e.g., weather widget, GitHub issue viewer).
+
+**MWP** is for **external dashboards** - monitoring tool invocations, approval workflows, and observability across multiple servers (e.g., timeline of all GitHub API calls, approval queue for dangerous operations).
+
+They're complementary: use mcp-ui for rich responses, MWP for operational monitoring.
 
 ### Do I need to use Web Components?
 
@@ -686,7 +759,7 @@ With a browser extension that injects MWP runtime, yes. See `@mwp/extension`.
 
 ### How does this relate to Anthropic's MCP spec?
 
-MWP is a client-side visualization layer. It doesn't change MCP protocol at all - just provides standardized UI patterns on top.
+MWP is a **client-side visualization layer** that works with standard MCP servers without any protocol modifications. See the [Relationship to MCP Protocol](#relationship-to-mcp-protocol) section for details. TL;DR: MCP servers don't need to know about MWP - it's purely client-side dashboards.
 
 ---
 

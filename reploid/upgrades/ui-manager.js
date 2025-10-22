@@ -80,11 +80,11 @@ const UI = {
         }
         logProgressEvent(payload);
         updateDiffFromProgress(payload);
-        if (payload.source === 'paxos' && payload.event === 'analytics' && payload.payload) {
+        if (payload.source === 'arena' && payload.event === 'analytics' && payload.payload) {
             try {
-                EventBus.emit('paxos:analytics', payload.payload);
+                EventBus.emit('arena:analytics', payload.payload);
             } catch (err) {
-                logger.warn('[UI] Failed to emit paxos analytics event:', err);
+                logger.warn('[UI] Failed to emit arena analytics event:', err);
             }
         }
     };

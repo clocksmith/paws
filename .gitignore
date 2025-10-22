@@ -4,3 +4,4 @@ mwp/node_modules
 .paws/
 dist/
 .env
+.DS_Store

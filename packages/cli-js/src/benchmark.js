@@ -15,8 +15,8 @@ const path = require('path');
 const { Command } = require('commander');
 const chalk = require('chalk');
 
-// Import from paxos module
-const { PaxosOrchestrator, CompetitorConfig } = require('./paxos');
+// Import from arena module
+const { ArenaOrchestrator, CompetitorConfig } = require('./arena');
 
 /**
  * Metrics for a single benchmark run
@@ -93,8 +93,8 @@ class PerformanceBenchmark {
   async runBenchmark(competitors, task, contextBundle, verifyCmd) {
     console.log(chalk.cyan(`\n☇ Running benchmark: ${task.substring(0, 60)}...`));
 
-    // Use Paxos orchestrator to run competition
-    const orchestrator = new PaxosOrchestrator(
+    // Use Arena orchestrator to run competition
+    const orchestrator = new ArenaOrchestrator(
       task,
       contextBundle,
       verifyCmd,
@@ -344,7 +344,7 @@ async function main() {
   program
     .name('paws-benchmark')
     .description('PAWS Benchmark - Compare LLM performance on your codebase')
-    .option('--config <path>', 'Path to competitor config file', 'packages/core/configs/paxos_config.json')
+    .option('--config <path>', 'Path to competitor config file', 'packages/core/configs/arena_config.json')
     .option('--suite <path>', 'Path to benchmark suite JSON file')
     .option('--task <description>', 'Single task description (alternative to suite)')
     .option('--context <path>', 'Context bundle for single task')

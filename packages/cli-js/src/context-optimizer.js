@@ -456,7 +456,7 @@ async function main() {
 
   console.log(chalk.green(`\n☉ Context optimization complete!`));
   console.log('Use this optimized bundle with:');
-  console.log(chalk.cyan(`  node packages/cli-js/src/paxos.js "${task}" ${outputPath} --verify-cmd "npm test"`));
+  console.log(chalk.cyan(`  paws-arena "${task}" ${outputPath} --verify-cmd "npm test"`));
 
   process.exit(0);
 }

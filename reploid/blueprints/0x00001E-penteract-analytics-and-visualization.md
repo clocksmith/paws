@@ -1,13 +1,13 @@
 # Blueprint 0x000024: Penteract Analytics & Visualization
 
-**Objective:** Transform Paxos and Penteract competition telemetry into a real-time, human-auditable dashboard that guides approval decisions and future persona tuning.
+**Objective:** Transform Arena and Penteract competition telemetry into a real-time, human-auditable dashboard that guides approval decisions and future persona tuning.
 
 **Target Upgrade:** PAXA (`penteract-analytics.js`)
 
 
 **Prerequisites:** 0x000007, 0x00000D, 0x000019
 
-**Affected Artifacts:** `/js/cats.js`, `/js/dogs.js`, `/js/progress-bus.js`, `/py/paws_paxos.py`, `/reploid/upgrades/ui-manager.js`, `/reploid/upgrades/penteract-visualizer.js`
+**Affected Artifacts:** `/js/cats.js`, `/js/dogs.js`, `/js/progress-bus.js`, `/py/paws_arena.py`, `/reploid/upgrades/ui-manager.js`, `/reploid/upgrades/penteract-visualizer.js`
 
 ---
 
@@ -15,7 +15,7 @@
 Penteract-mode competitions generate multi-agent deliberations whose value hinges on transparency. Without instrumentation, approvers face opaque “winner” selections and cannot diagnose why specific personas succeed or fail. Streaming analytics aligns PAWS with 2025 context-engineering best practices: it preserves trust, accelerates iteration, and surfaces signals that inform persona curation, verification design, and upgrade prioritisation.
 
 ### 2. The Architectural Solution
-The solution is implemented as a **Web Component widget** that aggregates Paxos telemetry into actionable analytics for visualization.
+The solution is implemented as a **Web Component widget** that aggregates Arena telemetry into actionable analytics for visualization.
 
 ```javascript
 // Web Component class pattern
@@ -28,12 +28,12 @@ class PenteractAnalyticsWidget extends HTMLElement {
   connectedCallback() {
     this.render();
     this._updateListener = () => this.render();
-    EventBus.on('paxos:analytics:processed', this._updateListener, 'PenteractAnalyticsWidget');
+    EventBus.on('arena:analytics:processed', this._updateListener, 'PenteractAnalyticsWidget');
   }
 
   disconnectedCallback() {
     if (this._updateListener) {
-      EventBus.off('paxos:analytics:processed', this._updateListener);
+      EventBus.off('arena:analytics:processed', this._updateListener);
     }
   }
 
@@ -61,10 +61,10 @@ class PenteractAnalyticsWidget extends HTMLElement {
 Data flow:
 - `cats`/`dogs` publish structured events via **ProgressBus** (`.paws/cache/progress-stream.ndjson`).
 - **ProgressWatcher** tails the log and broadcasts `PROGRESS_EVENT` frames.
-- UI manager converts those into `progress:event` and `paxos:analytics` signals.
-- **PenteractAnalytics** listens to `EventBus.on('paxos:analytics')` and processes snapshots.
+- UI manager converts those into `progress:event` and `arena:analytics` signals.
+- **PenteractAnalytics** listens to `EventBus.on('arena:analytics')` and processes snapshots.
 - Widget renders consensus state (status badges, agent metrics) and historical analytics.
-- Paxos snapshots persist to `paxos-analytics.json` for historical insights.
+- Arena snapshots persist to `arena-analytics.json` for historical insights.
 - **Widget Protocol**
   - Exports `widget` metadata: `{ element, displayName, icon, category, order }`.
   - Provides `getStatus()` with 5 required fields for dashboard integration.
@@ -74,25 +74,25 @@ Data flow:
 1. **Web Component Registration**
    - Define `PenteractAnalyticsWidget` extending `HTMLElement`.
    - Register custom element: `customElements.define('penteract-analytics-widget', PenteractAnalyticsWidget)`.
-   - Export widget metadata: `{ element, displayName: 'Penteract Analytics', icon: '▤', category: 'paxos', order: 85 }`.
+   - Export widget metadata: `{ element, displayName: 'Penteract Analytics', icon: '▤', category: 'arena', order: 85 }`.
 2. **Lifecycle: connectedCallback**
    - Call `attachShadow({ mode: 'open' })` in constructor.
-   - Subscribe to `EventBus.on('paxos:analytics:processed')` for real-time updates.
+   - Subscribe to `EventBus.on('arena:analytics:processed')` for real-time updates.
    - Render Shadow DOM with analytics dashboard.
 3. **Lifecycle: disconnectedCallback**
    - Unsubscribe from EventBus listener to prevent memory leaks.
 4. **Module Initialization**
    - Call `init()` to load history from `/analytics/penteract-analytics.json`.
-   - Subscribe to `EventBus.on('paxos:analytics', handleSnapshot)`.
+   - Subscribe to `EventBus.on('arena:analytics', handleSnapshot)`.
    - Emit latest analytics if available.
 5. **Analytics Processing**
-   - Listen for `paxos:analytics` events with snapshot data.
+   - Listen for `arena:analytics` events with snapshot data.
    - Normalize agent data: status, execution_time, token_count, solution_path, error.
    - Analyze agents: totals (pass/fail/error), averages (tokens/time), fastest/most expensive.
    - Build recommendations based on consensus status and metrics.
    - Enrich snapshot with metrics and recommendations.
    - Store in history (last 20 runs) and persist to StateManager.
-   - Emit `paxos:analytics:processed` event.
+   - Emit `arena:analytics:processed` event.
 6. **Shadow DOM Rendering**
    - Render inline `<style>` with monospace font and cyberpunk theme.
    - Display controls: "Clear History" button.
@@ -114,7 +114,7 @@ Data flow:
    - Limit to 20 most recent runs.
    - Clear history button empties array and persists.
 10. **Integration Points**
-    - Emit telemetry from `cats`, `dogs`, Paxos orchestrator.
+    - Emit telemetry from `cats`, `dogs`, Arena orchestrator.
     - Transport via ProgressWatcher.
     - Bridge to EventBus in UI manager.
     - Widget auto-updates on new analytics events.

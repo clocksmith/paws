@@ -8,11 +8,82 @@ Version 1.0.0 | [Full Specification](./specification/MWP.md)
 
 ## What & Why
 
-MWP standardizes how to build **visual dashboards** for Anthropic's [Model Context Protocol](https://modelcontextprotocol.io/) servers. It transforms MCP's headless backend into an interactive, observable UI layer while enforcing security controls.
+MWP standardizes how to build **visual dashboards** for Anthropic's [Model Context Protocol](https://modelcontextprotocol.io/) servers. It provides an external observability and control layer for monitoring MCP server operations in real-time.
 
-**The Problem:** MCP servers expose powerful tools (GitHub issue creation, Slack messaging, database queries) but have no standard visual interface.
+**The Problem:** MCP servers expose powerful tools (GitHub issue creation, Slack messaging, database queries) but lack standardized dashboards for monitoring operations, approving tool invocations, and auditing activity across multiple servers.
 
-**The Solution:** A protocol for building secure Web Component widgets that render MCP primitives (tools, resources, prompts) in any dashboard application.
+**The Solution:** A protocol for building secure Web Component widgets that provide external dashboards showing real-time MCP server activity, tool invocation history, approval workflows, and operational metrics.
+
+---
+
+## Relationship to mcp-ui
+
+**Important:** MWP and [mcp-ui](https://github.com/idosal/mcp-ui) solve **different problems** and are **complementary**, not competitors.
+
+**mcp-ui**: UI resources delivered **IN** MCP responses
+- MCP servers return rich, interactive UI as part of their response content
+- Users see visual responses inline during conversations
+- Example: "Show weather" → Server responds with interactive weather widget
+
+**MWP**: External dashboards **ABOUT** MCP servers
+- Separate observability layer watching MCP server operations
+- Real-time monitoring of tool invocations across all servers
+- Approval workflows for dangerous operations
+- Example: Dashboard showing timeline of all GitHub tool calls, approval queue, error logs
+
+**Use together:** An MCP server can use mcp-ui to deliver rich responses while having an MWP dashboard for operational monitoring.
+
+---
+
+## Relationship to MCP Protocol
+
+**Important:** MWP is a **client-side visualization layer** that works with the [Model Context Protocol](https://modelcontextprotocol.io/) without modifying it.
+
+### MWP Does NOT:
+- ❌ Modify or extend the MCP protocol specification
+- ❌ Require changes to MCP servers
+- ❌ Add new MCP primitives (tools, resources, prompts)
+- ❌ Change how MCP JSON-RPC communication works
+
+### MWP DOES:
+- ✅ Provide client-side dashboards for visualizing MCP operations
+- ✅ Work with **any standard MCP server** (no modifications needed)
+- ✅ Add observability layer on top of existing MCP communication
+- ✅ Standardize how dashboard applications render MCP server activity
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────┐
+│           Dashboard Application                 │
+│         (MWP Host - Client-side)                │
+│                                                 │
+│  ┌──────────────────────────────────────────┐  │
+│  │  MWP Widgets (Web Components)            │  │
+│  │  • GitHub Widget                         │  │
+│  │  • Slack Widget                          │  │
+│  │  • Filesystem Widget                     │  │
+│  └──────────────────┬───────────────────────┘  │
+│                     │                           │
+│  ┌──────────────────▼───────────────────────┐  │
+│  │  MCPBridge (Standard MCP Client)         │  │
+│  │  • Speaks standard MCP JSON-RPC          │  │
+│  │  • No protocol modifications             │  │
+│  └──────────────────┬───────────────────────┘  │
+└────────────────────┼────────────────────────────┘
+                     │ Standard MCP Protocol
+                     │ (JSON-RPC over stdio/HTTP)
+                     ▼
+┌─────────────────────────────────────────────────┐
+│         Standard MCP Servers                    │
+│    (No MWP knowledge required)                  │
+│  • GitHub MCP Server                            │
+│  • Slack MCP Server                             │
+│  • Any MCP-compliant server                     │
+└─────────────────────────────────────────────────┘
+```
+
+**Key Point:** MCP servers don't know or care about MWP. They communicate using standard MCP protocol. MWP widgets are purely client-side components that visualize the MCP interactions happening in the dashboard application.
 
 ---
 

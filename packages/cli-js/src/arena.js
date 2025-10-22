@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * PAWS Paxos - Multi-Agent Competitive Verification Orchestrator
+ * PAWS Arena - Multi-Agent Competitive Verification Orchestrator
  *
  * Runs multiple LLM agents in parallel on the same task with:
  * - Isolated git worktree environments
  * - Automated test-driven verification
- * - Consensus-based solution selection
+ * - Test-driven solution selection (not Paxos consensus)
  * - Performance metrics and benchmarking
  */
 
@@ -196,9 +196,9 @@ class LLMClient {
 }
 
 /**
- * Orchestrates multi-agent competition with Paxos-style consensus
+ * Orchestrates multi-agent competition with test-driven selection
  */
-class PaxosOrchestrator {
+class ArenaOrchestrator {
   constructor(task, contextBundle, verifyCmd, outputDir = 'workspace/competition') {
     this.task = task;
     this.contextBundle = contextBundle;
@@ -370,7 +370,7 @@ class PaxosOrchestrator {
    */
   async verifySolution(competitorName, solutionPath) {
     // Create a temporary worktree for verification
-    const sessionId = `paxos-${competitorName}-${uuidv4().substring(0, 6)}`;
+    const sessionId = `arena-${competitorName}-${uuidv4().substring(0, 6)}`;
     const worktreePath = `.paws_sessions/${sessionId}`;
 
     try {
@@ -463,7 +463,7 @@ class PaxosOrchestrator {
     try {
       const cacheDir = '.paws/cache';
       await fs.mkdir(cacheDir, { recursive: true });
-      const analyticsPath = path.join(cacheDir, 'paxos-analytics.json');
+      const analyticsPath = path.join(cacheDir, 'arena-analytics.json');
 
       const entry = {
         task: this.task,
@@ -506,7 +506,7 @@ class PaxosOrchestrator {
       // Progress stream
       const progressStream = path.join(cacheDir, 'progress-stream.ndjson');
       const progressLine = JSON.stringify({
-        source: 'paxos',
+        source: 'arena',
         event: 'analytics',
         timestamp: entry.timestamp,
         payload: entry
@@ -514,7 +514,7 @@ class PaxosOrchestrator {
 
       await fs.appendFile(progressStream, progressLine + '\n');
     } catch (err) {
-      console.log(chalk.gray(`[analytics] Failed to record Paxos analytics: ${err}`));
+      console.log(chalk.gray(`[analytics] Failed to record Arena analytics: ${err}`));
     }
   }
 
@@ -589,12 +589,12 @@ async function main() {
   const program = new Command();
 
   program
-    .name('paws-paxos')
-    .description('PAWS Paxos - Multi-Agent Competitive Verification Orchestrator')
+    .name('paws-arena')
+    .description('PAWS Arena - Multi-Agent Competitive Verification Orchestrator')
     .argument('[task]', 'The detailed task description for the AI agents')
     .argument('[context_bundle]', 'Path to the cats.md context bundle')
     .option('--verify-cmd <command>', 'Shell command to run for verification (e.g., "npm test")')
-    .option('--config <path>', 'Path to competitor config file', 'packages/core/configs/paxos_config.json')
+    .option('--config <path>', 'Path to competitor config file', 'packages/core/configs/arena_config.json')
     .option('--output-dir <path>', 'Directory to store results', 'workspace/competition')
     .option('--sequential', 'Run competitors sequentially instead of in parallel')
     .parse(process.argv);
@@ -630,7 +630,7 @@ async function main() {
   rl.close();
 
   // Create orchestrator
-  const orchestrator = new PaxosOrchestrator(
+  const orchestrator = new ArenaOrchestrator(
     task,
     contextBundle,
     verifyCmd,
@@ -686,7 +686,7 @@ module.exports = {
   CompetitorConfig,
   CompetitionResult,
   LLMClient,
-  PaxosOrchestrator
+  ArenaOrchestrator
 };
 
 // Run if called directly
