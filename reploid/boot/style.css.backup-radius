@@ -111,7 +111,7 @@ body {
   padding: 15px 20px;
   background: rgba(0, 255, 255, 0.05);
   border: 1px solid var(--color-border);
-  border-radius: 0;
+  border-radius: 4px;
   margin-bottom: 15px;
   flex-wrap: wrap;
 }
@@ -189,7 +189,7 @@ body {
 .error-message {
   background: rgba(244, 67, 54, 0.1);
   border: 1px solid rgba(244, 67, 54, 0.5);
-  border-radius: 0;
+  border-radius: 4px;
   padding: 15px;
   margin-bottom: 20px;
   text-align: left;
@@ -210,7 +210,7 @@ body {
 .error-message code {
   background: rgba(0, 0, 0, 0.3);
   padding: 2px 6px;
-  border-radius: 0;
+  border-radius: 3px;
   color: var(--color-primary);
   font-family: 'Courier New', monospace;
 }
@@ -244,7 +244,7 @@ body {
 .modal-content {
   background: var(--color-bg-primary);
   border: 2px solid var(--color-primary);
-  border-radius: 0;
+  border-radius: 6px;
   max-width: 650px;
   width: 100%;
   max-height: 85vh;
@@ -261,12 +261,12 @@ body {
 
 .modal-content::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 0;
+  border-radius: 4px;
 }
 
 .modal-content::-webkit-scrollbar-thumb {
   background: var(--color-primary);
-  border-radius: 0;
+  border-radius: 4px;
 }
 
 .modal-content::-webkit-scrollbar-thumb:hover {
@@ -395,7 +395,7 @@ body {
   color: var(--color-text-primary);
   font-family: 'Courier New', monospace;
   font-size: 0.9em;
-  border-radius: 0;
+  border-radius: 4px;
   box-sizing: border-box;
 }
 
@@ -442,7 +442,7 @@ body {
   color: var(--color-text-primary);
   font-family: var(--font-family);
   font-size: 0.95em;
-  border-radius: 0;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s;
 }
@@ -490,7 +490,7 @@ body {
   padding: 15px;
   background: rgba(0, 255, 255, 0.03);
   border: 1px solid var(--color-border);
-  border-radius: 0;
+  border-radius: 4px;
   transition: opacity 0.2s ease-out;
 }
 
@@ -505,7 +505,7 @@ body {
   padding: 12px 15px;
   background: rgba(255, 215, 0, 0.1);
   border: 1px solid rgba(255, 215, 0, 0.3);
-  border-radius: 0;
+  border-radius: 4px;
   color: var(--color-secondary);
   font-size: 0.9em;
   line-height: 1.5;
@@ -526,7 +526,7 @@ body {
   padding: 15px;
   background: rgba(0, 255, 255, 0.03);
   border: 1px solid var(--color-border);
-  border-radius: 0;
+  border-radius: 4px;
 }
 
 .settings-section-title {
@@ -630,7 +630,7 @@ body {
   padding: 8px 14px;
   background: rgba(60, 60, 60, 0.5);
   border: 1px solid rgba(100, 100, 100, 0.3);
-  border-radius: 999px;
+  border-radius: 16px;
   color: #aaa;
   font-size: 12px;
   font-family: var(--font-family);
@@ -707,7 +707,7 @@ body {
   padding: 12px;
   background: rgba(40, 40, 40, 0.4);
   border: 1px solid rgba(80, 80, 80, 0.3);
-  border-radius: 0;
+  border-radius: 8px;
   transition: all 0.2s ease;
 }
 
@@ -724,7 +724,7 @@ body {
   text-align: center;
   background: rgba(80, 80, 80, 0.3);
   padding: 4px 6px;
-  border-radius: 0;
+  border-radius: 4px;
 }
 
 .module-info {
@@ -792,7 +792,7 @@ body {
   padding: 15px 20px;
   background: rgba(0, 255, 255, 0.03);
   border: 1px solid var(--color-border);
-  border-radius: 0;
+  border-radius: 4px;
   margin-bottom: 20px;
 }
 
@@ -852,7 +852,7 @@ body {
   right: 10px;
   font-size: 0.65em;
   padding: 3px 8px;
-  border-radius: 0;
+  border-radius: 3px;
   font-weight: bold;
   text-transform: uppercase;
   cursor: help;
@@ -876,7 +876,7 @@ body {
   background: #000;
   color: var(--color-primary);
   padding: 5px 10px;
-  border-radius: 0;
+  border-radius: 3px;
   font-size: 1.2em;
   white-space: nowrap;
   opacity: 0;
@@ -904,7 +904,7 @@ body {
   background: #000;
   color: var(--color-secondary);
   padding: 5px 10px;
-  border-radius: 0;
+  border-radius: 3px;
   font-size: 1.2em;
   white-space: nowrap;
   opacity: 0;
@@ -948,7 +948,7 @@ body {
   color: var(--color-text-primary);
   font-family: var(--font-family);
   font-size: 0.85em;
-  border-radius: 0;
+  border-radius: 3px;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -1118,7 +1118,7 @@ body {
   padding: 20px;
   background: rgba(0, 255, 255, 0.03);
   border: 1px solid var(--color-border);
-  border-radius: 0;
+  border-radius: 4px;
 }
 
 .advanced-mode-content h3 {
@@ -1159,7 +1159,7 @@ body {
   padding: 10px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid var(--color-border);
-  border-radius: 0;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -1460,7 +1460,7 @@ body {
 .boot-mode-btn {
   background: rgba(40, 40, 40, 0.4);
   border: 2px solid var(--color-border);
-  border-radius: 0;
+  border-radius: 8px;
   padding: 20px 50px 20px 20px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -1564,7 +1564,7 @@ body {
   height: 18px;
   background: transparent;
   border: 2px solid var(--color-border);
-  border-radius: 0;
+  border-radius: 3px;
   transition: all 0.1s ease;
 }
 
@@ -1630,7 +1630,7 @@ body {
 .agent-setup-card {
   background: #101013;
   border: 1px solid #1f1f23;
-  border-radius: 0;
+  border-radius: 12px;
   padding: 18px 22px;
   margin-bottom: 24px;
   box-shadow: 0 8px 24px rgba(8, 8, 12, 0.45);
@@ -1802,7 +1802,7 @@ body {
   z-index: 10000;
   background: #111118;
   border: 1px solid #2d2d3d;
-  border-radius: 0;
+  border-radius: 12px;
   padding: 16px;
   width: min(280px, 90vw);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
@@ -1882,7 +1882,7 @@ body {
 .info-card {
   background: #12121a;
   border: 1px solid #1f1f23;
-  border-radius: 0;
+  border-radius: 12px;
   width: min(420px, 90vw);
   box-shadow: 0 12px 40px rgba(5, 5, 10, 0.55);
   display: flex;
@@ -1921,7 +1921,7 @@ body {
   margin-top: 24px;
   background: #111118;
   border: 1px dashed #2d2d3d;
-  border-radius: 0;
+  border-radius: 12px;
   padding: 16px;
   display: grid;
   gap: 12px;
@@ -1942,7 +1942,7 @@ body {
   border: 1px solid #343446;
   color: #d0d0e0;
   padding: 8px 14px;
-  border-radius: 0;
+  border-radius: 6px;
   cursor: pointer;
 }
 .secondary-btn:hover {
@@ -1981,7 +1981,7 @@ body {
 .directory-filter {
   background: #151521;
   border: 1px solid #2d2d3d;
-  border-radius: 0;
+  border-radius: 20px;
   color: #9fa0bb;
   padding: 5px 12px;
   cursor: pointer;
@@ -2006,7 +2006,7 @@ body {
   border: 1px solid #343446;
   color: #b8b8c8;
   padding: 6px 14px;
-  border-radius: 0;
+  border-radius: 20px;
   cursor: pointer;
 }
 .directory-tab.active {
@@ -2019,7 +2019,7 @@ body {
   flex: 1;
   background: #111118;
   border: 1px solid #292933;
-  border-radius: 0;
+  border-radius: 8px;
   padding: 8px 12px;
   color: #f4f4ff;
 }
@@ -2032,7 +2032,7 @@ body {
 .directory-item {
   background: #111118;
   border: 1px solid #1f1f29;
-  border-radius: 0;
+  border-radius: 10px;
   padding: 12px 14px;
 }
 .directory-item-header {
@@ -2102,7 +2102,7 @@ body {
   width: 18px;
   height: 18px;
   border: 1px solid #3a3a45;
-  border-radius: 0;
+  border-radius: 4px;
   position: relative;
 }
 .setting-checkbox input:checked + .setting-checkbox-box {
@@ -2125,7 +2125,7 @@ body {
   margin-top: 12px;
   background: #111118;
   border: 1px solid #1f1f29;
-  border-radius: 0;
+  border-radius: 10px;
   padding: 12px;
   display: grid;
   gap: 12px;
@@ -2145,7 +2145,7 @@ body {
   width: 100%;
   background: #0d0d14;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 6px;
   color: #f4f4ff;
   padding: 8px 10px;
 }
@@ -2168,7 +2168,7 @@ body {
 .mode-recommendation {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
   border: 1px solid #4fc3f7;
-  border-radius: 0;
+  border-radius: 8px;
   padding: 16px;
   margin-bottom: 24px;
 }
@@ -2209,7 +2209,7 @@ body {
 .mode-card {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
   border: 2px solid #252532;
-  border-radius: 0;
+  border-radius: 12px;
   padding: 20px;
   transition: all 0.3s ease;
   cursor: pointer;
@@ -2304,7 +2304,7 @@ body {
   border: 1px solid #4fc3f7;
   color: #4fc3f7;
   padding: 10px;
-  border-radius: 0;
+  border-radius: 6px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -2327,7 +2327,7 @@ body {
   padding: 6px 10px;
   background: rgba(79, 195, 247, 0.1);
   border-left: 3px solid #4fc3f7;
-  border-radius: 0;
+  border-radius: 4px;
   font-size: 12px;
   display: flex;
   align-items: center;
@@ -2359,7 +2359,7 @@ body {
   padding: 4px 8px;
   background: #4fc3f7;
   color: #000;
-  border-radius: 0;
+  border-radius: 4px;
   font-size: 11px;
   font-weight: bold;
   text-transform: uppercase;
@@ -2390,7 +2390,7 @@ body {
   padding: 12px 16px;
   background: rgba(255, 193, 7, 0.1);
   border: 1px solid rgba(255, 193, 7, 0.3);
-  border-radius: 0;
+  border-radius: 8px;
   margin-bottom: 20px;
 }
 
@@ -2416,7 +2416,7 @@ body {
 .alert-content code {
   background: rgba(0, 0, 0, 0.3);
   padding: 2px 6px;
-  border-radius: 0;
+  border-radius: 3px;
   font-family: 'Courier New', monospace;
   color: #4fc3f7;
 }
@@ -2425,7 +2425,7 @@ body {
 .advanced-options-toggle {
   margin-top: 20px;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 8px;
   padding: 0;
   background: rgba(0, 0, 0, 0.2);
 }
@@ -2469,7 +2469,7 @@ body {
   padding: 12px 16px;
   background: rgba(255, 193, 7, 0.1);
   border-left: 3px solid #ffc107;
-  border-radius: 0;
+  border-radius: 4px;
   margin-bottom: 20px;
 }
 
@@ -2498,7 +2498,7 @@ body {
 .proxy-prerequisites code {
   background: rgba(0, 0, 0, 0.3);
   padding: 2px 6px;
-  border-radius: 0;
+  border-radius: 3px;
   font-family: 'Courier New', monospace;
   color: #4fc3f7;
 }
@@ -2522,7 +2522,7 @@ body {
 .radio-card {
   position: relative;
   border: 2px solid #252532;
-  border-radius: 0;
+  border-radius: 8px;
   padding: 16px;
   background: rgba(0, 0, 0, 0.2);
   transition: all 0.2s;
@@ -2589,7 +2589,7 @@ body {
   padding: 16px;
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 8px;
 }
 
 .config-field {
@@ -2616,7 +2616,7 @@ body {
   border: 1px solid #252532;
   color: #e0e0f0;
   padding: 8px 12px;
-  border-radius: 0;
+  border-radius: 6px;
   font-size: 13px;
   font-family: 'Courier New', monospace;
   transition: border-color 0.2s;
@@ -2647,7 +2647,7 @@ body {
   padding: 12px 16px;
   background: linear-gradient(135deg, #4fc3f7 0%, #4ec9b0 100%);
   border: none;
-  border-radius: 0;
+  border-radius: 6px;
   color: #000;
   font-size: 14px;
   font-weight: 600;
@@ -2670,7 +2670,7 @@ body {
 .checkbox-card {
   position: relative;
   border: 2px solid #252532;
-  border-radius: 0;
+  border-radius: 8px;
   padding: 16px;
   background: rgba(0, 0, 0, 0.2);
   transition: all 0.2s;
@@ -2736,7 +2736,7 @@ body {
   padding: 10px 16px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 6px;
   color: #8e8ea6;
   font-size: 13px;
   cursor: pointer;
@@ -2768,7 +2768,7 @@ body {
   border: 1px solid #252532;
   color: #8e8ea6;
   padding: 6px 12px;
-  border-radius: 0;
+  border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
@@ -2789,7 +2789,7 @@ body {
 .mode-config-content {
   background: #16162a;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 8px;
   padding: 20px;
 }
 
@@ -2800,7 +2800,7 @@ body {
   gap: 12px;
   padding: 12px;
   background: #1a1a2e;
-  border-radius: 0;
+  border-radius: 6px;
   margin-bottom: 16px;
 }
 
@@ -2839,7 +2839,7 @@ body {
   padding: 12px;
   background: #1a1a2e;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 6px;
   margin-bottom: 8px;
   cursor: pointer;
   transition: all 0.2s;
@@ -2887,7 +2887,7 @@ body {
 .provider-card {
   background: #1a1a2e;
   border: 2px solid #252532;
-  border-radius: 0;
+  border-radius: 8px;
   padding: 16px;
   cursor: pointer;
   transition: all 0.2s;
@@ -2921,7 +2921,7 @@ body {
 
 .provider-status-badge {
   padding: 4px 10px;
-  border-radius: 0;
+  border-radius: 12px;
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -2947,7 +2947,7 @@ body {
   width: 100%;
   background: #0d0d14;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 6px;
   color: #f4f4ff;
   padding: 8px 10px;
   font-size: 13px;
@@ -2958,7 +2958,7 @@ body {
   width: 100%;
   background: #0d0d14;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 6px;
   color: #f4f4ff;
   padding: 8px 10px;
   font-size: 13px;
@@ -2972,7 +2972,7 @@ body {
 .cost-estimate {
   background: rgba(255, 183, 77, 0.1);
   border: 1px solid rgba(255, 183, 77, 0.3);
-  border-radius: 0;
+  border-radius: 6px;
   padding: 12px;
   margin-top: 16px;
 }
@@ -3001,7 +3001,7 @@ body {
 .mode-warning {
   background: rgba(244, 135, 113, 0.1);
   border: 1px solid rgba(244, 135, 113, 0.3);
-  border-radius: 0;
+  border-radius: 6px;
   padding: 12px 16px;
   margin: 16px 0;
 }
@@ -3021,7 +3021,7 @@ body {
 .mode-info {
   background: rgba(79, 195, 247, 0.1);
   border: 1px solid rgba(79, 195, 247, 0.3);
-  border-radius: 0;
+  border-radius: 6px;
   padding: 12px 16px;
   margin: 16px 0;
 }
@@ -3040,7 +3040,7 @@ body {
   padding: 4px 10px;
   background: rgba(79, 195, 247, 0.1);
   border: 1px solid rgba(79, 195, 247, 0.3);
-  border-radius: 0;
+  border-radius: 12px;
   font-size: 11px;
   font-weight: 600;
   color: #4fc3f7;
@@ -3127,7 +3127,7 @@ body {
 .tool-card {
   background: #16162a;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 8px;
   padding: 16px;
   margin-bottom: 12px;
   transition: all 0.2s;
@@ -3219,14 +3219,14 @@ body {
   flex: 1;
   height: 6px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 0;
+  border-radius: 3px;
   overflow: hidden;
 }
 
 .tool-progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #4fc3f7, #4ec9b0);
-  border-radius: 0;
+  border-radius: 3px;
   transition: width 0.3s ease;
   animation: shimmer 2s ease-in-out infinite;
 }
@@ -3254,7 +3254,7 @@ body {
   width: 100%;
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 4px;
   padding: 8px 12px;
   display: flex;
   align-items: center;
@@ -3325,7 +3325,7 @@ body {
 .tool-error {
   background: #0d0d1a;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 4px;
   padding: 12px;
   font-size: 12px;
   font-family: 'Courier New', monospace;
@@ -3359,7 +3359,7 @@ body {
 .tool-execution-panel::-webkit-scrollbar-thumb,
 .tool-section-content::-webkit-scrollbar-thumb {
   background: #252532;
-  border-radius: 0;
+  border-radius: 3px;
 }
 
 .tool-execution-panel::-webkit-scrollbar-thumb:hover,
@@ -3384,7 +3384,7 @@ body {
 .hitl-master-section {
   background: linear-gradient(135deg, #16162a 0%, #1a1a2e 100%);
   border: 2px solid #4fc3f7;
-  border-radius: 0;
+  border-radius: 12px;
   padding: 20px;
   margin-bottom: 24px;
   box-shadow: 0 4px 16px rgba(79, 195, 247, 0.2);
@@ -3418,7 +3418,7 @@ body {
   gap: 8px;
   background: rgba(0, 0, 0, 0.3);
   padding: 4px;
-  border-radius: 0;
+  border-radius: 8px;
 }
 
 .hitl-mode-btn {
@@ -3428,7 +3428,7 @@ body {
   padding: 10px 16px;
   background: transparent;
   border: 2px solid transparent;
-  border-radius: 0;
+  border-radius: 6px;
   color: #8e8ea6;
   cursor: pointer;
   transition: all 0.2s;
@@ -3457,14 +3457,14 @@ body {
   font-size: 13px;
   padding: 12px;
   background: rgba(0, 0, 0, 0.2);
-  border-radius: 0;
+  border-radius: 6px;
 }
 
 /* Modules Section */
 .hitl-modules-section {
   background: #16162a;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
 }
@@ -3489,7 +3489,7 @@ body {
   color: #8e8ea6;
   background: rgba(0, 0, 0, 0.3);
   padding: 4px 8px;
-  border-radius: 0;
+  border-radius: 4px;
 }
 
 /* Module Groups */
@@ -3508,7 +3508,7 @@ body {
   margin-bottom: 12px;
   padding: 8px 12px;
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 0;
+  border-radius: 6px;
 }
 
 .hitl-group-icon {
@@ -3525,7 +3525,7 @@ body {
 .hitl-module-card {
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 6px;
   padding: 12px;
   margin-bottom: 8px;
   transition: all 0.2s;
@@ -3578,7 +3578,7 @@ body {
   padding: 2px 6px;
   background: rgba(255, 193, 7, 0.2);
   color: #ffc107;
-  border-radius: 0;
+  border-radius: 3px;
   font-weight: 600;
   text-transform: uppercase;
 }
@@ -3602,7 +3602,7 @@ body {
   border: 1px solid #252532;
   color: #e0e0f0;
   padding: 6px 10px;
-  border-radius: 0;
+  border-radius: 4px;
   font-size: 12px;
   cursor: pointer;
   transition: border-color 0.2s;
@@ -3643,7 +3643,7 @@ body {
   padding: 10px 16px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 6px;
   color: #8e8ea6;
   cursor: pointer;
   transition: all 0.2s;
@@ -3661,7 +3661,7 @@ body {
   padding: 16px;
   background: #16162a;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 8px;
 }
 
 .hitl-queue-header {
@@ -3685,7 +3685,7 @@ body {
   color: #fff;
   background: #f44336;
   padding: 4px 8px;
-  border-radius: 0;
+  border-radius: 12px;
   min-width: 24px;
   text-align: center;
 }
@@ -3705,7 +3705,7 @@ body {
 .hitl-approval-item {
   background: rgba(244, 67, 54, 0.1);
   border: 1px solid #f44336;
-  border-radius: 0;
+  border-radius: 6px;
   padding: 12px;
   margin-bottom: 12px;
   animation: pulse-approval 2s ease-in-out infinite;
@@ -3747,7 +3747,7 @@ body {
   margin-bottom: 8px;
   padding: 8px;
   background: rgba(0, 0, 0, 0.2);
-  border-radius: 0;
+  border-radius: 4px;
 }
 
 .hitl-approval-module,
@@ -3765,7 +3765,7 @@ body {
   width: 100%;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 4px;
   padding: 6px 10px;
   color: #8e8ea6;
   cursor: pointer;
@@ -3785,7 +3785,7 @@ body {
   margin-top: 8px;
   background: #0d0d1a;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 4px;
   padding: 8px;
   font-size: 11px;
   color: #e0e0f0;
@@ -3802,7 +3802,7 @@ body {
 .hitl-reject-btn {
   flex: 1;
   padding: 8px 12px;
-  border-radius: 0;
+  border-radius: 4px;
   border: none;
   cursor: pointer;
   font-size: 13px;
@@ -3839,7 +3839,7 @@ body {
 
 .hitl-control-panel::-webkit-scrollbar-thumb {
   background: #252532;
-  border-radius: 0;
+  border-radius: 3px;
 }
 
 .hitl-control-panel::-webkit-scrollbar-thumb:hover {
@@ -3870,7 +3870,7 @@ body {
   padding: 16px;
   background: #16162a;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 8px;
 }
 
 .dashboard-title {
@@ -3890,7 +3890,7 @@ body {
   color: #8e8ea6;
   background: rgba(0, 0, 0, 0.3);
   padding: 4px 8px;
-  border-radius: 0;
+  border-radius: 4px;
 }
 
 /* Summary Stats */
@@ -3944,7 +3944,7 @@ body {
   padding: 8px 12px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 6px;
   color: #8e8ea6;
   cursor: pointer;
   transition: all 0.2s;
@@ -3969,7 +3969,7 @@ body {
   padding: 6px 12px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 6px;
   color: #8e8ea6;
   cursor: pointer;
   transition: all 0.2s;
@@ -4013,7 +4013,7 @@ body {
 .module-widget-card {
   background: #16162a;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 8px;
   padding: 12px;
   transition: all 0.2s;
 }
@@ -4089,7 +4089,7 @@ body {
 .widget-hitl-badge {
   font-size: 10px;
   padding: 3px 6px;
-  border-radius: 0;
+  border-radius: 3px;
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -4110,7 +4110,7 @@ body {
   padding: 4px 8px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 4px;
   color: #8e8ea6;
   cursor: pointer;
   transition: all 0.2s;
@@ -4137,7 +4137,7 @@ body {
   font-size: 12px;
   padding: 6px 10px;
   background: rgba(0, 0, 0, 0.2);
-  border-radius: 0;
+  border-radius: 4px;
 }
 
 .status-dot {
@@ -4197,7 +4197,7 @@ body {
   padding: 8px;
   background: rgba(0, 0, 0, 0.2);
   border-left: 2px solid #252532;
-  border-radius: 0;
+  border-radius: 4px;
   color: #8e8ea6;
   line-height: 1.4;
 }
@@ -4228,7 +4228,7 @@ body {
   padding: 6px 10px;
   background: rgba(79, 195, 247, 0.1);
   border: 1px solid #4fc3f7;
-  border-radius: 0;
+  border-radius: 4px;
   color: #4fc3f7;
   cursor: pointer;
   transition: all 0.2s;
@@ -4253,7 +4253,7 @@ body {
 
 .module-dashboard::-webkit-scrollbar-thumb {
   background: #252532;
-  border-radius: 0;
+  border-radius: 3px;
 }
 
 .module-dashboard::-webkit-scrollbar-thumb:hover {
@@ -4268,7 +4268,7 @@ body {
 .auto-detect-banner {
   background: rgba(0, 255, 255, 0.05);
   border: 1px solid rgba(0, 255, 255, 0.2);
-  border-radius: 0;
+  border-radius: 8px;
   padding: 16px;
   margin-bottom: 24px;
 }
@@ -4312,7 +4312,7 @@ body {
 .selected-models-list {
   min-height: 120px;
   border: 2px dashed #252532;
-  border-radius: 0;
+  border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
   display: flex;
@@ -4342,7 +4342,7 @@ body {
 .model-card {
   background: rgba(13, 13, 20, 0.8);
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 6px;
   padding: 12px 16px;
   display: flex;
   align-items: center;
@@ -4394,7 +4394,7 @@ body {
   color: #8e8ea6;
   cursor: pointer;
   padding: 6px 10px;
-  border-radius: 0;
+  border-radius: 4px;
   transition: all 0.2s;
   font-size: 14px;
 }
@@ -4415,7 +4415,7 @@ body {
   padding: 12px;
   background: rgba(0, 255, 255, 0.1);
   border: 2px dashed #0ff;
-  border-radius: 0;
+  border-radius: 6px;
   color: #0ff;
   font-size: 14px;
   cursor: pointer;
@@ -4433,7 +4433,7 @@ body {
   padding: 16px;
   background: rgba(255, 215, 0, 0.05);
   border: 1px solid rgba(255, 215, 0, 0.2);
-  border-radius: 0;
+  border-radius: 8px;
 }
 
 .consensus-section label {
@@ -4449,7 +4449,7 @@ body {
   padding: 10px;
   background: #0d0d14;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 6px;
   color: #f4f4ff;
   font-size: 14px;
 }
@@ -4472,7 +4472,7 @@ body {
   padding: 12px 24px;
   background: linear-gradient(135deg, #0ff 0%, #00d4ff 100%);
   border: none;
-  border-radius: 0;
+  border-radius: 6px;
   color: #0a0a14;
   font-size: 14px;
   font-weight: 600;
@@ -4494,7 +4494,7 @@ body {
   padding: 12px 24px;
   background: transparent;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 6px;
   color: #8e8ea6;
   font-size: 14px;
   cursor: pointer;
@@ -4605,7 +4605,7 @@ body {
   padding: 12px;
   background: #0d0d14;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 6px;
   color: #f4f4ff;
   font-size: 14px;
 }
@@ -4651,7 +4651,7 @@ body {
   padding: 16px;
   background: rgba(255, 68, 68, 0.1);
   border: 1px solid rgba(255, 68, 68, 0.3);
-  border-radius: 0;
+  border-radius: 4px;
   color: #ff4444;
   font-size: 13px;
   margin: 0;
@@ -4661,7 +4661,7 @@ body {
 .model-option {
   background: #0d0d14;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 6px;
   padding: 12px;
   cursor: pointer;
   transition: all 0.2s;
@@ -4705,7 +4705,7 @@ body {
   color: #8e8ea6;
   padding: 2px 8px;
   background: rgba(142, 142, 166, 0.1);
-  border-radius: 0;
+  border-radius: 4px;
 }
 
 .model-size {
@@ -4719,7 +4719,7 @@ body {
   color: #8e8ea6;
   padding: 4px 8px;
   background: rgba(142, 142, 166, 0.1);
-  border-radius: 0;
+  border-radius: 4px;
   margin-left: auto;
 }
 
@@ -4733,7 +4733,7 @@ body {
 .query-type-option {
   background: #0d0d14;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 6px;
   padding: 16px;
   cursor: pointer;
   transition: all 0.2s;
@@ -4777,7 +4777,7 @@ body {
 .status-badge {
   display: inline-block;
   padding: 4px 8px;
-  border-radius: 0;
+  border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
 }
@@ -4835,7 +4835,7 @@ body {
   padding: 16px;
   background: #0d0d14;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -4871,7 +4871,7 @@ body {
   padding: 12px;
   background: #0d0d14;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 6px;
   color: #f4f4ff;
   font-size: 14px;
 }
@@ -4897,7 +4897,7 @@ body {
   padding: 12px;
   background: #0d0d14;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 6px;
   color: #f4f4ff;
   font-size: 14px;
 }
@@ -4915,7 +4915,7 @@ body {
 
 .proxy-key-status {
   padding: 20px;
-  border-radius: 0;
+  border-radius: 6px;
   text-align: center;
 }
 
@@ -4953,7 +4953,7 @@ body {
   padding: 8px 12px;
   background: #0d0d14;
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 4px;
   color: #0ff;
   font-size: 12px;
   margin: 12px 0;
@@ -5013,7 +5013,7 @@ body {
   font-size: 13px;
   background: rgba(255, 149, 0, 0.05);
   border: 1px dashed rgba(255, 149, 0, 0.3);
-  border-radius: 0;
+  border-radius: 6px;
 }
 
 .empty-chips-state p {
@@ -5028,7 +5028,7 @@ body {
   padding: 6px 10px;
   background: rgba(0, 255, 255, 0.1);
   border: 1px solid rgba(0, 255, 255, 0.3);
-  border-radius: 0;
+  border-radius: 16px;
   font-size: 12px;
   color: #f4f4ff;
   transition: all 0.2s;
@@ -5095,7 +5095,7 @@ body {
 .provider-card {
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid #252532;
-  border-radius: 0;
+  border-radius: 8px;
   transition: all 0.2s;
   overflow: hidden;
 }
@@ -5141,7 +5141,7 @@ body {
 .provider-status {
   font-size: 11px;
   padding: 4px 10px;
-  border-radius: 0;
+  border-radius: 12px;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -5210,7 +5210,7 @@ body {
   padding: 10px;
   background: #0d0d14;
   border: 1px solid #252532;
-  border-radius: 0 0 0 6px;
+  border-radius: 6px 0 0 6px;
   color: #f4f4ff;
   font-size: 13px;
   font-family: 'Courier New', monospace;
@@ -5247,7 +5247,7 @@ body {
   overflow-y: auto;
   padding: 8px;
   background: rgba(0, 0, 0, 0.2);
-  border-radius: 0;
+  border-radius: 6px;
 }
 
 .models-list.hidden {
@@ -5260,7 +5260,7 @@ body {
   gap: 8px;
   padding: 8px;
   cursor: pointer;
-  border-radius: 0;
+  border-radius: 4px;
   transition: background 0.2s;
 }
 
@@ -5283,7 +5283,7 @@ body {
 .model-checkbox .model-tier {
   font-size: 10px;
   padding: 2px 6px;
-  border-radius: 0;
+  border-radius: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 600;
@@ -5315,7 +5315,7 @@ body {
   margin-bottom: 16px;
   padding: 12px;
   background: rgba(0, 0, 0, 0.2);
-  border-radius: 0;
+  border-radius: 6px;
 }
 
 .query-method label:first-child {
@@ -5345,7 +5345,7 @@ body {
   padding: 10px;
   background: rgba(0, 255, 255, 0.1);
   border: 1px solid rgba(0, 255, 255, 0.3);
-  border-radius: 0;
+  border-radius: 6px;
   color: #0ff;
   font-size: 13px;
   font-weight: 600;
@@ -5421,7 +5421,7 @@ body {
   width: 24px;
   height: 24px;
   border: 2px solid rgba(78, 201, 176, 0.3);
-  border-radius: 0;
+  border-radius: 4px;
 }
 
 /* Compact Auto-Approve Card */
@@ -5432,7 +5432,7 @@ body {
   padding: 12px 16px;
   background: rgba(78, 201, 176, 0.08);
   border: 2px solid rgba(78, 201, 176, 0.2);
-  border-radius: 0;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s;
   margin-top: 16px;
@@ -5502,7 +5502,7 @@ body {
   padding: 16px 20px;
   background: rgba(0, 255, 255, 0.02);
   border: 1px solid var(--color-border);
-  border-radius: 0;
+  border-radius: 8px;
   margin: 24px 0 16px 0;
   flex-wrap: wrap;
 }
@@ -5514,7 +5514,7 @@ body {
   padding: 8px 14px;
   background: rgba(0, 255, 255, 0.05);
   border: 1px solid rgba(0, 255, 255, 0.2);
-  border-radius: 0;
+  border-radius: 8px;
   flex: 1;
   min-width: 150px;
   transition: all 0.2s ease;
@@ -5569,7 +5569,7 @@ body {
   padding: 20px;
   background: rgba(0, 255, 255, 0.03);
   border: 1px solid var(--color-border);
-  border-radius: 0;
+  border-radius: 8px;
 }
 
 .model-cards-title {
@@ -5592,7 +5592,7 @@ body {
   position: relative;
   background: rgba(40, 40, 40, 0.4);
   border: 2px solid rgba(80, 80, 80, 0.3);
-  border-radius: 0;
+  border-radius: 8px;
   padding: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -5650,7 +5650,7 @@ body {
   padding: 6px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 0;
+  border-radius: 4px;
   color: var(--color-text-primary);
   font-size: 11px;
   cursor: pointer;
@@ -5705,7 +5705,7 @@ body {
   padding: 16px;
   background: rgba(255, 215, 0, 0.05);
   border: 1px solid rgba(255, 215, 0, 0.2);
-  border-radius: 0;
+  border-radius: 8px;
   margin-top: 16px;
 }
 
@@ -5722,7 +5722,7 @@ body {
   padding: 10px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 215, 0, 0.3);
-  border-radius: 0;
+  border-radius: 4px;
   color: var(--color-text-primary);
   font-size: 13px;
   font-family: var(--font-family);
@@ -5748,7 +5748,7 @@ body {
   padding: 20px;
   background: rgba(0, 255, 255, 0.05);
   border: 2px solid var(--color-primary);
-  border-radius: 0;
+  border-radius: 8px;
   animation: slideDown 0.3s ease;
 }
 
@@ -5822,7 +5822,7 @@ body {
   padding: 10px 12px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 0;
+  border-radius: 4px;
   color: var(--color-text-primary);
   font-size: 14px;
   font-family: var(--font-family);
@@ -5851,7 +5851,7 @@ body {
   padding: 10px 12px;
   background: rgba(0, 255, 255, 0.08);
   border: 1px solid rgba(0, 255, 255, 0.3);
-  border-radius: 0;
+  border-radius: 4px;
   color: var(--color-primary);
   font-size: 13px;
 }
@@ -5868,7 +5868,7 @@ body {
 .inline-btn-save {
   flex: 1;
   padding: 10px 16px;
-  border-radius: 0;
+  border-radius: 4px;
   font-size: 13px;
   font-family: var(--font-family);
   cursor: pointer;

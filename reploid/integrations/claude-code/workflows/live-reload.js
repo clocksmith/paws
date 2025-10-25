@@ -6,13 +6,14 @@
 let lastModified = Date.now();
 let errorCount = 0;
 const CHECK_INTERVAL = 1000; // Check every second
+const PROXY_BASE_URL = 'http://localhost:8000';
 
 // Track if we've seen errors to avoid reload loops
 window._reloadErrorThreshold = 3;
 window._consecutiveErrors = 0;
 
 function checkForUpdates() {
-  fetch('/api/health', {
+  fetch(`${PROXY_BASE_URL}/api/health`, {
     headers: { 'Cache-Control': 'no-cache' }
   })
     .then(response => response.json())

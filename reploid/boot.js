@@ -3,7 +3,7 @@ import { state, elements } from './boot/state.js';
 import { loadStoredKeys } from './boot/config.js';
 import { checkAPIStatus } from './boot/api.js';
 import { closeHelpPopover } from './boot/ui.js';
-import { initModelConfig, hasModelsConfigured } from './boot/model-config.js';
+import { initModelConfig, hasModelsConfigured, getSelectedModels } from './boot/model-config.js';
 
 // Detect if proxy server is available
 async function detectProxyServer() {
@@ -62,8 +62,15 @@ async function main() {
 }
 
 function setupEventListeners() {
-    elements.configBtn.addEventListener('click', openConfigModal);
-    elements.closeModal.addEventListener('click', () => elements.configModal.classList.add('hidden'));
+    // Config button and modal (if using legacy modal UI)
+    if (elements.configBtn && elements.configModal) {
+        elements.configBtn.addEventListener('click', () => {
+            elements.configModal.classList.toggle('hidden');
+        });
+    }
+    if (elements.closeModal && elements.configModal) {
+        elements.closeModal.addEventListener('click', () => elements.configModal.classList.add('hidden'));
+    }
 
     // Mode card selection - click to select and close
     document.querySelectorAll('.mode-card').forEach(card => {
@@ -438,6 +445,37 @@ async function awakenAgent() {
 
     if (!goal) {
         console.warn('[Boot] No goal specified');
+        // Show visible user message
+        const bootContainer = document.getElementById('boot-container');
+        if (bootContainer) {
+            // Create or get existing message container
+            let messageContainer = document.getElementById('boot-warning-message');
+            if (!messageContainer) {
+                messageContainer = document.createElement('div');
+                messageContainer.id = 'boot-warning-message';
+                messageContainer.className = 'error-message';
+                messageContainer.style.cssText = 'margin: 20px auto; max-width: 600px; text-align: center;';
+
+                // Insert at the top of boot container
+                const firstChild = bootContainer.firstElementChild;
+                if (firstChild) {
+                    bootContainer.insertBefore(messageContainer, firstChild);
+                } else {
+                    bootContainer.appendChild(messageContainer);
+                }
+            }
+
+            messageContainer.innerHTML = `
+                <strong>⚠️ Goal Required</strong>
+                <p>Please enter a goal for your agent before awakening. The goal defines what your agent will work on.</p>
+            `;
+            messageContainer.classList.remove('hidden');
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                messageContainer.classList.add('hidden');
+            }, 5000);
+        }
         return;
     }
 
@@ -450,26 +488,162 @@ async function awakenAgent() {
     }
 
     try {
-        // Hide boot container and show app root
+        // Collect and save boot state to VFS for genesis cycle
+        const bootMode = localStorage.getItem('BOOT_MODE') || 'meta';
+        const consensusType = localStorage.getItem('CONSENSUS_TYPE') || 'arena';
+        const selectedModels = getSelectedModels();
+
+        const genesisBootState = {
+            timestamp: new Date().toISOString(),
+            goal: goal,
+            bootMode: bootMode,
+            consensusType: consensusType,
+            selectedModels: selectedModels,
+            deploymentMode: state.selectedMode || 'cloud',
+            environment: {
+                hasProxy: state.proxyAvailable,
+                hasWebGPU: state.detectedEnv.hasWebGPU,
+                hasServer: state.detectedEnv.hasServer
+            }
+        };
+
+        console.log('[Boot] Saving genesis boot state to VFS:', genesisBootState);
+
+        // Save to VFS via proxy endpoint
+        if (state.proxyAvailable) {
+            try {
+                const vfsResponse = await fetch('http://localhost:8000/api/vfs/backup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        '/system/genesis-boot-config.json': JSON.stringify(genesisBootState, null, 2)
+                    })
+                });
+
+                if (vfsResponse.ok) {
+                    console.log('[Boot] Genesis boot state saved to VFS successfully');
+                } else {
+                    console.warn('[Boot] Failed to save genesis boot state to VFS:', await vfsResponse.text());
+                }
+            } catch (vfsError) {
+                console.warn('[Boot] Could not save to VFS (proxy unavailable):', vfsError.message);
+            }
+        } else {
+            console.warn('[Boot] Proxy unavailable, boot state not persisted to VFS');
+        }
+
+        // Smooth transition from boot to main app
         const bootContainer = document.getElementById('boot-container');
         const appRoot = document.getElementById('app-root');
 
         if (bootContainer && appRoot) {
-            bootContainer.style.display = 'none';
-            appRoot.style.display = 'block';
-        }
-
-        // Show awakening message
-        if (appRoot) {
-            appRoot.innerHTML = `
-                <div style="padding: 40px; text-align: center; color: #e0e0e0;">
-                    <h2>Agent Awakening</h2>
-                    <p>Goal: ${goal}</p>
-                    <p style="margin-top: 20px; color: #4ec9b0;">
-                        Awakening agent system...
-                    </p>
+            // Show loading overlay
+            const loadingOverlay = document.createElement('div');
+            loadingOverlay.id = 'boot-transition-overlay';
+            loadingOverlay.innerHTML = `
+                <style>
+                    #boot-transition-overlay {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                        z-index: 10000;
+                        animation: fadeIn 0.3s ease-in;
+                    }
+                    #boot-transition-overlay .loading-content {
+                        text-align: center;
+                    }
+                    #boot-transition-overlay h2 {
+                        color: var(--color-primary);
+                        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+                        font-size: 2em;
+                        margin: 0 0 20px 0;
+                        animation: shimmer 2s linear infinite;
+                        background: linear-gradient(90deg, #00ffff, #ffd700, #00ffff);
+                        background-size: 200% auto;
+                        -webkit-background-clip: text;
+                        -webkit-text-fill-color: transparent;
+                        background-clip: text;
+                    }
+                    #boot-transition-overlay .goal-text {
+                        color: #e0e0e0;
+                        font-size: 1.1em;
+                        margin-bottom: 30px;
+                        max-width: 600px;
+                    }
+                    #boot-transition-overlay .spinner {
+                        width: 60px;
+                        height: 60px;
+                        border: 4px solid rgba(0, 255, 255, 0.1);
+                        border-top: 4px solid var(--color-primary);
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                        margin: 0 auto;
+                    }
+                    #boot-transition-overlay .status-text {
+                        color: var(--color-secondary);
+                        margin-top: 20px;
+                        font-size: 0.9em;
+                    }
+                    @keyframes fadeIn {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                    @keyframes shimmer {
+                        0% { background-position: 0% center; }
+                        100% { background-position: 200% center; }
+                    }
+                    .fade-out {
+                        animation: fadeOut 0.5s ease-out forwards;
+                    }
+                    @keyframes fadeOut {
+                        from { opacity: 1; }
+                        to { opacity: 0; }
+                    }
+                </style>
+                <div class="loading-content">
+                    <h2>REPLOID Awakening</h2>
+                    <div class="goal-text">${goal}</div>
+                    <div class="spinner"></div>
+                    <div class="status-text">Initializing agent system...</div>
                 </div>
             `;
+            document.body.appendChild(loadingOverlay);
+
+            // Fade out boot container
+            bootContainer.style.transition = 'opacity 0.5s ease-out';
+            bootContainer.style.opacity = '0';
+
+            // After fade out, hide boot and prepare app
+            setTimeout(() => {
+                bootContainer.style.display = 'none';
+                appRoot.style.display = 'block';
+                appRoot.style.opacity = '0';
+
+                // Wait a moment then fade in app and fade out loading overlay
+                setTimeout(() => {
+                    appRoot.style.transition = 'opacity 0.5s ease-in';
+                    appRoot.style.opacity = '1';
+                    loadingOverlay.classList.add('fade-out');
+
+                    // Remove loading overlay after fade
+                    setTimeout(() => {
+                        loadingOverlay.remove();
+                    }, 500);
+                }, 100);
+            }, 500);
         }
 
         // Create VFS that fetches files from the server
@@ -507,8 +681,7 @@ async function awakenAgent() {
         const CoreLogicModule = new Function(appLogicCode + '\nreturn CoreLogicModule;')();
         console.log('[Boot] CoreLogicModule extracted:', typeof CoreLogicModule);
 
-        // Get selected boot mode (module preset)
-        const bootMode = localStorage.getItem('BOOT_MODE') || 'minimal';
+        // bootMode already declared above at line 492
         console.log('[Boot] Boot mode:', bootMode);
 
         // Prepare initial configuration
@@ -562,6 +735,86 @@ window.selectBootMode = function(mode) {
         btn.classList.remove('selected');
     });
     document.querySelector(`[data-mode="${mode}"]`)?.classList.add('selected');
+};
+
+// Expose module directory functions globally
+window.showModuleDirectory = async function() {
+    const modal = document.getElementById('directory-modal');
+    const content = document.getElementById('directory-content');
+
+    if (!modal || !content) return;
+
+    // Show loading state
+    content.innerHTML = '<div style="padding: 40px; text-align: center; color: #888;">Loading blueprints...</div>';
+    modal.classList.remove('hidden');
+
+    try {
+        // Fetch blueprints list from the server
+        const response = await fetch('/blueprints/', {
+            headers: { 'Accept': 'text/html' }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load blueprints');
+        }
+
+        const html = await response.text();
+
+        // Parse the directory listing to extract blueprint names
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const links = Array.from(doc.querySelectorAll('a')).filter(a => a.href.includes('.md'));
+
+        if (links.length === 0) {
+            content.innerHTML = '<div style="padding: 40px; text-align: center; color: #888;">No blueprints found</div>';
+            return;
+        }
+
+        // Create blueprint list
+        let modulesHTML = '<div class="module-list">';
+
+        links.forEach((link, index) => {
+            const filename = link.textContent.trim();
+            const name = filename.replace(/^0x[0-9A-F]+-/, '').replace(/\.md$/, '').replace(/-/g, ' ');
+            const capitalizedName = name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+
+            modulesHTML += `
+                <div class="module-item">
+                    <div class="module-number">${String(index + 1).padStart(3, '0')}</div>
+                    <div class="module-info">
+                        <div class="module-name">${capitalizedName}</div>
+                        <div class="module-file">${filename}</div>
+                    </div>
+                </div>
+            `;
+        });
+
+        modulesHTML += '</div>';
+        content.innerHTML = modulesHTML;
+
+    } catch (error) {
+        console.error('[Boot] Error loading blueprints:', error);
+        content.innerHTML = `
+            <div style="padding: 40px; text-align: center;">
+                <div style="color: #e74856; margin-bottom: 10px;">Failed to load blueprints</div>
+                <div style="color: #888; font-size: 12px;">${error.message}</div>
+            </div>
+        `;
+    }
+};
+
+window.closeDirectoryModal = function() {
+    const modal = document.getElementById('directory-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+};
+
+window.closeInfoCard = function() {
+    const overlay = document.getElementById('info-overlay');
+    if (overlay) {
+        overlay.classList.add('hidden');
+    }
 };
 
 // Start the application

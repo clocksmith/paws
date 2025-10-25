@@ -50,33 +50,26 @@
             </p>
         </div>
 
-        <!-- Agent Setup Card -->
-        <div class="agent-setup-card" aria-labelledby="agent-setup-title">
-            <div class="agent-setup-header">
-                <span class="mode-icon" id="current-mode-icon">▲</span>
-                <div class="agent-setup-main">
-                    <div id="agent-setup-title" class="agent-setup-title">Current Configuration</div>
-                    <div id="provider-status" class="agent-model-name">Detecting…</div>
-                </div>
-                <button id="config-btn" class="btn-config" aria-label="Change configuration" title="Change configuration">⛮</button>
-            </div>
-            <ul class="agent-features">
-                <li id="feature-1" class="feature-status">+ <span id="provider-status-detail">Checking availability...</span></li>
-                <li id="feature-2" class="feature-status">+ <span id="feature-2-text">Ready to use</span></li>
-            </ul>
-            <div class="agent-status-chips" role="status" aria-live="polite">
-                <span id="agent-chip-proxy" class="status-chip status-chip--checking" aria-label="Proxy server status: checking">Proxy · Checking…</span>
-                <span id="agent-chip-provider" class="status-chip status-chip--inactive" aria-label="AI provider status">No Provider</span>
-            </div>
+        <!-- Legacy Detection Markers (hidden, used by old scripts) -->
+        <div style="display: none;">
+            <div id="provider-status"></div>
+            <div id="provider-status-detail"></div>
+            <div id="current-mode-icon"></div>
+            <div id="agent-setup-title"></div>
+            <div id="feature-1"></div>
+            <div id="feature-2"></div>
+            <div id="agent-chip-proxy"></div>
+            <div id="agent-chip-provider"></div>
+            <div id="config-btn"></div>
         </div>
 
         <div id="api-error-message" class="error-message hidden" role="alert">
             <strong>Server Offline</strong>
-            <p>Reploid can’t reach <code>localhost:8000</code>.</p>
+            <p>Reploid can't reach <code>localhost:8000</code>.</p>
             <p><code>npm start</code> to boot the service, or read the <a href="https://github.com/clocksmith/deco/tree/main/docs" target="_blank" rel="noreferrer">setup guide</a>.</p>
         </div>
 
-        <!-- Settings Modal -->
+        <!-- Settings Modal (kept for backward compatibility, hidden) -->
         <div id="config-modal" class="modal hidden">
             <div class="modal-content">
                 <div class="modal-header">
@@ -482,128 +475,90 @@
                     </div>
                 </div>
             </div>
+        </div>
+        <!-- End Settings Modal -->
 
-            <!-- Available Models -->
-            <div class="available-models-section">
-                <h4>Available Models <span class="hint-text">(click to configure)</span></h4>
-
-                <!-- Cloud Providers Row -->
-                <div class="providers-row">
-                    <!-- Gemini -->
-                    <div class="provider-card" id="provider-gemini" data-provider="gemini">
-                        <div class="provider-card-header">
-                            <span class="provider-icon">▲</span>
-                            <h5>Gemini</h5>
-                            <span class="provider-status" id="gemini-status">Configure</span>
-                        </div>
-                        <div class="provider-card-body hidden" id="gemini-config">
-                            <div class="api-key-input-group">
-                                <label>API Key:</label>
-                                <input type="password" id="gemini-api-key" placeholder="Enter Gemini API key" />
-                                <button type="button" class="btn-verify" data-provider="gemini">Verify</button>
-                            </div>
-                            <div class="models-list hidden" id="gemini-models-list"></div>
-                            <div class="query-method">
-                                <label>Query Method:</label>
-                                <label><input type="radio" name="gemini-query" value="browser" checked/> Browser-Direct</label>
-                                <label><input type="radio" name="gemini-query" value="proxy" /> Via Proxy</label>
-                            </div>
-                            <button type="button" class="btn-add-selected" data-provider="gemini" disabled>Add Selected Models</button>
-                        </div>
-                    </div>
-
-                    <!-- OpenAI -->
-                    <div class="provider-card" id="provider-openai" data-provider="openai">
-                        <div class="provider-card-header">
-                            <span class="provider-icon">▲</span>
-                            <h5>OpenAI</h5>
-                            <span class="provider-status" id="openai-status">Configure</span>
-                        </div>
-                        <div class="provider-card-body hidden" id="openai-config">
-                            <div class="api-key-input-group">
-                                <label>API Key:</label>
-                                <input type="password" id="openai-api-key" placeholder="Enter OpenAI API key" />
-                                <button type="button" class="btn-verify" data-provider="openai">Verify</button>
-                            </div>
-                            <div class="models-list hidden" id="openai-models-list"></div>
-                            <div class="query-method">
-                                <label>Query Method:</label>
-                                <label><input type="radio" name="openai-query" value="browser" checked/> Browser-Direct</label>
-                                <label><input type="radio" name="openai-query" value="proxy" /> Via Proxy</label>
-                            </div>
-                            <button type="button" class="btn-add-selected" data-provider="openai" disabled>Add Selected Models</button>
-                        </div>
-                    </div>
-
-                    <!-- Anthropic -->
-                    <div class="provider-card" id="provider-anthropic" data-provider="anthropic">
-                        <div class="provider-card-header">
-                            <span class="provider-icon">▲</span>
-                            <h5>Anthropic</h5>
-                            <span class="provider-status" id="anthropic-status">Configure</span>
-                        </div>
-                        <div class="provider-card-body hidden" id="anthropic-config">
-                            <div class="api-key-input-group">
-                                <label>API Key:</label>
-                                <input type="password" id="anthropic-api-key" placeholder="Enter Anthropic API key" />
-                                <button type="button" class="btn-verify" data-provider="anthropic">Verify</button>
-                            </div>
-                            <div class="models-list hidden" id="anthropic-models-list"></div>
-                            <div class="query-method">
-                                <label>Query Method:</label>
-                                <label><input type="radio" name="anthropic-query" value="browser" checked/> Browser-Direct</label>
-                                <label><input type="radio" name="anthropic-query" value="proxy" /> Via Proxy</label>
-                            </div>
-                            <button type="button" class="btn-add-selected" data-provider="anthropic" disabled>Add Selected Models</button>
-                        </div>
-                    </div>
+        <!-- Provider Status (Read-Only) -->
+            <div class="provider-status-bar">
+                <div class="provider-status-item">
+                    <span class="provider-status-icon" id="ollama-status-icon">■</span>
+                    <span class="provider-status-label">Ollama</span>
+                    <span class="provider-status-value" id="ollama-status-text">Checking...</span>
                 </div>
-
-                <!-- Local Models Row -->
-                <div class="local-models-row">
-                    <!-- Ollama -->
-                    <div class="provider-card local-provider" id="provider-ollama" data-provider="ollama">
-                        <div class="provider-card-header">
-                            <span class="provider-icon">■</span>
-                            <h5>Ollama</h5>
-                            <span class="provider-status" id="ollama-status">Detecting...</span>
-                        </div>
-                        <div class="provider-card-body hidden" id="ollama-config">
-                            <div class="models-list" id="ollama-models-list"></div>
-                            <button type="button" class="btn-add-selected" data-provider="ollama" disabled>Add Selected Models</button>
-                        </div>
-                    </div>
-
-                    <!-- WebLLM -->
-                    <div class="provider-card local-provider" id="provider-webllm" data-provider="webllm">
-                        <div class="provider-card-header">
-                            <span class="provider-icon">◆</span>
-                            <h5>WebLLM</h5>
-                            <span class="provider-status" id="webllm-status">Detecting...</span>
-                        </div>
-                        <div class="provider-card-body hidden" id="webllm-config">
-                            <div class="models-list" id="webllm-models-list"></div>
-                            <button type="button" class="btn-add-selected" data-provider="webllm" disabled>Add Selected Models</button>
-                        </div>
-                    </div>
+                <div class="provider-status-item">
+                    <span class="provider-status-icon" id="webgpu-status-icon">◆</span>
+                    <span class="provider-status-label">WebGPU</span>
+                    <span class="provider-status-value" id="webgpu-status-text">Checking...</span>
+                </div>
+                <div class="provider-status-item">
+                    <span class="provider-status-icon" id="proxy-status-icon">●</span>
+                    <span class="provider-status-label">Proxy</span>
+                    <span class="provider-status-value" id="proxy-status-text">Checking...</span>
                 </div>
             </div>
 
-            <!-- Consensus Strategy -->
-            <div id="consensus-section" class="consensus-section hidden">
-                <label for="consensus-strategy">Consensus Strategy (2+ models)</label>
-                <select id="consensus-strategy" class="consensus-select">
-                    <option value="arena">Model Arena</option>
-                    <option value="peer-review">Peer Review</option>
-                </select>
-            </div>
+            <!-- Model Cards Container -->
+            <div class="model-cards-container">
+                <h4 class="model-cards-title">Active Models</h4>
 
-            <!-- Auto-Approve Toggle Card -->
-            <div class="auto-approve-card-compact" id="auto-approve-card" data-enabled="false">
-                <input type="checkbox" id="auto-approve-toggle" style="display: none;" />
-                <div class="auto-approve-content">
-                    <span class="auto-approve-label">◈ Auto-Approve Context</span>
-                    <span class="auto-approve-hint">Auto-approve context curation (not code changes)</span>
+                <div class="model-cards-list" id="model-cards-list">
+                    <!-- Model cards will be added here dynamically -->
+
+                    <!-- Add Model card - always visible -->
+                    <div class="model-card add-model-card" id="add-model-card">
+                        <div class="add-model-icon">+</div>
+                        <div class="add-model-text">Add Model</div>
+                    </div>
+                </div>
+
+                <!-- Inline Add/Edit Model Form (shown when adding/editing) -->
+                <div id="model-form-inline" class="model-form-inline hidden">
+                    <div class="model-form-header">
+                        <h5 id="model-form-title">Add Model</h5>
+                        <button class="close-btn-small" id="close-model-form">×</button>
+                    </div>
+
+                    <!-- Provider Selection -->
+                    <div class="inline-form-row">
+                        <label>Provider</label>
+                        <select id="provider-select" class="inline-select">
+                            <option value="">Select provider...</option>
+                        </select>
+                    </div>
+
+                    <!-- Model Selection -->
+                    <div class="inline-form-row hidden" id="model-select-group">
+                        <label>Model</label>
+                        <select id="model-select-dropdown" class="inline-select">
+                            <option value="">Select model...</option>
+                        </select>
+                    </div>
+
+                    <!-- API Key (if needed) -->
+                    <div class="inline-form-row hidden" id="api-key-group">
+                        <label>API Key</label>
+                        <input type="password" id="model-api-key" class="inline-input" placeholder="Enter API key..." />
+                    </div>
+
+                    <!-- Host Type (auto-selected, read-only display) -->
+                    <div class="inline-form-row hidden" id="host-type-group">
+                        <label>Connection</label>
+                        <div class="inline-host-type" id="host-type-display"></div>
+                    </div>
+
+                    <div class="inline-form-actions">
+                        <button class="inline-btn-cancel" id="cancel-model-btn">Cancel</button>
+                        <button class="inline-btn-save" id="save-model-btn" disabled>Add Model</button>
+                    </div>
+                </div>
+
+                <!-- Consensus Strategy (shown when 2+ models) -->
+                <div id="consensus-section" class="consensus-section hidden">
+                    <label for="consensus-strategy">Consensus Strategy</label>
+                    <select id="consensus-strategy" class="consensus-select">
+                        <option value="arena">Model Arena</option>
+                        <option value="peer-review">Peer Review</option>
+                    </select>
                 </div>
             </div>
         </div>
@@ -616,83 +571,46 @@
 
         <!-- Goal Input at Top -->
         <div class="goal-container-top">
-            <div class="goal-context">
-                <p class="goal-context-tagline">Where AI agents propose, critique, and evolve their own capabilities.</p>
-                <p class="goal-context-examples">Try goals like "Create tools to make tools to make tools" or "Analyze your own inefficiency patterns and improve yourself".</p>
-            </div>
             <div class="goal-input-group">
                 <input type="text" id="goal-input" placeholder="► Select at least one model to continue" maxlength="500" disabled />
                 <button id="awaken-btn" class="btn primary" disabled>Awaken Agent</button>
             </div>
+            <!-- Example Goal Chips -->
+            <div class="goal-example-chips">
+                <button class="goal-chip" onclick="document.getElementById('goal-input').value='Create tools to make tools to make tools'">Create tools to make tools to make tools</button>
+                <button class="goal-chip" onclick="document.getElementById('goal-input').value='Analyze your own inefficiency patterns and improve yourself'">Analyze your own inefficiency patterns and improve yourself</button>
+                <button class="goal-chip" onclick="document.getElementById('goal-input').value='Build a self-modifying code generation system'">Build a self-modifying code generation system</button>
+            </div>
         </div>
 
-        <!-- Configuration Tabs -->
+        <!-- Boot Mode Selection -->
         <div class="config-section">
-            <div class="config-tabs">
-                <button class="config-tab active" data-tab="simple">
-                    <span class="tab-text">▸ Quick Start</span>
+            <div class="boot-mode-options">
+                <button class="boot-mode-btn" data-mode="essential" onclick="selectBootMode('essential')">
+                    <div class="boot-mode-label">★ Essential Core</div>
+                    <div class="boot-mode-desc">8 modules — Minimal setup to run an agent.</div>
                 </button>
-                <button class="config-tab" data-tab="templates">
-                    <span class="tab-text">▦ Presets</span>
+
+                <button class="boot-mode-btn selected recommended" data-mode="meta" onclick="selectBootMode('meta')">
+                    <div class="boot-mode-badge">RECOMMENDED</div>
+                    <div class="boot-mode-label">☥ Meta-RSI Core</div>
+                    <div class="boot-mode-desc">15 modules — Tools that create tools + multi-model mixing + self-improvement.</div>
                 </button>
-                <button class="config-tab" data-tab="hunter">
-                    <span class="tab-text">◎ Custom</span>
+
+                <button class="boot-mode-btn" data-mode="full" onclick="selectBootMode('full')">
+                    <div class="boot-mode-label">☇ Full-Featured</div>
+                    <div class="boot-mode-desc">28 modules — Includes monitoring, testing, and browser API integration.</div>
+                </button>
+
+                <button class="boot-mode-btn" data-mode="experimental" onclick="selectBootMode('experimental')">
+                    <div class="boot-mode-label">⛉ Experimental Suite</div>
+                    <div class="boot-mode-desc">All 100 modules — Every feature: visualization, analytics, Python, local LLM, WebRTC, and more.</div>
                 </button>
             </div>
 
-            <!-- Simple Mode Tab Content (NEW) -->
-            <div class="tab-content active" id="simple-tab">
-                <div class="simple-mode-container">
-                    <p class="simple-mode-subtitle">
-                        Choose which
-                        <button type="button" class="link-button" data-popover="modules" aria-label="What are modules?">modules ⓘ</button>
-                        and
-                        <button type="button" class="link-button" data-popover="blueprints" aria-label="What are blueprints?">blueprints ⓘ</button>
-                        load at startup
-                        <button type="button" class="browse-link" onclick="window.openDirectoryBrowser('modules')" aria-label="Browse all modules and blueprints">Browse all →</button>
-                    </p>
-
-                    <div class="boot-mode-options">
-                        <button class="boot-mode-btn" data-mode="essential" onclick="selectBootMode('essential')">
-                            <div class="boot-mode-icon">★</div>
-                            <div class="boot-mode-label">Essential Core</div>
-                            <div class="boot-mode-desc">8 modules (~500ms) — Bare minimum to run an agent. Perfect for learning REPLOID basics.</div>
-                        </button>
-
-                        <button class="boot-mode-btn selected recommended" data-mode="meta" onclick="selectBootMode('meta')">
-                            <div class="boot-mode-badge">RECOMMENDED</div>
-                            <div class="boot-mode-icon">☥</div>
-                            <div class="boot-mode-label">Meta-RSI Core</div>
-                            <div class="boot-mode-desc">15 modules (~1s) — YOUR ORIGINAL VISION: Tools that create tools + multi-model mixing + self-improvement.</div>
-                        </button>
-
-                        <button class="boot-mode-btn" data-mode="full" onclick="selectBootMode('full')">
-                            <div class="boot-mode-icon">☇</div>
-                            <div class="boot-mode-label">Full-Featured</div>
-                            <div class="boot-mode-desc">28 modules (~2s) — Production-ready with monitoring, testing, and browser API integration.</div>
-                        </button>
-
-                        <button class="boot-mode-btn" data-mode="experimental" onclick="selectBootMode('experimental')">
-                            <div class="boot-mode-icon">⛉</div>
-                            <div class="boot-mode-label">Experimental Suite</div>
-                            <div class="boot-mode-desc">All 76 modules (~5s) — Every feature: visualization, analytics, Python, local LLM, WebRTC, and more. For power users.</div>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Templates Tab Content -->
-            <div class="tab-content" id="templates-tab">
-                <div id="persona-selection-container">
-                    <!-- Persona cards will be dynamically inserted here -->
-                </div>
-            </div>
-
-            <!-- Hunter Protocol Tab Content -->
-            <div class="tab-content" id="hunter-tab">
-                <div id="advanced-options">
-                    <!-- Advanced selection UI will be rendered here -->
-                </div>
+            <!-- Browse Modules Link -->
+            <div class="browse-modules-link">
+                <a href="#" onclick="window.showModuleDirectory(); return false;">Browse all modules →</a>
             </div>
         </div>
 

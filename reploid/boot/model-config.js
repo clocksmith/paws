@@ -1,243 +1,396 @@
-// Model Configuration UI - Single-screen model picker with inline configuration
+// Simplified Model Configuration UI - Card-Based Model Selector
 import { state, elements } from './state.js';
-import { discoverAvailableModels } from './api.js';
 
-// Selected models (array of configured model objects)
-let selectedModels = [];
-
-// Provider model catalogs (loaded after API key verification)
-const providerCatalogs = {
-    gemini: [
-        { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', tier: 'fast' },
-        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', tier: 'balanced' },
-        { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', tier: 'advanced' }
-    ],
-    openai: [
-        { id: 'gpt-5-2025-08-07-mini', name: 'GPT-5 Mini', tier: 'fast' },
-        { id: 'gpt-5-2025-08-07', name: 'GPT-5', tier: 'balanced' },
-        { id: 'o1-2025-12-17', name: 'O1', tier: 'advanced' }
-    ],
-    anthropic: [
-        { id: 'claude-4-5-haiku', name: 'Claude 4.5 Haiku', tier: 'fast' },
-        { id: 'claude-4-5-sonnet', name: 'Claude 4.5 Sonnet', tier: 'balanced' },
-        { id: 'claude-opus-4-5-20250514', name: 'Claude Opus 4.5', tier: 'advanced' }
-    ]
+// State
+let selectedModels = []; // Max 4 models
+let availableProviders = {
+    ollama: { online: false, models: [] },
+    webgpu: { online: false, models: [] },
+    proxy: { online: false }
 };
 
-// Initialize model configuration UI
+const MAX_MODELS = 4;
+
+// Provider model catalogs
+const cloudProviders = {
+    gemini: {
+        name: 'Gemini',
+        models: [
+            { id: 'gemini-2.5-flash-lite', name: 'Flash Lite' },
+            { id: 'gemini-2.5-flash', name: 'Flash' },
+            { id: 'gemini-2.5-pro', name: 'Pro' }
+        ],
+        requiresKey: true,
+        hostType: 'cloud-browser'
+    },
+    openai: {
+        name: 'OpenAI',
+        models: [
+            { id: 'gpt-5-2025-08-07-mini', name: 'GPT-5 Mini' },
+            { id: 'gpt-5-2025-08-07', name: 'GPT-5' },
+            { id: 'o1-2025-12-17', name: 'O1' }
+        ],
+        requiresKey: true,
+        hostType: 'cloud-browser'
+    },
+    anthropic: {
+        name: 'Anthropic',
+        models: [
+            { id: 'claude-4-5-haiku', name: 'Haiku 4.5' },
+            { id: 'claude-4-5-sonnet', name: 'Sonnet 4.5' },
+            { id: 'claude-opus-4-5-20250514', name: 'Opus 4.5' }
+        ],
+        requiresKey: true,
+        hostType: 'cloud-browser'
+    }
+};
+
+// Initialize
 export async function initModelConfig() {
-    console.log('[ModelConfig] Initializing single-screen model picker...');
+    console.log('[ModelConfig] Initializing card-based model selector...');
+
+    // Check what's available
+    await checkAvailability();
+
+    // Load saved models
+    loadSavedModels();
 
     // Setup event listeners
     setupEventListeners();
 
-    // Discover local models (Ollama, WebLLM)
-    await discoverLocalModels();
-
-    // Load saved configuration
-    loadSavedConfiguration();
-
-    // Render selected models chips
-    renderSelectedChips();
-
-    // Update goal input state
+    // Render initial state
+    renderModelCards();
+    updateStatusDots();
     updateGoalInputState();
-
-    // Update old status display (compatibility with existing UI)
-    updateLegacyStatusDisplay();
 }
 
-// Setup all event listeners
+// Check availability of local services
+async function checkAvailability() {
+    // Check Ollama
+    try {
+        const response = await fetch('http://localhost:8000/api/ollama/models', {
+            signal: AbortSignal.timeout(3000)
+        });
+        if (response.ok) {
+            const data = await response.json();
+            availableProviders.ollama.online = true;
+            availableProviders.ollama.models = (data.models || []).map(m => ({
+                id: m.name || m.model,
+                name: m.name || m.model
+            }));
+        }
+    } catch (error) {
+        console.log('[ModelConfig] Ollama not available:', error.message);
+    }
+
+    // Check WebGPU
+    availableProviders.webgpu.online = !!navigator.gpu;
+    if (availableProviders.webgpu.online) {
+        availableProviders.webgpu.models = [
+            { id: 'Phi-3-mini-4k-instruct-q4f16_1-MLC', name: 'Phi-3 Mini' },
+            { id: 'gemma-2b-it-q4f16_1-MLC', name: 'Gemma 2B' },
+            { id: 'Llama-3.2-1B-Instruct-q4f16_1-MLC', name: 'Llama 3.2 1B' }
+        ];
+    }
+
+    // Check Proxy
+    try {
+        const response = await fetch('http://localhost:8000/api/health', {
+            signal: AbortSignal.timeout(3000)
+        });
+        availableProviders.proxy.online = response.ok;
+    } catch (error) {
+        console.log('[ModelConfig] Proxy not available:', error.message);
+    }
+}
+
+// Setup event listeners
 function setupEventListeners() {
-    // Provider card header clicks (toggle expansion)
-    document.querySelectorAll('.provider-card-header').forEach(header => {
-        header.addEventListener('click', (e) => {
-            const card = e.currentTarget.closest('.provider-card');
-            toggleProviderCard(card);
+    // Add Model card click
+    const addModelCard = document.getElementById('add-model-card');
+    if (addModelCard) {
+        addModelCard.addEventListener('click', () => {
+            if (selectedModels.length >= MAX_MODELS) {
+                alert(`Maximum ${MAX_MODELS} models allowed`);
+                return;
+            }
+            openInlineForm();
         });
-    });
+    }
 
-    // Verify API key buttons
-    document.querySelectorAll('.btn-verify').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const provider = e.target.dataset.provider;
-            verifyApiKey(provider);
-        });
-    });
+    // Inline form close
+    const closeBtn = document.getElementById('close-model-form');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeInlineForm);
+    }
 
-    // Add selected models buttons
-    document.querySelectorAll('.btn-add-selected').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const provider = e.target.dataset.provider;
-            addSelectedModels(provider);
-        });
-    });
+    // Cancel button
+    const cancelBtn = document.getElementById('cancel-model-btn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', closeInlineForm);
+    }
 
-    // Consensus strategy change
+    // Save button
+    const saveBtn = document.getElementById('save-model-btn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', saveModel);
+    }
+
+    // Provider select change
+    const providerSelect = document.getElementById('provider-select');
+    if (providerSelect) {
+        providerSelect.addEventListener('change', onProviderChange);
+    }
+
+    // Model select change
+    const modelSelect = document.getElementById('model-select-dropdown');
+    if (modelSelect) {
+        modelSelect.addEventListener('change', onModelChange);
+    }
+
+    // Consensus strategy
     const consensusSelect = document.getElementById('consensus-strategy');
     if (consensusSelect) {
-        consensusSelect.addEventListener('change', (e) => {
-            saveConfigToStorage();
+        consensusSelect.addEventListener('change', () => {
+            saveToStorage();
         });
     }
 }
 
-// Toggle provider card expansion
-function toggleProviderCard(card) {
-    const body = card.querySelector('.provider-card-body');
-    const isExpanded = !body.classList.contains('hidden');
+// Open inline form for adding/editing
+function openInlineForm(editingIndex = null) {
+    const form = document.getElementById('model-form-inline');
+    const formTitle = document.getElementById('model-form-title');
+    const saveBtn = document.getElementById('save-model-btn');
 
-    if (isExpanded) {
-        // Collapse
-        body.classList.add('hidden');
-    } else {
-        // Expand
-        body.classList.remove('hidden');
+    // Show form
+    form.classList.remove('hidden');
+    formTitle.textContent = editingIndex !== null ? 'Edit Model' : 'Add Model';
+    saveBtn.textContent = editingIndex !== null ? 'Save Changes' : 'Add Model';
+    saveBtn.dataset.editingIndex = editingIndex !== null ? editingIndex : '';
+
+    // Populate provider dropdown
+    populateProviderSelect();
+
+    // Reset form
+    resetInlineForm();
+
+    // If editing, populate with existing data
+    if (editingIndex !== null) {
+        const model = selectedModels[editingIndex];
+        populateEditForm(model);
     }
 }
 
-// Verify API key and load models for cloud provider
-async function verifyApiKey(provider) {
-    const inputId = `${provider}-api-key`;
-    const statusId = `${provider}-status`;
-    const modelsListId = `${provider}-models-list`;
-    const addBtn = document.querySelector(`.btn-add-selected[data-provider="${provider}"]`);
+// Populate provider select dropdown
+function populateProviderSelect() {
+    const providerSelect = document.getElementById('provider-select');
+    const options = ['<option value="">Select provider...</option>'];
 
-    const input = document.getElementById(inputId);
-    const status = document.getElementById(statusId);
-    const modelsList = document.getElementById(modelsListId);
+    // Add Ollama if available
+    if (availableProviders.ollama.online && availableProviders.ollama.models.length > 0) {
+        options.push('<option value="ollama">Ollama (Local)</option>');
+    }
 
-    const apiKey = input.value.trim();
+    // Add WebGPU if available
+    if (availableProviders.webgpu.online) {
+        options.push('<option value="webllm">WebLLM (Browser)</option>');
+    }
 
-    if (!apiKey) {
-        alert('Please enter an API key');
+    // Add cloud providers (always available)
+    options.push('<option value="gemini">Gemini (Google)</option>');
+    options.push('<option value="openai">OpenAI</option>');
+    options.push('<option value="anthropic">Anthropic</option>');
+
+    providerSelect.innerHTML = options.join('');
+}
+
+// Handle provider selection change
+function onProviderChange(e) {
+    const provider = e.target.value;
+    const modelSelectGroup = document.getElementById('model-select-group');
+    const modelSelect = document.getElementById('model-select-dropdown');
+    const apiKeyGroup = document.getElementById('api-key-group');
+    const hostTypeGroup = document.getElementById('host-type-group');
+    const hostTypeDisplay = document.getElementById('host-type-display');
+    const saveBtn = document.getElementById('save-model-btn');
+
+    // Reset
+    modelSelectGroup.classList.add('hidden');
+    apiKeyGroup.classList.add('hidden');
+    hostTypeGroup.classList.add('hidden');
+    saveBtn.disabled = true;
+
+    if (!provider) return;
+
+    // Populate models based on provider
+    const models = [];
+    let hostType = '';
+    let requiresKey = false;
+
+    if (provider === 'ollama') {
+        models.push(...availableProviders.ollama.models);
+        hostType = 'Ollama Proxy';
+        requiresKey = false;
+    } else if (provider === 'webllm') {
+        models.push(...availableProviders.webgpu.models);
+        hostType = 'WebGPU (Browser)';
+        requiresKey = false;
+    } else if (cloudProviders[provider]) {
+        models.push(...cloudProviders[provider].models);
+        hostType = 'Cloud (Browser)';
+        requiresKey = true;
+    }
+
+    // Show model select
+    modelSelectGroup.classList.remove('hidden');
+    modelSelect.innerHTML = '<option value="">Select model...</option>' +
+        models.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+
+    // Show API key field if required
+    if (requiresKey) {
+        apiKeyGroup.classList.remove('hidden');
+        // Pre-fill API key if exists
+        const savedKey = localStorage.getItem(`${provider.toUpperCase()}_API_KEY`);
+        if (savedKey) {
+            document.getElementById('model-api-key').value = savedKey;
+        }
+    }
+
+    // Show host type
+    hostTypeGroup.classList.remove('hidden');
+    hostTypeDisplay.textContent = hostType;
+}
+
+// Handle model selection change
+function onModelChange(e) {
+    const saveBtn = document.getElementById('save-model-btn');
+    const provider = document.getElementById('provider-select').value;
+    const modelId = e.target.value;
+
+    if (!provider || !modelId) {
+        saveBtn.disabled = true;
         return;
     }
 
-    // Update status
-    status.textContent = 'Verifying...';
-    status.className = 'provider-status verifying';
+    // Check if API key is required
+    const providerConfig = cloudProviders[provider];
+    if (providerConfig && providerConfig.requiresKey) {
+        const apiKey = document.getElementById('model-api-key').value.trim();
+        saveBtn.disabled = !apiKey;
+    } else {
+        saveBtn.disabled = false;
+    }
+}
 
-    try {
-        // Save API key to localStorage
+// Save model (add or edit)
+function saveModel() {
+    const provider = document.getElementById('provider-select').value;
+    const modelId = document.getElementById('model-select-dropdown').value;
+    const modelName = document.getElementById('model-select-dropdown').selectedOptions[0]?.text;
+    const apiKey = document.getElementById('model-api-key').value.trim();
+    const editingIndex = document.getElementById('save-model-btn').dataset.editingIndex;
+
+    if (!provider || !modelId) {
+        alert('Please select a provider and model');
+        return;
+    }
+
+    // Determine host type
+    let hostType = 'cloud-browser';
+    let queryMethod = 'browser';
+    if (provider === 'ollama') {
+        hostType = 'ollama-proxy';
+        queryMethod = 'proxy';
+    } else if (provider === 'webllm') {
+        hostType = 'webgpu-browser';
+        queryMethod = 'browser';
+    }
+
+    // Save API key if provided
+    if (apiKey) {
         localStorage.setItem(`${provider.toUpperCase()}_API_KEY`, apiKey);
-
-        // TODO: Actually verify the API key with a test request
-        // For now, just assume it's valid and show models
-
-        // Show models list
-        modelsList.classList.remove('hidden');
-        renderProviderModels(provider, modelsList);
-
-        // Update status
-        status.textContent = 'Configured ✓';
-        status.className = 'provider-status configured';
-
-        // Enable add button (will be enabled when models selected)
-        updateAddButtonState(provider);
-
-        console.log(`[ModelConfig] API key verified for ${provider}`);
-    } catch (error) {
-        console.error(`[ModelConfig] API key verification failed for ${provider}:`, error);
-        status.textContent = 'Verification failed';
-        status.className = 'provider-status error';
-        alert(`API key verification failed: ${error.message}`);
     }
-}
 
-// Render available models for a provider with checkboxes
-function renderProviderModels(provider, container) {
-    const models = providerCatalogs[provider] || [];
+    // Create model config
+    const modelConfig = {
+        id: modelId,
+        name: modelName,
+        provider: provider,
+        hostType: hostType,
+        queryMethod: queryMethod,
+        keySource: apiKey ? 'localStorage' : 'none',
+        keyId: apiKey ? `${provider.toUpperCase()}_API_KEY` : null
+    };
 
-    container.innerHTML = models.map(model => `
-        <label class="model-checkbox">
-            <input type="checkbox"
-                   data-provider="${provider}"
-                   data-model-id="${model.id}"
-                   data-model-name="${model.name}"
-                   data-tier="${model.tier}"
-                   onchange="window.updateAddButtonState('${provider}')"/>
-            <span class="model-name">${model.name}</span>
-            <span class="model-tier ${model.tier}">${model.tier}</span>
-        </label>
-    `).join('');
-}
-
-// Update "Add Selected Models" button state
-window.updateAddButtonState = function(provider) {
-    const checkboxes = document.querySelectorAll(`input[data-provider="${provider}"]:checked`);
-    const addBtn = document.querySelector(`.btn-add-selected[data-provider="${provider}"]`);
-
-    if (addBtn) {
-        addBtn.disabled = checkboxes.length === 0;
-    }
-};
-
-// Add selected models from a provider
-function addSelectedModels(provider) {
-    const checkboxes = document.querySelectorAll(`input[data-provider="${provider}"]:checked`);
-    const queryMethod = document.querySelector(`input[name="${provider}-query"]:checked`)?.value || 'browser';
-
-    checkboxes.forEach(checkbox => {
-        const modelConfig = {
-            id: checkbox.dataset.modelId,
-            name: checkbox.dataset.modelName,
-            provider: provider,
-            tier: checkbox.dataset.tier,
-            queryType: queryMethod === 'browser' ? 'Q1' : 'Q2',
-            queryMethod: queryMethod,
-            keySource: queryMethod === 'browser' ? 'localStorage' : 'proxy-env',
-            keyId: `${provider.toUpperCase()}_API_KEY`
-        };
-
-        // Check if already added
-        const exists = selectedModels.find(m => m.id === modelConfig.id && m.queryMethod === modelConfig.queryMethod);
-        if (!exists) {
-            selectedModels.push(modelConfig);
+    // Add or update
+    if (editingIndex !== '') {
+        selectedModels[parseInt(editingIndex)] = modelConfig;
+    } else {
+        if (selectedModels.length >= MAX_MODELS) {
+            alert(`Maximum ${MAX_MODELS} models allowed`);
+            return;
         }
-
-        // Uncheck the checkbox
-        checkbox.checked = false;
-    });
+        selectedModels.push(modelConfig);
+    }
 
     // Update UI
-    renderSelectedChips();
-    updateAddButtonState(provider);
-    saveConfigToStorage();
+    renderModelCards();
+    saveToStorage();
     updateGoalInputState();
-    updateLegacyStatusDisplay();
+    closeInlineForm();
 
-    // Collapse the provider card
-    const card = document.getElementById(`provider-${provider}`);
-    const body = card.querySelector('.provider-card-body');
-    body.classList.add('hidden');
-
-    console.log(`[ModelConfig] Added models from ${provider}`, selectedModels);
+    console.log('[ModelConfig] Model saved:', modelConfig);
 }
 
-// Render selected models as chips
-function renderSelectedChips() {
-    const container = document.getElementById('selected-chips-container');
-    const emptyState = document.getElementById('chips-empty-state');
+// Close inline form
+function closeInlineForm() {
+    const form = document.getElementById('model-form-inline');
+    form.classList.add('hidden');
+    resetInlineForm();
+}
 
-    if (selectedModels.length === 0) {
-        if (emptyState) emptyState.classList.remove('hidden');
-        return;
-    }
+// Reset inline form
+function resetInlineForm() {
+    document.getElementById('provider-select').value = '';
+    document.getElementById('model-select-dropdown').innerHTML = '<option value="">Select model...</option>';
+    document.getElementById('model-api-key').value = '';
+    document.getElementById('model-select-group').classList.add('hidden');
+    document.getElementById('api-key-group').classList.add('hidden');
+    document.getElementById('host-type-group').classList.add('hidden');
+    document.getElementById('save-model-btn').disabled = true;
+}
 
-    if (emptyState) emptyState.classList.add('hidden');
+// Populate edit form
+function populateEditForm(model) {
+    document.getElementById('provider-select').value = model.provider;
+    onProviderChange({ target: { value: model.provider } });
 
-    container.innerHTML = selectedModels.map((model, index) => `
-        <div class="model-chip" data-index="${index}">
-            <span class="chip-icon">${getProviderIcon(model.provider)}</span>
-            <span class="chip-name">${model.name}</span>
-            <span class="chip-method">${model.queryMethod === 'browser' ? 'Direct' : 'Proxy'}</span>
-            <button type="button" class="chip-remove" onclick="window.removeModelChip(${index})">×</button>
-        </div>
-    `).join('');
+    setTimeout(() => {
+        document.getElementById('model-select-dropdown').value = model.id;
+        onModelChange({ target: { value: model.id } });
+    }, 100);
+}
+
+// Render model cards
+function renderModelCards() {
+    const container = document.getElementById('model-cards-list');
+    const addCard = document.getElementById('add-model-card');
+    const consensusSection = document.getElementById('consensus-section');
+
+    // Clear existing cards (except add card)
+    container.innerHTML = '';
+
+    // Render model cards
+    selectedModels.forEach((model, index) => {
+        const card = createModelCard(model, index);
+        container.appendChild(card);
+    });
+
+    // Re-add the Add Model card
+    container.appendChild(addCard);
 
     // Show/hide consensus section
-    const consensusSection = document.getElementById('consensus-section');
     if (consensusSection) {
         if (selectedModels.length >= 2) {
             consensusSection.classList.remove('hidden');
@@ -247,221 +400,159 @@ function renderSelectedChips() {
     }
 }
 
-// Remove model chip
-window.removeModelChip = function(index) {
-    selectedModels.splice(index, 1);
-    renderSelectedChips();
-    saveConfigToStorage();
-    updateGoalInputState();
-    updateLegacyStatusDisplay();
-};
+// Create model card element
+function createModelCard(model, index) {
+    const card = document.createElement('div');
+    card.className = 'model-card';
+    card.innerHTML = `
+        <div class="model-card-provider">${model.provider}</div>
+        <div class="model-card-name">${model.name}</div>
+        <div class="model-card-connection">${getHostTypeLabel(model.hostType)}</div>
+        <div class="model-card-actions">
+            <button class="model-card-btn edit" data-index="${index}">Edit</button>
+            <button class="model-card-btn remove" data-index="${index}">Remove</button>
+        </div>
+    `;
 
-// Get provider icon (non-emoji unicode symbols)
-function getProviderIcon(provider) {
-    const icons = {
-        gemini: '▲',
-        openai: '▲',
-        anthropic: '▲',
-        ollama: '■',
-        webllm: '◆'
+    // Edit button
+    card.querySelector('.edit').addEventListener('click', () => {
+        openInlineForm(index);
+    });
+
+    // Remove button
+    card.querySelector('.remove').addEventListener('click', () => {
+        removeModel(index);
+    });
+
+    return card;
+}
+
+// Get host type label
+function getHostTypeLabel(hostType) {
+    const labels = {
+        'cloud-browser': 'Cloud',
+        'ollama-proxy': 'Ollama',
+        'webgpu-browser': 'WebGPU',
+        'proxy': 'Proxy'
     };
-    return icons[provider] || '●';
+    return labels[hostType] || hostType;
 }
 
-// Discover local models (Ollama, WebLLM)
-async function discoverLocalModels() {
-    // Discover Ollama models
-    try {
-        const response = await fetch('http://localhost:8000/api/ollama/models', {
-            signal: AbortSignal.timeout(3000)
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            const models = data.models || [];
-
-            const ollamaStatus = document.getElementById('ollama-status');
-            const ollamaList = document.getElementById('ollama-models-list');
-            const ollamaCard = document.getElementById('provider-ollama');
-
-            if (models.length > 0) {
-                ollamaStatus.textContent = `${models.length} models`;
-                ollamaStatus.className = 'provider-status detected';
-
-                ollamaList.innerHTML = models.map((model, index) => `
-                    <label class="model-checkbox">
-                        <input type="checkbox"
-                               data-provider="ollama"
-                               data-model-id="${model.name || model.model}"
-                               data-model-name="${model.name || model.model}"
-                               data-tier="local"
-                               onchange="window.updateAddButtonState('ollama')"/>
-                        <span class="model-name">${model.name || model.model}</span>
-                    </label>
-                `).join('');
-
-                // Make card clickable
-                ollamaCard.classList.add('available');
-                window.updateAddButtonState('ollama');
-            } else {
-                ollamaStatus.textContent = 'No models';
-                ollamaStatus.className = 'provider-status unavailable';
-            }
-        } else {
-            throw new Error('Ollama not available');
-        }
-    } catch (error) {
-        const ollamaStatus = document.getElementById('ollama-status');
-        ollamaStatus.textContent = 'Not available';
-        ollamaStatus.className = 'provider-status unavailable';
-    }
-
-    // Check WebGPU for WebLLM
-    try {
-        const hasWebGPU = !!navigator.gpu;
-        const webllmStatus = document.getElementById('webllm-status');
-        const webllmList = document.getElementById('webllm-models-list');
-        const webllmCard = document.getElementById('provider-webllm');
-
-        if (hasWebGPU) {
-            webllmStatus.textContent = 'Available';
-            webllmStatus.className = 'provider-status detected';
-
-            // Show some common WebLLM models
-            const webllmModels = [
-                { id: 'Phi-3-mini-4k-instruct-q4f16_1-MLC', name: 'Phi-3 Mini' },
-                { id: 'gemma-2b-it-q4f16_1-MLC', name: 'Gemma 2B' },
-                { id: 'Llama-3.2-1B-Instruct-q4f16_1-MLC', name: 'Llama 3.2 1B' }
-            ];
-
-            webllmList.innerHTML = webllmModels.map((model, index) => `
-                <label class="model-checkbox">
-                    <input type="checkbox"
-                           data-provider="webllm"
-                           data-model-id="${model.id}"
-                           data-model-name="${model.name}"
-                           data-tier="browser"
-                           onchange="window.updateAddButtonState('webllm')"/>
-                    <span class="model-name">${model.name}</span>
-                </label>
-            `).join('');
-
-            webllmCard.classList.add('available');
-            window.updateAddButtonState('webllm');
-        } else {
-            webllmStatus.textContent = 'WebGPU not available';
-            webllmStatus.className = 'provider-status unavailable';
-        }
-    } catch (error) {
-        const webllmStatus = document.getElementById('webllm-status');
-        webllmStatus.textContent = 'Not available';
-        webllmStatus.className = 'provider-status unavailable';
+// Remove model
+function removeModel(index) {
+    if (confirm('Remove this model?')) {
+        selectedModels.splice(index, 1);
+        renderModelCards();
+        saveToStorage();
+        updateGoalInputState();
     }
 }
 
-// Update goal input state (enable/disable based on selected models)
+// Update status indicators (both dots and status bar)
+function updateStatusDots() {
+    // Ollama status
+    const ollamaIcon = document.getElementById('ollama-status-icon');
+    const ollamaText = document.getElementById('ollama-status-text');
+
+    if (ollamaIcon && ollamaText) {
+        if (availableProviders.ollama.online) {
+            ollamaIcon.className = 'provider-status-icon online';
+            ollamaText.className = 'provider-status-value online';
+            ollamaText.textContent = `Online (${availableProviders.ollama.models.length} models)`;
+        } else {
+            ollamaIcon.className = 'provider-status-icon offline';
+            ollamaText.className = 'provider-status-value offline';
+            ollamaText.textContent = 'Offline';
+        }
+    }
+
+    // WebGPU status
+    const webgpuIcon = document.getElementById('webgpu-status-icon');
+    const webgpuText = document.getElementById('webgpu-status-text');
+
+    if (webgpuIcon && webgpuText) {
+        if (availableProviders.webgpu.online) {
+            webgpuIcon.className = 'provider-status-icon online';
+            webgpuText.className = 'provider-status-value online';
+            webgpuText.textContent = 'Available';
+        } else {
+            webgpuIcon.className = 'provider-status-icon offline';
+            webgpuText.className = 'provider-status-value offline';
+            webgpuText.textContent = 'Not Available';
+        }
+    }
+
+    // Proxy status
+    const proxyIcon = document.getElementById('proxy-status-icon');
+    const proxyText = document.getElementById('proxy-status-text');
+
+    if (proxyIcon && proxyText) {
+        if (availableProviders.proxy.online) {
+            proxyIcon.className = 'provider-status-icon online';
+            proxyText.className = 'provider-status-value online';
+            proxyText.textContent = 'Online';
+        } else {
+            proxyIcon.className = 'provider-status-icon offline';
+            proxyText.className = 'provider-status-value offline';
+            proxyText.textContent = 'Offline';
+        }
+    }
+}
+
+// Update goal input state
 function updateGoalInputState() {
-    // Find the goal input field and button
-    const goalInput = document.getElementById('goal-input') ||
-                      document.querySelector('input[placeholder*="goal"]') ||
-                      document.querySelector('textarea[placeholder*="goal"]');
+    const goalInput = document.getElementById('goal-input');
     const awakenBtn = document.getElementById('awaken-btn');
 
     if (goalInput) {
         if (selectedModels.length === 0) {
             goalInput.disabled = true;
             goalInput.placeholder = '► Select at least one model to continue';
-            goalInput.classList.add('disabled-goal-input');
             if (awakenBtn) awakenBtn.disabled = true;
         } else {
             goalInput.disabled = false;
             goalInput.placeholder = 'Describe your goal...';
-            goalInput.classList.remove('disabled-goal-input');
             if (awakenBtn) awakenBtn.disabled = false;
         }
     }
 }
 
-// Load saved configuration from localStorage
-function loadSavedConfiguration() {
-    try {
-        const saved = localStorage.getItem('SELECTED_MODELS');
-        if (saved) {
-            selectedModels = JSON.parse(saved);
-            renderSelectedChips();
-            console.log('[ModelConfig] Loaded saved configuration:', selectedModels);
-        }
-
-        // Check for existing API keys and auto-configure providers
-        const geminiKey = localStorage.getItem('GEMINI_API_KEY');
-        const openaiKey = localStorage.getItem('OPENAI_API_KEY');
-        const anthropicKey = localStorage.getItem('ANTHROPIC_API_KEY');
-
-        if (geminiKey) {
-            document.getElementById('gemini-api-key').value = geminiKey;
-            document.getElementById('gemini-status').textContent = 'Key detected';
-            document.getElementById('gemini-status').className = 'provider-status detected';
-        }
-
-        if (openaiKey) {
-            document.getElementById('openai-api-key').value = openaiKey;
-            document.getElementById('openai-status').textContent = 'Key detected';
-            document.getElementById('openai-status').className = 'provider-status detected';
-        }
-
-        if (anthropicKey) {
-            document.getElementById('anthropic-api-key').value = anthropicKey;
-            document.getElementById('anthropic-status').textContent = 'Key detected';
-            document.getElementById('anthropic-status').className = 'provider-status detected';
-        }
-    } catch (error) {
-        console.error('[ModelConfig] Failed to load saved configuration:', error);
-    }
-}
-
-// Save configuration to localStorage
-function saveConfigToStorage() {
+// Save to storage
+function saveToStorage() {
     try {
         localStorage.setItem('SELECTED_MODELS', JSON.stringify(selectedModels));
 
-        // Also save consensus strategy
+        // Save consensus strategy
         const consensus = document.getElementById('consensus-strategy')?.value || 'arena';
         localStorage.setItem('CONSENSUS_TYPE', consensus);
 
-        // Set legacy fields for backward compatibility
+        // Legacy compatibility
         if (selectedModels.length > 0) {
             const primaryModel = selectedModels[0];
             localStorage.setItem('SELECTED_MODEL', primaryModel.id);
             localStorage.setItem('AI_PROVIDER', primaryModel.provider);
         }
 
-        console.log('[ModelConfig] Configuration saved to localStorage');
+        console.log('[ModelConfig] Configuration saved');
     } catch (error) {
-        console.error('[ModelConfig] Failed to save configuration:', error);
+        console.error('[ModelConfig] Failed to save:', error);
     }
 }
 
-// Update legacy status display (old UI elements at top of page)
-function updateLegacyStatusDisplay() {
-    const providerStatus = document.getElementById('provider-status');
-    const providerStatusDetail = document.getElementById('provider-status-detail');
-
-    if (!providerStatus || !providerStatusDetail) return;
-
-    if (selectedModels.length === 0) {
-        providerStatus.textContent = 'No models configured';
-        providerStatusDetail.textContent = 'Select at least one model to continue';
-    } else if (selectedModels.length === 1) {
-        const model = selectedModels[0];
-        providerStatus.textContent = model.name;
-        providerStatusDetail.textContent = `${model.provider} via ${model.queryMethod === 'browser' ? 'Browser' : 'Proxy'}`;
-    } else {
-        providerStatus.textContent = `${selectedModels.length} models configured`;
-        providerStatusDetail.textContent = selectedModels.map(m => m.name).join(', ');
+// Load saved models
+function loadSavedModels() {
+    try {
+        const saved = localStorage.getItem('SELECTED_MODELS');
+        if (saved) {
+            selectedModels = JSON.parse(saved);
+            console.log('[ModelConfig] Loaded saved models:', selectedModels);
+        }
+    } catch (error) {
+        console.error('[ModelConfig] Failed to load saved models:', error);
     }
 }
 
-// Export for external use
+// Export functions
 export function getSelectedModels() {
     return selectedModels;
 }
