@@ -6,8 +6,6 @@
  * combining expertise across sciences, computing, AI/AGI, design, and human systems.
  */
 
-import BasePersona from './base-persona.js';
-
 const MultiMindSynthesisPersona = {
   metadata: {
     id: 'multi-mind-synthesis-persona',
@@ -16,10 +14,10 @@ const MultiMindSynthesisPersona = {
     type: 'persona'
   },
 
-  factory: () => {
-    // Get base platform capabilities
-    const basePersona = BasePersona.factory();
-    const basePlatformPrompt = basePersona.getSystemPromptFragment();
+  factory: (deps) => {
+    // Get base platform capabilities from DI container
+    const BasePersona = deps['base-persona'];
+    const basePlatformPrompt = BasePersona?.getSystemPromptFragment?.() || '';
 
     // Widget tracking
     let _cycleCount = 0;
@@ -332,4 +330,7 @@ Your response should reflect the synthesis of all expert perspectives, with part
   }
 };
 
-export default MultiMindSynthesisPersona;
+// Make available for module loader
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = MultiMindSynthesisPersona;
+}

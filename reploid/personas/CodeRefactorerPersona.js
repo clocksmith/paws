@@ -1,7 +1,5 @@
 // Code Refactorer Persona - Project Phoenix
 
-import BasePersona from './base-persona.js';
-
 const CodeRefactorerPersona = {
   metadata: {
     id: 'code-refactorer-persona',
@@ -9,10 +7,10 @@ const CodeRefactorerPersona = {
     dependencies: ['base-persona'],
     type: 'persona'
   },
-  factory: () => {
-    // Get base platform capabilities
-    const basePersona = BasePersona.factory();
-    const basePlatformPrompt = basePersona.getSystemPromptFragment();
+  factory: (deps) => {
+    // Get base platform capabilities from DI container
+    const BasePersona = deps['base-persona'];
+    const basePlatformPrompt = BasePersona?.getSystemPromptFragment?.() || '';
 
     // Define role-specific prompt
     const rolePrompt = "You are a senior software engineer specializing in code quality. Your task is to analyze code for improvements, fix bugs, and enhance performance. You should be meticulous and provide clear justifications for your proposed changes.";
@@ -147,4 +145,7 @@ const CodeRefactorerPersona = {
   }
 };
 
-export default CodeRefactorerPersona;
+// Make available for module loader
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = CodeRefactorerPersona;
+}

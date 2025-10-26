@@ -6,8 +6,6 @@
  * multi-perspective analysis with explicit deliberation and confidence scoring.
  */
 
-import BasePersona from './base-persona.js';
-
 const MultiMindArchitectPersona = {
   metadata: {
     id: 'multi-mind-architect-persona',
@@ -16,10 +14,10 @@ const MultiMindArchitectPersona = {
     type: 'persona'
   },
 
-  factory: () => {
-    // Get base platform capabilities
-    const basePersona = BasePersona.factory();
-    const basePlatformPrompt = basePersona.getSystemPromptFragment();
+  factory: (deps) => {
+    // Get base platform capabilities from DI container
+    const BasePersona = deps['base-persona'];
+    const basePlatformPrompt = BasePersona?.getSystemPromptFragment?.() || '';
 
     // Widget tracking
     let _cycleCount = 0;
@@ -280,4 +278,7 @@ You are meticulous, self-critical, and prioritize correctness over speed. You ex
   }
 };
 
-export default MultiMindArchitectPersona;
+// Make available for module loader
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = MultiMindArchitectPersona;
+}

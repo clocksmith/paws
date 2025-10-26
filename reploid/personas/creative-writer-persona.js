@@ -5,7 +5,6 @@
  * This persona focuses on creative and professional writing tasks.
  */
 
-import BasePersona from './base-persona.js';
 const CreativeWriterPersona = {
   metadata: {
     id: 'creative-writer-persona',
@@ -14,10 +13,10 @@ const CreativeWriterPersona = {
     type: 'persona'
   },
 
-  factory: () => {
-    // Get base platform capabilities
-    const basePersona = BasePersona.factory();
-    const basePlatformPrompt = basePersona.getSystemPromptFragment();
+  factory: (deps) => {
+    // Get base platform capabilities from DI container
+    const BasePersona = deps['base-persona'];
+    const basePlatformPrompt = BasePersona?.getSystemPromptFragment?.() || '';
 
     // Widget tracking
     let _cycleCount = 0;
@@ -221,4 +220,7 @@ Whether the goal is to inform, persuade, entertain, or inspire, you help users c
   }
 };
 
-export default CreativeWriterPersona;
+// Make available for module loader
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = CreativeWriterPersona;
+}

@@ -14,6 +14,26 @@ REPLOID is a tool for running AI agents entirely in your browser, with a focus o
 
 ---
 
+## How It Works
+
+**Simple 5-step process:**
+
+1. **Boot Screen** → You select which modules to load and enter your goal
+2. **Download Modules** → Selected upgrades are downloaded from the server and saved to your browser's virtual file system (IndexedDB)
+3. **Load Dependencies** → The DI Container resolves and loads each module in the correct order based on their dependencies
+4. **Initialize Agent** → The agent cognitive loop starts with your selected persona (if any) shaping its behavior
+5. **Execute Goal** → The agent uses available tools to work toward your goal, streaming responses in real-time
+
+**The Three Building Blocks:**
+
+**Upgrades** are the functional modules that give the agent capabilities (e.g., `tool-runner.js`, `state-manager.js`, `meta-tool-creator.js`). They provide core features like tool execution, state management, API clients, and meta-cognitive abilities. Think of upgrades as the agent's "organs" - each one performs a specific function.
+
+**Personas** are behavior templates that shape how the agent thinks and responds (e.g., `creative-writer-persona.js`, `multi-mind-synthesis-persona.js`). They modify the system prompt, prioritize certain tools, and define the agent's "personality" and expertise. Think of personas as the agent's "mindset" - they determine approach and style.
+
+**Blueprints** are design documents that describe what each module should do before it's built (e.g., `0x00004E-module-widget-protocol.md`). They live in `/blueprints` and serve as specifications and documentation. Think of blueprints as the "architecture plans" - they guide development and explain design decisions.
+
+---
+
 ## Boot Modes
 
 REPLOID offers 4 progressive tiers to match your use case:

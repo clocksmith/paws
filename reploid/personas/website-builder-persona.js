@@ -6,8 +6,6 @@
  * with live preview capabilities.
  */
 
-import BasePersona from './base-persona.js';
-
 const WebsiteBuilderPersona = {
   metadata: {
     id: 'website-builder-persona',
@@ -16,10 +14,10 @@ const WebsiteBuilderPersona = {
     type: 'persona'
   },
 
-  factory: () => {
-    // Get base platform capabilities
-    const basePersona = BasePersona.factory();
-    const basePlatformPrompt = basePersona.getSystemPromptFragment();
+  factory: (deps) => {
+    // Get base platform capabilities from DI container
+    const BasePersona = deps['base-persona'];
+    const basePlatformPrompt = BasePersona?.getSystemPromptFragment?.() || '';
 
     // Widget tracking
     let _cycleCount = 0;
@@ -216,4 +214,7 @@ Always provide code that is ready to preview immediately in the browser.`;
   }
 };
 
-export default WebsiteBuilderPersona;
+// Make available for module loader
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = WebsiteBuilderPersona;
+}

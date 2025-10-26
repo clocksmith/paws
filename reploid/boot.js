@@ -487,6 +487,106 @@ async function awakenAgent() {
         return;
     }
 
+    // First, immediately handle UI transition before any async work
+    const bootContainer = document.getElementById('boot-container');
+    const appRoot = document.getElementById('app-root');
+
+    if (!bootContainer || !appRoot) {
+        console.error('[Boot] Missing boot-container or app-root elements');
+        return;
+    }
+
+    // Immediately hide boot container
+    bootContainer.style.display = 'none';
+
+    // Show loading overlay
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.id = 'boot-transition-overlay';
+    loadingOverlay.innerHTML = `
+                <style>
+                    #boot-transition-overlay {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                        z-index: 10000;
+                        animation: fadeIn 0.3s ease-in;
+                    }
+                    #boot-transition-overlay .loading-content {
+                        text-align: center;
+                    }
+                    #boot-transition-overlay h2 {
+                        color: #00ffff;
+                        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+                        font-size: 2em;
+                        margin: 0 0 20px 0;
+                        animation: shimmer 2s linear infinite;
+                        background: linear-gradient(90deg, #00ffff, #ffd700, #00ffff);
+                        background-size: 200% auto;
+                        -webkit-background-clip: text;
+                        -webkit-text-fill-color: transparent;
+                        background-clip: text;
+                    }
+                    #boot-transition-overlay .goal-text {
+                        color: #e0e0e0;
+                        font-size: 1.1em;
+                        margin-bottom: 30px;
+                        max-width: 600px;
+                    }
+                    #boot-transition-overlay .spinner {
+                        width: 60px;
+                        height: 60px;
+                        border: 4px solid rgba(0, 255, 255, 0.1);
+                        border-top: 4px solid #00ffff;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                        margin: 0 auto;
+                    }
+                    @keyframes fadeIn {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                    @keyframes shimmer {
+                        0% { background-position: 0% center; }
+                        100% { background-position: 200% center; }
+                    }
+                    .fade-out {
+                        animation: fadeOut 0.5s ease-out forwards;
+                    }
+                    @keyframes fadeOut {
+                        from { opacity: 1; }
+                        to { opacity: 0; }
+                    }
+                </style>
+                <div class="loading-content">
+                    <h2>REPLOID Awakening</h2>
+                    <div class="goal-text">${goal}</div>
+                    <div class="spinner"></div>
+                </div>
+            `;
+    document.body.appendChild(loadingOverlay);
+
+    // Show app root immediately
+    appRoot.style.display = 'block';
+    appRoot.style.opacity = '0';
+
+    // CRITICAL: Use requestAnimationFrame to ensure DOM updates before async work
+    // This forces the browser to render the boot screen removal
+    await new Promise(resolve => requestAnimationFrame(resolve));
+
+    // Now remove the boot container from DOM after browser has painted
+    bootContainer.remove();
+
     try {
         // Collect and save boot state to VFS for genesis cycle
         const bootMode = localStorage.getItem('BOOT_MODE') || 'meta';
@@ -534,145 +634,145 @@ async function awakenAgent() {
             console.warn('[Boot] Proxy unavailable, boot state not persisted to VFS');
         }
 
-        // Smooth transition from boot to main app
-        const bootContainer = document.getElementById('boot-container');
-        const appRoot = document.getElementById('app-root');
+        // ============================================================
+        // BOOT LOADER: Load all modules into VFS based on boot mode
+        // ============================================================
 
-        if (bootContainer && appRoot) {
-            // Show loading overlay
-            const loadingOverlay = document.createElement('div');
-            loadingOverlay.id = 'boot-transition-overlay';
-            loadingOverlay.innerHTML = `
-                <style>
-                    #boot-transition-overlay {
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        width: 100%;
-                        height: 100%;
-                        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: center;
-                        align-items: center;
-                        z-index: 10000;
-                        animation: fadeIn 0.3s ease-in;
-                    }
-                    #boot-transition-overlay .loading-content {
-                        text-align: center;
-                    }
-                    #boot-transition-overlay h2 {
-                        color: var(--color-primary);
-                        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-                        font-size: 2em;
-                        margin: 0 0 20px 0;
-                        animation: shimmer 2s linear infinite;
-                        background: linear-gradient(90deg, #00ffff, #ffd700, #00ffff);
-                        background-size: 200% auto;
-                        -webkit-background-clip: text;
-                        -webkit-text-fill-color: transparent;
-                        background-clip: text;
-                    }
-                    #boot-transition-overlay .goal-text {
-                        color: #e0e0e0;
-                        font-size: 1.1em;
-                        margin-bottom: 30px;
-                        max-width: 600px;
-                    }
-                    #boot-transition-overlay .spinner {
-                        width: 60px;
-                        height: 60px;
-                        border: 4px solid rgba(0, 255, 255, 0.1);
-                        border-top: 4px solid var(--color-primary);
-                        border-radius: 50%;
-                        animation: spin 1s linear infinite;
-                        margin: 0 auto;
-                    }
-                    #boot-transition-overlay .status-text {
-                        color: var(--color-secondary);
-                        margin-top: 20px;
-                        font-size: 0.9em;
-                    }
-                    @keyframes fadeIn {
-                        from { opacity: 0; }
-                        to { opacity: 1; }
-                    }
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                    @keyframes shimmer {
-                        0% { background-position: 0% center; }
-                        100% { background-position: 200% center; }
-                    }
-                    .fade-out {
-                        animation: fadeOut 0.5s ease-out forwards;
-                    }
-                    @keyframes fadeOut {
-                        from { opacity: 1; }
-                        to { opacity: 0; }
-                    }
-                </style>
-                <div class="loading-content">
-                    <h2>REPLOID Awakening</h2>
-                    <div class="goal-text">${goal}</div>
-                    <div class="spinner"></div>
-                    <div class="status-text">Initializing agent system...</div>
-                </div>
-            `;
-            document.body.appendChild(loadingOverlay);
+        console.log('[BootLoader] Initializing VFS and loading modules...');
 
-            // Fade out boot container
-            bootContainer.style.transition = 'opacity 0.5s ease-out';
-            bootContainer.style.opacity = '0';
+        // First, fetch module manifest to know what to load
+        console.log('[BootLoader] Fetching module manifest...');
+        const manifestResponse = await fetch('/module-manifest.json?t=' + Date.now());
+        const manifest = await manifestResponse.json();
+        console.log('[BootLoader] Manifest loaded:', manifest.version, 'with', Object.keys(manifest.loadGroups).length, 'load groups');
 
-            // After fade out, hide boot and prepare app
-            setTimeout(() => {
-                bootContainer.style.display = 'none';
-                appRoot.style.display = 'block';
-                appRoot.style.opacity = '0';
-
-                // Wait a moment then fade in app and fade out loading overlay
-                setTimeout(() => {
-                    appRoot.style.transition = 'opacity 0.5s ease-in';
-                    appRoot.style.opacity = '1';
-                    loadingOverlay.classList.add('fade-out');
-
-                    // Remove loading overlay after fade
-                    setTimeout(() => {
-                        loadingOverlay.remove();
-                    }, 500);
-                }, 100);
-            }, 500);
+        // Determine which modules to load based on boot mode
+        let modulesToLoad = [];
+        switch (bootMode) {
+            case 'essential':
+                modulesToLoad = manifest.presets?.essential || [];
+                break;
+            case 'meta':
+                modulesToLoad = manifest.presets?.meta || [];
+                break;
+            case 'full':
+                modulesToLoad = manifest.presets?.full || [];
+                break;
+            case 'experimental':
+                modulesToLoad = manifest.presets?.experimental || [];
+                break;
+            default:
+                modulesToLoad = manifest.presets?.meta || []; // Default to meta
         }
 
-        // Create VFS that fetches files from the server
+        console.log('[BootLoader] Boot mode:', bootMode, '- Loading', modulesToLoad.length, 'modules');
+
+        // Fetch config.json (needed for agent)
+        console.log('[BootLoader] Fetching config.json...');
+        const configResponse = await fetch('/config.json?t=' + Date.now());
+        const configContent = await configResponse.text();
+
+        // ALWAYS fetch app-logic.js (bootstrap script, not a module)
+        console.log('[BootLoader] Fetching app-logic.js (bootstrap)...');
+        const appLogicResponse = await fetch('/upgrades/app-logic.js?t=' + Date.now());
+        const appLogicContent = await appLogicResponse.text();
+
+        // Fetch all module files from server IN PARALLEL
+        console.log('[BootLoader] Fetching', modulesToLoad.length, 'module files from server...');
+        const modulePromises = modulesToLoad.map(async (modulePath) => {
+            try {
+                const response = await fetch(modulePath + '?t=' + Date.now());
+                if (!response.ok) {
+                    console.warn(`[BootLoader] Failed to fetch ${modulePath}:`, response.statusText);
+                    return null;
+                }
+                const content = await response.text();
+                return { path: modulePath, content };
+            } catch (error) {
+                console.error(`[BootLoader] Error fetching ${modulePath}:`, error);
+                return null;
+            }
+        });
+
+        const moduleResults = await Promise.all(modulePromises);
+        const loadedModules = moduleResults.filter(m => m !== null);
+        console.log('[BootLoader] Successfully fetched', loadedModules.length, 'modules');
+
+        // Initialize GitVFS (IndexedDB-backed Git filesystem)
+        console.log('[BootLoader] Initializing GitVFS...');
+        const LightningFS = window.LightningFS;
+        const fs = new LightningFS('reploid-vfs');
+        const git = window.git;
+
+        // Helper to write file to VFS
+        const writeToVFS = async (filepath, content) => {
+            const dir = filepath.substring(0, filepath.lastIndexOf('/'));
+            if (dir) {
+                await fs.promises.mkdir(dir, { recursive: true }).catch(() => {});
+            }
+            await fs.promises.writeFile(filepath, content, 'utf8');
+        };
+
+        // Initialize git repo if needed
+        try {
+            await git.init({ fs, dir: '/' });
+        } catch (error) {
+            // Repo might already exist
+        }
+
+        // Write all modules to VFS
+        console.log('[BootLoader] Writing', loadedModules.length, 'modules to VFS...');
+        await writeToVFS('/config.json', configContent);
+        await writeToVFS('/module-manifest.json', JSON.stringify(manifest, null, 2));
+        await writeToVFS('/upgrades/app-logic.js', appLogicContent);
+
+        for (const module of loadedModules) {
+            await writeToVFS(module.path, module.content);
+        }
+
+        console.log('[BootLoader] All modules + app-logic written to VFS');
+
+        // Commit to git
+        try {
+            await git.add({ fs, dir: '/', filepath: '.' });
+            await git.commit({
+                fs,
+                dir: '/',
+                message: `Boot Loader: Loaded ${loadedModules.length} modules (${bootMode} mode)`,
+                author: {
+                    name: 'REPLOID Boot Loader',
+                    email: 'boot@reploid.local'
+                }
+            });
+            console.log('[BootLoader] Committed modules to Git');
+        } catch (error) {
+            console.warn('[BootLoader] Git commit failed (non-fatal):', error);
+        }
+
+        // Create VFS interface for agent
         const vfs = {
             read: async (path) => {
-                console.log(`[VFS] Reading: ${path}`);
+                console.log(`[VFS] Reading from IndexedDB: ${path}`);
                 try {
-                    // Remove leading slash for fetch
-                    const fetchPath = path.startsWith('/') ? path.substring(1) : path;
-                    // Add cache-busting parameter
-                    const cacheBust = `${fetchPath}?t=${Date.now()}`;
-                    const response = await fetch(cacheBust);
-
-                    if (!response.ok) {
-                        throw new Error(`Failed to fetch ${path}: ${response.statusText}`);
-                    }
-
-                    const content = await response.text();
+                    const content = await fs.promises.readFile(path, 'utf8');
                     console.log(`[VFS] Loaded: ${path} (${content.length} bytes)`);
                     return content;
                 } catch (error) {
                     console.error(`[VFS] Error reading ${path}:`, error);
                     throw error;
                 }
-            }
+            },
+            write: async (path, content) => {
+                await writeToVFS(path, content);
+            },
+            fs, // Expose filesystem for advanced operations
+            git // Expose git for version control
         };
 
-        // Load app-logic.js
-        console.log('[Boot] Loading app-logic.js...');
+        console.log('[BootLoader] VFS ready - all modules available in IndexedDB');
+
+        // Load app-logic.js from VFS
+        console.log('[Boot] Loading app-logic.js from VFS...');
         const appLogicCode = await vfs.read('/upgrades/app-logic.js');
         console.log('[Boot] app-logic.js loaded, size:', appLogicCode.length);
 
@@ -701,6 +801,18 @@ async function awakenAgent() {
         await CoreLogicModule(initialConfig, vfs);
 
         console.log('[Boot] Agent system awakened successfully');
+
+        // After successful initialization, transition to main app
+        setTimeout(() => {
+            appRoot.style.transition = 'opacity 0.5s ease-in';
+            appRoot.style.opacity = '1';
+            loadingOverlay.classList.add('fade-out');
+
+            // Remove loading overlay after fade
+            setTimeout(() => {
+                loadingOverlay.remove();
+            }, 500);
+        }, 300);
 
     } catch (error) {
         console.error('[Boot] Failed to awaken agent:', error);

@@ -1,120 +1,488 @@
 {
   "version": "1.0",
   "description": "REPLOID Universal Module Manifest - Defines all modules and their load order",
+  "presets": {
+    "essential": [
+      "/upgrades/utils.js",
+      "/upgrades/event-bus.js",
+      "/upgrades/di-container.js",
+      "/upgrades/app-logic.js",
+      "/upgrades/storage-indexeddb.js",
+      "/upgrades/state-helpers-pure.js",
+      "/upgrades/audit-logger.js",
+      "/upgrades/state-manager.js",
+      "/upgrades/rate-limiter.js",
+      "/upgrades/api-client.js",
+      "/upgrades/tool-runner-pure-helpers.js",
+      "/upgrades/tool-runner.js",
+      "/utils/diff-generator.js",
+      "/upgrades/vfs-explorer.js",
+      "/upgrades/performance-monitor.js",
+      "/upgrades/metrics-dashboard.js",
+      "/upgrades/introspector.js",
+      "/upgrades/reflection-store.js",
+      "/upgrades/self-tester.js",
+      "/upgrades/browser-apis.js",
+      "/upgrades/verification-manager.js",
+      "/upgrades/sentinel-tools.js",
+      "/upgrades/git-vfs.js",
+      "/upgrades/webrtc-swarm.js",
+      "/upgrades/webrtc-coordinator.js",
+      "/upgrades/sentinel-fsm.js",
+      "/upgrades/agent-visualizer.js",
+      "/upgrades/ast-visualizer.js",
+      "/upgrades/module-graph-visualizer.js",
+      "/upgrades/toast-notifications.js",
+      "/upgrades/tutorial-system.js",
+      "/upgrades/pyodide-runtime.js",
+      "/upgrades/local-llm.js",
+      "/upgrades/progress-tracker.js",
+      "/upgrades/log-panel.js",
+      "/upgrades/status-bar.js",
+      "/upgrades/thought-panel.js",
+      "/upgrades/goal-panel.js",
+      "/upgrades/sentinel-panel.js",
+      "/upgrades/ui-manager.js",
+      "/upgrades/streaming-response-handler.js",
+      "/upgrades/hybrid-llm-provider.js",
+      "/upgrades/agent-logic-pure.js",
+      "/upgrades/autonomous-orchestrator.js",
+      "/upgrades/agent-cycle.js",
+      "/personas/base-persona.js",
+      "/personas/CodeRefactorerPersona.js"
+    ],
+    "meta": [
+      "/upgrades/utils.js",
+      "/upgrades/event-bus.js",
+      "/upgrades/di-container.js",
+      "/upgrades/state-helpers-pure.js",
+      "/upgrades/tool-runner-pure-helpers.js",
+      "/upgrades/config.js",
+      "/upgrades/app-logic.js",
+      "/upgrades/storage-indexeddb.js",
+      "/upgrades/audit-logger.js",
+      "/upgrades/rate-limiter.js",
+      "/upgrades/model-registry.js",
+      "/upgrades/state-manager.js",
+      "/upgrades/local-llm.js",
+      "/upgrades/hybrid-llm-provider.js",
+      "/upgrades/api-client.js",
+      "/upgrades/tool-runner.js",
+      "/utils/diff-generator.js",
+      "/upgrades/agent-logic-pure.js",
+      "/upgrades/autonomous-orchestrator.js",
+      "/upgrades/agent-cycle.js",
+      "/upgrades/context-manager.js",
+      "/upgrades/streaming-response-handler.js",
+      "/upgrades/reflection-store.js",
+      "/upgrades/performance-monitor.js",
+      "/upgrades/toast-notifications.js",
+      "/upgrades/browser-apis.js",
+      "/upgrades/pyodide-runtime.js",
+      "/upgrades/introspector.js",
+      "/upgrades/self-tester.js",
+      "/upgrades/verification-manager.js",
+      "/upgrades/vfs-explorer.js",
+      "/upgrades/metrics-dashboard.js",
+      "/upgrades/agent-visualizer.js",
+      "/upgrades/ast-visualizer.js",
+      "/upgrades/module-graph-visualizer.js",
+      "/upgrades/tutorial-system.js",
+      "/upgrades/progress-tracker.js",
+      "/upgrades/log-panel.js",
+      "/upgrades/status-bar.js",
+      "/upgrades/goal-panel.js",
+      "/upgrades/thought-panel.js",
+      "/upgrades/git-vfs.js",
+      "/upgrades/webrtc-swarm.js",
+      "/upgrades/webrtc-coordinator.js",
+      "/upgrades/sentinel-fsm.js",
+      "/upgrades/sentinel-tools.js",
+      "/upgrades/sentinel-panel.js",
+      "/upgrades/meta-tool-creator.js",
+      "/upgrades/model-arena.js",
+      "/upgrades/ui-manager.js",
+      "/personas/base-persona.js",
+      "/personas/CodeRefactorerPersona.js"
+    ],
+    "full": [
+      "/upgrades/utils.js",
+      "/upgrades/event-bus.js",
+      "/upgrades/di-container.js",
+      "/upgrades/state-helpers-pure.js",
+      "/upgrades/tool-runner-pure-helpers.js",
+      "/upgrades/agent-logic-pure.js",
+      "/upgrades/config.js",
+      "/upgrades/app-logic.js",
+      "/upgrades/storage-indexeddb.js",
+      "/upgrades/audit-logger.js",
+      "/upgrades/rate-limiter.js",
+      "/upgrades/model-registry.js",
+      "/upgrades/state-manager.js",
+      "/upgrades/local-llm.js",
+      "/upgrades/hybrid-llm-provider.js",
+      "/upgrades/api-client.js",
+      "/upgrades/tool-runner.js",
+      "/utils/diff-generator.js",
+      "/upgrades/reflection-store.js",
+      "/upgrades/performance-monitor.js",
+      "/upgrades/toast-notifications.js",
+      "/upgrades/streaming-response-handler.js",
+      "/upgrades/context-manager.js",
+      "/upgrades/browser-apis.js",
+      "/upgrades/progress-tracker.js",
+      "/upgrades/log-panel.js",
+      "/upgrades/status-bar.js",
+      "/upgrades/goal-panel.js",
+      "/upgrades/thought-panel.js",
+      "/upgrades/vfs-explorer.js",
+      "/upgrades/metrics-dashboard.js",
+      "/upgrades/introspector.js",
+      "/upgrades/self-tester.js",
+      "/upgrades/agent-visualizer.js",
+      "/upgrades/ast-visualizer.js",
+      "/upgrades/module-graph-visualizer.js",
+      "/upgrades/tutorial-system.js",
+      "/upgrades/pyodide-runtime.js",
+      "/upgrades/ui-manager.js",
+      "/upgrades/autonomous-orchestrator.js",
+      "/upgrades/agent-cycle.js",
+      "/upgrades/verification-manager.js",
+      "/upgrades/sentinel-tools.js",
+      "/upgrades/sentinel-panel.js",
+      "/upgrades/confirmation-modal.js",
+      "/upgrades/diff-viewer-ui.js",
+      "/upgrades/git-vfs.js",
+      "/upgrades/webrtc-swarm.js",
+      "/upgrades/webrtc-coordinator.js",
+      "/upgrades/sentinel-fsm.js",
+      "/upgrades/meta-tool-creator.js",
+      "/upgrades/model-arena.js",
+      "/upgrades/peer-review-consensus.js"
+    ],
+    "experimental": [
+      "/upgrades/utils.js",
+      "/upgrades/event-bus.js",
+      "/upgrades/di-container.js",
+      "/upgrades/state-helpers-pure.js",
+      "/upgrades/tool-runner-pure-helpers.js",
+      "/upgrades/agent-logic-pure.js",
+      "/upgrades/config.js",
+      "/upgrades/app-logic.js",
+      "/upgrades/storage-indexeddb.js",
+      "/upgrades/audit-logger.js",
+      "/upgrades/rate-limiter.js",
+      "/upgrades/model-registry.js",
+      "/upgrades/state-manager.js",
+      "/upgrades/local-llm.js",
+      "/upgrades/hybrid-llm-provider.js",
+      "/upgrades/api-client.js",
+      "/upgrades/tool-runner.js",
+      "/utils/diff-generator.js",
+      "/upgrades/reflection-store.js",
+      "/upgrades/performance-monitor.js",
+      "/upgrades/toast-notifications.js",
+      "/upgrades/streaming-response-handler.js",
+      "/upgrades/context-manager.js",
+      "/upgrades/browser-apis.js",
+      "/upgrades/pyodide-runtime.js",
+      "/upgrades/introspector.js",
+      "/upgrades/self-tester.js",
+      "/upgrades/verification-manager.js",
+      "/upgrades/vfs-explorer.js",
+      "/upgrades/metrics-dashboard.js",
+      "/upgrades/agent-visualizer.js",
+      "/upgrades/ast-visualizer.js",
+      "/upgrades/module-graph-visualizer.js",
+      "/upgrades/tutorial-system.js",
+      "/upgrades/goal-modifier.js",
+      "/upgrades/progress-tracker.js",
+      "/upgrades/log-panel.js",
+      "/upgrades/status-bar.js",
+      "/upgrades/goal-panel.js",
+      "/upgrades/thought-panel.js",
+      "/upgrades/ui-manager.js",
+      "/upgrades/autonomous-orchestrator.js",
+      "/upgrades/agent-cycle.js",
+      "/upgrades/git-vfs.js",
+      "/upgrades/sentinel-tools.js",
+      "/upgrades/sentinel-panel.js",
+      "/upgrades/confirmation-modal.js",
+      "/upgrades/diff-viewer-ui.js",
+      "/upgrades/webrtc-swarm.js",
+      "/upgrades/webrtc-coordinator.js",
+      "/upgrades/sentinel-fsm.js",
+      "/upgrades/meta-tool-creator.js",
+      "/upgrades/model-arena.js",
+      "/upgrades/peer-review-consensus.js",
+      "/personas/base-persona.js",
+      "/personas/CodeRefactorerPersona.js"
+    ]
+  },
   "loadGroups": [
     {
       "description": "Pure modules (no dependencies)",
       "modules": [
-        { "id": "Utils", "path": "/upgrades/utils.js" },
-        { "id": "EventBus", "path": "/upgrades/event-bus.js" },
-        { "id": "DIContainer", "path": "/upgrades/di-container.js" },
-        { "id": "StateHelpersPure", "path": "/upgrades/state-helpers-pure.js" },
-        { "id": "ToolRunnerPureHelpers", "path": "/upgrades/tool-runner-pure-helpers.js" },
-        { "id": "AgentLogicPure", "path": "/upgrades/agent-logic-pure.js" },
-        { "id": "Config", "path": "/upgrades/config.js" }
+        {
+          "id": "Utils",
+          "path": "/upgrades/utils.js"
+        },
+        {
+          "id": "EventBus",
+          "path": "/upgrades/event-bus.js"
+        },
+        {
+          "id": "DIContainer",
+          "path": "/upgrades/di-container.js"
+        },
+        {
+          "id": "StateHelpersPure",
+          "path": "/upgrades/state-helpers-pure.js"
+        },
+        {
+          "id": "ToolRunnerPureHelpers",
+          "path": "/upgrades/tool-runner-pure-helpers.js"
+        },
+        {
+          "id": "AgentLogicPure",
+          "path": "/upgrades/agent-logic-pure.js"
+        },
+        {
+          "id": "Config",
+          "path": "/upgrades/config.js"
+        }
       ]
     },
     {
       "description": "Storage and logging (need Utils)",
       "modules": [
-        { "id": "Storage", "path": "/upgrades/storage-indexeddb.js" },
-        { "id": "AuditLogger", "path": "/upgrades/audit-logger.js" },
-        { "id": "RateLimiter", "path": "/upgrades/rate-limiter.js" },
-        { "id": "ModelRegistry", "path": "/upgrades/model-registry.js" }
+        {
+          "id": "Storage",
+          "path": "/upgrades/storage-indexeddb.js"
+        },
+        {
+          "id": "AuditLogger",
+          "path": "/upgrades/audit-logger.js"
+        },
+        {
+          "id": "RateLimiter",
+          "path": "/upgrades/rate-limiter.js"
+        },
+        {
+          "id": "ModelRegistry",
+          "path": "/upgrades/model-registry.js"
+        }
       ]
     },
     {
       "description": "State management (needs Storage, AuditLogger)",
       "modules": [
-        { "id": "StateManager", "path": "/upgrades/state-manager.js" }
+        {
+          "id": "StateManager",
+          "path": "/upgrades/state-manager.js"
+        }
       ]
     },
     {
       "description": "LLM providers (need StateManager)",
       "modules": [
-        { "id": "LocalLLM", "path": "/upgrades/local-llm.js" },
-        { "id": "HybridLLMProvider", "path": "/upgrades/hybrid-llm-provider.js" }
+        {
+          "id": "LocalLLM",
+          "path": "/upgrades/local-llm.js"
+        },
+        {
+          "id": "HybridLLMProvider",
+          "path": "/upgrades/hybrid-llm-provider.js"
+        }
       ]
     },
     {
       "description": "API and tools (need StateManager, RateLimiter)",
       "modules": [
-        { "id": "ApiClient", "path": "/upgrades/api-client.js" },
-        { "id": "ToolRunner", "path": "/upgrades/tool-runner.js" },
-        { "id": "DiffGenerator", "path": "/utils/diff-generator.js" }
+        {
+          "id": "ApiClient",
+          "path": "/upgrades/api-client.js"
+        },
+        {
+          "id": "ToolRunner",
+          "path": "/upgrades/tool-runner.js"
+        },
+        {
+          "id": "DiffGenerator",
+          "path": "/utils/diff-generator.js"
+        }
       ]
     },
     {
       "description": "Reflection and monitoring (need StateManager, EventBus)",
       "modules": [
-        { "id": "ReflectionStore", "path": "/upgrades/reflection-store.js" },
-        { "id": "PerformanceMonitor", "path": "/upgrades/performance-monitor.js" },
-        { "id": "ToastNotifications", "path": "/upgrades/toast-notifications.js" }
+        {
+          "id": "ReflectionStore",
+          "path": "/upgrades/reflection-store.js"
+        },
+        {
+          "id": "PerformanceMonitor",
+          "path": "/upgrades/performance-monitor.js"
+        },
+        {
+          "id": "ToastNotifications",
+          "path": "/upgrades/toast-notifications.js"
+        }
       ]
     },
     {
       "description": "Context and streaming (need StateManager, EventBus)",
       "modules": [
-        { "id": "StreamingResponseHandler", "path": "/upgrades/streaming-response-handler.js" },
-        { "id": "ContextManager", "path": "/upgrades/context-manager.js" }
+        {
+          "id": "StreamingResponseHandler",
+          "path": "/upgrades/streaming-response-handler.js"
+        },
+        {
+          "id": "ContextManager",
+          "path": "/upgrades/context-manager.js"
+        }
       ]
     },
     {
       "description": "Browser features and runtimes (need StateManager, EventBus)",
       "modules": [
-        { "id": "BrowserAPIs", "path": "/upgrades/browser-apis.js" },
-        { "id": "PyodideRuntime", "path": "/upgrades/pyodide-runtime.js" }
+        {
+          "id": "BrowserAPIs",
+          "path": "/upgrades/browser-apis.js"
+        },
+        {
+          "id": "PyodideRuntime",
+          "path": "/upgrades/pyodide-runtime.js"
+        }
       ]
     },
     {
       "description": "Testing and introspection (need StateManager, EventBus)",
       "modules": [
-        { "id": "Introspector", "path": "/upgrades/introspector.js" },
-        { "id": "SelfTester", "path": "/upgrades/self-tester.js" },
-        { "id": "VerificationManager", "path": "/upgrades/verification-manager.js" }
+        {
+          "id": "Introspector",
+          "path": "/upgrades/introspector.js"
+        },
+        {
+          "id": "SelfTester",
+          "path": "/upgrades/self-tester.js"
+        },
+        {
+          "id": "VerificationManager",
+          "path": "/upgrades/verification-manager.js"
+        }
       ]
     },
     {
       "description": "Visualizers and dashboards (need various deps)",
       "modules": [
-        { "id": "VFSExplorer", "path": "/upgrades/vfs-explorer.js" },
-        { "id": "MetricsDashboard", "path": "/upgrades/metrics-dashboard.js" },
-        { "id": "AgentVisualizer", "path": "/upgrades/agent-visualizer.js" },
-        { "id": "ASTVisualizer", "path": "/upgrades/ast-visualizer.js" },
-        { "id": "ModuleGraphVisualizer", "path": "/upgrades/module-graph-visualizer.js" },
-        { "id": "TutorialSystem", "path": "/upgrades/tutorial-system.js" }
+        {
+          "id": "VFSExplorer",
+          "path": "/upgrades/vfs-explorer.js"
+        },
+        {
+          "id": "MetricsDashboard",
+          "path": "/upgrades/metrics-dashboard.js"
+        },
+        {
+          "id": "AgentVisualizer",
+          "path": "/upgrades/agent-visualizer.js"
+        },
+        {
+          "id": "ASTVisualizer",
+          "path": "/upgrades/ast-visualizer.js"
+        },
+        {
+          "id": "ModuleGraphVisualizer",
+          "path": "/upgrades/module-graph-visualizer.js"
+        },
+        {
+          "id": "TutorialSystem",
+          "path": "/upgrades/tutorial-system.js"
+        }
       ]
     },
     {
       "description": "CLUSTER 1 UI Panels (need ModuleLoader, EventBus)",
       "modules": [
-        { "id": "ProgressTracker", "path": "/upgrades/progress-tracker.js" },
-        { "id": "LogPanel", "path": "/upgrades/log-panel.js" },
-        { "id": "StatusBar", "path": "/upgrades/status-bar.js" },
-        { "id": "GoalPanel", "path": "/upgrades/goal-panel.js" },
-        { "id": "ThoughtPanel", "path": "/upgrades/thought-panel.js" }
+        {
+          "id": "ProgressTracker",
+          "path": "/upgrades/progress-tracker.js"
+        },
+        {
+          "id": "LogPanel",
+          "path": "/upgrades/log-panel.js"
+        },
+        {
+          "id": "StatusBar",
+          "path": "/upgrades/status-bar.js"
+        },
+        {
+          "id": "GoalPanel",
+          "path": "/upgrades/goal-panel.js"
+        },
+        {
+          "id": "ThoughtPanel",
+          "path": "/upgrades/thought-panel.js"
+        }
       ]
     },
     {
       "description": "UI and agent cycle (need everything above)",
       "modules": [
-        { "id": "UIManager", "path": "/upgrades/ui-manager.js" },
-        { "id": "AgentCycle", "path": "/upgrades/agent-cycle.js" }
+        {
+          "id": "UIManager",
+          "path": "/upgrades/ui-manager.js"
+        },
+        {
+          "id": "AgentCycle",
+          "path": "/upgrades/agent-cycle.js"
+        }
       ]
     },
     {
       "description": "Sentinel and orchestration (need most other modules)",
       "modules": [
-        { "id": "GitVFS", "path": "/upgrades/git-vfs.js" },
-        { "id": "SentinelTools", "path": "/upgrades/sentinel-tools.js" },
-        { "id": "SentinelPanel", "path": "/upgrades/sentinel-panel.js" },
-        { "id": "DiffViewerUI", "path": "/upgrades/diff-viewer-ui.js" },
-        { "id": "WebRTCSwarm", "path": "/upgrades/webrtc-swarm.js" },
-        { "id": "WebRTCCoordinator", "path": "/upgrades/webrtc-coordinator.js" },
-        { "id": "SentinelFSM", "path": "/upgrades/sentinel-fsm.js" },
-        { "id": "MetaToolCreator", "path": "/upgrades/meta-tool-creator.js" },
-        { "id": "ModelArena", "path": "/upgrades/model-arena.js" },
-        { "id": "PeerReviewConsensus", "path": "/upgrades/peer-review-consensus.js" }
+        {
+          "id": "GitVFS",
+          "path": "/upgrades/git-vfs.js"
+        },
+        {
+          "id": "SentinelTools",
+          "path": "/upgrades/sentinel-tools.js"
+        },
+        {
+          "id": "SentinelPanel",
+          "path": "/upgrades/sentinel-panel.js"
+        },
+        {
+          "id": "DiffViewerUI",
+          "path": "/upgrades/diff-viewer-ui.js"
+        },
+        {
+          "id": "WebRTCSwarm",
+          "path": "/upgrades/webrtc-swarm.js"
+        },
+        {
+          "id": "WebRTCCoordinator",
+          "path": "/upgrades/webrtc-coordinator.js"
+        },
+        {
+          "id": "SentinelFSM",
+          "path": "/upgrades/sentinel-fsm.js"
+        },
+        {
+          "id": "MetaToolCreator",
+          "path": "/upgrades/meta-tool-creator.js"
+        },
+        {
+          "id": "ModelArena",
+          "path": "/upgrades/model-arena.js"
+        },
+        {
+          "id": "PeerReviewConsensus",
+          "path": "/upgrades/peer-review-consensus.js"
+        }
       ]
     }
   ]

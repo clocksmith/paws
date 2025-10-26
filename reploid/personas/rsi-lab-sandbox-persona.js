@@ -6,8 +6,6 @@
  * Recursive Self-Improvement (RSI) capabilities in a sandboxed environment.
  */
 
-import BasePersona from './base-persona.js';
-
 const RsiLabSandboxPersona = {
   metadata: {
     id: 'rsi-lab-sandbox-persona',
@@ -16,10 +14,10 @@ const RsiLabSandboxPersona = {
     type: 'persona'
   },
 
-  factory: () => {
-    // Get base platform capabilities
-    const basePersona = BasePersona.factory();
-    const basePlatformPrompt = basePersona.getSystemPromptFragment();
+  factory: (deps) => {
+    // Get base platform capabilities from DI container
+    const BasePersona = deps['base-persona'];
+    const basePlatformPrompt = BasePersona?.getSystemPromptFragment?.() || '';
 
     // Widget tracking
     let _cycleCount = 0;
@@ -226,4 +224,7 @@ You have access to meta-tools that let you create new capabilities, modify your 
   }
 };
 
-export default RsiLabSandboxPersona;
+// Make available for module loader
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = RsiLabSandboxPersona;
+}

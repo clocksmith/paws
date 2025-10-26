@@ -198,18 +198,23 @@ ${code};
     const manifestContent = await vfs.read("/module-manifest.json");
     const manifest = JSON.parse(manifestContent);
 
-    logger.info(`[CoreLogic] Manifest version ${manifest.version} loaded with ${manifest.loadGroups.length} load groups`);
+    logger.info(`[CoreLogic] Manifest version ${manifest.version} loaded`);
 
-    // Flatten manifest into module file list for loading
-    const moduleFiles = [];
-    for (const group of manifest.loadGroups) {
-      for (const moduleSpec of group.modules) {
-        moduleFiles.push({
-          id: moduleSpec.id,
-          path: moduleSpec.path
-        });
-      }
-    }
+    // Get the boot mode from initial config to determine which preset to load
+    const bootMode = initialConfig?.bootMode || 'meta';
+    logger.info(`[CoreLogic] Boot mode: ${bootMode}, loading modules from preset`);
+
+    // Get module paths from the selected preset (these are the ones already in VFS)
+    const presetPaths = manifest.presets?.[bootMode] || manifest.presets?.meta || [];
+    logger.info(`[CoreLogic] Loading ${presetPaths.length} modules from '${bootMode}' preset`);
+
+    // Create module file list from preset paths
+    const moduleFiles = presetPaths.map(path => {
+      // Extract module ID from path (e.g., /upgrades/utils.js -> Utils)
+      const filename = path.split('/').pop().replace('.js', '');
+      const id = filename.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
+      return { id, path };
+    });
 
     // Load and register all modules
     logger.info("[CoreLogic] Loading and registering all application modules...");

@@ -5,8 +5,6 @@
  * This persona excels at turning product ideas into working prototypes quickly.
  */
 
-import BasePersona from './base-persona.js';
-
 const ProductPrototypeFactoryPersona = {
   metadata: {
     id: 'product-prototype-factory-persona',
@@ -15,10 +13,10 @@ const ProductPrototypeFactoryPersona = {
     type: 'persona'
   },
 
-  factory: () => {
-    // Get base platform capabilities
-    const basePersona = BasePersona.factory();
-    const basePlatformPrompt = basePersona.getSystemPromptFragment();
+  factory: (deps) => {
+    // Get base platform capabilities from DI container
+    const BasePersona = deps['base-persona'];
+    const basePlatformPrompt = BasePersona?.getSystemPromptFragment?.() || '';
 
     // Widget tracking
     let _cycleCount = 0;
@@ -216,4 +214,7 @@ Your prototypes bridge the gap between concept and reality, helping teams make i
   }
 };
 
-export default ProductPrototypeFactoryPersona;
+// Make available for module loader
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = ProductPrototypeFactoryPersona;
+}

@@ -5,8 +5,6 @@
  * This persona specializes in technical writing and change documentation.
  */
 
-import BasePersona from './base-persona.js';
-
 const RfcAuthorPersona = {
   metadata: {
     id: 'rfc-author-persona',
@@ -15,10 +13,10 @@ const RfcAuthorPersona = {
     type: 'persona'
   },
 
-  factory: () => {
-    // Get base platform capabilities
-    const basePersona = BasePersona.factory();
-    const basePlatformPrompt = basePersona.getSystemPromptFragment();
+  factory: (deps) => {
+    // Get base platform capabilities from DI container
+    const BasePersona = deps['base-persona'];
+    const basePlatformPrompt = BasePersona?.getSystemPromptFragment?.() || '';
 
     // Widget tracking
     let _cycleCount = 0;
@@ -222,4 +220,7 @@ Your RFCs help teams build consensus, preserve institutional knowledge, and make
   }
 };
 
-export default RfcAuthorPersona;
+// Make available for module loader
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = RfcAuthorPersona;
+}

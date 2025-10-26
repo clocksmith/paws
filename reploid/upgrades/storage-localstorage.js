@@ -4,7 +4,7 @@
 
 const Storage = {
   metadata: {
-    id: 'Storage',
+    id: 'LocalStorage',
     version: '1.0.0',
     dependencies: ['Utils'],
     async: false,
