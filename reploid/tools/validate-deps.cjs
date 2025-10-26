@@ -212,7 +212,92 @@ function validatePreset(presetName, modulePaths, moduleMap) {
 }
 
 /**
- * Auto-fix a preset by adding missing dependencies
+ * Topological sort to fix dependency ordering
+ */
+function topologicalSort(modulePaths, moduleMap) {
+  // Build a map of path -> module
+  const pathToModule = {};
+  for (const path of modulePaths) {
+    const module = Object.values(moduleMap).find(m =>
+      path.includes(m.relativePath)
+    );
+    if (module) {
+      pathToModule[path] = module;
+    }
+  }
+
+  // Build adjacency list for modules in this preset
+  const graph = {};
+  const inDegree = {};
+  const moduleIds = new Set();
+
+  for (const path of modulePaths) {
+    const module = pathToModule[path];
+    if (!module) continue;
+
+    moduleIds.add(module.id);
+    graph[module.id] = [];
+    inDegree[module.id] = 0;
+  }
+
+  // Build edges (dependency -> dependent)
+  for (const path of modulePaths) {
+    const module = pathToModule[path];
+    if (!module) continue;
+
+    for (const depId of module.dependencies) {
+      const isOptional = depId.endsWith('?');
+      const actualDepId = isOptional ? depId.slice(0, -1) : depId;
+
+      // Only process dependencies that are in this preset
+      if (moduleIds.has(actualDepId)) {
+        graph[actualDepId].push(module.id);
+        inDegree[module.id]++;
+      }
+    }
+  }
+
+  // Kahn's algorithm for topological sort
+  const queue = [];
+  const sorted = [];
+
+  // Start with nodes with no dependencies
+  for (const moduleId of moduleIds) {
+    if (inDegree[moduleId] === 0) {
+      queue.push(moduleId);
+    }
+  }
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    sorted.push(current);
+
+    for (const neighbor of graph[current]) {
+      inDegree[neighbor]--;
+      if (inDegree[neighbor] === 0) {
+        queue.push(neighbor);
+      }
+    }
+  }
+
+  // Convert back to paths
+  const sortedPaths = sorted.map(moduleId => {
+    const module = moduleMap[moduleId];
+    return '/' + module.relativePath;
+  });
+
+  // Add any modules that weren't in the sort (shouldn't happen but just in case)
+  for (const path of modulePaths) {
+    if (!sortedPaths.includes(path)) {
+      sortedPaths.push(path);
+    }
+  }
+
+  return sortedPaths;
+}
+
+/**
+ * Auto-fix a preset by adding missing dependencies and fixing order
  */
 function fixPreset(presetName, modulePaths, moduleMap) {
   const fixed = [...modulePaths];
@@ -267,7 +352,10 @@ function fixPreset(presetName, modulePaths, moduleMap) {
     }
   }
 
-  return { fixed, added };
+  // Now sort the modules topologically to fix ordering
+  const sorted = topologicalSort(fixed, moduleMap);
+
+  return { fixed: sorted, added };
 }
 
 /**
@@ -335,18 +423,27 @@ function main() {
     }
 
     // Auto-fix if requested
-    if (AUTO_FIX && errors.some(e => e.type === 'missing_dependency')) {
+    if (AUTO_FIX && (errors.some(e => e.type === 'missing_dependency') || errors.some(e => e.type === 'wrong_order'))) {
       log(`\n  Attempting auto-fix...`, 'blue');
       const { fixed, added } = fixPreset(presetName, modulePaths, moduleMap);
+
+      const orderChanged = JSON.stringify(fixed) !== JSON.stringify(modulePaths);
 
       if (added.length > 0) {
         log(`  Added ${added.length} missing dependencies:`, 'green');
         for (const depId of added) {
           log(`    + ${depId}`, 'green');
         }
+      }
+
+      if (orderChanged) {
+        log(`  Fixed dependency ordering`, 'green');
+      }
+
+      if (added.length > 0 || orderChanged) {
         fixes[presetName] = fixed;
       } else {
-        log(`  No dependencies to add`, 'gray');
+        log(`  No changes needed`, 'gray');
       }
     }
 

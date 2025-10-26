@@ -3,7 +3,7 @@ const CycleLogic = {
   metadata: {
     id: 'CycleLogic',
     version: '3.1.0', // Sentinel FSM + Curator Mode
-    dependencies: ['config', 'Utils', 'Storage', 'StateManager', 'ApiClient', 'HybridLLMProvider', 'ToolRunner', 'AgentLogicPureHelpers', 'EventBus', 'Persona', 'AutonomousOrchestrator?'],
+    dependencies: ['config', 'Utils', 'Storage', 'StateManager', 'ApiClient', 'HybridLLMProvider', 'ToolRunner', 'AgentLogicPureHelpers', 'EventBus', 'Persona?', 'AutonomousOrchestrator?'],
     async: false,
     type: 'service'
   },
