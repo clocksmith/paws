@@ -2253,9 +2253,11 @@ function greet(name) {
 
         switch (newState) {
             case 'AWAITING_CONTEXT_APPROVAL':
-                sentinelContent.innerHTML = `<h4>Review Context (cats.md)</h4><p>Agent wants to read the following files:</p>`;
-                const catsContent = await StateManager.getArtifactContent(context.turn.cats_path);
-                sentinelContent.innerHTML += `<pre>${catsContent}</pre>`;
+                const contextPath = context?.turn?.context_path || context?.catsPath || 'unknown';
+                const contextFileName = contextPath.split('/').pop();
+                sentinelContent.innerHTML = `<h4>Review Context (${contextFileName})</h4><p>Agent wants to read the following files:</p>`;
+                const catsContent = await StateManager.getArtifactContent(contextPath);
+                sentinelContent.innerHTML += `<pre>${catsContent || 'No content available'}</pre>`;
                 approveBtn.classList.remove('hidden');
                 approveBtn.onclick = () => EventBus.emit('user:approve:context');
                 break;

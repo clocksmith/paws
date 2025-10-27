@@ -860,7 +860,7 @@ async function awakenAgent() {
 
         // Initialize the agent system
         console.log('[Boot] Calling CoreLogicModule...');
-        await CoreLogicModule(initialConfig, vfs);
+        const agentSystem = await CoreLogicModule(initialConfig, vfs);
 
         console.log('[Boot] Agent system awakened successfully');
 
@@ -870,17 +870,47 @@ async function awakenAgent() {
         appRoot.style.transition = 'opacity 0.5s ease-in';
         appRoot.style.opacity = '1';
 
-        // Fade out and remove loading overlay
-        if (loadingOverlay && loadingOverlay.parentNode) {
-            loadingOverlay.classList.add('fade-out');
-            setTimeout(() => {
-                if (loadingOverlay.parentNode) {
-                    loadingOverlay.remove();
-                    console.log('[Boot] Boot overlay removed');
+        // Fade out and remove loading overlay - WAIT for it to complete
+        await new Promise((resolve) => {
+            if (loadingOverlay && loadingOverlay.parentNode) {
+                loadingOverlay.classList.add('fade-out');
+                setTimeout(() => {
+                    if (loadingOverlay.parentNode) {
+                        loadingOverlay.remove();
+                        console.log('[Boot] Boot overlay removed');
+                    }
+                    resolve();
+                }, 500);
+            } else {
+                console.warn('[Boot] Loading overlay not found or already removed');
+                resolve();
+            }
+        });
+
+        // Hide the boot container now that loading is complete
+        if (bootContainer && bootContainer.parentNode) {
+            bootContainer.style.display = 'none';
+            console.log('[Boot] Boot container hidden');
+        }
+
+        console.log('[Boot] Boot overlay removal complete - starting user cycle');
+
+        // NOW start the user cycle after boot screen is fully removed
+        if (agentSystem && agentSystem.goal && agentSystem.container) {
+            console.log('[Boot] Starting user cycle with goal:', agentSystem.goal);
+            try {
+                const SentinelFSM = await agentSystem.container.resolve('SentinelFSM');
+                if (SentinelFSM && SentinelFSM.startCycle) {
+                    await SentinelFSM.startCycle(agentSystem.goal);
+                    console.log('[Boot] User cycle started successfully');
+                } else {
+                    console.error('[Boot] SentinelFSM.startCycle not available');
                 }
-            }, 500);
+            } catch (cycleError) {
+                console.error('[Boot] Failed to start user cycle:', cycleError);
+            }
         } else {
-            console.warn('[Boot] Loading overlay not found or already removed');
+            console.log('[Boot] No goal provided, agent remains in IDLE state');
         }
 
     } catch (error) {

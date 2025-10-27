@@ -461,41 +461,31 @@ ${genesisContext.files.map(f => `- [${f.type}] ${f.path}`).join('\n')}
         logger.warn("[CoreLogic] Failed to create genesis snapshot (non-fatal):", genesisError.message);
     }
 
-    // Hide boot container and show app
-    const bootContainer = document.getElementById("boot-container");
+    // Boot container will be hidden by boot.js after loading overlay clears
+    // Just ensure app root is visible and ready
     const appRoot = document.getElementById("app-root");
-    if (bootContainer) bootContainer.style.display = "none";
-    if (appRoot) appRoot.style.display = "block";
+    if (appRoot) {
+      appRoot.style.display = "block";
+      appRoot.style.visibility = "visible";
+    }
 
-    // If a goal was provided, start the agent cycle
+    // Set the goal in UI if provided (but don't start cycle yet - boot.js will do that)
     if (initialConfig && initialConfig.goal) {
-      logger.info("[CoreLogic] Starting agent with initial goal:", initialConfig.goal);
-
+      logger.info("[CoreLogic] Initial goal set:", initialConfig.goal);
       try {
-        // Update UI with the goal
         if (UI.updateGoal) {
           UI.updateGoal(initialConfig.goal);
         }
-
-        // Start the agent cycle
-        const SentinelFSM = await container.resolve('SentinelFSM');
-        if (SentinelFSM && SentinelFSM.startCycle) {
-          await SentinelFSM.startCycle(initialConfig.goal);
-          logger.info("[CoreLogic] Agent cycle started successfully");
-        } else {
-          logger.error("[CoreLogic] SentinelFSM.startCycle not available");
-        }
-      } catch (startError) {
-        logger.error("[CoreLogic] Failed to start agent cycle:", {
-          name: startError.name,
-          message: startError.message,
-          stack: startError.stack,
-          details: startError.details
-        });
+      } catch (e) {
+        logger.warn("[CoreLogic] Could not update goal in UI:", e.message);
       }
-    } else {
-      logger.info("[CoreLogic] No initial goal provided. Agent is in IDLE state.");
     }
+
+    // Return container and goal so boot.js can start the cycle after clearing boot screen
+    return {
+      container,
+      goal: initialConfig?.goal || null
+    };
 
   } catch (error) {
     // Track boot failure

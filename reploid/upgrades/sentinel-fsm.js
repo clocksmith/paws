@@ -237,10 +237,8 @@ const SentinelFSM = {
 
     // State: AWAITING_CONTEXT_APPROVAL
     const executeAwaitingContextApproval = async () => {
-      EventBus.emit('agent:awaiting:context', {
-        cats_path: cycleContext.catsPath,
-        session_id: cycleContext.sessionId
-      });
+      // Emit full context object so UI can read the file
+      EventBus.emit('agent:awaiting:context', cycleContext);
 
       // Check if auto-approve is enabled (session-level only for now)
       const sessionAutoApprove = typeof localStorage !== 'undefined' && localStorage.getItem('SESSION_AUTO_APPROVE') === 'true';
