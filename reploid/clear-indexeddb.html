@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear REPLOID IndexedDB</title>
+</head>
+<body>
+    <h1>Clear REPLOID IndexedDB</h1>
+    <button id="clearBtn">Clear IndexedDB</button>
+    <div id="status"></div>
+    
+    <script>
+        document.getElementById('clearBtn').addEventListener('click', async () => {
+            const status = document.getElementById('status');
+            try {
+                // Clear reploid-vfs IndexedDB
+                await new Promise((resolve, reject) => {
+                    const req = indexedDB.deleteDatabase('reploid-vfs');
+                    req.onsuccess = () => resolve();
+                    req.onerror = () => reject(req.error);
+                });
+                
+                // Clear localStorage
+                localStorage.clear();
+                
+                status.innerHTML = '<p style="color: green;">✅ Cleared! Reload REPLOID now.</p>';
+            } catch (error) {
+                status.innerHTML = '<p style="color: red;">Error: ' + error.message + '</p>';
+            }
+        });
+    </script>
+</body>
+</html>

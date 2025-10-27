@@ -1,0 +1,1 @@
+Hello from MOP demo! This is a sample file for the filesystem MCP server to read.

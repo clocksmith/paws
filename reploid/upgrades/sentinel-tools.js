@@ -130,24 +130,28 @@ const SentinelTools = {
         return [];
       }
 
-      // Create a file tree summary for the LLM
+      // Create a file tree summary for the LLM with full paths
       const fileTree = relevantPaths.map(path => {
-        const parts = path.split('/');
-        return '  '.repeat(parts.length - 2) + parts[parts.length - 1];
+        // Show full path and file type
+        const ext = path.split('.').pop();
+        const type = ext === 'js' ? '(module)' : ext === 'json' ? '(config)' : '(file)';
+        return `${path} ${type}`;
       }).join('\n');
 
       const prompt = `You are analyzing a codebase to select relevant files for a task.
 
 Task: ${goal}
 
-Available files:
+Available files (${relevantPaths.length} total):
 ${fileTree}
 
-Select ONLY the most relevant files needed to understand and complete this task.
-Be selective - include only what's necessary.
-Return a JSON array of file paths.
+Select 5-15 of the MOST relevant files needed to understand and complete this task.
+Be selective - focus on core modules, configuration, and files directly related to the goal.
+Return ONLY a JSON array of full file paths exactly as shown above.
 
-Example: ["/modules/api.js", "/config.json"]`;
+Example format: ["/upgrades/state-manager.js", "/config.json", "/upgrades/storage-indexeddb.js"]
+
+Your response (JSON array only):`;
 
       try {
         logger.info('[SentinelTools] Calling LLM for file curation via proxy...');
@@ -171,7 +175,13 @@ Example: ["/modules/api.js", "/config.json"]`;
           const selectedFiles = JSON.parse(jsonMatch[0]);
           const validFiles = selectedFiles.filter(f => relevantPaths.includes(f));
           logger.info(`[SentinelTools] AI selected ${validFiles.length} files:`, validFiles);
-          return validFiles;
+
+          // If AI selected 0 files, fall through to heuristic fallback
+          if (validFiles.length > 0) {
+            return validFiles;
+          } else {
+            logger.warn('[SentinelTools] AI returned 0 valid files, falling back to heuristic');
+          }
         } else {
           logger.warn('[SentinelTools] No JSON array found in LLM response');
         }

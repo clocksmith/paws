@@ -1699,5 +1699,4 @@ if (typeof window !== 'undefined') {
   };
 }
 
-// Module available for evaluation
-DiffViewerUIModule;
+export default DiffViewerUIModule;

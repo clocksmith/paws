@@ -265,7 +265,7 @@ describe('CoreLogicModule (app-logic.js)', () => {
     it('should load default persona', async () => {
       await CoreLogicModule(mockInitialConfig, mockVfs);
 
-      expect(mockVfs.read).toHaveBeenCalledWith('/personas/CodeRefactorerPersona.js');
+      expect(mockVfs.read).toHaveBeenCalledWith('/personas/code-refactorer-persona.js');
     });
 
     it('should load custom persona', async () => {

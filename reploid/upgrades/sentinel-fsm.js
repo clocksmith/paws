@@ -13,7 +13,7 @@ const SentinelFSM = {
   metadata: {
     id: 'SentinelFSM',
     version: '2.2.0',
-    dependencies: ['StateManager', 'ToolRunner', 'ApiClient', 'HybridLLMProvider', 'EventBus', 'Utils', 'SentinelTools', 'GitVFS', 'ReflectionStore', 'SelfTester', 'WebRTCCoordinator'],
+    dependencies: ['StateManager', 'ToolRunner', 'ApiClient', 'HybridLLMProvider', 'EventBus', 'Utils', 'SentinelTools', 'GitVFS', 'ReflectionStore?', 'SelfTester', 'WebRTCCoordinator?'],
     async: false,
     type: 'service'
   },
@@ -193,7 +193,11 @@ const SentinelFSM = {
             logger.error(`[SentinelFSM] Unknown state: ${currentState}`);
         }
       } catch (error) {
-        logger.error(`[SentinelFSM] Error in state ${currentState}:`, error);
+        logger.error(`[SentinelFSM] Error in state ${currentState}:`, {
+          message: error.message,
+          stack: error.stack,
+          error: error.toString()
+        });
         transitionTo('ERROR');
         await executeState();
       }
@@ -218,7 +222,7 @@ const SentinelFSM = {
       const result = await SentinelTools.createCatsBundle({
         file_paths: relevantFiles,
         reason: `Context for goal: ${cycleContext.goal}`,
-        turn_path: cycleContext.turn.cats_path,
+        turn_path: cycleContext.turn.context_path,
         ai_curate: true
       });
 
@@ -632,8 +636,10 @@ Now generate your proposal:`
             ]
           };
 
-          const reflectionId = await ReflectionStore.addReflection(reflectionData);
-          logger.info(`[SentinelFSM] Reflection stored with ID: ${reflectionId}`);
+          if (ReflectionStore) {
+            const reflectionId = await ReflectionStore.addReflection(reflectionData);
+            logger.info(`[SentinelFSM] Reflection stored with ID: ${reflectionId}`);
+          }
 
           // Share successful reflections with swarm
           if (WebRTCCoordinator && reflectionData.outcome === 'successful') {

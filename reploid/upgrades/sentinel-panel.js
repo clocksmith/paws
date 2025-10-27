@@ -9,8 +9,8 @@ const SentinelPanel = {
     version: '1.0.0',
     description: 'Approval workflow panel for context and proposal reviews',
     features: [
-      'Context approval (cats.md review)',
-      'Proposal approval (dogs.md review with diff viewer)',
+      'Context approval (review selected files)',
+      'Proposal approval (review changes with diff viewer)',
       'Auto-approve toggle for context-only approvals',
       'Integration with SentinelFSM state machine',
       'DiffViewerUI integration for visual diffs',
@@ -160,24 +160,30 @@ const SentinelPanel = {
     // Context approval rendering (preserves UIManager pattern)
     const renderContextApproval = async (context) => {
       try {
-        let catsContent = '';
+        let contextContent = '';
+        let contextPath = context?.turn?.context_path || context?.catsPath || 'unknown';
 
-        if (context?.turn?.cats_path && StateManager) {
-          catsContent = await StateManager.getArtifactContent(context.turn.cats_path);
+        if (context?.turn?.context_path && StateManager) {
+          contextContent = await StateManager.getArtifactContent(context.turn.context_path);
         } else if (context?.turn?.cats_content) {
-          catsContent = context.turn.cats_content;
+          contextContent = context.turn.cats_content;
+        } else if (context?.catsPath && StateManager) {
+          contextContent = await StateManager.getArtifactContent(context.catsPath);
         } else {
-          catsContent = 'No context content available';
+          contextContent = 'No context content available';
         }
+
+        // Extract filename from path for display
+        const contextFileName = contextPath.split('/').pop();
 
         render(`
           <div class="sentinel-approval-header">
-            <h4>Review Context (cats.md)</h4>
+            <h4>Review Context (${contextFileName})</h4>
             <span class="sentinel-badge">Awaiting Approval</span>
           </div>
           <div class="sentinel-approval-content">
             <p class="sentinel-info">Agent wants to read the following files:</p>
-            <pre class="sentinel-content">${escapeHtml(catsContent)}</pre>
+            <pre class="sentinel-content">${escapeHtml(contextContent)}</pre>
             <div class="approval-actions">
               <button id="approve-context-btn" class="btn-approve">✓ Approve</button>
               <button id="revise-context-btn" class="btn-revise">⟲ Revise</button>

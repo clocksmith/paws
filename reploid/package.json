@@ -1,9 +1,15 @@
 {
   "name": "@paws/reploid",
   "version": "0.1.0",
-  "description": "REPLOID - Browser-native visual interface for PAWS with multi-agent workflows",
+  "description": "Browser-Native AI Agent with Recursive Self-Improvement",
   "main": "boot.js",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/clocksmith/paws.git",
+    "directory": "reploid"
+  },
+  "homepage": "https://github.com/clocksmith/paws/tree/main/reploid",
   "bin": {
     "reploid": "./bin/reploid-cli.js",
     "reploid-config": "./bin/reploid-config"
@@ -34,10 +40,10 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
-    "ws": "^8.18.3",
     "dotenv": "^16.3.1",
-    "node-fetch": "^3.3.2"
+    "express": "^4.18.2",
+    "node-fetch": "^3.3.2",
+    "ws": "^8.18.3"
   },
   "optionalDependencies": {
     "@anthropic-ai/sdk": "^0.16.1",
@@ -49,7 +55,7 @@
     "@vitest/coverage-v8": "^3.2.4",
     "@vitest/ui": "^3.2.4",
     "concurrently": "^8.0.0",
-    "happy-dom": "^19.0.2",
+    "happy-dom": "^20.0.8",
     "nodemon": "^3.0.1",
     "playwright": "^1.55.1",
     "vitest": "^3.2.4"

@@ -7,7 +7,7 @@ const UI = {
     id: 'UI',
     version: '5.0.0',
     description: 'Central UI management with browser-native visualizer integration, modal system, toast notifications, Python REPL, Local LLM, and modular panel support',
-    dependencies: ['config', 'Utils', 'StateManager', 'DiffGenerator', 'EventBus', 'VFSExplorer', 'PerformanceMonitor', 'MetricsDashboard', 'Introspector', 'ReflectionStore', 'SelfTester', 'BrowserAPIs', 'AgentVisualizer', 'ASTVisualizer', 'ModuleGraphVisualizer', 'ToastNotifications', 'TutorialSystem', 'PyodideRuntime', 'LocalLLM', 'ProgressTracker?', 'LogPanel?', 'StatusBar?', 'ThoughtPanel?', 'GoalPanel?', 'SentinelPanel?'],
+    dependencies: ['config', 'Utils', 'StateManager', 'DiffGenerator', 'EventBus', 'VFSExplorer', 'PerformanceMonitor?', 'MetricsDashboard?', 'Introspector', 'ReflectionStore?', 'SelfTester', 'BrowserAPIs', 'AgentVisualizer?', 'ASTVisualizer?', 'ModuleGraphVisualizer?', 'ToastNotifications?', 'TutorialSystem?', 'PyodideRuntime?', 'LocalLLM?', 'ProgressTracker?', 'LogPanel?', 'StatusBar?', 'ThoughtPanel?', 'GoalPanel?', 'SentinelPanel?'],
     async: true,
     type: 'ui'
   },

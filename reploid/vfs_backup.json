@@ -1,3 +1,0 @@
-{
-  "/system/genesis-boot-config.json": "{\n  \"timestamp\": \"2025-10-26T23:11:02.019Z\",\n  \"goal\": \"Analyze your own inefficiency patterns and improve yourself\",\n  \"bootMode\": \"meta\",\n  \"consensusType\": \"arena\",\n  \"selectedModels\": [\n    {\n      \"id\": \"gpt-oss:120b\",\n      \"name\": \"gpt-oss:120b\",\n      \"provider\": \"ollama\",\n      \"hostType\": \"ollama-proxy\",\n      \"queryMethod\": \"proxy\",\n      \"keySource\": \"none\",\n      \"keyId\": null\n    }\n  ],\n  \"deploymentMode\": \"cloud\",\n  \"environment\": {\n    \"hasProxy\": true,\n    \"hasWebGPU\": true,\n    \"hasServer\": true\n  }\n}"
-}

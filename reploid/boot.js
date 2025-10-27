@@ -648,21 +648,28 @@ async function awakenAgent() {
 
         // Determine which modules to load based on boot mode
         let modulesToLoad = [];
-        switch (bootMode) {
-            case 'essential':
-                modulesToLoad = manifest.presets?.essential || [];
-                break;
-            case 'meta':
-                modulesToLoad = manifest.presets?.meta || [];
-                break;
-            case 'full':
-                modulesToLoad = manifest.presets?.full || [];
-                break;
-            case 'experimental':
-                modulesToLoad = manifest.presets?.experimental || [];
-                break;
-            default:
-                modulesToLoad = manifest.presets?.meta || []; // Default to meta
+        let presetName = bootMode;
+
+        // Map old boot mode names to new preset names for backwards compatibility
+        const modeMapping = {
+            'minimal': 'minimal-rsi',
+            'essential': 'minimal-rsi',
+            'meta': 'rsi-core',
+            'rsi': 'rsi-core',
+            'full': 'experimental',
+            'experimental': 'experimental'
+        };
+
+        presetName = modeMapping[bootMode] || bootMode;
+
+        // Try to load the preset
+        if (manifest.presets?.[presetName]) {
+            modulesToLoad = manifest.presets[presetName];
+        } else {
+            // Fallback to RSI core as default
+            console.warn(`[BootLoader] Unknown boot mode '${bootMode}', falling back to RSI Core`);
+            modulesToLoad = manifest.presets?.['rsi-core'] || [];
+            presetName = 'rsi-core';
         }
 
         console.log('[BootLoader] Boot mode:', bootMode, '- Loading', modulesToLoad.length, 'modules');
@@ -738,7 +745,7 @@ async function awakenAgent() {
             await git.commit({
                 fs,
                 dir: '/',
-                message: `Boot Loader: Loaded ${loadedModules.length} modules (${bootMode} mode)`,
+                message: `Boot Loader: Loaded ${loadedModules.length} modules (${presetName} preset)`,
                 author: {
                     name: 'REPLOID Boot Loader',
                     email: 'boot@reploid.local'
@@ -748,6 +755,61 @@ async function awakenAgent() {
         } catch (error) {
             console.warn('[BootLoader] Git commit failed (non-fatal):', error);
         }
+
+        // ============================================================
+        // GENESIS CYCLE: Initialize StateManager with module metadata
+        // ============================================================
+        console.log('[BootLoader] Initializing StateManager genesis state...');
+
+        const artifactMetadata = {};
+
+        // Register config.json
+        artifactMetadata['/config.json'] = {
+            id: '/config.json',
+            type: 'json',
+            description: 'REPLOID configuration'
+        };
+
+        // Register module manifest
+        artifactMetadata['/module-manifest.json'] = {
+            id: '/module-manifest.json',
+            type: 'json',
+            description: 'Module manifest with load groups and presets'
+        };
+
+        // Register app-logic.js
+        artifactMetadata['/upgrades/app-logic.js'] = {
+            id: '/upgrades/app-logic.js',
+            type: 'code',
+            description: 'Core agent logic bootstrap module'
+        };
+
+        // Register all loaded modules
+        for (const module of loadedModules) {
+            const moduleId = module.path.replace('/upgrades/', '').replace('.js', '');
+            artifactMetadata[module.path] = {
+                id: module.path,
+                type: 'code',
+                description: `REPLOID module: ${moduleId}`
+            };
+        }
+
+        // Create initial state for StateManager
+        const genesisState = {
+            totalCycles: 0,
+            artifactMetadata: artifactMetadata,
+            currentGoal: {
+                seed: goal,
+                cumulative: goal,
+                stack: [],
+                latestType: "Boot"
+            },
+            apiKey: ""
+        };
+
+        // Save genesis state to VFS at /.state (where StateManager reads it)
+        await fs.promises.writeFile('/.state', JSON.stringify(genesisState, null, 2), 'utf8');
+        console.log(`[BootLoader] Genesis state saved with ${Object.keys(artifactMetadata).length} artifacts`);
 
         // Create VFS interface for agent
         const vfs = {
@@ -788,7 +850,7 @@ async function awakenAgent() {
         const initialConfig = {
             goal: goal,
             mode: state.selectedMode || 'cloud',
-            bootMode: bootMode,  // Pass boot mode to determine which modules to load
+            bootMode: presetName,  // Pass mapped preset name (e.g., 'minimal-rsi' not 'minimal')
             persona: {
                 id: 'code_refactorer'  // Default persona
             }
@@ -802,33 +864,73 @@ async function awakenAgent() {
 
         console.log('[Boot] Agent system awakened successfully');
 
-        // After successful initialization, transition to main app
-        setTimeout(() => {
-            appRoot.style.transition = 'opacity 0.5s ease-in';
-            appRoot.style.opacity = '1';
-            loadingOverlay.classList.add('fade-out');
+        // After successful initialization, transition to main app immediately
+        console.log('[Boot] Removing boot overlay...');
+        appRoot.style.transition = 'opacity 0.5s ease-in';
+        appRoot.style.opacity = '1';
 
-            // Remove loading overlay after fade
+        // Fade out and remove loading overlay
+        if (loadingOverlay && loadingOverlay.parentNode) {
+            loadingOverlay.classList.add('fade-out');
             setTimeout(() => {
-                loadingOverlay.remove();
+                if (loadingOverlay.parentNode) {
+                    loadingOverlay.remove();
+                    console.log('[Boot] Boot overlay removed');
+                }
             }, 500);
-        }, 300);
+        } else {
+            console.warn('[Boot] Loading overlay not found or already removed');
+        }
 
     } catch (error) {
         console.error('[Boot] Failed to awaken agent:', error);
 
-        // Show error in UI
+        // Hide loading overlay and show error screen
+        const loadingOverlay = document.getElementById('boot-transition-overlay');
+        if (loadingOverlay) {
+            loadingOverlay.remove();
+        }
+
         const appRoot = document.getElementById('app-root');
         if (appRoot) {
-            appRoot.style.display = 'block';
+            appRoot.style.display = 'flex';
+            appRoot.style.alignItems = 'center';
+            appRoot.style.justifyContent = 'center';
+            appRoot.style.minHeight = '100vh';
+            appRoot.style.padding = '20px';
             appRoot.innerHTML = `
-                <div style="padding: 40px; color: #ff6b6b;">
-                    <h2>Agent Awakening Failed</h2>
-                    <p style="margin-top: 20px;">Error: ${error.message}</p>
-                    <pre style="margin-top: 20px; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 4px; text-align: left; overflow-x: auto;">${error.stack}</pre>
-                    <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #4ec9b0; color: #1e1e1e; border: none; border-radius: 4px; cursor: pointer;">
-                        Reload and Try Again
-                    </button>
+                <div style="max-width: 800px; width: 100%; padding: 40px; background: rgba(255, 107, 107, 0.1); border: 2px solid #ff6b6b; border-radius: 12px; box-shadow: 0 8px 32px rgba(255, 107, 107, 0.2);">
+                    <div style="text-align: center;">
+                        <h1 style="color: #ff6b6b; margin: 0 0 10px 0; font-size: 2.5em;">⚠️ Boot Failed</h1>
+                        <p style="color: #d0d0d0; font-size: 1.2em; margin: 0 0 30px 0;">Agent initialization encountered an error</p>
+                    </div>
+
+                    <div style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ff6b6b;">
+                        <h3 style="color: #ff6b6b; margin: 0 0 10px 0; font-size: 1.1em;">Error Message:</h3>
+                        <p style="color: #fff; margin: 0; font-family: 'Monaco', 'Courier New', monospace;">${error.message}</p>
+                    </div>
+
+                    <details style="margin-bottom: 30px;">
+                        <summary style="color: #4ec9b0; cursor: pointer; padding: 10px; background: rgba(78, 201, 176, 0.1); border-radius: 4px; user-select: none;">
+                            📋 View Stack Trace
+                        </summary>
+                        <pre style="margin-top: 10px; padding: 20px; background: rgba(0,0,0,0.6); border-radius: 4px; color: #d0d0d0; overflow-x: auto; font-size: 0.85em; border: 1px solid #333;">${error.stack || 'No stack trace available'}</pre>
+                    </details>
+
+                    <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                        <button onclick="location.reload()" style="padding: 12px 24px; background: linear-gradient(135deg, #4ec9b0, #2ea78c); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 1em; font-weight: 600; box-shadow: 0 4px 12px rgba(78, 201, 176, 0.3); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            🔄 Reload and Retry
+                        </button>
+                        <button onclick="localStorage.clear(); location.reload()" style="padding: 12px 24px; background: linear-gradient(135deg, #ff6b6b, #ee5555); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 1em; font-weight: 600; box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            🗑️ Clear Cache & Reset
+                        </button>
+                    </div>
+
+                    <div style="margin-top: 30px; padding: 15px; background: rgba(78, 201, 176, 0.05); border-radius: 6px; border-left: 3px solid #4ec9b0;">
+                        <p style="color: #4ec9b0; margin: 0; font-size: 0.9em;">
+                            💡 <strong>Tip:</strong> Check the browser console (F12) for detailed logs. If the problem persists, try clearing your browser cache or using a different boot mode.
+                        </p>
+                    </div>
                 </div>
             `;
         }

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MOP Demo Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    .header {
+      background: #2c3e50;
+      color: white;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .header p {
+      margin-top: 8px;
+      opacity: 0.9;
+      font-size: 14px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 24px;
+      margin-top: 24px;
+    }
+
+    .widget {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .widget-header {
+      background: #34495e;
+      color: white;
+      padding: 16px;
+      font-weight: 600;
+    }
+
+    .widget-body {
+      padding: 16px;
+    }
+
+    .server-list {
+      list-style: none;
+    }
+
+    .server-item {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .server-item:hover {
+      background: #f8f8f8;
+    }
+
+    .server-item:last-child {
+      border-bottom: none;
+    }
+
+    .server-name {
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    .server-status {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    .server-status.connected {
+      background: #27ae60;
+    }
+
+    .server-status.disconnected {
+      background: #e74c3c;
+    }
+
+    .server-description {
+      font-size: 13px;
+      color: #7f8c8d;
+      margin-top: 4px;
+    }
+
+    button {
+      padding: 10px 20px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #2980b9;
+    }
+
+    button:disabled {
+      background: #bdc3c7;
+      cursor: not-allowed;
+    }
+
+    .example-list {
+      list-style: none;
+    }
+
+    .example-item {
+      padding: 12px;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+
+    .example-name {
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 4px;
+    }
+
+    .example-description {
+      font-size: 13px;
+      color: #7f8c8d;
+      margin-bottom: 8px;
+    }
+
+    .example-steps {
+      font-size: 12px;
+      color: #95a5a6;
+    }
+
+    .activity-log {
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+
+    .log-entry {
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .log-entry.success {
+      background: #d5f4e6;
+      color: #0f5323;
+    }
+
+    .log-entry.error {
+      background: #fce4e4;
+      color: #86181d;
+    }
+
+    .log-entry.info {
+      background: #e7f3ff;
+      color: #0366d6;
+    }
+
+    .log-timestamp {
+      color: #666;
+      margin-right: 8px;
+    }
+
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
+    .tool-card {
+      padding: 12px;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tool-card:hover {
+      border-color: #3498db;
+      box-shadow: 0 2px 8px rgba(52,152,219,0.2);
+    }
+
+    .tool-name {
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 4px;
+    }
+
+    .tool-description {
+      font-size: 12px;
+      color: #7f8c8d;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+      justify-content: flex-end;
+    }
+
+    .btn-cancel {
+      background: #95a5a6;
+    }
+
+    .btn-cancel:hover {
+      background: #7f8c8d;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>MOP Demo Dashboard</h1>
+    <p>MCP Observability Protocol - Real-time monitoring and control</p>
+  </div>
+
+  <div class="container">
+    <div class="dashboard-grid">
+      <!-- MCP Servers Widget -->
+      <div class="widget">
+        <div class="widget-header">MCP Servers</div>
+        <div class="widget-body">
+          <ul class="server-list" id="server-list">
+            <li style="padding: 24px; text-align: center; color: #95a5a6;">
+              Loading servers...
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Tools Widget -->
+      <div class="widget">
+        <div class="widget-header">Available Tools</div>
+        <div class="widget-body">
+          <select id="server-select" style="width: 100%; padding: 8px; margin-bottom: 16px;">
+            <option value="">Select a server...</option>
+          </select>
+          <div class="tools-grid" id="tools-grid">
+            <div style="grid-column: 1 / -1; text-align: center; color: #95a5a6; padding: 24px;">
+              Select a server to view tools
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Example Pipelines Widget -->
+      <div class="widget">
+        <div class="widget-header">Example Pipelines</div>
+        <div class="widget-body">
+          <ul class="example-list" id="example-list">
+            <li style="padding: 24px; text-align: center; color: #95a5a6;">
+              Loading examples...
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Activity Log Widget -->
+      <div class="widget" style="grid-column: 1 / -1;">
+        <div class="widget-header">Activity Log</div>
+        <div class="widget-body">
+          <div class="activity-log" id="activity-log">
+            <div class="log-entry info">
+              <span class="log-timestamp">[00:00:00]</span>
+              <span>Dashboard initialized</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div class="modal" id="confirmation-modal">
+    <div class="modal-content">
+      <div class="modal-header">Confirm Tool Execution</div>
+      <div id="modal-body"></div>
+      <div class="modal-buttons">
+        <button class="btn-cancel" onclick="cancelToolExecution()">Cancel</button>
+        <button onclick="confirmToolExecution()">Execute</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

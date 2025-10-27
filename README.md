@@ -1,102 +1,329 @@
-# PAWS (Prepare Artifacts With SWAP (Selected Write Apply PAWS))
+# PAWS Monorepo
 
-Multi-agent AI development toolkit built around **context engineering**. The core idea is that curating what information an AI sees is as important as how you prompt it.
+**A collection of AI development tools with a shared philosophy: practical multi-agent workflows and recursive self-improvement.**
 
-## What is PAWS?
+This monorepo contains separate but complementary projects:
+- **PAWS CLI** - Command-line tools for multi-agent code generation
+- **REPLOID** - Browser-native recursive self-improvement agent
+- **MCP Lens** - Protocol-semantic analytics for MCP servers
 
-**Goal:** Generate robust solutions through structured cognitive diversity. Rather than relying on a single AI perspective, PAWS orchestrates multiple specialized agents that compete, collaborate, and verify solutions through testing.
+---
 
-**How it works:**
-1. **`cats`** - Curate context bundles by scoring files, pruning irrelevant code, and using AI-assisted selection to create focused input.
-2. **`dogs`** - Apply changes with interactive approval and git-native safety. Every change is auditable and reversible.
-3. **Multi-agent Arena** - Run competing agents in parallel to generate solutions. The best solution is selected through test-driven verification (not Paxos consensus - it's competitive testing where tests determine the winner).
-4. **Session state** - Maintain state outside the model to prevent context degradation across multiple turns.
+## Projects Overview
 
-This approach provides streamlined workflows for multi-agent coordination and test-driven solution selection. **PAWS is optimized for CLI-based multi-agent code generation with loose, file-based coordination. It's like Unix pipes for AI agents.**
+### PAWS CLI - Multi-Agent Code Generation
 
-## REPLOID: Browser-Native AI Agent Environment
+**Command-line tools for context-driven AI workflows with competitive verification.**
 
-**[REPLOID](reploid/README.md)** is a browser-native AI agent framework with a focus on **meta-tool creation** (tools that create tools) and **multi-model mixing**. It runs entirely in the browser with no backend required.
+**Philosophy:** Multiple AI agents generate solutions in parallel. Tests pick the winner. No consensus, just verification.
 
-**Core Philosophy:**
-1. **Meta-Tool Creation** - Agents that can create new tools for themselves
-2. **Multi-Model Mixing** - Combining different LLMs (Gemini, GPT, Claude, local) for hybrid intelligence
-3. **Browser-Native** - 100% browser runtime using IndexedDB, WebGPU, and Web Workers
-4. **Recursive Self-Improvement (RSI)** - Agents can improve their own code with human oversight
+#### What It Does
 
-**4-Tier Progressive Architecture:**
-- ★ **Essential Core** (8 modules, ~500ms) - Basic agent runtime
-- ☥ **Meta-RSI Core** (15 modules, ~1s) - **RECOMMENDED** - Meta-tools + multi-model mixing
-- ☇ **Full-Featured** (28 modules, ~2s) - Production ready with monitoring and testing
-- ⛉ **Experimental Suite** (76 modules, ~5s) - All features (visualization, Python, local LLM, WebRTC)
+1. **`cats`** - Bundle code into AI-consumable context (with AI-assisted file selection)
+2. **`dogs`** - Extract and apply code changes from AI responses (with git safety)
+3. **`paws-arena`** - Run multiple LLMs in parallel, isolated git worktrees, test-driven selection
+4. **`paws-swarm`** - Collaborative multi-agent workflows (Architect → Implementer → Reviewer)
+5. **`paws-benchmark`** - Compare LLM performance on your codebase
+6. **`paws-context-optimizer`** - Handle large codebases with smart context pruning
 
-**Key Features:**
-- **76 modular upgrades** - Each tagged by tier (essential/meta/full/experimental)
-- **67+ architectural blueprints** - Design docs teaching implementation patterns
-- **Human-supervised safety** - Approval gates, git checkpoints, automatic rollback on test failures
-- **Multi-provider support** - Cloud APIs (Gemini, Claude, GPT-4), local Ollama, and WebGPU models
+**Status:** ✅ Fully implemented in both JavaScript and Python
 
-**REPLOID is optimized for browser-native agent environments with modular architecture. Start simple (8 modules), scale to production (28 modules), or use everything (76 modules).** REPLOID is independently capable but shares the DOGS/CATS bundle format with PAWS CLI tools for optional interoperability.
+**Location:** [`packages/cli-js/`](packages/cli-js/README.md), [`packages/cli-py/`](packages/cli-py/README.md)
 
-## Packages
-
-- **[@paws/core](packages/core/README.md)** - Shared resources (personas, system prompts, configs)
-- **[@paws/cli-js](packages/cli-js/README.md)** - JavaScript CLI tools (cats, dogs, paws-session)
-- **[@paws/cli-py](packages/cli-py/README.md)** - Python CLI tools (paws-cats, paws-dogs, paws-arena, paws-swarm)
-- **[@paws/reploid](reploid/README.md)** - Browser-native recursive self-improvement framework
-
-## Integrations
-
-- **[MCP Server](integrations/mcp/README.md)** - Model Context Protocol integration for Claude Desktop
-- **[VS Code Extension](integrations/vscode/README.md)** - IDE integration with inline diff review
-
-## Getting Started
-
+**Quick Start:**
 ```bash
 # Install
 pnpm install
 cd packages/cli-py && pip install -e .
 
 # Basic workflow
-pnpm --filter @paws/cli-js cats src/**/*.js -o context.md  # Curate context
-pnpm --filter @paws/cli-js dogs changes.md                 # Apply changes
-
-# Start browser UI
-pnpm --filter @paws/reploid start  # http://localhost:8080
+paws-cats src/**/*.js -o context.md
+paws-arena "Refactor auth to use OAuth2" context.md --verify-cmd "npm test"
+paws-dogs workspace/competition/winning_solution.md --interactive
 ```
 
-See package READMEs for detailed documentation and examples.
+**See:** [EXAMPLES.md](EXAMPLES.md) for detailed workflows
 
-## Related Projects
+---
 
-### MCP Widget Protocol (mwp/)
+### REPLOID - Browser-Native Agent Environment
 
-The **[MCP Widget Protocol](mwp/README.md)** is a separate project in this repository that standardizes visual dashboards for Model Context Protocol servers.
+**Self-modifying AI agent that runs entirely in your browser.**
 
-**What it does:**
-- Provides a protocol for building interactive Web Component widgets for MCP servers
-- Enables visual representation of MCP primitives (tools, resources, prompts)
-- Includes reference dashboard implementation and official widgets
-- Enforces security controls with user confirmation flows
+**Philosophy:** Agents should be able to introspect and modify their own code, with human oversight.
 
-**Relationship to PAWS:**
-- Complementary but independent project
-- MWP focuses on visual dashboards for **external MCP servers**, PAWS/REPLOID focuses on multi-agent workflows
-- **Important:** REPLOID has its own internal "Module Widget Protocol" for visualizing internal modules (76 upgrades like ToolRunner, StateManager, EventBus) - this is separate from MCP Widget Protocol
-- **Integration Potential**: REPLOID modules can be converted to MCP servers and visualized with MWP widgets
-  - Visual VFS browser with syntax highlighting
-  - Blueprint gallery instead of text search
-  - Side-by-side diff viewer for proposed modifications
-  - Test results dashboard with visual pass/fail indicators
-  - Interactive checkpoint timeline
-  - Visual approval UI for destructive operations
-- **Hybrid Architecture**: REPLOID dashboard can show both internal widgets (Module Widget Protocol) and external widgets (MCP Widget Protocol) side-by-side
-- Complete integration guide: `reploid/docs/MWP_INTEGRATION_GUIDE.md`
-- Shares monorepo for convenience but maintains separate package ecosystems
+#### What It Does
 
-See [mwp/README.md](mwp/README.md) for full documentation.
+- **76 modular upgrades** following 1:1:1:1 pattern (Module : Blueprint : Test : Widget)
+- **Meta-tool creation** - Tools that create other tools
+- **Multi-model mixing** - Gemini, Claude, GPT-4, local models (Ollama), WebGPU inference
+- **Virtual File System** - IndexedDB-backed storage
+- **Web Component widgets** - Visual dashboard for all modules
+- **Recursive Self-Improvement** - Modify own code with checkpoints and test verification
+- **WebRTC P2P swarm** - Browser-to-browser agent coordination
+- **Python runtime** - Pyodide + WebAssembly for Python execution
+
+**Status:** ✅ Fully implemented with 4 boot tiers
+
+**Location:** [`reploid/`](reploid/README.md)
+
+**Quick Start:**
+```bash
+cd reploid
+npm install
+npm start  # Starts proxy server on http://localhost:8000
+
+# Open browser to http://localhost:8080
+# Select boot mode (Essential/Meta/Full/Experimental)
+# Enter goal and let agent work
+```
+
+**See:** [reploid/README.md](reploid/README.md) for architecture details
+
+---
+
+### MCP Lens - Protocol-Semantic Analytics for MCP
+
+**Analytical-level understanding of Model Context Protocol servers.**
+
+**Philosophy:** Understanding *how* LLMs interact with MCP servers requires protocol-semantic analysis, not just resource metrics.
+
+#### What It Does
+
+- **Protocol-semantic analysis** - Understand why tool calls fail, capability negotiation patterns, schema compliance
+- **Cross-server correlation** - Track semantic dependencies across multiple MCP servers
+- **Efficiency analysis** - Identify tool patterns that lead to success vs. failure
+- **Widget protocol** - Build analytical dashboards as Web Components
+- **LLM interaction patterns** - Analyze how LLMs use tools over time
+
+**Status:** ✅ Protocol defined, strategic positioning validated (Oct 2025)
+
+**Location:** [`lens/`](lens/README.md)
+
+**Note:** MCP Lens is completely independent. It can analyze any MCP server, including potential future PAWS/REPLOID MCP servers.
+
+---
+
+## Shared Philosophy
+
+While these projects are independent, they share common values:
+
+**1. Human-in-the-Loop by Default**
+- All potentially destructive operations require approval
+- Git checkpoints before major changes
+- Test verification before accepting solutions
+
+**2. Context Engineering**
+- Curating what AI sees is as important as how you prompt
+- Smart file selection over dumping entire codebases
+- Context bundling for reproducibility
+
+**3. Multi-Model Mixing**
+- No single model is best for everything
+- Let models compete or collaborate
+- Benchmark on your specific codebase
+
+**4. Recursive Self-Improvement**
+- Agents should be able to modify themselves
+- With guardrails: tests, checkpoints, human approval
+- Code should be introspectable and modifiable
+
+**5. No Vendor Lock-in**
+- CLI tools work with any LLM provider
+- REPLOID supports local models (Ollama, WebGPU)
+- Everything uses open standards (MCP, git, markdown)
+
+---
+
+## Package Structure
+
+```
+paws/
+├── packages/
+│   ├── cli-js/          # PAWS CLI in JavaScript
+│   ├── cli-py/          # PAWS CLI in Python
+│   ├── core/            # Shared resources (personas, prompts)
+│   └── parsers/         # Shared CATS/DOGS bundle parsers
+├── reploid/             # Browser-native agent environment
+├── lens/                # MCP Lens (protocol-semantic analytics)
+└── integrations/
+    ├── mcp/             # MCP server for PAWS tools
+    └── vscode/          # VS Code extension
+```
+
+---
+
+## Getting Started
+
+### PAWS CLI Workflows
+
+**Scenario:** Multiple LLMs compete to refactor authentication.
+
+```bash
+# 1. Create context bundle with AI-assisted file selection
+paws-cats --ai-curate "refactor authentication to OAuth2" -o context.md
+
+# 2. Run multi-agent competition
+paws-arena \
+  "Refactor auth module to use OAuth2 with token refresh" \
+  context.md \
+  --verify-cmd "pytest tests/test_auth.py" \
+  --config arena_config.json
+
+# 3. Review winning solution
+paws-dogs workspace/competition/best_solution.md --interactive
+
+# 4. Apply changes (after approval)
+```
+
+**What happens:**
+- Gemini, Claude, and GPT-4 generate solutions independently
+- Each solution tested in isolated git worktree
+- Only passing solutions are presented
+- You choose which to apply (or reject all)
+
+---
+
+### REPLOID Self-Improvement
+
+**Scenario:** Agent improves its own error handling.
+
+```bash
+# 1. Start REPLOID
+cd reploid && npm start
+
+# 2. Open browser to localhost:8080
+
+# 3. Select "Meta-RSI Core" boot mode
+
+# 4. Enter goal:
+"Improve error handling in agent-cycle.js based on blueprint 0x000003"
+
+# 5. Agent will:
+- Read relevant blueprints
+- Analyze current code
+- Propose modifications
+- Create checkpoint
+- Request approval
+- Run tests
+- Apply changes or rollback
+```
+
+**What happens:**
+- Agent introspects its own modules
+- Uses blueprints as design guides
+- Proposes changes with rationale
+- Requires human approval
+- Tests before applying
+- Auto-rollback on test failure
+
+---
+
+## Installation
+
+### Full Monorepo Setup
+
+```bash
+# Clone repository
+git clone https://github.com/yourusername/paws.git
+cd paws
+
+# Install JavaScript dependencies
+pnpm install
+
+# Install Python CLI
+cd packages/cli-py
+pip install -e .
+cd ../..
+
+# Install REPLOID dependencies
+cd reploid
+npm install
+cd ..
+
+# Set up API keys (optional, for cloud models)
+export GEMINI_API_KEY="your-key"
+export ANTHROPIC_API_KEY="your-key"
+export OPENAI_API_KEY="your-key"
+```
+
+### Individual Project Setup
+
+Each project can be installed independently - see their respective READMEs.
+
+---
+
+## Documentation
+
+### PAWS CLI
+- [JavaScript CLI README](packages/cli-js/README.md)
+- [Python CLI README](packages/cli-py/README.md)
+- [EXAMPLES.md](EXAMPLES.md) - Detailed workflows
+
+### REPLOID
+- [REPLOID README](reploid/README.md)
+- [Architecture Docs](reploid/docs/README.md)
+- [Blueprint System](reploid/blueprints/README.md)
+
+### MOP
+- [MOP README](mop/README.md)
+- [Protocol Specification](mop/specification/README.md)
+
+### General
+- [ARCHITECTURE.md](ARCHITECTURE.md) - How projects relate
+- [Shared Core](packages/core/README.md) - Personas and prompts
+
+---
+
+## Contributing
+
+Each project has its own patterns:
+
+**PAWS CLI:**
+- Standard JavaScript/Python practices
+- Tests for all CLI commands
+- Documentation for new workflows
+
+**REPLOID:**
+- **1:1:1:1 pattern** (Module : Blueprint : Test : Widget)
+- All upgrades must have Web Components
+- See [reploid/docs/WEB_COMPONENTS_GUIDE.md](reploid/docs/WEB_COMPONENTS_GUIDE.md)
+
+**MOP:**
+- Follow MOP widget protocol specification
+- Security-first (user confirmations)
+- See [mop/CONTRIBUTING.md](mop/CONTRIBUTING.md)
+
+---
+
+## Philosophy: Why a Monorepo?
+
+These projects share:
+- **Code** - Personas, system prompts, utilities
+- **Philosophy** - Multi-agent, human-in-loop, context engineering
+- **Standards** - Markdown bundles, git workflows, MCP protocol
+
+But they're **not a unified system**. They're separate tools that:
+- Solve different problems (CLI workflows vs browser agents vs MCP visualization)
+- Can be used independently
+- Share a vision without forcing integration
+
+**Think:** Unix philosophy applied to AI tooling. Small, focused tools that *could* be combined, but don't *require* it.
+
+---
 
 ## License
 
 MIT
 
+---
+
+## Support
+
+- **Issues:** Use GitHub issues for each project (tag with `paws-cli`, `reploid`, or `mop`)
+- **Discussions:** For architecture questions and integration ideas
+- **Examples:** See [EXAMPLES.md](EXAMPLES.md) for real-world workflows
+
+---
+
+**Built with the philosophy: Tools should be composable, not monolithic. Agents should be verifiable, not autonomous.**

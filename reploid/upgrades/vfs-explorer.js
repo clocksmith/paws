@@ -6,7 +6,7 @@ const VFSExplorer = {
   metadata: {
     id: 'VFSExplorer',
     version: '1.1.0',
-    dependencies: ['Utils', 'EventBus', 'StateManager', 'ToastNotifications'],
+    dependencies: ['Utils', 'EventBus', 'StateManager', 'ToastNotifications?'],
     async: false,
     type: 'ui'
   },

@@ -13,7 +13,7 @@ const HybridLLMProvider = {
   metadata: {
     id: 'HybridLLMProvider',
     version: '1.0.0',
-    dependencies: ['config', 'Utils', 'EventBus', 'StateManager', 'LocalLLM', 'ApiClient', 'StreamingResponseHandler?'],
+    dependencies: ['config', 'Utils', 'EventBus', 'StateManager', 'LocalLLM?', 'ApiClient', 'StreamingResponseHandler?'],
     async: true,
     type: 'agent'
   },
