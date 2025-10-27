@@ -864,8 +864,9 @@ async function awakenAgent() {
 
         console.log('[Boot] Agent system awakened successfully');
 
-        // After successful initialization, transition to main app immediately
-        console.log('[Boot] Removing boot overlay...');
+        // Genesis bootstrap runs synchronously inside CoreLogicModule,
+        // so it's already complete at this point. Transition to main app.
+        console.log('[Boot] Genesis bootstrap complete - removing boot overlay...');
         appRoot.style.transition = 'opacity 0.5s ease-in';
         appRoot.style.opacity = '1';
 

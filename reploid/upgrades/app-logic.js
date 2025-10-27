@@ -347,6 +347,87 @@ ${code};
 
     logger.info("[CoreLogic] Agent initialization complete. System is operational.");
 
+    // ============================================================
+    // GENESIS BOOTSTRAP: Catalog VFS files as birth context
+    // ============================================================
+    logger.info("[CoreLogic] Running genesis bootstrap...");
+    try {
+      // List all files in VFS to create birth context
+      const allFiles = [];
+      const walkDir = async (dir) => {
+        try {
+          const entries = await vfs.fs.promises.readdir(dir);
+          for (const entry of entries) {
+            const fullPath = dir === '/' ? `/${entry}` : `${dir}/${entry}`;
+            try {
+              const stat = await vfs.fs.promises.stat(fullPath);
+              if (stat.isDirectory()) {
+                await walkDir(fullPath);
+              } else if (stat.isFile()) {
+                allFiles.push(fullPath);
+              }
+            } catch (e) {
+              // Skip unreadable files
+            }
+          }
+        } catch (e) {
+          // Skip unreadable directories
+        }
+      };
+
+      await walkDir('/');
+      logger.info(`[CoreLogic] Genesis: Found ${allFiles.length} files in VFS`);
+
+      // Create genesis context bundle (simple catalog)
+      const genesisContext = {
+        timestamp: new Date().toISOString(),
+        bootMode: initialConfig.bootMode,
+        totalFiles: allFiles.length,
+        files: allFiles.map(path => ({
+          path,
+          type: path.endsWith('.js') ? 'module' :
+                path.endsWith('.json') ? 'config' :
+                path.endsWith('.md') ? 'documentation' : 'other'
+        })),
+        modules: allFiles
+          .filter(f => f.includes('/upgrades/') && f.endsWith('.js'))
+          .map(f => f.replace('/upgrades/', '').replace('.js', '')),
+        config: allFiles.filter(f => f.endsWith('.json')),
+        personas: allFiles.filter(f => f.includes('/personas/'))
+      };
+
+      // Save genesis context to VFS
+      const genesisMarkdown = `# Genesis Bootstrap Context
+
+**Timestamp:** ${genesisContext.timestamp}
+**Boot Mode:** ${genesisContext.bootMode}
+**Total Files:** ${genesisContext.totalFiles}
+
+## Loaded Modules (${genesisContext.modules.length})
+${genesisContext.modules.map(m => `- ${m}`).join('\n')}
+
+## Configuration Files (${genesisContext.config.length})
+${genesisContext.config.map(c => `- ${c}`).join('\n')}
+
+## Personas (${genesisContext.personas.length})
+${genesisContext.personas.map(p => `- ${p}`).join('\n')}
+
+## All Files
+${genesisContext.files.map(f => `- [${f.type}] ${f.path}`).join('\n')}
+
+---
+*This is the agent's birth memory - a catalog of all source code present at initialization.*
+`;
+
+      await vfs.write('/system/genesis-context.md', genesisMarkdown);
+      await vfs.write('/system/genesis-context.json', JSON.stringify(genesisContext, null, 2));
+
+      logger.info("[CoreLogic] Genesis bootstrap complete - birth context saved to /system/genesis-context.md");
+      logger.info(`[CoreLogic] Genesis summary: ${genesisContext.totalFiles} files, ${genesisContext.modules.length} modules`);
+    } catch (genesisError) {
+      logger.warn("[CoreLogic] Genesis bootstrap failed (non-fatal):", genesisError.message);
+    }
+
     // Mark boot as complete
     _bootStats.endTime = Date.now();
     _bootStats.totalDuration = _bootStats.endTime - _bootStats.startTime;
