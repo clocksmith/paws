@@ -47,6 +47,5 @@ Server configuration is loaded from `/config.json` under the `server` section.
 
 ## See Also
 
-- `/upgrades/webrtc-swarm.js` - WebRTC swarm client
+- `/upgrades/core/webrtc-swarm.js` - WebRTC swarm client
 - `/blueprints/0x000044-webrtc-swarm-transport.md` - WebRTC architecture
-- `/docs/WEBRTC_QUICKSTART.md` - WebRTC setup guide

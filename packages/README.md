@@ -9,40 +9,41 @@ This directory contains the core PAWS packages organized as a pnpm workspace.
 ## Packages
 
 ### [@paws/core](core/README.md)
-Shared resources for PAWS including personas, system prompts, and configuration files. This package provides path helpers for accessing these resources from both JavaScript and Python.
+Shared resources for PAWS including personas, system prompts, and configuration files. Written in TypeScript.
 
 **Key contents:**
 - `personas/` - AI persona definitions
 - `sys/` - System prompts
 - `configs/` - Configuration files
+- Path helper utilities
+
+### [@paws/parsers](parsers/)
+Shared parsing logic for PAWS bundle formats (CATS/DOGS). Written in TypeScript.
+
+**Key features:**
+- DOGS bundle parser with delta command support
+- File operation detection (CREATE, MODIFY, DELETE)
+- Binary content handling
+- Browser and Node.js compatible
 
 ### [@paws/cli-js](cli-js/README.md)
-JavaScript CLI tools for PAWS. Provides the `cats` (context bundler), `dogs` (change applier), and `paws-session` (session manager) commands.
+TypeScript CLI tools for PAWS multi-agent workflows.
+
+**Commands:**
+- `cats` - Context bundler with AI-assisted file selection
+- `dogs` - Change applier with interactive review
+- `paws-arena` - Multi-agent competitive verification
+- `paws-swarm` - Collaborative multi-agent workflows
+- `paws-benchmark` - LLM performance comparison
+- `paws-context-optimizer` - Smart context pruning for large codebases
+- `paws-session` - Stateful workflow management with git worktrees
 
 **Key features:**
 - AI-powered file curation
 - Interactive change review
 - Git worktree session management
-- API for programmatic usage
-
-### [@paws/cli-py](cli-py/README.md)
-Python CLI tools for PAWS. Includes `paws-cats`, `paws-dogs`, `paws-paxos` (multi-agent orchestrator), and `paws-session`.
-
-**Key features:**
-- Python API for bundling and applying changes
-- Multi-agent Paxos consensus workflow
-- Session management
-- Verification and rollback support
-
-### [@paws/reploid](reploid/README.md)
-Browser-native visual interface for PAWS providing interactive multi-agent AI workflows with visual diff review and approval gates.
-
-**Key features:**
-- Visual diff viewer with syntax highlighting
-- File tree explorer
-- Multi-agent competition (Paxos mode)
-- WebGPU local LLM support
-- Recursive self-improvement (RSI) modules
+- Multi-model support (Gemini, Claude, OpenAI)
+- Test-driven verification
 
 ## Installation
 
@@ -52,24 +53,19 @@ From the repository root:
 # Install all dependencies
 pnpm install
 
-# Install Python package
-cd packages/cli-py
-pip install -e .
+# Build all packages
+pnpm -r run build
 ```
 
 ## Development
 
 ```bash
-# Run tests for all packages
+# Build all packages
+pnpm -r run build
+
+# Run tests
+cd packages/cli-js
 pnpm test
-
-# Run tests for specific package
-pnpm --filter @paws/cli-js test
-pnpm --filter @paws/reploid test
-
-# Python tests
-cd packages/cli-py
-pytest
 ```
 
 ## Package Dependencies
@@ -77,12 +73,10 @@ pytest
 ```
 @paws/core              # No dependencies (provides resources)
     ↓
-@paws/cli-js            # Depends on @paws/core
+@paws/parsers           # No dependencies (standalone parser)
     ↓
-@paws/reploid           # Depends on @paws/cli-js and @paws/core
+@paws/cli-js            # Depends on @paws/core
 ```
-
-Python package `@paws/cli-py` accesses `@paws/core` resources via filesystem paths.
 
 ---
 

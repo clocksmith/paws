@@ -7,6 +7,15 @@
 | File | Purpose |
 |------|---------|
 | `add-structured-cycle-config.js` | Adds structured cognitive cycle configuration to config.json |
+| `analyze-unregistered.js` | Analyzes modules not registered in manifest |
+| `archive-unused-modules.sh` | Archives unused modules to upgrades/archived/ |
+| `cleanup-deprecated.sh` | Removes deprecated files and directories |
+| `concat-files.js` | Concatenates multiple files into one |
+| `find-truly-unused.js` | Finds modules that are truly unused |
+| `renumber-blueprints.js` | Renumbers blueprint hex IDs |
+| `scan-migrations.js` | Scans for migration tasks |
+| `sync-tracker.js` | Synchronizes tracker data |
+| `validate-personas.js` | Validates persona file structure |
 
 ## Running Scripts
 
@@ -30,8 +39,3 @@ node scripts/add-structured-cycle-config.js
 - **Migration**: Update file structures or data formats
 - **Analysis**: Generate reports or statistics
 - **Build**: Pre-build or post-build automation
-
-## See Also
-
-- `/upgrades/scan-migrations.js` - Migration scanner utility
-- `/upgrades/sync-tracker.js` - Tracker synchronization utility

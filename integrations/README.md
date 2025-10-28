@@ -9,7 +9,7 @@ This directory contains integrations that connect PAWS to other tools and platfo
 ## Available Integrations
 
 ### [MCP Server](mcp/README.md)
-Model Context Protocol server that exposes PAWS tools (`cats`, `dogs`, `paxos`) for use with Claude Desktop and other MCP-compatible clients.
+Model Context Protocol server that exposes PAWS tools (`cats`, `dogs`, `arena`, `swarm`, `session`) for use with Claude Desktop and other MCP-compatible clients.
 
 **Use cases:**
 - Use PAWS commands directly from Claude Desktop

@@ -8,12 +8,14 @@ Model Context Protocol (MCP) server that exposes PAWS tools for use with Claude 
 
 ## Overview
 
-This integration allows you to use PAWS commands directly from Claude Desktop or any MCP-compatible client. Claude can invoke `cats`, `dogs`, and `paxos` as native tools.
+This integration allows you to use PAWS commands directly from Claude Desktop or any MCP-compatible client.
 
 **Available Tools:**
 - `cats` - Create context bundles from your project files
 - `dogs` - Apply AI-generated change bundles
-- `paxos` - Run multi-agent competitive workflows
+- `arena` - Run multi-agent competitive workflows with test-driven selection
+- `swarm` - Collaborative multi-agent workflows (Architect → Implementer → Reviewer)
+- `session` - Manage stateful multi-turn sessions with git worktrees
 
 ## Installation
 
@@ -41,7 +43,7 @@ Add to your Claude Desktop config file:
   "mcpServers": {
     "paws": {
       "command": "node",
-      "args": ["/absolute/path/to/paws/integrations/mcp/src/server.js"]
+      "args": ["/absolute/path/to/paws/integrations/mcp/dist/server.js"]
     }
   }
 }
@@ -71,13 +73,13 @@ Claude: I'll use the dogs tool to apply these changes...
 [Reviews and applies changes with your approval]
 ```
 
-### Multi-Agent Workflow
+### Multi-Agent Arena
 
 ```
-You: Run a Paxos workflow to implement user registration
+You: Run an arena workflow to implement user registration
 
-Claude: I'll coordinate multiple AI agents to generate and test solutions...
-[Runs competitive workflow with consensus selection]
+Claude: I'll run multiple AI agents in parallel to generate and test solutions...
+[Runs competitive workflow with test-driven selection]
 ```
 
 ## Architecture
@@ -85,7 +87,9 @@ Claude: I'll coordinate multiple AI agents to generate and test solutions...
 ```
 integrations/mcp/
 ├── src/
-│   └── server.js          # MCP server implementation
+│   └── server.ts          # MCP server implementation (TypeScript)
+├── dist/
+│   └── server.js          # Compiled JavaScript
 ├── package.json           # Dependencies
 └── README.md             # This file
 ```
@@ -94,11 +98,14 @@ The server uses `@paws/cli-js` to execute PAWS commands and translates them into
 
 ## Development
 
-### Running the Server
+### Building and Running
 
 ```bash
+# Build TypeScript
+pnpm build
+
 # Start server
-node src/server.js
+node dist/server.js
 
 # Or via pnpm
 pnpm start
@@ -109,7 +116,7 @@ pnpm start
 Test the server with the MCP Inspector:
 
 ```bash
-npx @modelcontextprotocol/inspector node src/server.js
+npx @modelcontextprotocol/inspector node dist/server.js
 ```
 
 ## Troubleshooting

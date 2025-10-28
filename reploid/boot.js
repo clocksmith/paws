@@ -5,6 +5,39 @@ import { checkAPIStatus } from './boot/api.js';
 import { closeHelpPopover } from './boot/ui.js';
 import { initModelConfig, hasModelsConfigured, getSelectedModels } from './boot/model-config.js';
 
+// Load development integrations if enabled
+async function loadDevIntegrations() {
+    const developmentMode = localStorage.getItem('DEVELOPMENT_MODE') === 'true';
+
+    if (developmentMode) {
+        console.log('[Boot] Development mode enabled - loading dev integrations');
+
+        const loadScript = (src) => {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = () => {
+                    console.log(`[Boot] Loaded: ${src}`);
+                    resolve();
+                };
+                script.onerror = (error) => {
+                    console.warn(`[Boot] Failed to load ${src}:`, error);
+                    resolve(); // Don't block boot on dev script failures
+                };
+                document.head.appendChild(script);
+            });
+        };
+
+        // Load console monitor and live reload
+        await Promise.all([
+            loadScript('integrations/claude-code/workflows/console-monitor.js'),
+            loadScript('integrations/claude-code/workflows/live-reload.js')
+        ]);
+    } else {
+        console.log('[Boot] Development mode disabled - skipping dev integrations');
+    }
+}
+
 // Detect if proxy server is available
 async function detectProxyServer() {
     try {
@@ -21,6 +54,9 @@ async function detectProxyServer() {
 
 // This is the main entry point for the application.
 async function main() {
+    // Load development integrations if enabled
+    await loadDevIntegrations();
+
     // Initial setup
     loadStoredKeys();
     await checkAPIStatus();
@@ -588,10 +624,30 @@ async function awakenAgent() {
     bootContainer.remove();
 
     try {
+        // ============================================================
+        // GENESIS CYCLE (Cycle 0): Bootstrap and System Initialization
+        // ============================================================
+        const genesisStartTime = Date.now();
+        const genesisActions = [];
+
+        const logGenesisAction = (action, details = {}) => {
+            const actionEntry = {
+                action,
+                timestamp: Date.now() - genesisStartTime,
+                ...details
+            };
+            genesisActions.push(actionEntry);
+            console.log(`[Genesis] ${action}`, details);
+        };
+
+        logGenesisAction('Genesis cycle started', { goal });
+
         // Collect and save boot state to VFS for genesis cycle
-        const bootMode = localStorage.getItem('BOOT_MODE') || 'meta';
+        const bootMode = localStorage.getItem('BOOT_MODE') || 'rsi-core';
         const consensusType = localStorage.getItem('CONSENSUS_TYPE') || 'arena';
         const selectedModels = getSelectedModels();
+
+        logGenesisAction('Collected boot configuration', { bootMode, consensusType, modelCount: selectedModels.length });
 
         const genesisBootState = {
             timestamp: new Date().toISOString(),
@@ -607,11 +663,12 @@ async function awakenAgent() {
             }
         };
 
-        console.log('[Boot] Saving genesis boot state to VFS:', genesisBootState);
+        logGenesisAction('Prepared genesis boot state');
 
         // Save to VFS via proxy endpoint
         if (state.proxyAvailable) {
             try {
+                logGenesisAction('Saving boot state to VFS via proxy');
                 const vfsResponse = await fetch('http://localhost:8000/api/vfs/backup', {
                     method: 'POST',
                     headers: {
@@ -638,25 +695,22 @@ async function awakenAgent() {
         // BOOT LOADER: Load all modules into VFS based on boot mode
         // ============================================================
 
-        console.log('[BootLoader] Initializing VFS and loading modules...');
+        logGenesisAction('Starting boot loader - initializing VFS');
 
         // First, fetch module manifest to know what to load
-        console.log('[BootLoader] Fetching module manifest...');
         const manifestResponse = await fetch('/module-manifest.json?t=' + Date.now());
         const manifest = await manifestResponse.json();
-        console.log('[BootLoader] Manifest loaded:', manifest.version, 'with', Object.keys(manifest.loadGroups).length, 'load groups');
+        logGenesisAction('Fetched module manifest', { version: manifest.version, loadGroups: Object.keys(manifest.loadGroups).length });
 
         // Determine which modules to load based on boot mode
         let modulesToLoad = [];
         let presetName = bootMode;
 
-        // Map old boot mode names to new preset names for backwards compatibility
+        // Map boot mode names to preset names (legacy compatibility)
         const modeMapping = {
+            'headless': 'headless',
             'minimal': 'minimal-rsi',
-            'essential': 'minimal-rsi',
             'meta': 'rsi-core',
-            'rsi': 'rsi-core',
-            'full': 'experimental',
             'experimental': 'experimental'
         };
 
@@ -672,20 +726,20 @@ async function awakenAgent() {
             presetName = 'rsi-core';
         }
 
-        console.log('[BootLoader] Boot mode:', bootMode, '- Loading', modulesToLoad.length, 'modules');
+        logGenesisAction('Determined module preset', { preset: presetName, moduleCount: modulesToLoad.length });
 
         // Fetch config.json (needed for agent)
-        console.log('[BootLoader] Fetching config.json...');
         const configResponse = await fetch('/config.json?t=' + Date.now());
         const configContent = await configResponse.text();
+        logGenesisAction('Fetched config.json');
 
         // ALWAYS fetch app-logic.js (bootstrap script, not a module)
-        console.log('[BootLoader] Fetching app-logic.js (bootstrap)...');
-        const appLogicResponse = await fetch('/upgrades/app-logic.js?t=' + Date.now());
+        const appLogicResponse = await fetch('/upgrades/core/app-logic.js?t=' + Date.now());
         const appLogicContent = await appLogicResponse.text();
+        logGenesisAction('Fetched app-logic.js');
 
         // Fetch all module files from server IN PARALLEL
-        console.log('[BootLoader] Fetching', modulesToLoad.length, 'module files from server...');
+        logGenesisAction('Fetching modules from server', { count: modulesToLoad.length });
         const modulePromises = modulesToLoad.map(async (modulePath) => {
             try {
                 const response = await fetch(modulePath + '?t=' + Date.now());
@@ -703,10 +757,10 @@ async function awakenAgent() {
 
         const moduleResults = await Promise.all(modulePromises);
         const loadedModules = moduleResults.filter(m => m !== null);
-        console.log('[BootLoader] Successfully fetched', loadedModules.length, 'modules');
+        logGenesisAction('Fetched all modules', { successCount: loadedModules.length, failedCount: modulesToLoad.length - loadedModules.length });
 
         // Initialize GitVFS (IndexedDB-backed Git filesystem)
-        console.log('[BootLoader] Initializing GitVFS...');
+        logGenesisAction('Initializing VFS (LightningFS + Git)');
         const LightningFS = window.LightningFS;
         const fs = new LightningFS('reploid-vfs');
         const git = window.git;
@@ -728,16 +782,16 @@ async function awakenAgent() {
         }
 
         // Write all modules to VFS
-        console.log('[BootLoader] Writing', loadedModules.length, 'modules to VFS...');
+        logGenesisAction('Writing modules to VFS', { count: loadedModules.length + 3 });
         await writeToVFS('/config.json', configContent);
         await writeToVFS('/module-manifest.json', JSON.stringify(manifest, null, 2));
-        await writeToVFS('/upgrades/app-logic.js', appLogicContent);
+        await writeToVFS('/upgrades/core/app-logic.js', appLogicContent);
 
         for (const module of loadedModules) {
             await writeToVFS(module.path, module.content);
         }
 
-        console.log('[BootLoader] All modules + app-logic written to VFS');
+        logGenesisAction('All modules written to VFS');
 
         // Commit to git
         try {
@@ -745,21 +799,22 @@ async function awakenAgent() {
             await git.commit({
                 fs,
                 dir: '/',
-                message: `Boot Loader: Loaded ${loadedModules.length} modules (${presetName} preset)`,
+                message: `Genesis Cycle 0: Loaded ${loadedModules.length} modules (${presetName} preset)`,
                 author: {
-                    name: 'REPLOID Boot Loader',
-                    email: 'boot@reploid.local'
+                    name: 'REPLOID Genesis',
+                    email: 'genesis@reploid.local'
                 }
             });
-            console.log('[BootLoader] Committed modules to Git');
+            logGenesisAction('Created genesis commit in Git VFS');
         } catch (error) {
             console.warn('[BootLoader] Git commit failed (non-fatal):', error);
+            logGenesisAction('Git commit failed (continuing anyway)', { error: error.message });
         }
 
         // ============================================================
         // GENESIS CYCLE: Initialize StateManager with module metadata
         // ============================================================
-        console.log('[BootLoader] Initializing StateManager genesis state...');
+        logGenesisAction('Preparing StateManager genesis state');
 
         const artifactMetadata = {};
 
@@ -778,8 +833,8 @@ async function awakenAgent() {
         };
 
         // Register app-logic.js
-        artifactMetadata['/upgrades/app-logic.js'] = {
-            id: '/upgrades/app-logic.js',
+        artifactMetadata['/upgrades/core/app-logic.js'] = {
+            id: '/upgrades/core/app-logic.js',
             type: 'code',
             description: 'Core agent logic bootstrap module'
         };
@@ -809,7 +864,7 @@ async function awakenAgent() {
 
         // Save genesis state to VFS at /.state (where StateManager reads it)
         await fs.promises.writeFile('/.state', JSON.stringify(genesisState, null, 2), 'utf8');
-        console.log(`[BootLoader] Genesis state saved with ${Object.keys(artifactMetadata).length} artifacts`);
+        logGenesisAction('Genesis state saved to VFS', { artifactCount: Object.keys(artifactMetadata).length });
 
         // Create VFS interface for agent
         const vfs = {
@@ -831,20 +886,15 @@ async function awakenAgent() {
             git // Expose git for version control
         };
 
-        console.log('[BootLoader] VFS ready - all modules available in IndexedDB');
+        logGenesisAction('VFS interface created');
 
         // Load app-logic.js from VFS
-        console.log('[Boot] Loading app-logic.js from VFS...');
-        const appLogicCode = await vfs.read('/upgrades/app-logic.js');
-        console.log('[Boot] app-logic.js loaded, size:', appLogicCode.length);
+        const appLogicCode = await vfs.read('/upgrades/core/app-logic.js');
+        logGenesisAction('Loaded app-logic.js from VFS', { size: appLogicCode.length });
 
         // Execute app-logic.js to get the CoreLogicModule function
-        console.log('[Boot] Executing app-logic.js...');
         const CoreLogicModule = new Function(appLogicCode + '\nreturn CoreLogicModule;')();
-        console.log('[Boot] CoreLogicModule extracted:', typeof CoreLogicModule);
-
-        // bootMode already declared above at line 492
-        console.log('[Boot] Boot mode:', bootMode);
+        logGenesisAction('Executed app-logic.js - CoreLogicModule ready');
 
         // Prepare initial configuration
         const initialConfig = {
@@ -856,13 +906,39 @@ async function awakenAgent() {
             }
         };
 
-        console.log('[Boot] Initializing agent system with config:', initialConfig);
+        logGenesisAction('Prepared initial configuration', { persona: initialConfig.persona.id, bootMode: initialConfig.bootMode });
 
         // Initialize the agent system
-        console.log('[Boot] Calling CoreLogicModule...');
         const agentSystem = await CoreLogicModule(initialConfig, vfs);
 
-        console.log('[Boot] Agent system awakened successfully');
+        logGenesisAction('Agent system initialized successfully');
+
+        // ============================================================
+        // GENESIS CYCLE COMPLETE: Save summary to VFS
+        // ============================================================
+        const genesisEndTime = Date.now();
+        const genesisDuration = genesisEndTime - genesisStartTime;
+
+        const genesisCycleSummary = {
+            cycleNumber: 0,
+            type: 'GENESIS',
+            status: 'COMPLETED',
+            startTime: new Date(genesisStartTime).toISOString(),
+            endTime: new Date(genesisEndTime).toISOString(),
+            durationMs: genesisDuration,
+            goal: goal,
+            bootMode: presetName,
+            modulesLoaded: loadedModules.length,
+            actions: genesisActions,
+            summary: `Genesis cycle completed in ${(genesisDuration / 1000).toFixed(2)}s. Loaded ${loadedModules.length} modules (${presetName} preset), initialized VFS, and prepared agent system.`
+        };
+
+        // Save genesis cycle to VFS
+        await writeToVFS('/.state-genesis.json', JSON.stringify(genesisCycleSummary, null, 2));
+        logGenesisAction('Saved genesis cycle summary to VFS', { duration: genesisDuration });
+
+        console.log(`[Genesis] Cycle 0 complete in ${genesisDuration}ms`);
+        console.log(`[Genesis] Total actions: ${genesisActions.length}`);
 
         // Genesis bootstrap runs synchronously inside CoreLogicModule,
         // so it's already complete at this point. Transition to main app.

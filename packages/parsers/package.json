@@ -2,12 +2,27 @@
   "name": "@paws/parsers",
   "version": "1.0.0",
   "description": "Shared parsing logic for PAWS bundle formats (cats/dogs)",
-  "main": "src/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "commonjs",
   "exports": {
-    ".": "./src/index.js",
-    "./dogs-parser": "./src/dogs-parser.js",
-    "./cats-generator": "./src/cats-generator.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./dogs-parser": {
+      "types": "./dist/dogs-parser.d.ts",
+      "default": "./dist/dogs-parser.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "paws",
@@ -19,5 +34,9 @@
   "license": "MIT",
   "engines": {
     "node": ">=16.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0"
   }
 }

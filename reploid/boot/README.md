@@ -8,6 +8,8 @@
 |------|---------|
 | `api.js` | API client initialization and configuration |
 | `config.js` | Configuration loading and validation |
+| `lazy-loader.js` | Lazy module loading utilities |
+| `model-config.js` | Model provider configuration and selection |
 | `modes.js` | Operational mode setup (autonomous, curator, etc.) |
 | `state.js` | Initial state management setup |
 | `style.css` | Bootstrap styling (loaded before main UI) |

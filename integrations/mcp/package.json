@@ -3,11 +3,20 @@
   "version": "0.1.0",
   "description": "Model Context Protocol server exposing PAWS cats/dogs/paxos tools.",
   "type": "module",
-  "main": "src/server.js",
+  "main": "dist/server.js",
+  "types": "dist/server.d.ts",
   "scripts": {
-    "start": "node src/server.js"
+    "start": "node dist/server.js",
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "dev": "tsc && node dist/server.js",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@paws/cli-js": "workspace:*"
+    "@paws/cli": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0"
   }
 }

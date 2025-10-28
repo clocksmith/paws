@@ -4,7 +4,7 @@
 
 ---
 
-> **Architecture Note:** Blueprints form the knowledge foundation for REPLOID's Sentinel Agent capabilities. They are technical specifications bundled into user-facing **Personas** defined in `config.json`. This directory contains the architectural patterns and implementation guides that enable the agent's self-improvement and evolution. See `docs/PERSONAS.md` for persona development details.
+> **Architecture Note:** Blueprints form the knowledge foundation for REPLOID's Sentinel Agent capabilities. They are technical specifications that guide the agent's self-improvement and evolution. This directory contains architectural patterns and implementation guides for major capabilities.
 
 This directory contains REPLOID's conceptual knowledge base. The files herein are instructional markdown documents, or **"blueprints,"** designed to be discovered and studied by the agent itself. Each blueprint provides a high-level guide to potential self-improvements, outlining architectural principles, strategic goals, and implementation pathways for major capabilities.
 

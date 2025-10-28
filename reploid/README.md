@@ -31,7 +31,7 @@ npm start  # http://localhost:8000
 # Navigate to http://localhost:8080
 
 # 4. Select boot mode
-# Choose "Meta-RSI Core" (recommended)
+# Choose "RSI-Core" (recommended)
 
 # 5. Enter a goal
 "Analyze the current module dependencies and suggest optimizations"
@@ -41,8 +41,6 @@ npm start  # http://localhost:8000
 # - Introspects code
 # - Proposes changes
 # - Requests approval
-# - Runs tests
-# - Applies or rolls back
 ```
 
 ---
@@ -60,7 +58,7 @@ npm start  # http://localhost:8000
 **The 1:1:1:1 Pattern:**
 
 Every module follows this pattern:
-- **1 Module** (`upgrades/tool-runner.js`) - JavaScript with DI container pattern
+- **1 Module** (`upgrades/core/tool-runner.js`) - JavaScript with DI container pattern
 - **1 Blueprint** (`blueprints/0x00000A-tool-runner.md`) - Design documentation
 - **1 Test** (`tests/unit/tool-runner.test.js`) - Unit tests
 - **1 Widget** (defined in same file) - Web Component for visualization
@@ -71,70 +69,59 @@ Every module follows this pattern:
 
 REPLOID offers 4 progressive tiers to match your use case:
 
-### ★ Essential Core (8 modules, ~500ms)
-**Perfect for learning REPLOID basics**
+### Headless (31 modules, ~15K lines)
+**Perfect for headless/server operation**
 
-The bare minimum to run an agent:
+Pure functional modules without UI:
 - Agent cognitive loop
 - Virtual file system (VFS)
 - Tool execution
-- Basic UI
-- Single LLM provider
+- State management
+- Multi-model LLM support
 
-**Best for:** First-time users, tutorials, understanding core concepts
+**Best for:** Headless agents, server deployments, CI/CD, automated workflows
 
 ---
 
-### ☥ Meta-RSI Core (15 modules, ~1s) **← RECOMMENDED**
-**Tools that create tools**
+### Minimal-RSI (35 modules, ~18K lines)
+**Core RSI features with basic UI**
 
-Everything in Essential Core, plus:
-- **Meta-tool creator** - Tools that create other tools
-- **Multi-model mixing** - Mix Gemini, GPT, Claude, and local models
-- **Code introspection** - Agent can examine its own code
-- **Streaming responses** - Real-time UI updates
-- **Context management** - Smart token pruning
+Everything in Headless, plus:
+- Basic UI panels (VFS explorer, diff viewer, sentinel control)
+- Visual feedback for agent operations
+- Interactive approval workflows
+
+**Best for:** Learning REPLOID, interactive development, tutorials
+
+---
+
+### RSI-Core (46 modules, ~23K lines) **← RECOMMENDED**
+**Full RSI with comprehensive UI**
+
+Everything in Minimal-RSI, plus:
+- Complete UI dashboard (goals, thoughts, logs, status, metrics)
+- Performance monitoring and analytics
+- Progress tracking and notifications
+- Agent state visualization
 
 **Best for:**
-- Experimenting with meta-tool creation
-- Multi-model agent workflows
+- Production projects
 - Self-improving agents
+- Interactive development
 - Core REPLOID vision
 
 ---
 
-### ☇ Full-Featured (28 modules, ~2s)
-**Production-ready with monitoring and testing**
-
-Everything in Meta-RSI Core, plus:
-- Performance monitoring and metrics
-- Browser API integration (File System, Notifications, etc.)
-- Reflection storage for learning over time
-- Self-testing framework
-- Rate limiting and verification
-- Enhanced UI with styling
-
-**Best for:**
-- Production projects
-- Real-world applications
-- Performance-critical workflows
-- Projects requiring testing/validation
-
----
-
-### ⛉ Experimental Suite (All 76 modules, ~5s)
+### Experimental (56 modules, ~35K lines)
 **Every feature for research and power users**
 
-Everything in Full-Featured, plus:
-- **Visualization suite** - Agent FSM, AST trees, module graphs, canvas
-- **Analytics & monitoring** - Metrics, costs, tool usage tracking
+Everything in RSI-Core, plus:
+- **Visualization suite** - AST trees, module graphs, canvas rendering
 - **Python runtime** - Execute Python via Pyodide + WebAssembly
 - **Local LLM** - WebGPU-accelerated local inference
 - **WebRTC swarm** - P2P browser-to-browser coordination
-- **Meta-cognitive layer** - Autonomous self-improvement
-- **Documentation tools** - RFC authoring, blueprint generation
-- **Security** - Module integrity, audit logging
-- And 48+ more specialized modules...
+- **Advanced tools** - Tutorial system, confirmation modals, app logic helpers
+- And 10+ more specialized modules...
 
 **Best for:**
 - Research and experimentation
@@ -146,19 +133,18 @@ Everything in Full-Featured, plus:
 
 ## Key Features
 
-### 76 Modular Upgrades
+### 79 Modular Upgrades
+
+**Module Organization:**
+- **Core** (63 modules) - Agent logic, state management, tools, LLM providers, VFS
+- **UI** (16 modules) - Panels, visualizers, dashboards, notifications
+- **Archived** (11 modules) - Unused/experimental features
 
 Each module is self-contained with:
 - DI container pattern for dependency injection
 - Web Component widget for visualization
 - Blueprint document explaining design decisions
 - Unit tests for reliability
-
-**Module Categories:**
-- **Core** (8) - Agent loop, VFS, tool execution, UI
-- **Meta** (7) - Meta-tool creation, multi-model, introspection
-- **Full** (13) - Monitoring, browser APIs, reflection, testing
-- **Experimental** (48) - Visualization, Python, local LLM, WebRTC, etc.
 
 ### Virtual File System (VFS)
 
@@ -170,22 +156,7 @@ Browser-native storage using IndexedDB:
 
 ### Multi-Model Mixing
 
-Use multiple LLMs in a single workflow:
-```javascript
-// Query Gemini for design
-const design = await HYBR.query({
-  provider: "gemini",
-  model: "gemini-2.0-flash-exp",
-  prompt: "Design a caching system"
-});
-
-// Get Claude to review
-const review = await HYBR.query({
-  provider: "anthropic",
-  model: "claude-3-5-sonnet-20241022",
-  prompt: `Review this design: ${design}`
-});
-```
+Use multiple LLMs in a single workflow - mix Gemini for speed, Claude for reasoning, GPT-4 for code, or local models for privacy.
 
 **Supported Providers:**
 - ☁️ Cloud: Gemini, Claude (Anthropic), GPT-4 (OpenAI)
@@ -193,25 +164,7 @@ const review = await HYBR.query({
 
 ### Meta-Tool Creation
 
-Agents can create new tools for themselves:
-```javascript
-const newTool = {
-  name: "analyze_performance",
-  description: "Analyze code performance bottlenecks",
-  input_schema: {
-    type: "object",
-    properties: {
-      code: { type: "string" }
-    }
-  },
-  handler: (input) => {
-    return analyzeCode(input.code);
-  }
-};
-
-// Agent registers and uses immediately
-await MTCP.createTool(newTool);
-```
+Agents can create new tools for themselves dynamically. Tools are registered in the runtime and immediately available for use.
 
 ### Recursive Self-Improvement (RSI)
 
@@ -224,140 +177,13 @@ Agent can modify its own code with safety:
 4. **Automatic Rollback** - Revert on test failure
 5. **Blueprint Compliance** - Changes must follow design patterns
 
-**Example RSI Flow:**
-```
-1. Agent reads blueprint 0x000003 (Error Handling)
-2. Analyzes current code in agent-cycle.js
-3. Proposes improvements with rationale
-4. Creates checkpoint: "before-error-handling-improvements"
-5. Requests human approval
-6. Applies changes if approved
-7. Runs unit tests
-8. Rolls back if tests fail
-```
-
 ### Web Component Widgets
 
-Every module has a visual dashboard:
-- Real-time status monitoring
-- Interactive controls
-- Scoped styles (Shadow DOM)
-- Event-driven updates
-
-**Example Widget:**
-```javascript
-class ToolRunnerWidget extends HTMLElement {
-  getStatus() {
-    return {
-      state: 'active',
-      primaryMetric: `${stats.total} executions`,
-      secondaryMetric: `${stats.success} success`,
-      lastActivity: Date.now()
-    };
-  }
-
-  render() {
-    this.shadowRoot.innerHTML = `
-      <div class="panel">
-        <h3>🔧 Tool Runner</h3>
-        <div>Total: ${stats.total}</div>
-      </div>
-    `;
-  }
-}
-```
+Every module has a visual dashboard with real-time status monitoring, interactive controls, scoped styles (Shadow DOM), and event-driven updates.
 
 ### Blueprint System
 
-67+ architectural blueprints guide development:
-- Design patterns
-- Implementation strategies
-- Trade-off analysis
-- Code examples
-- Test requirements
-
-**Blueprint Format:**
-```markdown
-# Blueprint 0x00000A: Tool Runner Engine
-
-**Objective:** Execute tools in sandboxed environment
-
-**Prerequisites:**
-- 0x000003 (Error Handling)
-- 0x000008 (Agent Cognitive Cycle)
-
-**Implementation:**
-1. Create tool registry
-2. Implement sandboxing
-3. Add error recovery
-4. Create widget interface
-```
-
----
-
-## Architecture
-
-### Boot Architecture
-
-```
-index.html
-    ↓
-boot.js (bootstrapper)
-    ↓
-DI Container
-    ↓
-Load Modules (based on tier)
-    ↓
-Register Widgets
-    ↓
-Initialize Agent Cognitive Loop
-    ↓
-Start Execution
-```
-
-### Module Architecture
-
-```
-Module (upgrades/*.js)
-    ├── metadata: { id, version, dependencies, type }
-    ├── factory: (deps) => { ... }
-    │    ├── api: Public methods
-    │    ├── widget: Web Component
-    │    └── internal: Private state
-    └── export for DI container
-```
-
-### DI Container Pattern
-
-```javascript
-const MyModule = {
-  metadata: {
-    id: 'MyModule',
-    dependencies: ['Utils', 'EventBus'],
-    async: false
-  },
-
-  factory: (deps) => {
-    const { Utils, EventBus } = deps;
-
-    // Private state
-    let _state = {};
-
-    // Public API
-    const api = {
-      doSomething: () => { /* ... */ }
-    };
-
-    // Widget
-    class MyModuleWidget extends HTMLElement { /* ... */ }
-
-    return {
-      api,
-      widget: { element: 'my-module-widget', ... }
-    };
-  }
-};
-```
+67+ architectural blueprints guide development with design patterns, implementation strategies, trade-off analysis, code examples, and test requirements.
 
 ---
 
@@ -367,8 +193,12 @@ const MyModule = {
 /reploid
   ├── index.html              # Boot UI and entry point
   ├── boot.js                 # Module loader and DI container
-  ├── config.json             # Module configuration (4-tier system)
-  ├── /upgrades               # All 76 modules (JavaScript)
+  ├── config.json             # Module configuration
+  ├── module-manifest.json    # Module loading presets
+  ├── /upgrades               # All 79 modules
+  │   ├── /core               # 63 functional modules (agent logic, state, tools)
+  │   ├── /ui                 # 16 UI modules (panels, visualizers, dashboards)
+  │   └── /archived           # 11 unused/experimental modules
   ├── /blueprints             # 67+ design documents (Markdown)
   ├── /tests                  # Unit and integration tests
   │   ├── /unit               # Module tests (1:1 with upgrades)
@@ -377,131 +207,26 @@ const MyModule = {
   ├── /server                 # Proxy server for LLM APIs
   │   ├── proxy.js            # Main proxy (stdio → HTTP for Ollama)
   │   └── signaling-server.js # WebRTC signaling
-  ├── /docs                   # Documentation
-  ├── /styles                 # CSS for UI
+  ├── /personas               # 9 agent personas
   ├── /utils                  # Utility modules
-  └── /integrations           # Claude Code, VS Code, etc.
+  └── /integrations           # Claude Code, VS Code, MCP server
 ```
 
 ---
 
 ## Configuration
 
-Edit `config.json` to:
-- Select boot tier (Essential/Meta/Full/Experimental)
+Edit `config.json` or use the boot UI to:
+- Select boot mode (headless/minimal-rsi/rsi-core/experimental)
 - Configure LLM providers (API keys, endpoints)
-- Set WebRTC signaling server
+- Set model preferences
 - Adjust module loading
 - Configure permissions
 
-**Example config.json:**
-```json
-{
-  "version": "1.0",
-  "bootMode": "meta",
-  "api": {
-    "provider": "gemini",
-    "geminiKey": "your-api-key",
-    "timeout": 180000
-  },
-  "localLLM": {
-    "enabled": true,
-    "endpoint": "http://localhost:11434"
-  },
-  "modules": {
-    "essential": ["agent-cycle", "vfs", "tool-runner", ...],
-    "meta": ["meta-tool-creator", "hybrid-llm", ...],
-    "full": ["performance-monitor", "browser-apis", ...],
-    "experimental": ["local-llm", "webrtc-swarm", ...]
-  }
-}
-```
-
----
-
-## Example Workflows
-
-### Workflow 1: Multi-Model Code Review
-
-```javascript
-// Use Gemini for initial draft
-const code = await HYBR.query({
-  provider: "gemini",
-  prompt: "Write a caching module with TTL support"
-});
-
-// Use Claude for code review
-const review = await HYBR.query({
-  provider: "anthropic",
-  prompt: `Review this code:\n${code}`
-});
-
-// Use local model for style check
-const styleCheck = await HYBR.query({
-  provider: "ollama",
-  model: "codellama",
-  prompt: `Check style:\n${code}`
-});
-```
-
-### Workflow 2: Meta-Tool Creation
-
-```javascript
-// Agent creates a new tool
-const tool = await MTCP.createTool({
-  name: "analyze_dependencies",
-  description: "Analyze module dependencies",
-  input_schema: {
-    type: "object",
-    properties: {
-      moduleName: { type: "string" }
-    }
-  },
-  handler: async (input) => {
-    const deps = analyzeDeps(input.moduleName);
-    return { dependencies: deps };
-  }
-});
-
-// Tool is immediately available
-const result = await ToolRunner.runTool("analyze_dependencies", {
-  moduleName: "agent-cycle"
-});
-```
-
-### Workflow 3: Self-Improvement
-
-```javascript
-// Agent reads its own code
-const currentCode = await VFS.readArtifact("/upgrades/agent-cycle.js");
-
-// Analyzes based on blueprint
-const blueprint = await VFS.readArtifact("/blueprints/0x000008-agent-cognitive-cycle.md");
-
-// Proposes improvements
-const proposal = await LLM.query({
-  prompt: `Improve this code based on blueprint:\n${blueprint}\n${currentCode}`
-});
-
-// Creates checkpoint
-await StateManager.createCheckpoint("before-agent-cycle-improvements");
-
-// Requests approval
-const approved = await UI.requestApproval(proposal);
-
-if (approved) {
-  // Apply changes
-  await VFS.writeArtifact("/upgrades/agent-cycle.js", improvedCode);
-
-  // Run tests
-  const testsPassed = await SelfTester.runTests("agent-cycle");
-
-  if (!testsPassed) {
-    // Rollback
-    await StateManager.restoreCheckpoint("before-agent-cycle-improvements");
-  }
-}
-```
+**Module Manifest (`module-manifest.json`):**
+- Defines 4 presets with specific module lists
+- Controls load order via dependency groups
+- Maps module paths to IDs
 
 ---
 
@@ -523,7 +248,7 @@ npm test tests/unit/tool-runner.test.js
 
 **Test Pattern:**
 Every module has a corresponding unit test:
-- `upgrades/tool-runner.js` → `tests/unit/tool-runner.test.js`
+- `upgrades/core/tool-runner.js` → `tests/unit/tool-runner.test.js`
 - Tests cover API methods, error handling, edge cases
 - Widgets tested separately with DOM mocking
 
@@ -536,74 +261,32 @@ Every module has a corresponding unit test:
 Follow the **1:1:1:1 pattern**:
 
 1. **Create Blueprint** (`blueprints/0xNNNNNN-my-module.md`)
-2. **Write Module** (`upgrades/my-module.js`)
+2. **Write Module** (`upgrades/core/my-module.js` or `upgrades/ui/my-module.js`)
    - Implement `metadata` and `factory`
    - Create Web Component widget in same file
    - Add `@blueprint 0xNNNNNN` annotation
 3. **Write Test** (`tests/unit/my-module.test.js`)
-4. **Register Module** (add to `config.json`)
+4. **Register Module** (add to `module-manifest.json`)
 
-**See:** [docs/WEB_COMPONENTS_GUIDE.md](docs/WEB_COMPONENTS_GUIDE.md) for complete guide
-
-### Module Widget Protocol
-
-All modules must export a widget interface:
-
-```javascript
-return {
-  api: {
-    // Public methods
-  },
-  widget: {
-    element: 'my-module-widget',      // Custom element name
-    displayName: 'My Module',          // Human-readable name
-    icon: '🔧',                        // Icon emoji
-    category: 'tools',                 // core/tools/ai/storage/ui/analytics/rsi
-    updateInterval: 5000               // Auto-refresh interval (optional)
-  }
-};
-```
-
-**Widget Requirements:**
+**Module Widget Requirements:**
 - Must extend `HTMLElement`
 - Must use Shadow DOM
 - Must implement `getStatus()` method
 - Should implement `getControls()` for actions
 - Must be defined in same file as module
 
-**See:** [docs/MODULE_WIDGET_PROTOCOL.md](docs/MODULE_WIDGET_PROTOCOL.md)
-
 ---
 
 ## Advanced Features
 
 ### Python Runtime (Pyodide)
-
-Execute Python code via WebAssembly:
-```javascript
-const result = await PYO.runPython(`
-import numpy as np
-arr = np.array([1, 2, 3])
-result = arr.mean()
-`);
-```
+Execute Python code via WebAssembly (experimental preset).
 
 ### Local LLM (WebGPU)
-
-Run models entirely in browser:
-```javascript
-await LLLM.initialize("Llama-3.2-1B");
-const response = await LLLM.complete("Explain recursion");
-```
+Run models entirely in browser (experimental preset).
 
 ### WebRTC P2P Swarm
-
-Browser-to-browser agent coordination:
-```javascript
-await SWRM.joinSwarm("my-swarm-id");
-await SWRM.broadcastGoal("Analyze distributed system");
-const results = await SWRM.collectResults();
-```
+Browser-to-browser agent coordination (experimental preset).
 
 ---
 
@@ -628,19 +311,11 @@ REPLOID is part of the PAWS monorepo but is a **standalone project**.
 **Shared with PAWS:**
 - Philosophy (multi-agent, human-in-loop, context engineering)
 - Some utilities (personas, system prompts)
-- Git workflows and markdown formats
 
 **Not shared:**
 - Runtime (browser vs CLI)
 - Storage (VFS/IndexedDB vs filesystem)
 - Primary use case (self-improvement vs multi-agent competition)
-
-**Potential future integration:**
-- Export PAWS CLI solutions as REPLOID modules
-- Use REPLOID as MCP server for PAWS tools
-- Shared context format across projects
-
-**Current status:** Integration is aspirational, not implemented.
 
 **See:** [../README.md](../README.md) for monorepo overview
 
@@ -648,29 +323,26 @@ REPLOID is part of the PAWS monorepo but is a **standalone project**.
 
 ## FAQ
 
-**Q: Which boot tier should I start with?**
-A: **Meta-RSI Core** (15 modules). It has the core vision without overwhelming complexity.
+**Q: Which boot mode should I start with?**
+A: **RSI-Core** (46 modules). It has the full UI and core RSI features without overwhelming complexity.
 
-**Q: Can I switch tiers later?**
+**Q: What's the difference between the presets?**
+A: **Headless** (31) = no UI, **Minimal-RSI** (35) = basic UI, **RSI-Core** (46) = full UI, **Experimental** (56) = all features.
+
+**Q: Can I switch modes later?**
 A: Yes! Just reload with a different boot mode. Your VFS data persists in IndexedDB.
 
 **Q: Is this actually running in the browser?**
 A: Yes! 100% browser-native. No backend server required (except optional proxy for LLM API calls).
 
 **Q: Can agents modify their own code?**
-A: Yes, with RSI modules (Meta tier+). All changes require human approval and test verification.
+A: Yes, with RSI modules. All changes require human approval and test verification.
 
 **Q: How does this differ from Claude Code?**
 A: Claude Code is a CLI tool. REPLOID runs in browser with VFS, can modify itself, supports multi-model mixing, and has P2P swarm capabilities.
 
-**Q: Do I need to know the 76 modules?**
-A: No. Start with Essential (8) or Meta (15). The module system is progressive.
-
 **Q: Can I use this offline?**
 A: Partially. VFS/modules work offline, but LLM queries need network (unless using local WebGPU models).
-
-**Q: How do I debug modules?**
-A: Browser DevTools. All modules run in main thread. Widgets use Shadow DOM for style isolation.
 
 ---
 
@@ -680,10 +352,10 @@ A: Browser DevTools. All modules run in main thread. Widgets use Shadow DOM for 
 **Solution:** Check browser console. Likely missing dependency or syntax error.
 
 **Problem:** "API key invalid"
-**Solution:** Update `config.json` with valid API keys for your providers.
+**Solution:** Configure API keys via boot UI or edit `config.json`.
 
 **Problem:** "Tests failing after modification"
-**Solution:** Automatic rollback should occur. Check checkpoint history.
+**Solution:** Automatic rollback should occur. Check checkpoint history in VFS.
 
 **Problem:** "WebGPU not available"
 **Solution:** Use Chrome/Edge 113+. Safari doesn't fully support WebGPU yet.
@@ -691,33 +363,25 @@ A: Browser DevTools. All modules run in main thread. Widgets use Shadow DOM for 
 **Problem:** "IndexedDB quota exceeded"
 **Solution:** Clear VFS or export important data. Browser has storage limits.
 
-**See:** [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for more
-
 ---
 
 ## Documentation
 
-- **[Quick Start](docs/QUICK-START.md)** - Get running in 5 minutes
-- **[Web Components Guide](docs/WEB_COMPONENTS_GUIDE.md)** - Adding new modules
-- **[Blueprint System](docs/BLUEPRINT_UPDATE_GUIDE.md)** - Writing design docs
-- **[Module Widget Protocol](docs/MODULE_WIDGET_PROTOCOL.md)** - Widget requirements
-- **[MCP Tools vs Upgrades](docs/MCP_TOOLS_VS_UPGRADES.md)** - Critical distinctions
-- **[Testing Guide](docs/WEB_COMPONENTS_TESTING_GUIDE.md)** - Testing patterns
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues
-- **[API Reference](docs/API.md)** - Module documentation
-- **[Full Docs Index](docs/README.md)** - All documentation
+- **Quick Start** - docs/QUICK-START.md (if exists)
+- **Web Components Guide** - docs/WEB_COMPONENTS_GUIDE.md
+- **Blueprint System** - docs/BLUEPRINT_UPDATE_GUIDE.md
+- **Testing Guide** - docs/WEB_COMPONENTS_TESTING_GUIDE.md
+- **Troubleshooting** - docs/TROUBLESHOOTING.md
 
 ---
 
 ## Contributing
 
 Follow the **1:1:1:1 pattern**:
-- 1 Module (`upgrades/*.js`)
+- 1 Module (`upgrades/core/*.js` or `upgrades/ui/*.js`)
 - 1 Blueprint (`blueprints/0xNNNNNN-*.md`)
 - 1 Test (`tests/unit/*.test.js`)
 - 1 Widget (defined in module file)
-
-**See:** [docs/WEB_COMPONENTS_GUIDE.md](docs/WEB_COMPONENTS_GUIDE.md) before creating modules.
 
 ---
 

@@ -34,7 +34,7 @@
     "package": "vsce package || echo \"Install 'vsce' to package the extension\""
   },
   "dependencies": {
-    "@paws/cli-js": "workspace:*"
+    "@paws/cli": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.11.19",

@@ -79,11 +79,10 @@ The `base-persona.js` provides platform-level capabilities that apply to all age
 3. Define your role-specific `getSystemPromptFragment()` that extends the base prompt
 4. Optionally implement `filterTools()` and lifecycle hooks (`onCycleStart`, etc.)
 5. Export as default: `export default MyPersona;`
-6. Add to `/config.json` under the `personas` array with the kebab-case filename
-7. Reference in documentation: `/docs/PERSONAS.md`
+6. Update the default persona in `app-logic.js` if needed
 
 ## See Also
 
-- `/docs/PERSONAS.md` - Persona system overview
-- `/docs/PERSONAS_REFERENCE.md` - Detailed persona documentation
-- `/upgrades/persona-manager.js` - Persona management module
+- Persona selection happens via boot UI or `config.json`
+- Default persona: `multi-mind-synthesis-persona.js`
+- Personas are loaded by `app-logic.js` during boot

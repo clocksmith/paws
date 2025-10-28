@@ -1,27 +1,35 @@
 {
-  "name": "@paws/cli-js",
+  "name": "@paws/cli",
   "version": "3.0.0",
-  "description": "PAWS JavaScript CLI - Context bundler and change applier",
-  "main": "src/cats.js",
+  "description": "PAWS CLI - Context bundler and change applier (TypeScript)",
+  "main": "dist/cats.js",
+  "types": "dist/cats.d.ts",
   "type": "commonjs",
   "bin": {
-    "cats": "./bin/cats.js",
-    "dogs": "./bin/dogs.js",
-    "paws-session": "./bin/paws-session.js",
-    "paws-arena": "./bin/paws-arena.js",
-    "paws-swarm": "./bin/paws-swarm.js",
-    "paws-context-optimizer": "./bin/paws-context-optimizer.js",
-    "paws-benchmark": "./bin/paws-benchmark.js"
+    "cats": "./dist/bin/cats.js",
+    "dogs": "./dist/bin/dogs.js",
+    "paws-session": "./dist/bin/paws-session.js",
+    "paws-arena": "./dist/bin/paws-arena.js",
+    "paws-swarm": "./dist/bin/paws-swarm.js",
+    "paws-context-optimizer": "./dist/bin/paws-context-optimizer.js",
+    "paws-benchmark": "./dist/bin/paws-benchmark.js"
   },
   "scripts": {
-    "test": "mocha 'test/**/*.js'",
-    "test:cats": "mocha 'test/cats/**/*.js'",
-    "test:dogs": "mocha 'test/dogs/**/*.js'",
-    "test:integration": "mocha 'test/integration/**/*.js'"
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rm -rf dist",
+    "prepare": "npm run build",
+    "test": "npm run build && mocha -r ts-node/register 'test/**/*.ts'",
+    "test:cats": "npm run build && mocha -r ts-node/register 'test/cats/**/*.ts'",
+    "test:dogs": "npm run build && mocha -r ts-node/register 'test/dogs/**/*.ts'",
+    "test:integration": "npm run build && mocha -r ts-node/register 'test/integration/**/*.ts'"
   },
   "dependencies": {
     "@paws/core": "workspace:*",
+    "blessed": "^0.1.81",
+    "blessed-contrib": "^4.11.0",
     "chalk": "^4.1.2",
+    "cli-table3": "^0.6.5",
     "commander": "^11.1.0",
     "glob": "^10.3.10",
     "ignore": "^5.3.0",
@@ -31,14 +39,20 @@
     "uuid": "^9.0.0"
   },
   "optionalDependencies": {
-    "@google/generative-ai": "^0.1.3",
     "@anthropic-ai/sdk": "^0.17.0",
+    "@google/generative-ai": "^0.1.3",
     "openai": "^4.20.0"
   },
   "devDependencies": {
+    "@types/inquirer": "^9.0.7",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20.10.0",
+    "@types/uuid": "^9.0.7",
     "chai": "^4.3.10",
     "chai-as-promised": "^7.1.1",
-    "mocha": "^10.2.0"
+    "mocha": "^10.2.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.0"
   },
   "engines": {
     "node": ">=16.0.0"

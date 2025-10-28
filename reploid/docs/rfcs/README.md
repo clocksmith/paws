@@ -62,5 +62,3 @@ How do we know when this is successfully implemented?
 ## Related Documents
 
 - [/blueprints](../../blueprints/README.md) - Core system architecture (implemented)
-- [/docs/ROADMAP.md](../ROADMAP.md) - Development roadmap
-- [/RFC-STATUS.md](../../RFC-STATUS.md) - Project-level status tracking

@@ -12,7 +12,7 @@
 
 **File**: `rfc.md`
 
-Used by `/upgrades/rfc-author.js` to generate standardized RFC documents for:
+Used by `/upgrades/core/rfc-author.js` to generate standardized RFC documents for:
 - Feature proposals
 - Architecture changes
 - Process improvements
@@ -38,6 +38,6 @@ Create new `.md` or `.json` templates in this directory for:
 
 ## See Also
 
-- `/upgrades/rfc-author.js` - RFC authoring module
+- `/upgrades/core/rfc-author.js` - RFC authoring module
 - `/blueprints/0x00001A-rfc-authoring.md` - RFC authoring guide
 - `/docs/rfcs/` - Published RFCs

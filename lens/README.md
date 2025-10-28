@@ -37,7 +37,7 @@ MCP Lens provides **analytical-level understanding** of Model Context Protocol s
                      ▼
 ┌─────────────────────────────────────────────────┐
 │         Standard MCP Servers                    │
-│    (No MOP knowledge required)                  │
+│    (No MCP Lens knowledge required)             │
 │  • GitHub MCP Server                            │
 │  • Slack MCP Server                             │
 │  • Any MCP-compliant server                     │
@@ -228,7 +228,7 @@ eventBus.on('mcp:tool:error', (payload) => {
 
 ## Competitive Landscape (Oct 2025)
 
-The MCP observability ecosystem has three distinct layers. MOP uniquely occupies the protocol-semantic layer:
+The MCP observability ecosystem has three distinct layers. MCP Lens uniquely occupies the protocol-semantic layer:
 
 ### Infrastructure Layer (Resource Metrics)
 

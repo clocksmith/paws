@@ -1,6 +1,6 @@
 # @paws/core
 
-**[↑ Back to Main](../../README.md)** | **[↑ Packages](../README.md)** | **[→ CLI-JS](../cli-js/README.md)** | **[→ CLI-PY](../cli-py/README.md)** | **[→ REPLOID](../reploid/README.md)**
+**[↑ Back to Main](../../README.md)** | **[↑ Packages](../README.md)** | **[→ CLI-JS](../cli-js/README.md)**
 
 ---
 
@@ -10,28 +10,18 @@ Shared resources for PAWS - personas, system prompts, and configuration files.
 
 - **`personas/`** - AI persona definitions for different roles (Architect, Voice of Code, etc.)
 - **`sys/`** - System prompts for AI interactions
-- **`configs/`** - Shared configuration files (Paxos, etc.)
+- **`configs/`** - Shared configuration files
 
 ## Usage
 
-### In JavaScript/Node.js
+### In TypeScript/Node.js
 
-```javascript
-const { getPersonasPath, getSysPath, getConfigsPath } = require('@paws/core');
+```typescript
+import { getPersonasPath, getSysPath, getConfigsPath } from '@paws/core';
 
 console.log(getPersonasPath());  // /path/to/packages/core/personas
 console.log(getSysPath());       // /path/to/packages/core/sys
 console.log(getConfigsPath());   // /path/to/packages/core/configs
-```
-
-### In Python
-
-```python
-from paws import PERSONAS_PATH, SYS_PATH, CONFIGS_PATH
-
-print(PERSONAS_PATH)  # /path/to/packages/core/personas
-print(SYS_PATH)       // /path/to/packages/core/sys
-print(CONFIGS_PATH)   # /path/to/packages/core/configs
 ```
 
 ## Package Exports
@@ -49,4 +39,4 @@ MIT
 
 ---
 
-**[↑ Back to Main](../../README.md)** | **[↑ Packages](../README.md)** | **[→ CLI-JS](../cli-js/README.md)** | **[→ CLI-PY](../cli-py/README.md)** | **[→ REPLOID](../reploid/README.md)**
+**[↑ Back to Main](../../README.md)** | **[↑ Packages](../README.md)** | **[→ CLI-JS](../cli-js/README.md)**

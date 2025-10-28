@@ -901,7 +901,7 @@ describe('UI Manager Module', () => {
     });
 
     it('should fetch CSS styles', async () => {
-      const response = await fetch('styles/dashboard.css');
+      const response = await fetch('styles/ui-core.css');
       const text = await response.text();
       expect(text).toBeDefined();
     });
