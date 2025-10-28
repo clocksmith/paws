@@ -2,7 +2,7 @@
 
 **[Browser-Native AI Agent with Recursive Self-Improvement](https://github.com/clocksmith/paws/tree/main/reploid)**
 
-REPLOID is a fully browser-based AI agent environment that can introspect and modify its own code. No backend required - everything runs in your browser using IndexedDB, WebGPU, and Web Workers.
+REPLOID is a fully browser-based AI agent environment that can introspect and modify its own code. Backend proxy is optional. Everything runs in your browser using IndexedDB, WebGPU, and Web Workers.
 
 ---
 
@@ -59,7 +59,7 @@ npm start  # http://localhost:8000
 
 Every module follows this pattern:
 - **1 Module** (`upgrades/core/tool-runner.js`) - JavaScript with DI container pattern
-- **1 Blueprint** (`blueprints/0x00000A-tool-runner.md`) - Design documentation
+- **1 Blueprint** (`blueprints/0x00000A-tool-runner.md`) - Design documentation that can substitute a module (experimetnal)
 - **1 Test** (`tests/unit/tool-runner.test.js`) - Unit tests
 - **1 Widget** (defined in same file) - Web Component for visualization
 
@@ -159,7 +159,7 @@ Browser-native storage using IndexedDB:
 Use multiple LLMs in a single workflow - mix Gemini for speed, Claude for reasoning, GPT-4 for code, or local models for privacy.
 
 **Supported Providers:**
-- ☁️ Cloud: Gemini, Claude (Anthropic), GPT-4 (OpenAI)
+- ☁️ Cloud: Gemini, Claude (Anthropic), GPT-5 (OpenAI)
 - 🖥️ Local: Ollama (via proxy), WebGPU (in-browser)
 
 ### Meta-Tool Creation
@@ -184,33 +184,6 @@ Every module has a visual dashboard with real-time status monitoring, interactiv
 ### Blueprint System
 
 67+ architectural blueprints guide development with design patterns, implementation strategies, trade-off analysis, code examples, and test requirements.
-
----
-
-## File Structure
-
-```
-/reploid
-  ├── index.html              # Boot UI and entry point
-  ├── boot.js                 # Module loader and DI container
-  ├── config.json             # Module configuration
-  ├── module-manifest.json    # Module loading presets
-  ├── /upgrades               # All 79 modules
-  │   ├── /core               # 63 functional modules (agent logic, state, tools)
-  │   ├── /ui                 # 16 UI modules (panels, visualizers, dashboards)
-  │   └── /archived           # 11 unused/experimental modules
-  ├── /blueprints             # 67+ design documents (Markdown)
-  ├── /tests                  # Unit and integration tests
-  │   ├── /unit               # Module tests (1:1 with upgrades)
-  │   ├── /integration        # Integration tests
-  │   └── /e2e                # End-to-end tests (Playwright)
-  ├── /server                 # Proxy server for LLM APIs
-  │   ├── proxy.js            # Main proxy (stdio → HTTP for Ollama)
-  │   └── signaling-server.js # WebRTC signaling
-  ├── /personas               # 9 agent personas
-  ├── /utils                  # Utility modules
-  └── /integrations           # Claude Code, VS Code, MCP server
-```
 
 ---
 
@@ -254,29 +227,6 @@ Every module has a corresponding unit test:
 
 ---
 
-## Development
-
-### Adding a New Module
-
-Follow the **1:1:1:1 pattern**:
-
-1. **Create Blueprint** (`blueprints/0xNNNNNN-my-module.md`)
-2. **Write Module** (`upgrades/core/my-module.js` or `upgrades/ui/my-module.js`)
-   - Implement `metadata` and `factory`
-   - Create Web Component widget in same file
-   - Add `@blueprint 0xNNNNNN` annotation
-3. **Write Test** (`tests/unit/my-module.test.js`)
-4. **Register Module** (add to `module-manifest.json`)
-
-**Module Widget Requirements:**
-- Must extend `HTMLElement`
-- Must use Shadow DOM
-- Must implement `getStatus()` method
-- Should implement `getControls()` for actions
-- Must be defined in same file as module
-
----
-
 ## Advanced Features
 
 ### Python Runtime (Pyodide)
@@ -287,20 +237,6 @@ Run models entirely in browser (experimental preset).
 
 ### WebRTC P2P Swarm
 Browser-to-browser agent coordination (experimental preset).
-
----
-
-## Comparison to Other Tools
-
-| Feature | REPLOID | Cursor | Claude Code | Devin |
-|---------|---------|--------|-------------|-------|
-| **Runtime** | Browser | VS Code | CLI | Cloud VM |
-| **Self-Modify** | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| **Multi-Model** | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| **Local LLM** | ✅ WebGPU | ❌ No | ❌ No | ❌ No |
-| **P2P Swarm** | ✅ WebRTC | ❌ No | ❌ No | ❌ No |
-| **No Backend** | ✅ Yes | ⚠️ Partial | ❌ No | ❌ No |
-| **Meta-Tools** | ✅ Yes | ❌ No | ❌ No | ❌ No |
 
 ---
 
@@ -326,81 +262,19 @@ REPLOID is part of the PAWS monorepo but is a **standalone project**.
 **Q: Which boot mode should I start with?**
 A: **RSI-Core** (46 modules). It has the full UI and core RSI features without overwhelming complexity.
 
-**Q: What's the difference between the presets?**
-A: **Headless** (31) = no UI, **Minimal-RSI** (35) = basic UI, **RSI-Core** (46) = full UI, **Experimental** (56) = all features.
-
-**Q: Can I switch modes later?**
-A: Yes! Just reload with a different boot mode. Your VFS data persists in IndexedDB.
-
 **Q: Is this actually running in the browser?**
 A: Yes! 100% browser-native. No backend server required (except optional proxy for LLM API calls).
 
 **Q: Can agents modify their own code?**
-A: Yes, with RSI modules. All changes require human approval and test verification.
+A: Yes.
 
 **Q: How does this differ from Claude Code?**
 A: Claude Code is a CLI tool. REPLOID runs in browser with VFS, can modify itself, supports multi-model mixing, and has P2P swarm capabilities.
 
 **Q: Can I use this offline?**
-A: Partially. VFS/modules work offline, but LLM queries need network (unless using local WebGPU models).
+A: Yes! VFS/modules work offline, but cloud LLM queries need network (unless using local WebGPU models or Ollama).
 
----
-
-## Troubleshooting
-
-**Problem:** "Module failed to load"
-**Solution:** Check browser console. Likely missing dependency or syntax error.
-
-**Problem:** "API key invalid"
-**Solution:** Configure API keys via boot UI or edit `config.json`.
-
-**Problem:** "Tests failing after modification"
-**Solution:** Automatic rollback should occur. Check checkpoint history in VFS.
-
-**Problem:** "WebGPU not available"
-**Solution:** Use Chrome/Edge 113+. Safari doesn't fully support WebGPU yet.
-
-**Problem:** "IndexedDB quota exceeded"
-**Solution:** Clear VFS or export important data. Browser has storage limits.
-
----
-
-## Documentation
-
-- **Quick Start** - docs/QUICK-START.md (if exists)
-- **Web Components Guide** - docs/WEB_COMPONENTS_GUIDE.md
-- **Blueprint System** - docs/BLUEPRINT_UPDATE_GUIDE.md
-- **Testing Guide** - docs/WEB_COMPONENTS_TESTING_GUIDE.md
-- **Troubleshooting** - docs/TROUBLESHOOTING.md
-
----
-
-## Contributing
-
-Follow the **1:1:1:1 pattern**:
-- 1 Module (`upgrades/core/*.js` or `upgrades/ui/*.js`)
-- 1 Blueprint (`blueprints/0xNNNNNN-*.md`)
-- 1 Test (`tests/unit/*.test.js`)
-- 1 Widget (defined in module file)
-
----
 
 ## License
 
 MIT
-
----
-
-## Acknowledgments
-
-Built with the vision of **tools that create tools** and **agents that improve themselves**.
-
-Inspired by:
-- Recursive Self-Improvement (RSI) research
-- Meta-learning and meta-programming
-- Browser-native AI capabilities
-- Human-in-the-loop AI safety
-
----
-
-**REPLOID: Because the best agent is one that can modify itself.**
