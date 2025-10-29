@@ -411,13 +411,18 @@ Now generate your proposal:`
         maxOutputTokens: 8192  // Standard token limit for responses
       });
 
+      // Emit token usage for UI display
+      if (response.usage && EventBus) {
+        EventBus.emit('llm:tokens', { usage: response.usage });
+      }
+
       // Parse response for proposed changes
       const changes = parseProposedChanges(response.text);
 
       // Create dogs bundle
       const result = await SentinelTools.createDogsBundle({
         changes,
-        turn_path: cycleContext.turn.dogs_path,
+        turn_path: cycleContext.turn.proposal_path,
         summary: `Proposal for: ${cycleContext.goal}`
       });
 

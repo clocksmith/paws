@@ -6,13 +6,13 @@ const SentinelTools = {
   metadata: {
     id: 'SentinelTools',
     version: '1.0.0',
-    dependencies: ['config', 'Storage', 'StateManager', 'Utils', 'ApiClient', 'VerificationManager?'],
+    dependencies: ['config', 'Storage', 'StateManager', 'Utils', 'ApiClient', 'EventBus?', 'VerificationManager?'],
     async: false,
     type: 'service'
   },
 
   factory: (deps) => {
-    const { Storage, StateManager, Utils, ApiClient, config } = deps;
+    const { Storage, StateManager, Utils, ApiClient, EventBus, config } = deps;
     const { logger, Errors } = Utils;
     const { ArtifactError, ToolError } = Errors;
 
@@ -167,6 +167,11 @@ Your response (JSON array only):`;
         const response = await ApiClient.callApiWithRetry(history, null);
 
         logger.info('[SentinelTools] LLM response received:', response.type);
+
+        // Emit token usage for UI display
+        if (response.usage && EventBus) {
+          EventBus.emit('llm:tokens', { usage: response.usage });
+        }
 
         // Parse the LLM response to extract file paths
         const content = response.content;

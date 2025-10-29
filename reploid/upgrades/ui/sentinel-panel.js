@@ -556,14 +556,13 @@ const SentinelPanel = {
       }
 
       .btn-approve {
-        flex: 1;
-        padding: 12px 24px;
+        padding: 8px 16px;
         background: #4CAF50;
         border: none;
         border-radius: 4px;
         color: white;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
         transition: all 0.2s;
       }
@@ -574,14 +573,13 @@ const SentinelPanel = {
       }
 
       .btn-revise {
-        flex: 1;
-        padding: 12px 24px;
+        padding: 8px 16px;
         background: rgba(255, 152, 0, 0.2);
         border: 1px solid rgba(255, 152, 0, 0.4);
         border-radius: 4px;
         color: rgba(255, 152, 0, 0.9);
         cursor: pointer;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
         transition: all 0.2s;
       }

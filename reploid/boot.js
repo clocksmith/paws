@@ -964,6 +964,7 @@ async function awakenAgent() {
         });
 
         // Hide the boot container now that loading is complete
+        // This automatically hides all children including goal-container-top and config-section
         if (bootContainer && bootContainer.parentNode) {
             bootContainer.style.display = 'none';
             console.log('[Boot] Boot container hidden');

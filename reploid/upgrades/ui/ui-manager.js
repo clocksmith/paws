@@ -14,7 +14,7 @@ const UI = {
 
   factory: (deps) => {
     const { config, Utils, StateManager, DiffGenerator, EventBus, VFSExplorer, PerformanceMonitor, MetricsDashboard, Introspector, ReflectionStore, SelfTester, BrowserAPIs, AgentVisualizer, ASTVisualizer, ModuleGraphVisualizer, ToastNotifications, TutorialSystem, PyodideRuntime, LocalLLM, ProgressTracker, LogPanel, StatusBar, ThoughtPanel, GoalPanel, SentinelPanel } = deps;
-    const { logger, showButtonSuccess, exportAsMarkdown } = Utils;
+    const { logger, showButtonSuccess, exportAsMarkdown, escapeHtml } = Utils;
 
     let uiRefs = {};
     let isLogView = false;
@@ -1797,6 +1797,19 @@ a:focus-visible,
 
 .progress-step .step-icon {
     font-size: var(--font-md);
+}
+
+.progress-step .step-timing {
+    font-size: var(--font-xs);
+    color: var(--accent-cyan);
+    margin-left: var(--space-xs);
+    font-weight: 600;
+    animation: pulse-timing 2s ease-in-out infinite;
+}
+
+@keyframes pulse-timing {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
 }
 
 .progress-step .step-label {
@@ -5201,9 +5214,25 @@ function greet(name) {
             updateStatusBar(data.state, data.detail, data.progress);
         });
 
+        // Listen to token usage updates from LLM responses
+        EventBus.on('llm:tokens', (data) => {
+            if (data && data.usage) {
+                streamingTokens.input = data.usage.promptTokens || 0;
+                streamingTokens.output = data.usage.completionTokens || 0;
+                streamingTokens.total = data.usage.totalTokens || 0;
+            }
+        });
+
         // Legacy event name support
         EventBus.on('agent:state:change', handleStateChange);
     };
+
+    // Track state timing for streaming indicators
+    let stateStartTime = null;
+    let stateTimerInterval = null;
+
+    // Track tokens from LLM responses
+    let streamingTokens = { input: 0, output: 0, total: 0 };
 
     const updateProgressTracker = (currentState) => {
         // Skip monolithic implementation if modular panel is enabled
@@ -5213,26 +5242,68 @@ function greet(name) {
 
         const steps = [
             { state: 'IDLE', icon: '○', label: 'Idle' },
-            { state: 'CURATING_CONTEXT', icon: '⚙', label: 'Curating' },
+            { state: 'CURATING_CONTEXT', icon: '⚙', label: 'Curating', streaming: true },
             { state: 'AWAITING_CONTEXT_APPROVAL', icon: '⏸', label: 'Approve Context' },
-            { state: 'PLANNING_WITH_CONTEXT', icon: '◐', label: 'Planning' },
-            { state: 'GENERATING_PROPOSAL', icon: '✎', label: 'Generating' },
+            { state: 'PLANNING_WITH_CONTEXT', icon: '◐', label: 'Planning', streaming: true },
+            { state: 'GENERATING_PROPOSAL', icon: '✎', label: 'Generating', streaming: true },
             { state: 'AWAITING_PROPOSAL_APPROVAL', icon: '⏸', label: 'Approve Proposal' },
             { state: 'APPLYING_CHANGESET', icon: '▶', label: 'Applying' },
             { state: 'REFLECTING', icon: '◐', label: 'Reflecting' }
         ];
 
         const currentIndex = steps.findIndex(s => s.state === currentState);
+        const currentStep = steps[currentIndex];
+
+        // Start timer for streaming states
+        if (currentStep && currentStep.streaming) {
+            stateStartTime = Date.now();
+            streamingTokens = { input: 0, output: 0, total: 0 }; // Reset tokens for new state
+
+            // Clear any existing timer
+            if (stateTimerInterval) {
+                clearInterval(stateTimerInterval);
+            }
+
+            // Update every second
+            stateTimerInterval = setInterval(() => {
+                updateProgressTrackerDisplay(currentState, steps, currentIndex);
+            }, 1000);
+        } else {
+            // Clear timer for non-streaming states
+            if (stateTimerInterval) {
+                clearInterval(stateTimerInterval);
+                stateTimerInterval = null;
+            }
+            stateStartTime = null;
+            streamingTokens = { input: 0, output: 0, total: 0 };
+        }
+
+        updateProgressTrackerDisplay(currentState, steps, currentIndex);
+    };
+
+    const updateProgressTrackerDisplay = (currentState, steps, currentIndex) => {
+        if (!uiRefs.progressSteps) return;
+
+        const currentStep = steps[currentIndex];
+        const elapsed = stateStartTime ? Math.floor((Date.now() - stateStartTime) / 1000) : 0;
 
         uiRefs.progressSteps.innerHTML = steps.map((step, index) => {
             let className = 'progress-step';
             if (index < currentIndex) className += ' completed';
             if (index === currentIndex) className += ' active';
 
+            const isCurrentAndStreaming = index === currentIndex && step.streaming && elapsed > 0;
+            const hasTokens = isCurrentAndStreaming && streamingTokens.total > 0;
+
+            const timingDisplay = isCurrentAndStreaming
+                ? `<span class="step-timing">${elapsed}s${hasTokens ? ` · ${streamingTokens.total}t` : ''}</span>`
+                : '';
+
             return `
                 <div class="${className}">
                     <span class="step-icon">${step.icon}</span>
                     <span class="step-label">${step.label}</span>
+                    ${timingDisplay}
                 </div>
             `;
         }).join('');
@@ -5264,9 +5335,9 @@ function greet(name) {
             case 'AWAITING_CONTEXT_APPROVAL':
                 const contextPath = context?.turn?.context_path || context?.catsPath || 'unknown';
                 const contextFileName = contextPath.split('/').pop();
-                sentinelContent.innerHTML = `<h4>Review Context (${contextFileName})</h4><p>Agent wants to read the following files:</p>`;
+                sentinelContent.innerHTML = `<h4>Review Context (${escapeHtml(contextFileName)})</h4><p>Agent wants to read the following files:</p>`;
                 const catsContent = await StateManager.getArtifactContent(contextPath);
-                sentinelContent.innerHTML += `<pre>${catsContent || 'No content available'}</pre>`;
+                sentinelContent.innerHTML += `<pre>${escapeHtml(catsContent || 'No content available')}</pre>`;
                 approveBtn.classList.remove('hidden');
                 approveBtn.onclick = () => EventBus.emit('user:approve:context');
                 break;
@@ -5287,7 +5358,7 @@ function greet(name) {
                 } else {
                     // Fallback to simple display
                     const dogsContent = await StateManager.getArtifactContent(context.turn.dogs_path);
-                    sentinelContent.innerHTML += `<pre>${dogsContent}</pre>`;
+                    sentinelContent.innerHTML += `<pre>${escapeHtml(dogsContent)}</pre>`;
                     approveBtn.classList.remove('hidden');
                     approveBtn.onclick = () => EventBus.emit('user:approve:proposal');
                 }
