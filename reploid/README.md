@@ -22,10 +22,10 @@ REPLOID is a fully browser-based AI agent environment that can introspect and mo
 ```bash
 # 1. Install dependencies
 cd reploid
-npm install
+pnpm install
 
 # 2. Start the proxy server (handles LLM API calls)
-npm start  # http://localhost:8000
+pnpm start  # http://localhost:8000
 
 # 3. Open browser
 # Navigate to http://localhost:8080
@@ -207,16 +207,16 @@ Edit `config.json` or use the boot UI to:
 
 ```bash
 # Run unit tests
-npm test
+pnpm test
 
 # Run with coverage
-npm run test:coverage
+pnpm run test:coverage
 
 # Run end-to-end tests
-npm run test:e2e
+pnpm run test:e2e
 
 # Run specific test
-npm test tests/unit/tool-runner.test.js
+pnpm test tests/unit/tool-runner.test.js
 ```
 
 **Test Pattern:**
