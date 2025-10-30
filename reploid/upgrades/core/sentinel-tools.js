@@ -6,13 +6,13 @@ const SentinelTools = {
   metadata: {
     id: 'SentinelTools',
     version: '1.0.0',
-    dependencies: ['config', 'Storage', 'StateManager', 'Utils', 'ApiClient', 'EventBus?', 'VerificationManager?'],
+    dependencies: ['config', 'Storage', 'Utils', 'ApiClient', 'EventBus?', 'VerificationManager?'],
     async: false,
     type: 'service'
   },
 
   factory: (deps) => {
-    const { Storage, StateManager, Utils, ApiClient, EventBus, config } = deps;
+    const { Storage, Utils, ApiClient, EventBus, config } = deps;
     const { logger, Errors } = Utils;
     const { ArtifactError, ToolError } = Errors;
 
@@ -85,7 +85,7 @@ const SentinelTools = {
 
       for (const path of selectedPaths) {
         try {
-          const content = await StateManager.getArtifactContent(path);
+          const content = await Storage.getArtifactContent(path);
           if (content === null) {
             logger.warn(`[SentinelTools] File not found: ${path}`);
             continue;
@@ -103,7 +103,7 @@ const SentinelTools = {
         }
       }
 
-      await StateManager.createArtifact(turn_path, 'markdown', bundleContent,
+      await Storage.createArtifact(turn_path, 'markdown', bundleContent,
         `Context bundle for turn: ${reason}`);
 
       return {
@@ -115,7 +115,7 @@ const SentinelTools = {
 
     // AI-powered file curation
     const curateFilesWithAI = async (goal) => {
-      const allMeta = await StateManager.getAllArtifactMetadata();
+      const allMeta = await Storage.getAllArtifactMetadata();
       const filePaths = Object.keys(allMeta);
 
       // Filter out session and temporary files
@@ -237,7 +237,7 @@ Your response (JSON array only):`;
         }
       }
 
-      await StateManager.createArtifact(turn_path, 'markdown', bundleContent,
+      await Storage.createArtifact(turn_path, 'markdown', bundleContent,
         `Change proposal: ${summary || 'Multiple changes'}`);
 
       return {
@@ -251,7 +251,7 @@ Your response (JSON array only):`;
     const applyDogsBundle = async (toolArgs) => {
       const { dogs_path, verify_command, session_id } = toolArgs;
 
-      const dogsContent = await StateManager.getArtifactContent(dogs_path);
+      const dogsContent = await Storage.getArtifactContent(dogs_path);
       if (!dogsContent) {
         throw new ArtifactError(`Dogs bundle not found: ${dogs_path}`);
       }
@@ -277,7 +277,7 @@ Your response (JSON array only):`;
       }
 
       // Create checkpoint before applying changes
-      const checkpoint = await StateManager.createCheckpoint(
+      const checkpoint = await Storage.createCheckpoint(
         `Before applying ${dogs_path}`
       );
       logger.info(`[SentinelTools] Created checkpoint: ${checkpoint.id}`);
@@ -290,11 +290,11 @@ Your response (JSON array only):`;
 
           if (change.operation === 'CREATE') {
             // Check if file already exists
-            const existing = await StateManager.getArtifactContent(change.file_path);
+            const existing = await Storage.getArtifactContent(change.file_path);
             if (existing !== null) {
               throw new ToolError(`Cannot CREATE ${change.file_path}: file already exists`);
             }
-            await StateManager.createArtifact(
+            await Storage.createArtifact(
               change.file_path,
               'text',
               change.new_content,
@@ -304,15 +304,15 @@ Your response (JSON array only):`;
 
           } else if (change.operation === 'MODIFY') {
             // Check if file exists
-            const existing = await StateManager.getArtifactContent(change.file_path);
+            const existing = await Storage.getArtifactContent(change.file_path);
             if (existing === null) {
               throw new ToolError(`Cannot MODIFY ${change.file_path}: file not found`);
             }
-            await StateManager.updateArtifact(change.file_path, change.new_content);
+            await Storage.updateArtifact(change.file_path, change.new_content);
             appliedChanges.push(change);
 
           } else if (change.operation === 'DELETE') {
-            await StateManager.deleteArtifact(change.file_path);
+            await Storage.deleteArtifact(change.file_path);
             appliedChanges.push(change);
           }
         }
@@ -325,7 +325,7 @@ Your response (JSON array only):`;
           if (!verifyResult.success) {
             // Rollback on verification failure
             logger.error(`[SentinelTools] Verification failed, rolling back`);
-            await StateManager.restoreCheckpoint(checkpoint.id);
+            await Storage.restoreCheckpoint(checkpoint.id);
             return {
               success: false,
               message: `Verification failed: ${verifyResult.error}`,
@@ -336,8 +336,8 @@ Your response (JSON array only):`;
         }
 
         // Commit the changes to Git VFS if available
-        if (StateManager.commitChanges) {
-          await StateManager.commitChanges(
+        if (Storage.commitChanges) {
+          await Storage.commitChanges(
             `Applied dogs bundle: ${appliedChanges.length} changes`,
             { dogs_path, checkpoint: checkpoint.id }
           );
@@ -353,7 +353,7 @@ Your response (JSON array only):`;
       } catch (error) {
         // Rollback on any error
         logger.error(`[SentinelTools] Error applying changes, rolling back:`, error);
-        await StateManager.restoreCheckpoint(checkpoint.id);
+        await Storage.restoreCheckpoint(checkpoint.id);
         throw new ToolError(`Failed to apply dogs bundle: ${error.message}`);
       }
     };
@@ -410,7 +410,7 @@ Your response (JSON array only):`;
         if (command.startsWith('test:')) {
           // Run a test file from VFS
           const testPath = command.substring(5);
-          const testCode = await StateManager.getArtifactContent(testPath);
+          const testCode = await Storage.getArtifactContent(testPath);
           if (!testCode) {
             return { success: false, error: `Test file not found: ${testPath}` };
           }

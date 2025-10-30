@@ -44,16 +44,17 @@ dogs workspace/competition/winning_solution.md --interactive
 
 ### REPLOID - Browser-Native Agent Environment
 
-**Self-modifying AI agent that runs in your browser.**
+**Self-modifying AI agent with MCP servers and Lens widgets.**
 
 **Philosophy:** Agents should be able to introspect and modify their own code, with human oversight.
 
 #### What It Does
 
+- **MCP server architecture** - Modular servers for VFS, workflow, agent control, tools, audit
+- **Lens protocol widgets** - Approval workflows and real-time agent monitoring
 - **Meta-tool creation** - Tools that create other tools, that are used to create more tools
 - **Multi-model mixing** - Gemini, Claude, GPT, local models (Ollama), WebGPU inference
 - **Virtual File System** - IndexedDB-backed storage
-- **Web Component widgets** - Visual dashboards for agent execution
 - **Recursive Self-Improvement** - Modify own code with checkpoints and test verification
 - **EXPERIMENTAL WebRTC P2P swarm** - Browser-to-browser agent coordination
 - **EXPERIMENTAL Python runtime** - Pyodide + WebAssembly for Python execution

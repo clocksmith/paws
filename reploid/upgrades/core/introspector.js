@@ -6,13 +6,13 @@ const Introspector = {
   metadata: {
     id: 'Introspector',
     version: '1.0.0',
-    dependencies: ['Utils', 'EventBus', 'StateManager'],
+    dependencies: ['Utils', 'EventBus', 'Storage'],
     async: false,
     type: 'introspection'
   },
 
   factory: (deps) => {
-    const { Utils, EventBus, StateManager } = deps;
+    const { Utils, EventBus, Storage } = deps;
     const { logger } = Utils;
 
     // Cache for introspection data
@@ -43,7 +43,7 @@ const Introspector = {
 
       try {
         // Read config.json to get module registry
-        const configContent = await StateManager.getArtifactContent('/config.json');
+        const configContent = await Storage.getArtifactContent('/config.json');
         const config = JSON.parse(configContent);
 
         const graph = {
@@ -71,7 +71,7 @@ const Introspector = {
             // Try to read the actual module to get metadata
             try {
               const modulePath = `/upgrades/${module.path}`;
-              const moduleContent = await StateManager.getArtifactContent(modulePath);
+              const moduleContent = await Storage.getArtifactContent(modulePath);
 
               // Extract metadata (look for metadata: { ... } pattern)
               const metadataMatch = moduleContent.match(/metadata:\s*\{([^}]+)\}/s);
@@ -164,7 +164,7 @@ const Introspector = {
 
       try {
         // Read tools-read.json
-        const readToolsContent = await StateManager.getArtifactContent('/upgrades/tools-read.json');
+        const readToolsContent = await Storage.getArtifactContent('/upgrades/tools-read.json');
         const readTools = JSON.parse(readToolsContent);
 
         if (Array.isArray(readTools)) {
@@ -183,7 +183,7 @@ const Introspector = {
 
       try {
         // Read tools-write.json
-        const writeToolsContent = await StateManager.getArtifactContent('/upgrades/tools-write.json');
+        const writeToolsContent = await Storage.getArtifactContent('/upgrades/tools-write.json');
         const writeTools = JSON.parse(writeToolsContent);
 
         if (Array.isArray(writeTools)) {
@@ -212,7 +212,7 @@ const Introspector = {
       logger.info(`[Introspector] Analyzing code: ${filePath}`);
 
       try {
-        const content = await StateManager.getArtifactContent(filePath);
+        const content = await Storage.getArtifactContent(filePath);
 
         const analysis = {
           path: filePath,

@@ -6,13 +6,13 @@ const SelfTester = {
   metadata: {
     id: 'SelfTester',
     version: '1.0.0',
-    dependencies: ['Utils', 'EventBus', 'StateManager'],
+    dependencies: ['Utils', 'EventBus', 'Storage'],
     async: true,
     type: 'validation'
   },
 
   factory: (deps) => {
-    const { Utils, EventBus, StateManager } = deps;
+    const { Utils, EventBus, Storage } = deps;
     const { logger } = Utils;
 
     // Test results cache
@@ -53,7 +53,7 @@ const SelfTester = {
 
         // Check core modules
         const coreModules = [
-          'Utils', 'StateManager', 'EventBus', 'ApiClient',
+          'Utils', 'Storage', 'EventBus', 'ApiClient',
           'ToolRunner', 'PerformanceMonitor', 'Introspector', 'ReflectionStore'
         ];
 
@@ -86,7 +86,7 @@ const SelfTester = {
 
         // Check if modules have expected methods
         const moduleChecks = [
-          { name: 'StateManager', methods: ['getState', 'setState', 'updateState'] },
+          { name: 'Storage', methods: ['getState', 'setState', 'updateState'] },
           { name: 'EventBus', methods: ['on', 'emit', 'off'] },
           { name: 'ToolRunner', methods: ['execute', 'loadTools'] },
           { name: 'PerformanceMonitor', methods: ['getMetrics', 'trackEvent'] },
@@ -291,26 +291,26 @@ const SelfTester = {
           return results;
         }
 
-        const StateManager = container.get('StateManager');
-        if (!StateManager) {
+        const Storage = container.get('Storage');
+        if (!Storage) {
           results.tests.push({
-            name: 'StateManager available',
+            name: 'Storage available',
             passed: false,
-            error: 'StateManager not found'
+            error: 'Storage not found'
           });
           results.failed++;
           return results;
         }
 
         results.tests.push({
-          name: 'StateManager available',
+          name: 'Storage available',
           passed: true
         });
         results.passed++;
 
         // Test state retrieval
         try {
-          const state = StateManager.getState();
+          const state = Storage.getState();
           results.tests.push({
             name: 'getState() returns object',
             passed: typeof state === 'object' && state !== null
@@ -417,13 +417,13 @@ const SelfTester = {
           results.failed++;
         }
 
-        // Test StateManager artifact storage
+        // Test Storage artifact storage
         const container = window.DIContainer;
         if (container) {
-          const StateManager = container.get('StateManager');
-          if (StateManager) {
+          const Storage = container.get('Storage');
+          if (Storage) {
             try {
-              const metadata = await StateManager.getAllArtifactMetadata();
+              const metadata = await Storage.getAllArtifactMetadata();
               results.tests.push({
                 name: 'getAllArtifactMetadata() works',
                 passed: typeof metadata === 'object'

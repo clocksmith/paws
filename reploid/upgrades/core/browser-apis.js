@@ -6,13 +6,13 @@ const BrowserAPIs = {
   metadata: {
     id: 'BrowserAPIs',
     version: '1.0.0',
-    dependencies: ['Utils', 'EventBus', 'StateManager'],
+    dependencies: ['Utils', 'EventBus', 'Storage'],
     async: true,
     type: 'capability'
   },
 
   factory: (deps) => {
-    const { Utils, EventBus, StateManager } = deps;
+    const { Utils, EventBus, Storage } = deps;
     const { logger } = Utils;
 
     // Track granted permissions and handles
@@ -191,7 +191,7 @@ const BrowserAPIs = {
       }
 
       try {
-        const content = await StateManager.getArtifactContent(artifactPath);
+        const content = await Storage.getArtifactContent(artifactPath);
         if (!content) {
           logger.error(`[BrowserAPIs] Artifact not found: ${artifactPath}`);
           return false;

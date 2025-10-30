@@ -21,7 +21,7 @@ const cloudProviders = {
             { id: 'gemini-2.5-pro', name: 'Pro' }
         ],
         requiresKey: true,
-        hostType: 'cloud-browser'
+        hostType: 'browser-cloud'
     },
     openai: {
         name: 'OpenAI',
@@ -31,7 +31,7 @@ const cloudProviders = {
             { id: 'o1-2025-12-17', name: 'O1' }
         ],
         requiresKey: true,
-        hostType: 'cloud-browser'
+        hostType: 'browser-cloud'
     },
     anthropic: {
         name: 'Anthropic',
@@ -41,7 +41,7 @@ const cloudProviders = {
             { id: 'claude-opus-4-5-20250514', name: 'Opus 4.5' }
         ],
         requiresKey: true,
-        hostType: 'cloud-browser'
+        hostType: 'browser-cloud'
     }
 };
 
@@ -297,13 +297,13 @@ function saveModel() {
     }
 
     // Determine host type
-    let hostType = 'cloud-browser';
+    let hostType = 'browser-cloud';
     let queryMethod = 'browser';
     if (provider === 'ollama') {
-        hostType = 'ollama-proxy';
+        hostType = 'proxy-local';
         queryMethod = 'proxy';
     } else if (provider === 'webllm') {
-        hostType = 'webgpu-browser';
+        hostType = 'browser-local';
         queryMethod = 'browser';
     }
 
@@ -430,10 +430,15 @@ function createModelCard(model, index) {
 // Get host type label
 function getHostTypeLabel(hostType) {
     const labels = {
-        'cloud-browser': 'Cloud',
-        'ollama-proxy': 'Ollama',
-        'webgpu-browser': 'WebGPU',
-        'proxy': 'Proxy'
+        'browser-cloud': 'Browser → Cloud',
+        'proxy-cloud': 'Proxy → Cloud',
+        'browser-local': 'Browser → Local',
+        'proxy-local': 'Proxy → Local',
+        // Legacy mappings
+        'cloud-browser': 'Browser → Cloud',
+        'ollama-proxy': 'Proxy → Local',
+        'webgpu-browser': 'Browser → Local',
+        'proxy': 'Proxy → Cloud'
     };
     return labels[hostType] || hostType;
 }
@@ -450,51 +455,61 @@ function removeModel(index) {
 
 // Update status indicators (both dots and status bar)
 function updateStatusDots() {
-    // Ollama status
-    const ollamaIcon = document.getElementById('ollama-status-icon');
-    const ollamaText = document.getElementById('ollama-status-text');
+    // Browser → Cloud (always ready)
+    const browserCloudIcon = document.getElementById('browser-cloud-icon');
+    const browserCloudText = document.getElementById('browser-cloud-text');
 
-    if (ollamaIcon && ollamaText) {
-        if (availableProviders.ollama.online) {
-            ollamaIcon.className = 'provider-status-icon online';
-            ollamaText.className = 'provider-status-value online';
-            ollamaText.textContent = `Online (${availableProviders.ollama.models.length} models)`;
-        } else {
-            ollamaIcon.className = 'provider-status-icon offline';
-            ollamaText.className = 'provider-status-value offline';
-            ollamaText.textContent = 'Offline';
-        }
+    if (browserCloudIcon && browserCloudText) {
+        browserCloudIcon.className = 'provider-status-icon online';
+        browserCloudText.className = 'provider-status-value online';
+        browserCloudText.textContent = 'Ready';
     }
 
-    // WebGPU status
-    const webgpuIcon = document.getElementById('webgpu-status-icon');
-    const webgpuText = document.getElementById('webgpu-status-text');
+    // Proxy → Cloud (check if proxy server is online)
+    const proxyCloudIcon = document.getElementById('proxy-cloud-icon');
+    const proxyCloudText = document.getElementById('proxy-cloud-text');
 
-    if (webgpuIcon && webgpuText) {
-        if (availableProviders.webgpu.online) {
-            webgpuIcon.className = 'provider-status-icon online';
-            webgpuText.className = 'provider-status-value online';
-            webgpuText.textContent = 'Available';
-        } else {
-            webgpuIcon.className = 'provider-status-icon offline';
-            webgpuText.className = 'provider-status-value offline';
-            webgpuText.textContent = 'Not Available';
-        }
-    }
-
-    // Proxy status
-    const proxyIcon = document.getElementById('proxy-status-icon');
-    const proxyText = document.getElementById('proxy-status-text');
-
-    if (proxyIcon && proxyText) {
+    if (proxyCloudIcon && proxyCloudText) {
         if (availableProviders.proxy.online) {
-            proxyIcon.className = 'provider-status-icon online';
-            proxyText.className = 'provider-status-value online';
-            proxyText.textContent = 'Online';
+            proxyCloudIcon.className = 'provider-status-icon online';
+            proxyCloudText.className = 'provider-status-value online';
+            proxyCloudText.textContent = 'Available';
         } else {
-            proxyIcon.className = 'provider-status-icon offline';
-            proxyText.className = 'provider-status-value offline';
-            proxyText.textContent = 'Offline';
+            proxyCloudIcon.className = 'provider-status-icon offline';
+            proxyCloudText.className = 'provider-status-value offline';
+            proxyCloudText.textContent = 'Unavailable';
+        }
+    }
+
+    // Browser → Local (WebGPU)
+    const browserLocalIcon = document.getElementById('browser-local-icon');
+    const browserLocalText = document.getElementById('browser-local-text');
+
+    if (browserLocalIcon && browserLocalText) {
+        if (availableProviders.webgpu.online) {
+            browserLocalIcon.className = 'provider-status-icon online';
+            browserLocalText.className = 'provider-status-value online';
+            browserLocalText.textContent = 'WebGPU Available';
+        } else {
+            browserLocalIcon.className = 'provider-status-icon offline';
+            browserLocalText.className = 'provider-status-value offline';
+            browserLocalText.textContent = 'WebGPU Unavailable';
+        }
+    }
+
+    // Proxy → Local (Ollama)
+    const proxyLocalIcon = document.getElementById('proxy-local-icon');
+    const proxyLocalText = document.getElementById('proxy-local-text');
+
+    if (proxyLocalIcon && proxyLocalText) {
+        if (availableProviders.ollama.online) {
+            proxyLocalIcon.className = 'provider-status-icon online';
+            proxyLocalText.className = 'provider-status-value online';
+            proxyLocalText.textContent = `Ollama (${availableProviders.ollama.models.length} models)`;
+        } else {
+            proxyLocalIcon.className = 'provider-status-icon offline';
+            proxyLocalText.className = 'provider-status-value offline';
+            proxyLocalText.textContent = 'Ollama Offline';
         }
     }
 }

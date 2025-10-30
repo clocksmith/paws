@@ -102,6 +102,9 @@ ${code};
                (typeof ContextManager !== 'undefined') ? ContextManager :
                (typeof EventBus !== 'undefined') ? EventBus :
                (typeof LocalLLM !== 'undefined') ? LocalLLM :
+               (typeof ToolSandbox !== 'undefined') ? ToolSandbox :
+               (typeof MCPProtocol !== 'undefined') ? MCPProtocol :
+               (typeof UIDashboardStyles !== 'undefined') ? UIDashboardStyles :
                (typeof HybridLLMProvider !== 'undefined') ? HybridLLMProvider :
                (typeof RateLimiter !== 'undefined') ? RateLimiter :
                (typeof AuditLogger !== 'undefined') ? AuditLogger :
@@ -278,7 +281,7 @@ ${code};
           timestamp: moduleLoadEnd
         });
 
-        logger.info(`[CoreLogic] Registered module: ${module.metadata.id} from ${filePath}`);
+        // Reduced logging - only log count at the end
       } else {
         // Track error
         _bootStats.moduleErrors.push({
@@ -291,15 +294,26 @@ ${code};
       }
     }
 
-    logger.info("[CoreLogic] All modules registered. Resolving main services.");
+    logger.info(`[CoreLogic] Registered ${_bootStats.modulesLoaded.length} modules successfully. Resolving main services.`);
 
     // Resolve the main application services
-    const CycleLogic = await container.resolve('CycleLogic');
-    const UI = await container.resolve('UI');
+    const CycleLogic = await container.resolve('AgentCycleStructured');
 
-    // Initialize UI (StateManager is now injected via DI)
-    if (UI.init) {
-        await UI.init();
+    // Initialize UI if available (not needed in headless mode)
+    let UI = null;
+    try {
+        UI = await container.resolve('UI');
+        logger.info("[CoreLogic] UI module resolved successfully");
+        if (UI && UI.init) {
+            logger.info("[CoreLogic] Calling UI.init()...");
+            await UI.init();
+            logger.info("[CoreLogic] UI.init() completed successfully");
+        } else {
+            logger.warn("[CoreLogic] UI module has no init() method");
+        }
+    } catch (e) {
+        logger.error("[CoreLogic] UI initialization failed:", e.message);
+        logger.error("[CoreLogic] UI error stack:", e.stack);
     }
 
     // Initialize GitVFS for version control

@@ -361,6 +361,14 @@
       "Identify opportunities for creating meta-tools (tools that create other tools)"
     ]
   },
+  "mcpProtocol": {
+    "enabled": true,
+    "enableSandbox": true,
+    "enableTransport": false,
+    "transportUrl": "ws://localhost:8001",
+    "sandboxTimeout": 30000,
+    "auditLogging": true
+  },
   "providers": {
     "default": "local",
     "fallbackProviders": [
@@ -1042,6 +1050,33 @@
       "description": "Fast JSON-based patch format for internal RSI (10x faster than DOGS/CATS)",
       "category": "rsi",
       "blueprint": "0x000063",
+      "tier": "experimental",
+      "priority": "low"
+    },
+    {
+      "id": "MCPP",
+      "path": "core/mcp-protocol.js",
+      "description": "MCP (Model Context Protocol) JSON-RPC 2.0 protocol layer for standardized tool execution",
+      "category": "protocol",
+      "blueprint": "0x000070",
+      "tier": "full",
+      "priority": "medium"
+    },
+    {
+      "id": "TSND",
+      "path": "core/tool-sandbox.js",
+      "description": "Web Worker-based sandboxed execution environment for untrusted tool code",
+      "category": "security",
+      "blueprint": "0x000071",
+      "tier": "full",
+      "priority": "medium"
+    },
+    {
+      "id": "MCPT",
+      "path": "core/mcp-transport-ws.js",
+      "description": "WebSocket transport layer for external MCP client access",
+      "category": "transport",
+      "blueprint": "0x000072",
       "tier": "experimental",
       "priority": "low"
     }

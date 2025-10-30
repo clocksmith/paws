@@ -13,10 +13,9 @@ const AgentCycleStructured = {
     id: 'AgentCycleStructured',
     version: '1.0.0',
     dependencies: [
-      'StateManager',
+      'Storage',
       'ApiClient',
       'HybridLLMProvider',
-      'ToolRunner',
       'EventBus',
       'Utils',
       'Persona',
@@ -28,10 +27,9 @@ const AgentCycleStructured = {
 
   factory: (deps) => {
     const {
-      StateManager,
+      Storage,
       ApiClient,
       HybridLLMProvider,
-      ToolRunner,
       EventBus,
       Utils,
       Persona,
@@ -70,7 +68,7 @@ const AgentCycleStructured = {
       // Load context if provided
       let contextContent = '';
       if (contextPath) {
-        contextContent = await StateManager.getArtifactContent(contextPath);
+        contextContent = await Storage.getArtifactContent(contextPath);
       }
 
       // Step 1: Deliberate & Analyze (Persona Selection + Analysis)

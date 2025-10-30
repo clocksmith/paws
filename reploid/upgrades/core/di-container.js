@@ -31,7 +31,7 @@ const DIContainer = {
         );
         return;
       }
-      logger.info(`[DIContainer] Registered module: ${module.metadata.id}`);
+      // Reduced logging - registration is tracked internally
       _services.set(module.metadata.id, module);
 
       // Track registration

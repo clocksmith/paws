@@ -6,13 +6,13 @@ const ContextManager = {
   metadata: {
     id: 'ContextManager',
     version: '1.0.0',
-    dependencies: ['Utils', 'StateManager', 'EventBus'],
+    dependencies: ['Utils', 'Storage', 'EventBus'],
     async: false,
     type: 'service'
   },
 
   factory: (deps) => {
-    const { Utils, StateManager, EventBus } = deps;
+    const { Utils, Storage, EventBus } = deps;
     const { logger } = Utils;
 
     logger.info('[ContextManager] Initializing context management system...');

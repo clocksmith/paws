@@ -1,453 +1,206 @@
 {
-  "version": "1.0",
-  "description": "REPLOID Universal Module Manifest - Defines all modules and their load order",
+  "version": "2.0",
+  "description": "REPLOID Universal Module Manifest - 3 simplified presets",
   "presets": {
+    "core": [
+      "/upgrades/core/utils.js",
+      "/upgrades/core/state-helpers-pure.js",
+      "/upgrades/core/tool-runner-pure-helpers.js",
+      "/upgrades/core/agent-logic-pure.js",
+      "/upgrades/core/agent-cycle-structured.js",
+      "/upgrades/core/event-bus.js",
+      "/upgrades/core/di-container.js",
+      "/upgrades/core/config.js",
+      "/upgrades/core/storage-indexeddb.js",
+      "/upgrades/core/git-vfs.js",
+      "/upgrades/core/api-client.js",
+      "/upgrades/core/rate-limiter.js",
+      "/upgrades/core/model-registry.js",
+      "/upgrades/core/browser-apis.js",
+      "/upgrades/core/context-manager.js",
+      "/upgrades/core/streaming-response-handler.js",
+      "/upgrades/core/introspector.js",
+      "/upgrades/core/self-tester.js",
+      "/upgrades/core/verification-manager.js",
+      "/upgrades/core/hybrid-llm-provider.js",
+      "/upgrades/core/meta-tool-creator.js",
+      "/upgrades/core/reflection-store.js",
+      "/upgrades/core/sentinel-tools.js",
+      "/upgrades/core/model-arena.js",
+      "/upgrades/core/autonomous-orchestrator.js",
+      "/upgrades/core/tool-sandbox.js",
+      "/upgrades/core/mcp-protocol.js",
+      "/upgrades/mcp/reploid-mcp-server-base.js",
+      "/upgrades/mcp/reploid-mcp-registry.js",
+      "/upgrades/mcp/reploid-mcp-bridge.js",
+      "/upgrades/mcp/approval-permission-manager.js",
+      "/upgrades/mcp/servers/vfs-mcp-server.js",
+      "/upgrades/mcp/servers/agent-control-mcp-server.js",
+      "/upgrades/mcp/servers/tool-execution-mcp-server.js",
+      "/upgrades/mcp/servers/config-mcp-server.js",
+      "/upgrades/mcp/servers/workflow-mcp-server.js",
+      "/upgrades/mcp/servers/git-vfs-mcp-server.js",
+      "/upgrades/mcp/servers/browser-apis-mcp-server.js",
+      "/upgrades/mcp/servers/storage-mcp-server.js",
+      "/upgrades/mcp/servers/introspector-mcp-server.js",
+      "/upgrades/mcp/servers/self-tester-mcp-server.js",
+      "/upgrades/mcp/servers/streaming-response-mcp-server.js",
+      "/upgrades/mcp/servers/context-manager-mcp-server.js",
+      "/upgrades/mcp/servers/audit-mcp-server.js",
+      "/upgrades/mcp/servers/performance-monitor-mcp-server.js",
+      "/upgrades/mcp/servers/reflection-store-mcp-server.js",
+      "/upgrades/mcp/servers/meta-tool-creator-mcp-server.js",
+      "/upgrades/mcp/servers/verification-manager-mcp-server.js",
+      "/upgrades/mcp/servers/sentinel-tools-mcp-server.js",
+      "/upgrades/mcp/servers/autonomous-orchestrator-mcp-server.js",
+      "/upgrades/mcp/servers/model-registry-mcp-server.js",
+      "/upgrades/mcp/servers/rate-limiter-mcp-server.js",
+      "/upgrades/mcp/servers/api-client-mcp-server.js",
+      "/upgrades/mcp/servers/hybrid-llm-mcp-server.js",
+      "/upgrades/mcp/servers/local-llm-mcp-server.js",
+      "/upgrades/ui/ui-manager.js",
+      "/upgrades/ui/ui-dashboard-template.js",
+      "/upgrades/ui/ui-dashboard-styles.js",
+      "/upgrades/ui/goal-panel.js",
+      "/upgrades/ui/module-graph-visualizer.js",
+      "/upgrades/ui/confirmation-modal.js",
+      "/personas/base-persona.js",
+      "/personas/code-refactorer-persona.js",
+      "/utils/diff-generator.js"
+    ],
     "headless": [
       "/upgrades/core/utils.js",
       "/upgrades/core/state-helpers-pure.js",
       "/upgrades/core/tool-runner-pure-helpers.js",
       "/upgrades/core/agent-logic-pure.js",
-      "/utils/diff-generator.js",
-      "/personas/base-persona.js",
+      "/upgrades/core/agent-cycle-structured.js",
       "/upgrades/core/event-bus.js",
       "/upgrades/core/di-container.js",
       "/upgrades/core/config.js",
-      "/upgrades/core/rate-limiter.js",
       "/upgrades/core/storage-indexeddb.js",
-      "/personas/code-refactorer-persona.js",
-      "/upgrades/core/model-registry.js",
-      "/upgrades/core/audit-logger.js",
       "/upgrades/core/git-vfs.js",
-      "/upgrades/core/state-manager.js",
       "/upgrades/core/api-client.js",
-      "/upgrades/core/autonomous-orchestrator.js",
+      "/upgrades/core/rate-limiter.js",
+      "/upgrades/core/model-registry.js",
+      "/upgrades/core/browser-apis.js",
       "/upgrades/core/context-manager.js",
       "/upgrades/core/streaming-response-handler.js",
-      "/upgrades/core/browser-apis.js",
       "/upgrades/core/introspector.js",
       "/upgrades/core/self-tester.js",
       "/upgrades/core/verification-manager.js",
-      "/upgrades/core/tool-runner.js",
       "/upgrades/core/hybrid-llm-provider.js",
       "/upgrades/core/meta-tool-creator.js",
       "/upgrades/core/sentinel-tools.js",
-      "/upgrades/core/agent-cycle.js",
       "/upgrades/core/model-arena.js",
-      "/upgrades/core/sentinel-fsm.js"
+      "/upgrades/core/autonomous-orchestrator.js",
+      "/upgrades/core/tool-sandbox.js",
+      "/upgrades/core/mcp-protocol.js",
+      "/upgrades/mcp/reploid-mcp-server-base.js",
+      "/upgrades/mcp/reploid-mcp-registry.js",
+      "/upgrades/mcp/reploid-mcp-bridge.js",
+      "/upgrades/mcp/approval-permission-manager.js",
+      "/upgrades/mcp/servers/vfs-mcp-server.js",
+      "/upgrades/mcp/servers/agent-control-mcp-server.js",
+      "/upgrades/mcp/servers/tool-execution-mcp-server.js",
+      "/upgrades/mcp/servers/config-mcp-server.js",
+      "/upgrades/mcp/servers/workflow-mcp-server.js",
+      "/upgrades/mcp/servers/git-vfs-mcp-server.js",
+      "/upgrades/mcp/servers/browser-apis-mcp-server.js",
+      "/upgrades/mcp/servers/storage-mcp-server.js",
+      "/upgrades/mcp/servers/introspector-mcp-server.js",
+      "/upgrades/mcp/servers/self-tester-mcp-server.js",
+      "/upgrades/mcp/servers/streaming-response-mcp-server.js",
+      "/upgrades/mcp/servers/context-manager-mcp-server.js",
+      "/personas/base-persona.js",
+      "/personas/code-refactorer-persona.js",
+      "/utils/diff-generator.js"
     ],
-    "minimal-rsi": [
+    "complete": [
       "/upgrades/core/utils.js",
       "/upgrades/core/state-helpers-pure.js",
       "/upgrades/core/tool-runner-pure-helpers.js",
       "/upgrades/core/agent-logic-pure.js",
-      "/utils/diff-generator.js",
-      "/personas/base-persona.js",
       "/upgrades/core/event-bus.js",
       "/upgrades/core/di-container.js",
       "/upgrades/core/config.js",
-      "/upgrades/core/rate-limiter.js",
       "/upgrades/core/storage-indexeddb.js",
-      "/personas/code-refactorer-persona.js",
-      "/upgrades/core/model-registry.js",
-      "/upgrades/core/audit-logger.js",
       "/upgrades/core/git-vfs.js",
-      "/upgrades/core/state-manager.js",
       "/upgrades/core/api-client.js",
-      "/upgrades/core/autonomous-orchestrator.js",
+      "/upgrades/core/rate-limiter.js",
+      "/upgrades/core/model-registry.js",
+      "/upgrades/core/browser-apis.js",
       "/upgrades/core/context-manager.js",
       "/upgrades/core/streaming-response-handler.js",
-      "/upgrades/core/browser-apis.js",
       "/upgrades/core/introspector.js",
       "/upgrades/core/self-tester.js",
       "/upgrades/core/verification-manager.js",
-      "/upgrades/ui/vfs-explorer.js",
-      "/upgrades/core/tool-runner.js",
       "/upgrades/core/hybrid-llm-provider.js",
       "/upgrades/core/meta-tool-creator.js",
       "/upgrades/core/sentinel-tools.js",
-      "/upgrades/core/agent-cycle.js",
       "/upgrades/core/model-arena.js",
-      "/upgrades/core/sentinel-fsm.js",
-      "/upgrades/ui/diff-viewer-ui.js",
-      "/upgrades/ui/sentinel-panel.js",
-      "/upgrades/ui/ui-manager.js"
-    ],
-    "rsi-core": [
-      "/upgrades/core/utils.js",
-      "/upgrades/core/state-helpers-pure.js",
-      "/upgrades/core/tool-runner-pure-helpers.js",
-      "/upgrades/core/agent-logic-pure.js",
-      "/utils/diff-generator.js",
-      "/personas/base-persona.js",
-      "/upgrades/core/event-bus.js",
-      "/upgrades/core/di-container.js",
-      "/upgrades/core/config.js",
-      "/upgrades/core/rate-limiter.js",
-      "/upgrades/ui/toast-notifications.js",
-      "/upgrades/core/storage-indexeddb.js",
-      "/personas/code-refactorer-persona.js",
-      "/upgrades/core/reflection-store.js",
-      "/upgrades/core/performance-monitor.js",
-      "/upgrades/ui/progress-tracker.js",
-      "/upgrades/ui/log-panel.js",
-      "/upgrades/ui/status-bar.js",
-      "/upgrades/core/model-registry.js",
-      "/upgrades/core/audit-logger.js",
-      "/upgrades/core/git-vfs.js",
-      "/upgrades/ui/metrics-dashboard.js",
-      "/upgrades/core/state-manager.js",
-      "/upgrades/core/api-client.js",
       "/upgrades/core/autonomous-orchestrator.js",
-      "/upgrades/core/context-manager.js",
-      "/upgrades/core/streaming-response-handler.js",
-      "/upgrades/core/browser-apis.js",
-      "/upgrades/core/introspector.js",
-      "/upgrades/core/self-tester.js",
-      "/upgrades/core/verification-manager.js",
-      "/upgrades/ui/vfs-explorer.js",
+      "/upgrades/core/tool-sandbox.js",
+      "/upgrades/core/mcp-protocol.js",
+      "/upgrades/mcp/reploid-mcp-server-base.js",
+      "/upgrades/mcp/reploid-mcp-registry.js",
+      "/upgrades/mcp/reploid-mcp-bridge.js",
+      "/upgrades/mcp/approval-permission-manager.js",
+      "/upgrades/mcp/servers/vfs-mcp-server.js",
+      "/upgrades/mcp/servers/agent-control-mcp-server.js",
+      "/upgrades/mcp/servers/tool-execution-mcp-server.js",
+      "/upgrades/mcp/servers/config-mcp-server.js",
+      "/upgrades/mcp/servers/workflow-mcp-server.js",
+      "/upgrades/mcp/servers/git-vfs-mcp-server.js",
+      "/upgrades/mcp/servers/browser-apis-mcp-server.js",
+      "/upgrades/mcp/servers/storage-mcp-server.js",
+      "/upgrades/mcp/servers/introspector-mcp-server.js",
+      "/upgrades/mcp/servers/self-tester-mcp-server.js",
+      "/upgrades/mcp/servers/streaming-response-mcp-server.js",
+      "/upgrades/mcp/servers/context-manager-mcp-server.js",
+      "/upgrades/mcp/servers/audit-mcp-server.js",
+      "/upgrades/mcp/servers/performance-monitor-mcp-server.js",
+      "/upgrades/mcp/servers/reflection-store-mcp-server.js",
+      "/upgrades/mcp/servers/meta-tool-creator-mcp-server.js",
+      "/upgrades/mcp/servers/verification-manager-mcp-server.js",
+      "/upgrades/mcp/servers/sentinel-tools-mcp-server.js",
+      "/upgrades/mcp/servers/autonomous-orchestrator-mcp-server.js",
+      "/upgrades/mcp/servers/model-registry-mcp-server.js",
+      "/upgrades/mcp/servers/rate-limiter-mcp-server.js",
+      "/upgrades/mcp/servers/api-client-mcp-server.js",
+      "/upgrades/mcp/servers/hybrid-llm-mcp-server.js",
+      "/upgrades/mcp/servers/local-llm-mcp-server.js",
+      "/upgrades/ui/ui-manager.js",
+      "/upgrades/ui/ui-dashboard-template.js",
+      "/upgrades/ui/ui-dashboard-styles.js",
       "/upgrades/ui/goal-panel.js",
-      "/upgrades/ui/thought-panel.js",
-      "/upgrades/core/tool-runner.js",
-      "/upgrades/core/hybrid-llm-provider.js",
       "/upgrades/ui/module-graph-visualizer.js",
-      "/upgrades/core/meta-tool-creator.js",
-      "/upgrades/core/sentinel-tools.js",
-      "/upgrades/core/agent-cycle.js",
-      "/upgrades/core/model-arena.js",
-      "/upgrades/core/sentinel-fsm.js",
-      "/upgrades/ui/agent-visualizer.js",
-      "/upgrades/ui/sentinel-panel.js",
-      "/upgrades/ui/diff-viewer-ui.js",
-      "/upgrades/ui/ui-manager.js"
-    ],
-    "experimental": [
-      "/upgrades/core/utils.js",
-      "/upgrades/core/state-helpers-pure.js",
-      "/upgrades/core/tool-runner-pure-helpers.js",
-      "/upgrades/core/agent-logic-pure.js",
-      "/upgrades/core/app-logic.js",
-      "/utils/diff-generator.js",
-      "/upgrades/core/goal-modifier.js",
-      "/personas/base-persona.js",
-      "/upgrades/core/event-bus.js",
-      "/upgrades/core/di-container.js",
-      "/upgrades/core/config.js",
-      "/upgrades/core/rate-limiter.js",
-      "/upgrades/ui/toast-notifications.js",
-      "/upgrades/core/storage-indexeddb.js",
-      "/personas/code-refactorer-persona.js",
-      "/upgrades/core/reflection-store.js",
-      "/upgrades/core/performance-monitor.js",
-      "/upgrades/ui/ast-visualizer.js",
-      "/upgrades/ui/progress-tracker.js",
-      "/upgrades/ui/log-panel.js",
-      "/upgrades/ui/status-bar.js",
       "/upgrades/ui/confirmation-modal.js",
-      "/upgrades/core/model-registry.js",
-      "/upgrades/core/audit-logger.js",
-      "/upgrades/core/git-vfs.js",
-      "/upgrades/core/simple-vfs.js",
-      "/upgrades/ui/metrics-dashboard.js",
-      "/upgrades/core/state-manager.js",
-      "/upgrades/core/local-llm.js",
-      "/upgrades/core/api-client.js",
-      "/upgrades/core/streaming-response-handler.js",
-      "/upgrades/core/context-manager.js",
-      "/upgrades/core/browser-apis.js",
+      "/personas/base-persona.js",
+      "/personas/code-refactorer-persona.js",
+      "/utils/diff-generator.js",
+      "/lens/lens-protocol.js",
+      "/lens/lens-bridge.js",
+      "/lens/lens-widget-registry.js",
+      "/lens/lens-event-bus.js",
+      "/lens/lens-state-manager.js",
+      "/lens/lens-ui-renderer.js",
+      "/lens/lens-mcp-adapter.js",
+      "/lens/lens-approval-ui.js",
+      "/upgrades/mcp/servers/model-arena-mcp-server.js",
+      "/upgrades/mcp/servers/peer-review-consensus-mcp-server.js",
+      "/upgrades/mcp/servers/webrtc-swarm-mcp-server.js",
+      "/upgrades/mcp/servers/webrtc-coordinator-mcp-server.js",
+      "/upgrades/mcp/servers/goal-modifier-mcp-server.js",
+      "/upgrades/mcp/servers/tutorial-system-mcp-server.js",
+      "/upgrades/mcp/servers/pyodide-runtime-mcp-server.js",
+      "/upgrades/mcp/servers/app-logic-mcp-server.js",
+      "/upgrades/mcp/servers/simple-vfs-mcp-server.js",
       "/upgrades/core/pyodide-runtime.js",
-      "/upgrades/core/introspector.js",
-      "/upgrades/core/self-tester.js",
-      "/upgrades/core/verification-manager.js",
-      "/upgrades/ui/vfs-explorer.js",
-      "/upgrades/core/tutorial-system.js",
-      "/upgrades/ui/goal-panel.js",
-      "/upgrades/ui/thought-panel.js",
-      "/upgrades/core/autonomous-orchestrator.js",
-      "/upgrades/ui/diff-viewer-ui.js",
-      "/upgrades/core/webrtc-swarm.js",
-      "/upgrades/core/meta-tool-creator.js",
-      "/upgrades/core/tool-runner.js",
-      "/upgrades/core/hybrid-llm-provider.js",
-      "/upgrades/ui/module-graph-visualizer.js",
-      "/upgrades/core/sentinel-tools.js",
       "/upgrades/core/webrtc-coordinator.js",
-      "/upgrades/core/model-arena.js",
-      "/upgrades/core/peer-review-consensus.js",
-      "/upgrades/core/sentinel-fsm.js",
-      "/upgrades/ui/agent-visualizer.js",
-      "/upgrades/ui/sentinel-panel.js",
-      "/upgrades/ui/ui-manager.js"
+      "/upgrades/core/webrtc-swarm.js",
+      "/upgrades/core/goal-modifier.js",
+      "/upgrades/core/tutorial-system.js",
+      "/upgrades/core/mcp-transport-ws.js"
     ]
-  },
-  "loadGroups": [
-    {
-      "description": "Pure modules (no dependencies)",
-      "modules": [
-        {
-          "id": "Utils",
-          "path": "/upgrades/core/utils.js"
-        },
-        {
-          "id": "EventBus",
-          "path": "/upgrades/core/event-bus.js"
-        },
-        {
-          "id": "DIContainer",
-          "path": "/upgrades/core/di-container.js"
-        },
-        {
-          "id": "StateHelpersPure",
-          "path": "/upgrades/core/state-helpers-pure.js"
-        },
-        {
-          "id": "ToolRunnerPureHelpers",
-          "path": "/upgrades/core/tool-runner-pure-helpers.js"
-        },
-        {
-          "id": "AgentLogicPure",
-          "path": "/upgrades/core/agent-logic-pure.js"
-        },
-        {
-          "id": "Config",
-          "path": "/upgrades/core/config.js"
-        }
-      ]
-    },
-    {
-      "description": "Storage and logging (need Utils)",
-      "modules": [
-        {
-          "id": "Storage",
-          "path": "/upgrades/core/storage-indexeddb.js"
-        },
-        {
-          "id": "AuditLogger",
-          "path": "/upgrades/core/audit-logger.js"
-        },
-        {
-          "id": "RateLimiter",
-          "path": "/upgrades/core/rate-limiter.js"
-        },
-        {
-          "id": "ModelRegistry",
-          "path": "/upgrades/core/model-registry.js"
-        }
-      ]
-    },
-    {
-      "description": "State management (needs Storage, AuditLogger)",
-      "modules": [
-        {
-          "id": "StateManager",
-          "path": "/upgrades/core/state-manager.js"
-        }
-      ]
-    },
-    {
-      "description": "LLM providers (need StateManager)",
-      "modules": [
-        {
-          "id": "LocalLLM",
-          "path": "/upgrades/core/local-llm.js"
-        },
-        {
-          "id": "HybridLLMProvider",
-          "path": "/upgrades/core/hybrid-llm-provider.js"
-        }
-      ]
-    },
-    {
-      "description": "API and tools (need StateManager, RateLimiter)",
-      "modules": [
-        {
-          "id": "ApiClient",
-          "path": "/upgrades/core/api-client.js"
-        },
-        {
-          "id": "ToolRunner",
-          "path": "/upgrades/core/tool-runner.js"
-        },
-        {
-          "id": "DiffGenerator",
-          "path": "/utils/diff-generator.js"
-        }
-      ]
-    },
-    {
-      "description": "Reflection and monitoring (need StateManager, EventBus)",
-      "modules": [
-        {
-          "id": "ReflectionStore",
-          "path": "/upgrades/core/reflection-store.js"
-        },
-        {
-          "id": "PerformanceMonitor",
-          "path": "/upgrades/core/performance-monitor.js"
-        },
-        {
-          "id": "ToastNotifications",
-          "path": "/upgrades/ui/toast-notifications.js"
-        }
-      ]
-    },
-    {
-      "description": "Context and streaming (need StateManager, EventBus)",
-      "modules": [
-        {
-          "id": "StreamingResponseHandler",
-          "path": "/upgrades/core/streaming-response-handler.js"
-        },
-        {
-          "id": "ContextManager",
-          "path": "/upgrades/core/context-manager.js"
-        }
-      ]
-    },
-    {
-      "description": "Browser features and runtimes (need StateManager, EventBus)",
-      "modules": [
-        {
-          "id": "BrowserAPIs",
-          "path": "/upgrades/core/browser-apis.js"
-        },
-        {
-          "id": "PyodideRuntime",
-          "path": "/upgrades/core/pyodide-runtime.js"
-        }
-      ]
-    },
-    {
-      "description": "Testing and introspection (need StateManager, EventBus)",
-      "modules": [
-        {
-          "id": "Introspector",
-          "path": "/upgrades/core/introspector.js"
-        },
-        {
-          "id": "SelfTester",
-          "path": "/upgrades/core/self-tester.js"
-        },
-        {
-          "id": "VerificationManager",
-          "path": "/upgrades/core/verification-manager.js"
-        }
-      ]
-    },
-    {
-      "description": "Visualizers and dashboards (need various deps)",
-      "modules": [
-        {
-          "id": "VFSExplorer",
-          "path": "/upgrades/ui/vfs-explorer.js"
-        },
-        {
-          "id": "MetricsDashboard",
-          "path": "/upgrades/ui/metrics-dashboard.js"
-        },
-        {
-          "id": "AgentVisualizer",
-          "path": "/upgrades/ui/agent-visualizer.js"
-        },
-        {
-          "id": "ASTVisualizer",
-          "path": "/upgrades/ui/ast-visualizer.js"
-        },
-        {
-          "id": "ModuleGraphVisualizer",
-          "path": "/upgrades/ui/module-graph-visualizer.js"
-        },
-        {
-          "id": "TutorialSystem",
-          "path": "/upgrades/core/tutorial-system.js"
-        }
-      ]
-    },
-    {
-      "description": "CLUSTER 1 UI Panels (need ModuleLoader, EventBus)",
-      "modules": [
-        {
-          "id": "ProgressTracker",
-          "path": "/upgrades/ui/progress-tracker.js"
-        },
-        {
-          "id": "LogPanel",
-          "path": "/upgrades/ui/log-panel.js"
-        },
-        {
-          "id": "StatusBar",
-          "path": "/upgrades/ui/status-bar.js"
-        },
-        {
-          "id": "GoalPanel",
-          "path": "/upgrades/ui/goal-panel.js"
-        },
-        {
-          "id": "ThoughtPanel",
-          "path": "/upgrades/ui/thought-panel.js"
-        }
-      ]
-    },
-    {
-      "description": "UI and agent cycle (need everything above)",
-      "modules": [
-        {
-          "id": "UIManager",
-          "path": "/upgrades/ui/ui-manager.js"
-        },
-        {
-          "id": "AgentCycle",
-          "path": "/upgrades/core/agent-cycle.js"
-        }
-      ]
-    },
-    {
-      "description": "Sentinel and orchestration (need most other modules)",
-      "modules": [
-        {
-          "id": "GitVFS",
-          "path": "/upgrades/core/git-vfs.js"
-        },
-        {
-          "id": "SimpleVFS",
-          "path": "/upgrades/core/simple-vfs.js"
-        },
-        {
-          "id": "SentinelTools",
-          "path": "/upgrades/core/sentinel-tools.js"
-        },
-        {
-          "id": "SentinelPanel",
-          "path": "/upgrades/ui/sentinel-panel.js"
-        },
-        {
-          "id": "DiffViewerUI",
-          "path": "/upgrades/ui/diff-viewer-ui.js"
-        },
-        {
-          "id": "WebRTCSwarm",
-          "path": "/upgrades/core/webrtc-swarm.js"
-        },
-        {
-          "id": "WebRTCCoordinator",
-          "path": "/upgrades/core/webrtc-coordinator.js"
-        },
-        {
-          "id": "SentinelFSM",
-          "path": "/upgrades/core/sentinel-fsm.js"
-        },
-        {
-          "id": "MetaToolCreator",
-          "path": "/upgrades/core/meta-tool-creator.js"
-        },
-        {
-          "id": "ModelArena",
-          "path": "/upgrades/core/model-arena.js"
-        },
-        {
-          "id": "PeerReviewConsensus",
-          "path": "/upgrades/core/peer-review-consensus.js"
-        }
-      ]
-    }
-  ]
+  }
 }

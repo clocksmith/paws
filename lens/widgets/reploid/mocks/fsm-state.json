@@ -1,0 +1,72 @@
+{
+  "current_state": "AWAITING_CONTEXT_APPROVAL",
+  "previous_state": "CURATING_CONTEXT",
+  "states": [
+    {
+      "name": "IDLE",
+      "description": "Agent is idle, waiting for tasks",
+      "color": "#888888",
+      "transitions": ["CURATING_CONTEXT"]
+    },
+    {
+      "name": "CURATING_CONTEXT",
+      "description": "Agent is selecting relevant files for context",
+      "color": "#4ec9b0",
+      "transitions": ["AWAITING_CONTEXT_APPROVAL", "ERROR"]
+    },
+    {
+      "name": "AWAITING_CONTEXT_APPROVAL",
+      "description": "Waiting for user to approve context selection",
+      "color": "#ffc107",
+      "transitions": ["PLANNING_WITH_CONTEXT", "CURATING_CONTEXT", "ERROR"]
+    },
+    {
+      "name": "PLANNING_WITH_CONTEXT",
+      "description": "Agent is planning approach with approved context",
+      "color": "#4ec9b0",
+      "transitions": ["GENERATING_PROPOSAL", "ERROR"]
+    },
+    {
+      "name": "GENERATING_PROPOSAL",
+      "description": "Agent is generating code changes",
+      "color": "#4ec9b0",
+      "transitions": ["AWAITING_PROPOSAL_APPROVAL", "ERROR"]
+    },
+    {
+      "name": "AWAITING_PROPOSAL_APPROVAL",
+      "description": "Waiting for user to approve code changes",
+      "color": "#ffc107",
+      "transitions": ["APPLYING_CHANGESET", "GENERATING_PROPOSAL", "ERROR"]
+    },
+    {
+      "name": "APPLYING_CHANGESET",
+      "description": "Agent is applying approved changes to files",
+      "color": "#4ec9b0",
+      "transitions": ["REFLECTING", "ERROR"]
+    },
+    {
+      "name": "REFLECTING",
+      "description": "Agent is reflecting on results and planning next steps",
+      "color": "#4ec9b0",
+      "transitions": ["IDLE", "CURATING_CONTEXT", "ERROR"]
+    },
+    {
+      "name": "ERROR",
+      "description": "Agent encountered an error",
+      "color": "#ff4444",
+      "transitions": ["IDLE", "CURATING_CONTEXT"]
+    }
+  ],
+  "history": [
+    {"state": "IDLE", "timestamp": "2025-10-30T15:00:00Z", "duration": 120},
+    {"state": "CURATING_CONTEXT", "timestamp": "2025-10-30T15:02:00Z", "duration": 45},
+    {"state": "AWAITING_CONTEXT_APPROVAL", "timestamp": "2025-10-30T15:02:45Z", "duration": 0}
+  ],
+  "metrics": {
+    "total_transitions": 23,
+    "successful_runs": 5,
+    "failed_runs": 1,
+    "average_cycle_time_seconds": 180,
+    "approval_wait_time_seconds": 120
+  }
+}

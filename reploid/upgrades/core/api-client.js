@@ -6,17 +6,17 @@ const ApiClient = {
   metadata: {
     id: 'ApiClient',
     version: '2.0.0',
-    dependencies: ['config', 'Utils', 'StateManager', 'RateLimiter'],
+    dependencies: ['config', 'Utils', 'Storage', 'RateLimiter'],
     async: false,
     type: 'service'
   },
   
   factory: (deps) => {
     // Validate dependencies
-    const { config, Utils, StateManager, RateLimiter } = deps;
+    const { config, Utils, Storage, RateLimiter } = deps;
     const { logger, Errors } = Utils;
 
-    if (!config || !logger || !Errors || !Utils || !StateManager) {
+    if (!config || !logger || !Errors || !Utils || !Storage) {
       throw new Error('ApiClient: Missing required dependencies');
     }
 

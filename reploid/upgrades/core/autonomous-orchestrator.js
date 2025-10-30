@@ -3,13 +3,13 @@ const AutonomousOrchestrator = {
   metadata: {
     id: 'AutonomousOrchestrator',
     version: '1.0.0',
-    dependencies: ['config', 'Utils', 'StateManager', 'EventBus', 'Storage'],
+    dependencies: ['config', 'Utils', 'Storage', 'EventBus'],
     async: false,
     type: 'service'
   },
 
   factory: (deps) => {
-    const { config, Utils, StateManager, EventBus, Storage } = deps;
+    const { config, Utils, Storage, EventBus } = deps;
     const { logger } = Utils;
 
     let isRunning = false;
@@ -225,12 +225,12 @@ const AutonomousOrchestrator = {
     const saveReport = async (report) => {
       try {
         const reportPath = `/sessions/curator-reports/report-${report.sessionId}.json`;
-        await StateManager.writeArtifact(reportPath, JSON.stringify(report, null, 2));
+        await Storage.writeArtifact(reportPath, JSON.stringify(report, null, 2));
 
         // Also generate HTML report
         const htmlReport = generateHTMLReport(report);
         const htmlPath = `/sessions/curator-reports/report-${report.sessionId}.html`;
-        await StateManager.writeArtifact(htmlPath, htmlReport);
+        await Storage.writeArtifact(htmlPath, htmlReport);
 
         logger.info('[Curator] Report saved:', htmlPath);
 

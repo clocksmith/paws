@@ -13,13 +13,13 @@ const HybridLLMProvider = {
   metadata: {
     id: 'HybridLLMProvider',
     version: '1.0.0',
-    dependencies: ['config', 'Utils', 'EventBus', 'StateManager', 'LocalLLM?', 'ApiClient', 'StreamingResponseHandler?'],
+    dependencies: ['config', 'Utils', 'EventBus', 'Storage', 'LocalLLM?', 'ApiClient', 'StreamingResponseHandler?'],
     async: true,
     type: 'agent'
   },
 
   factory: (deps) => {
-    const { config, Utils, EventBus, StateManager, LocalLLM, ApiClient, StreamingResponseHandler } = deps;
+    const { config, Utils, EventBus, Storage, LocalLLM, ApiClient, StreamingResponseHandler } = deps;
     const { logger } = Utils;
 
     let useLocal = false; // Default to cloud

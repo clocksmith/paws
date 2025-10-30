@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reploid Lens Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0a0a14;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+    }
+
+    .dashboard-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* Header */
+    .dashboard-header {
+      background: rgba(20, 20, 20, 0.95);
+      border-bottom: 2px solid #4ec9b0;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+    }
+
+    .dashboard-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .dashboard-title h1 {
+      font-size: 24px;
+      color: #4ec9b0;
+      font-weight: bold;
+      letter-spacing: 2px;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: rgba(78, 201, 176, 0.1);
+      border: 1px solid rgba(78, 201, 176, 0.3);
+      font-size: 12px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #4ec9b0;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .dashboard-controls {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      background: rgba(78, 201, 176, 0.2);
+      border: 1px solid rgba(78, 201, 176, 0.4);
+      color: #4ec9b0;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: rgba(78, 201, 176, 0.3);
+      box-shadow: 0 0 10px rgba(78, 201, 176, 0.3);
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Workflow Control Panel */
+    .workflow-control {
+      background: rgba(30, 30, 30, 0.9);
+      border-bottom: 1px solid #333;
+      padding: 16px 24px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .workflow-control-label {
+      color: #888;
+      font-size: 12px;
+      min-width: 40px;
+    }
+
+    .workflow-control-input {
+      flex: 1;
+      padding: 10px 16px;
+      background: rgba(20, 20, 20, 0.8);
+      border: 1px solid #333;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+
+    .workflow-control-input:focus {
+      outline: none;
+      border-color: #4ec9b0;
+    }
+
+    .workflow-control-btn {
+      padding: 10px 24px;
+      background: #4ec9b0;
+      border: none;
+      color: #000;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+
+    .workflow-control-btn:hover {
+      background: #6ee7ce;
+      box-shadow: 0 0 15px rgba(78, 201, 176, 0.5);
+    }
+
+    .workflow-control-btn:disabled {
+      background: #555;
+      color: #888;
+      cursor: not-allowed;
+    }
+
+    .workflow-control-btn.stop {
+      background: #ff4444;
+      color: #fff;
+    }
+
+    .workflow-control-btn.stop:hover {
+      background: #ff6666;
+    }
+
+    .workflow-status {
+      padding: 10px 16px;
+      background: rgba(78, 201, 176, 0.1);
+      border: 1px solid rgba(78, 201, 176, 0.3);
+      font-size: 12px;
+      min-width: 200px;
+      text-align: center;
+    }
+
+    /* Main Content */
+    .dashboard-content {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: 2px;
+      padding: 2px;
+      background: #000;
+      overflow: hidden;
+    }
+
+    .widget-panel {
+      background: rgba(20, 20, 20, 0.8);
+      border: 1px solid #333;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      background: rgba(40, 40, 40, 0.8);
+      padding: 12px 16px;
+      border-bottom: 1px solid #333;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-title {
+      font-size: 14px;
+      color: #4ec9b0;
+      font-weight: bold;
+    }
+
+    .panel-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .panel-btn {
+      padding: 4px 8px;
+      background: transparent;
+      border: 1px solid #555;
+      color: #888;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      transition: all 0.2s;
+    }
+
+    .panel-btn:hover {
+      border-color: #4ec9b0;
+      color: #4ec9b0;
+    }
+
+    .panel-content {
+      flex: 1;
+      overflow: auto;
+      padding: 0;
+    }
+
+    /* Custom scrollbar */
+    .panel-content::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .panel-content::-webkit-scrollbar-track {
+      background: #1a1a1a;
+    }
+
+    .panel-content::-webkit-scrollbar-thumb {
+      background: #4ec9b0;
+    }
+
+    .panel-content::-webkit-scrollbar-thumb:hover {
+      background: #6ee7ce;
+    }
+
+    /* Loading State */
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #888;
+      font-size: 14px;
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(78, 201, 176, 0.2);
+      border-top-color: #4ec9b0;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Error State */
+    .error {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #ff4444;
+      font-size: 14px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .error-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    /* Toast Notifications */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toast {
+      background: rgba(20, 20, 20, 0.95);
+      border: 1px solid #4ec9b0;
+      padding: 12px 20px;
+      min-width: 300px;
+      color: #e0e0e0;
+      font-size: 13px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .toast.error {
+      border-color: #ff4444;
+    }
+
+    .toast.success {
+      border-color: #4ec9b0;
+    }
+
+    .toast.info {
+      border-color: #ffc107;
+    }
+
+    .toast.warn {
+      border-color: #ffc107;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    /* Footer */
+    .dashboard-footer {
+      background: rgba(20, 20, 20, 0.95);
+      border-top: 1px solid #333;
+      padding: 8px 24px;
+      font-size: 11px;
+      color: #666;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-left {
+      display: flex;
+      gap: 20px;
+    }
+
+    .footer-stat {
+      display: flex;
+      gap: 6px;
+    }
+
+    .footer-stat-label {
+      color: #888;
+    }
+
+    .footer-stat-value {
+      color: #4ec9b0;
+    }
+
+    .footer-right {
+      color: #444;
+    }
+
+    /* Responsive */
+    @media (max-width: 1400px) {
+      .dashboard-content {
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 900px) {
+      .dashboard-content {
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(5, auto);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+    <!-- Header -->
+    <header class="dashboard-header">
+      <div class="dashboard-title">
+        <h1>◈ REPLOID LENS</h1>
+        <div class="status-indicator">
+          <div class="status-dot"></div>
+          <span id="connection-status">CONNECTING</span>
+        </div>
+      </div>
+      <div class="dashboard-controls">
+        <button class="btn" onclick="dashboard.refreshAll()">⟳ Refresh All</button>
+        <button class="btn" onclick="dashboard.toggleFullscreen()">⛶ Fullscreen</button>
+      </div>
+    </header>
+
+    <!-- Workflow Control Panel -->
+    <div class="workflow-control">
+      <span class="workflow-control-label">Goal:</span>
+      <input
+        type="text"
+        class="workflow-control-input"
+        id="workflow-goal-input"
+        placeholder="Enter a goal (e.g., 'Add logging to main.js')"
+        value="Add a hello world function to utils.js"
+      />
+      <button class="workflow-control-btn" id="start-workflow-btn" onclick="dashboard.startWorkflow()">
+        ▶ Start Workflow
+      </button>
+      <button class="workflow-control-btn stop" id="stop-workflow-btn" onclick="dashboard.stopWorkflow()" style="display: none;">
+        ■ Stop
+      </button>
+      <div class="workflow-status" id="workflow-status">
+        Ready
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="dashboard-content">
+      <!-- Agent Control Panel -->
+      <div class="widget-panel">
+        <div class="panel-header">
+          <div class="panel-title">🤖 Agent Control</div>
+          <div class="panel-controls">
+            <button class="panel-btn" onclick="dashboard.refreshWidget('agent-control')">⟳</button>
+          </div>
+        </div>
+        <div class="panel-content" id="agent-control-panel">
+          <div class="loading">
+            <div class="loading-spinner"></div>
+            <div>Loading Agent Control...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metrics Dashboard Panel -->
+      <div class="widget-panel">
+        <div class="panel-header">
+          <div class="panel-title">📈 Metrics</div>
+          <div class="panel-controls">
+            <button class="panel-btn" onclick="dashboard.refreshWidget('metrics')">⟳</button>
+          </div>
+        </div>
+        <div class="panel-content" id="metrics-panel">
+          <div class="loading">
+            <div class="loading-spinner"></div>
+            <div>Loading Metrics...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Agent Visualizer Panel -->
+      <div class="widget-panel">
+        <div class="panel-header">
+          <div class="panel-title">🔄 FSM Visualizer</div>
+          <div class="panel-controls">
+            <button class="panel-btn" onclick="dashboard.refreshWidget('agent-viz')">⟳</button>
+          </div>
+        </div>
+        <div class="panel-content" id="agent-viz-panel">
+          <div class="loading">
+            <div class="loading-spinner"></div>
+            <div>Loading Visualizer...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VFS Explorer Panel -->
+      <div class="widget-panel">
+        <div class="panel-header">
+          <div class="panel-title">📁 File Explorer</div>
+          <div class="panel-controls">
+            <button class="panel-btn" onclick="dashboard.refreshWidget('vfs-explorer')">⟳</button>
+          </div>
+        </div>
+        <div class="panel-content" id="vfs-explorer-panel">
+          <div class="loading">
+            <div class="loading-spinner"></div>
+            <div>Loading VFS Explorer...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Diff Viewer Panel -->
+      <div class="widget-panel">
+        <div class="panel-header">
+          <div class="panel-title">📊 Diff Viewer</div>
+          <div class="panel-controls">
+            <button class="panel-btn" onclick="dashboard.refreshWidget('diff-viewer')">⟳</button>
+          </div>
+        </div>
+        <div class="panel-content" id="diff-viewer-panel">
+          <div class="loading">
+            <div class="loading-spinner"></div>
+            <div>Loading Diff Viewer...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Event Log Panel -->
+      <div class="widget-panel">
+        <div class="panel-header">
+          <div class="panel-title">📋 Event Log</div>
+          <div class="panel-controls">
+            <button class="panel-btn" onclick="dashboard.clearEventLog()">Clear</button>
+          </div>
+        </div>
+        <div class="panel-content" id="event-log-panel" style="padding: 12px; font-size: 11px; line-height: 1.6;">
+          <div style="color: #888;">Waiting for events...</div>
+        </div>
+      </div>
+
+      <!-- Sentinel Panel (Approval Workflows) -->
+      <div class="widget-panel">
+        <div class="panel-header">
+          <div class="panel-title">🛡️ Sentinel Control</div>
+          <div class="panel-controls">
+            <button class="panel-btn" onclick="dashboard.refreshWidget('sentinel-panel')">⟳</button>
+          </div>
+        </div>
+        <div class="panel-content" id="sentinel-panel-panel">
+          <div class="loading">
+            <div class="loading-spinner"></div>
+            <div>Loading Sentinel...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status Bar Panel -->
+      <div class="widget-panel">
+        <div class="panel-header">
+          <div class="panel-title">📊 System Status</div>
+          <div class="panel-controls">
+            <button class="panel-btn" onclick="dashboard.refreshWidget('status-bar')">⟳</button>
+          </div>
+        </div>
+        <div class="panel-content" id="status-bar-panel">
+          <div class="loading">
+            <div class="loading-spinner"></div>
+            <div>Loading Status...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Log Panel -->
+      <div class="widget-panel">
+        <div class="panel-header">
+          <div class="panel-title">📝 Audit Logs</div>
+          <div class="panel-controls">
+            <button class="panel-btn" onclick="dashboard.refreshWidget('log-panel')">⟳</button>
+          </div>
+        </div>
+        <div class="panel-content" id="log-panel-panel">
+          <div class="loading">
+            <div class="loading-spinner"></div>
+            <div>Loading Logs...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Thought Panel -->
+      <div class="widget-panel">
+        <div class="panel-header">
+          <div class="panel-title">💭 Agent Thoughts</div>
+          <div class="panel-controls">
+            <button class="panel-btn" onclick="dashboard.refreshWidget('thought-panel')">⟳</button>
+          </div>
+        </div>
+        <div class="panel-content" id="thought-panel-panel">
+          <div class="loading">
+            <div class="loading-spinner"></div>
+            <div>Loading Thoughts...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress Tracker Panel -->
+      <div class="widget-panel">
+        <div class="panel-header">
+          <div class="panel-title">⏳ Progress Tracker</div>
+          <div class="panel-controls">
+            <button class="panel-btn" onclick="dashboard.refreshWidget('progress-tracker')">⟳</button>
+          </div>
+        </div>
+        <div class="panel-content" id="progress-tracker-panel">
+          <div class="loading">
+            <div class="loading-spinner"></div>
+            <div>Loading Progress...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toast Notifications Panel -->
+      <div class="widget-panel">
+        <div class="panel-header">
+          <div class="panel-title">🔔 Notifications</div>
+          <div class="panel-controls">
+            <button class="panel-btn" onclick="dashboard.refreshWidget('toast-notifications')">⟳</button>
+          </div>
+        </div>
+        <div class="panel-content" id="toast-notifications-panel">
+          <div class="loading">
+            <div class="loading-spinner"></div>
+            <div>Loading Notifications...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AST Visualizer Panel -->
+      <div class="widget-panel">
+        <div class="panel-header">
+          <div class="panel-title">🌳 AST Visualizer</div>
+          <div class="panel-controls">
+            <button class="panel-btn" onclick="dashboard.refreshWidget('ast-visualizer')">⟳</button>
+          </div>
+        </div>
+        <div class="panel-content" id="ast-visualizer-panel">
+          <div class="loading">
+            <div class="loading-spinner"></div>
+            <div>Loading AST...</div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="dashboard-footer">
+      <div class="footer-left">
+        <div class="footer-stat">
+          <span class="footer-stat-label">Server:</span>
+          <span class="footer-stat-value" id="server-name">reploid-workflow</span>
+        </div>
+        <div class="footer-stat">
+          <span class="footer-stat-label">Mode:</span>
+          <span class="footer-stat-value" id="mode">PRODUCTION</span>
+        </div>
+        <div class="footer-stat">
+          <span class="footer-stat-label">Widgets:</span>
+          <span class="footer-stat-value" id="widget-count">0/12</span>
+        </div>
+      </div>
+      <div class="footer-right">
+        MCP Lens v1.0.0 | Reploid Agent Dashboard
+      </div>
+    </footer>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Dashboard Host Script -->
+  <script type="module" src="./lens-dashboard-host.js"></script>
+</body>
+</html>

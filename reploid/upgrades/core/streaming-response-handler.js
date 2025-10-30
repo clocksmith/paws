@@ -6,13 +6,13 @@ const StreamingResponseHandler = {
   metadata: {
     id: 'StreamingResponseHandler',
     version: '1.0.0',
-    dependencies: ['Utils', 'EventBus', 'StateManager'],
+    dependencies: ['Utils', 'EventBus', 'Storage'],
     async: false,
     type: 'service'
   },
 
   factory: (deps) => {
-    const { Utils, EventBus, StateManager } = deps;
+    const { Utils, EventBus, Storage } = deps;
     const { logger } = Utils;
 
     logger.info('[StreamingResponseHandler] Initializing streaming response handler...');

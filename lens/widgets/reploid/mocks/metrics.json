@@ -1,0 +1,65 @@
+{
+  "session": {
+    "id": "session_2025_10_30_150000",
+    "started_at": "2025-10-30T15:00:00Z",
+    "uptime_seconds": 1800,
+    "total_tasks": 5,
+    "completed_tasks": 4,
+    "failed_tasks": 1
+  },
+  "performance": {
+    "average_context_curation_time_seconds": 45,
+    "average_planning_time_seconds": 30,
+    "average_proposal_generation_time_seconds": 60,
+    "average_changeset_application_time_seconds": 15,
+    "average_approval_wait_time_seconds": 120,
+    "total_cycle_time_seconds": 270
+  },
+  "resources": {
+    "memory_usage_mb": 256,
+    "memory_peak_mb": 384,
+    "cpu_usage_percent": 12,
+    "disk_reads_mb": 45,
+    "disk_writes_mb": 12
+  },
+  "code_changes": {
+    "total_files_modified": 15,
+    "total_lines_added": 450,
+    "total_lines_removed": 120,
+    "total_lines_modified": 89,
+    "files_created": 3,
+    "files_deleted": 1
+  },
+  "approvals": {
+    "context_approvals": 4,
+    "context_rejections": 1,
+    "proposal_approvals": 3,
+    "proposal_rejections": 2,
+    "auto_approvals": 0,
+    "average_review_time_seconds": 45
+  },
+  "errors": {
+    "total_errors": 2,
+    "context_errors": 1,
+    "proposal_errors": 0,
+    "application_errors": 1,
+    "last_error": {
+      "message": "Failed to parse file: syntax error",
+      "timestamp": "2025-10-30T15:25:00Z",
+      "state": "CURATING_CONTEXT"
+    }
+  },
+  "timeseries": {
+    "timestamps": [
+      "2025-10-30T15:00:00Z",
+      "2025-10-30T15:05:00Z",
+      "2025-10-30T15:10:00Z",
+      "2025-10-30T15:15:00Z",
+      "2025-10-30T15:20:00Z",
+      "2025-10-30T15:25:00Z"
+    ],
+    "memory_mb": [128, 156, 201, 256, 298, 256],
+    "cpu_percent": [5, 8, 15, 12, 18, 12],
+    "task_completion_rate": [0, 0, 1, 2, 3, 4]
+  }
+}

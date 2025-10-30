@@ -1,19 +1,19 @@
 # REPLOID
 
-**[Browser-Native AI Agent with Recursive Self-Improvement](https://github.com/clocksmith/paws/tree/main/reploid)**
+**Browser-Native AI Agent with MCP and Lens Architecture**
 
-REPLOID is a fully browser-based AI agent environment that can introspect and modify its own code. Backend proxy is optional. Everything runs in your browser using IndexedDB, WebGPU, and Web Workers.
+REPLOID is a browser-based AI agent environment exposing capabilities via Model Context Protocol (MCP) with Lens widget UI. Backend proxy optional. Runs in-browser using IndexedDB and Web Workers.
 
 ---
 
 ## Core Philosophy
 
-**Agents should be able to improve themselves, with human oversight.**
+**Modular agent architecture with human oversight via approval workflows.**
 
-1. **Meta-Tool Creation** - Tools that create other tools
-2. **Multi-Model Mixing** - Combine Gemini, Claude, GPT-4, local models, WebGPU
-3. **Browser-Native** - 100% client-side using modern web APIs
-4. **Recursive Self-Improvement** - Modify own code with safety guardrails
+1. **MCP Servers** - Expose agent capabilities as tools/resources/prompts via JSON-RPC 2.0
+2. **Lens Widgets** - TypeScript web components for human oversight UI
+3. **Multi-Model Mixing** - Combine Gemini, Claude, GPT-4, local models
+4. **Browser-Native** - Client-side using VFS (LightningFS + isomorphic-git)
 
 ---
 
@@ -30,115 +30,87 @@ pnpm start  # http://localhost:8000
 # 3. Open browser
 # Navigate to http://localhost:8080
 
-# 4. Select boot mode
-# Choose "RSI-Core" (recommended)
+# 4. Select boot preset
+# Choose "CORE" (recommended)
 
 # 5. Enter a goal
-"Analyze the current module dependencies and suggest optimizations"
+"Show me what MCP servers are available"
 
 # 6. Watch the agent work
 # - Loads modules from VFS
-# - Introspects code
-# - Proposes changes
-# - Requests approval
+# - Agent uses MCP tools via approval workflows
+# - Streaming responses in real-time
 ```
 
 ---
 
 ## How It Works
 
-**Simple 5-step boot process:**
+**Boot process (Genesis Cycle 0):**
 
-1. **Boot Screen** → Select modules to load and enter your goal
-2. **Download Modules** → Upgrades downloaded from server, saved to VFS (IndexedDB)
-3. **Load Dependencies** → DI Container resolves and loads modules in dependency order
-4. **Initialize Agent** → Cognitive loop starts with optional persona
-5. **Execute Goal** → Agent uses available tools, streaming responses in real-time
-
-**The 1:1:1:1 Pattern:**
-
-Every module follows this pattern:
-- **1 Module** (`upgrades/core/tool-runner.js`) - JavaScript with DI container pattern
-- **1 Blueprint** (`blueprints/0x00000A-tool-runner.md`) - Design documentation that can substitute a module (experimetnal)
-- **1 Test** (`tests/unit/tool-runner.test.js`) - Unit tests
-- **1 Widget** (defined in same file) - Web Component for visualization
+1. **Boot Screen** - Select preset (CORE/HEADLESS/COMPLETE) and enter goal
+2. **Download Modules** - Load from `/upgrades/` directory, save to VFS (IndexedDB via LightningFS)
+3. **Initialize VFS** - Mount isomorphic-git, load module-manifest.json
+4. **Load Modules** - DI Container resolves dependencies, MCP servers register tools/resources/prompts
+5. **Mount Lens Widgets** - TypeScript UI components connect to MCP servers for approval workflows
+6. **Execute Goal** - Agent runs cognitive loop, uses MCP tools, Lens provides oversight
 
 ---
 
-## Boot Modes
+## Boot Presets
 
-REPLOID offers 4 progressive tiers to match your use case:
+REPLOID offers 3 module presets:
 
-### Headless (31 modules, ~15K lines)
-**Perfect for headless/server operation**
+### CORE (64 modules) **← RECOMMENDED**
+**Complete RSI agent with full UI and in-browser MCP protocol servers**
 
-Pure functional modules without UI:
-- Agent cognitive loop
-- Virtual file system (VFS)
-- Tool execution
-- State management
-- Multi-model LLM support
+Includes:
+- **Core Infrastructure** (25 modules) - Agent cognitive loop, VFS (LightningFS + isomorphic-git), DI container
+- **MCP Infrastructure** (5 modules) - Protocol implementation, JSON-RPC 2.0 transport
+- **MCP Servers** (24 Tier 1-3 servers) - In-browser protocol servers exposing tools/resources/prompts
+- **UI Modules** (6 modules) - Dashboard, status panels, notifications
+- **Personas & Utils** (3 modules) - Code refactorer persona, diff generator
 
-**Best for:** Headless agents, server deployments, CI/CD, automated workflows
-
----
-
-### Minimal-RSI (35 modules, ~18K lines)
-**Core RSI features with basic UI**
-
-Everything in Headless, plus:
-- Basic UI panels (VFS explorer, diff viewer, sentinel control)
-- Visual feedback for agent operations
-- Interactive approval workflows
-
-**Best for:** Learning REPLOID, interactive development, tutorials
+**Best for:** Production use, interactive development, full agent capabilities
 
 ---
 
-### RSI-Core (46 modules, ~23K lines) **← RECOMMENDED**
-**Full RSI with comprehensive UI**
+### HEADLESS (45 modules)
+**In-browser MCP protocol server, no UI**
 
-Everything in Minimal-RSI, plus:
-- Complete UI dashboard (goals, thoughts, logs, status, metrics)
-- Performance monitoring and analytics
-- Progress tracking and notifications
-- Agent state visualization
+Includes only:
+- Core infrastructure + MCP infrastructure
+- Agent cycle logic
+- Tier 1 MCP servers (essential capabilities only)
+- No Lens widgets, no UI modules
 
-**Best for:**
-- Production projects
-- Self-improving agents
-- Interactive development
-- Core REPLOID vision
+**Best for:** CI/CD, APIs, embedded systems, server-side deployments
 
 ---
 
-### Experimental (56 modules, ~35K lines)
-**Every feature for research and power users**
+### COMPLETE (85 modules) **EXPERIMENTAL**
+**Everything including experimental in-browser MCP servers**
 
-Everything in RSI-Core, plus:
-- **Visualization suite** - AST trees, module graphs, canvas rendering
-- **Python runtime** - Execute Python via Pyodide + WebAssembly
-- **Local LLM** - WebGPU-accelerated local inference
-- **WebRTC swarm** - P2P browser-to-browser coordination
-- **Advanced tools** - Tutorial system, confirmation modals, app logic helpers
-- And 10+ more specialized modules...
+Everything in CORE, plus:
+- **9 Experimental MCP Servers** (Tier 4) - Advanced capabilities
+- **Python Runtime** - Pyodide WebAssembly execution
+- **WebRTC P2P** - Browser-to-browser agent coordination
+- **Advanced Features** - Goal modification, peer consensus, tutorials
 
-**Best for:**
-- Research and experimentation
-- Power users who want everything
-- Multi-agent systems
-- Bleeding-edge features
+**Best for:** Research, experimentation, bleeding-edge features
 
 ---
 
 ## Key Features
 
-### 79 Modular Upgrades
+### 77 Modular Upgrades
 
 **Module Organization:**
-- **Core** (63 modules) - Agent logic, state management, tools, LLM providers, VFS
-- **UI** (16 modules) - Panels, visualizers, dashboards, notifications
+- **Core** (62 modules) - Agent logic, MCP servers, tools, LLM providers, VFS
+- **UI** (16 modules) - Panels, visualizers, dashboards, notifications, Lens widgets
 - **Archived** (11 modules) - Unused/experimental features
+
+MCP server architecture with Lens widget dashboards for approval workflows and real-time monitoring.
 
 Each module is self-contained with:
 - DI container pattern for dependency injection

@@ -138,7 +138,8 @@ const Storage = {
 
     const getState = async () => {
         try {
-            return await pfs.readFile('/.state', 'utf8');
+            const stateJson = await pfs.readFile('/.state', 'utf8');
+            return JSON.parse(stateJson);
         } catch (e) {
             return null;
         }
@@ -161,6 +162,36 @@ const Storage = {
             contentA: new TextDecoder().decode(contentA.blob),
             contentB: new TextDecoder().decode(contentB.blob)
         };
+    };
+
+    const getAllArtifactMetadata = async () => {
+        const metadata = {};
+        const walkDir = async (dir) => {
+            try {
+                const entries = await pfs.readdir(dir);
+                for (const entry of entries) {
+                    const fullPath = dir === '/' ? `/${entry}` : `${dir}/${entry}`;
+                    try {
+                        const stat = await pfs.stat(fullPath);
+                        if (stat.isDirectory()) {
+                            await walkDir(fullPath);
+                        } else if (stat.isFile()) {
+                            metadata[fullPath] = {
+                                path: fullPath,
+                                size: stat.size,
+                                mtime: stat.mtime
+                            };
+                        }
+                    } catch (e) {
+                        // Skip unreadable files
+                    }
+                }
+            } catch (e) {
+                // Skip unreadable directories
+            }
+        };
+        await walkDir('/');
+        return metadata;
     };
 
     // Web Component widget - defined inside factory to access closure variables
@@ -448,6 +479,7 @@ const Storage = {
       api: {
         setArtifactContent,
         getArtifactContent,
+        getAllArtifactMetadata,
         deleteArtifact,
         saveState,
         getState,

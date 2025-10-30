@@ -36,450 +36,34 @@
             </p>
         </div>
 
-        <!-- Legacy Detection Markers (hidden, used by old scripts) -->
-        <div style="display: none;">
-            <div id="provider-status"></div>
-            <div id="provider-status-detail"></div>
-            <div id="current-mode-icon"></div>
-            <div id="agent-setup-title"></div>
-            <div id="feature-1"></div>
-            <div id="feature-2"></div>
-            <div id="agent-chip-proxy"></div>
-            <div id="agent-chip-provider"></div>
-            <div id="config-btn"></div>
-        </div>
-
         <div id="api-error-message" class="error-message hidden" role="alert">
             <strong>Server Offline</strong>
             <p>Reploid can't reach <code>localhost:8000</code>.</p>
             <p><code>npm start</code> to boot the service, or read the <a href="https://github.com/clocksmith/deco/tree/main/docs" target="_blank" rel="noreferrer">setup guide</a>.</p>
         </div>
 
-        <!-- Settings Modal (kept for backward compatibility, hidden) -->
-        <div id="config-modal" class="modal hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Operating Mode</h3>
-                    <button id="close-modal" class="close-btn">×</button>
-                </div>
-                <div class="modal-body">
-                    <!-- Deployment Mode Content -->
-                    <div id="modal-mode-content">
-                        <p class="modal-tab-description">Choose how Reploid connects to AI models.</p>
-
-                        <!-- Proxy Status Alert -->
-                        <div class="proxy-status-alert hidden" id="proxy-warning">
-                            <span class="alert-icon">⚠️</span>
-                            <div class="alert-content">
-                                <strong>Proxy Server Not Running</strong>
-                                <p>Some options require the proxy server. Start it with: <code>npm start</code></p>
-                            </div>
-                        </div>
-
-                        <!-- Mode Selection Cards -->
-                        <div class="mode-cards">
-                            <div class="mode-card recommended" data-mode="cloud-direct">
-                                <div class="mode-badge recommended-badge">⛻ Fastest Setup</div>
-                                <div class="mode-card-header">
-                                    <span class="mode-icon">▲</span>
-                                    <h4 class="mode-title">Cloud Models (Browser)</h4>
-                                </div>
-                                <ul class="mode-features">
-                                    <li class="feature-pro">✓ Just an API key</li>
-                                    <li class="feature-pro">✓ Works immediately</li>
-                                    <li class="feature-pro">✓ No servers needed</li>
-                                </ul>
-                                <div class="requirements-badge">
-                                    <span class="req-icon">⚷</span> Requires: API Key
-                                </div>
-                            </div>
-
-                            <div class="mode-card" data-mode="proxy-based">
-                                <div class="mode-card-header">
-                                    <span class="mode-icon">■</span>
-                                    <h4 class="mode-title">Local & Private</h4>
-                                    <p class="mode-subtitle">Ollama or Cloud via Proxy</p>
-                                </div>
-                                <ul class="mode-features">
-                                    <li class="feature-pro">✓ Runs on your hardware</li>
-                                    <li class="feature-pro">✓ Maximum privacy</li>
-                                    <li class="feature-pro">✓ Completely free (local)</li>
-                                </ul>
-                                <div class="requirements-badge warning">
-                                    <span class="req-icon">⚙️</span> Requires: Proxy Server
-                                </div>
-                            </div>
-
-                            <div class="mode-card" data-mode="web-llm">
-                                <div class="mode-card-header">
-                                    <span class="mode-icon">◆</span>
-                                    <h4 class="mode-title">Browser-Only (WebLLM)</h4>
-                                </div>
-                                <ul class="mode-features">
-                                    <li class="feature-pro">✓ No API key needed</li>
-                                    <li class="feature-pro">✓ No proxy needed</li>
-                                    <li class="feature-pro">✓ Runs offline</li>
-                                </ul>
-                                <div class="requirements-badge info">
-                                    <span class="req-icon">⛉</span> Requires: WebGPU Support
-                                </div>
-                            </div>
-
-                            <div class="mode-card" data-mode="hybrid">
-                                <div class="mode-badge info-badge">Smart Switching</div>
-                                <div class="mode-card-header">
-                                    <span class="mode-icon">◐</span>
-                                    <h4 class="mode-title">Hybrid (Cloud + Local)</h4>
-                                    <p class="mode-subtitle">Auto-switches based on task</p>
-                                </div>
-                                <ul class="mode-features">
-                                    <li class="feature-pro">✓ Uses local for simple tasks</li>
-                                    <li class="feature-pro">✓ Uses cloud for complex tasks</li>
-                                    <li class="feature-pro">✓ Cost optimized</li>
-                                </ul>
-                                <div class="requirements-badge warning">
-                                    <span class="req-icon">⚙️</span> Requires: Proxy + API Key + Ollama
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Advanced Options (Collapsed) -->
-                        <details class="advanced-options-toggle">
-                            <summary>▼ Advanced Options</summary>
-                            <div class="mode-cards advanced-mode-cards">
-                                <div class="mode-card" data-mode="multi">
-                                    <div class="mode-card-header">
-                                        <span class="mode-icon">◈</span>
-                                        <h4 class="mode-title">High Availability</h4>
-                                    </div>
-                                    <ul class="mode-features">
-                                        <li class="feature-pro">+ Never fails</li>
-                                        <li class="feature-pro">+ Best quality</li>
-                                        <li class="feature-con">− 3x cost</li>
-                                    </ul>
-                                    <div class="requirements-badge">
-                                        <span class="req-icon">⚷</span> Requires: Multiple API Keys
-                                    </div>
-                                </div>
-
-                                <div class="mode-card" data-mode="custom">
-                                    <div class="mode-card-header">
-                                        <span class="mode-icon">⬢</span>
-                                        <h4 class="mode-title">Custom Endpoint</h4>
-                                    </div>
-                                    <ul class="mode-features">
-                                        <li class="feature-pro">+ Your infrastructure</li>
-                                        <li class="feature-pro">+ Enterprise ready</li>
-                                        <li class="feature-con">− Advanced setup</li>
-                                    </ul>
-                                    <div class="requirements-badge info">
-                                        <span class="req-icon">⚙️</span> Requires: Custom Config
-                                    </div>
-                                </div>
-                            </div>
-                        </details>
-
-                        <!-- Auto-Approve Settings -->
-                        <div class="auto-approve-section" style="margin-top: 24px; padding: 16px; background: rgba(78, 201, 176, 0.08); border: 1px solid rgba(78, 201, 176, 0.2); border-radius: 8px;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                                <div>
-                                    <h4 style="margin: 0 0 4px 0; font-size: 14px; color: #4ec9b0;">⚡ Auto-Approve Mode</h4>
-                                    <p style="margin: 0; font-size: 12px; color: #888; line-height: 1.4;">Automatically approve context curation (never auto-approves code changes for safety)</p>
-                                </div>
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="auto-approve-toggle" />
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div id="auto-approve-info" class="hidden" style="font-size: 11px; color: #4ec9b0; padding: 8px; background: rgba(78, 201, 176, 0.05); border-radius: 4px;">
-                                ✓ Context will be auto-approved. Proposals still require your review.
-                            </div>
-                        </div>
-
-                        <!-- Mode Configuration Section (shown after selecting a mode) -->
-                        <div id="mode-config-section" class="mode-config-section hidden">
-                            <div class="mode-config-header">
-                                <button type="button" id="back-to-modes" class="btn-back">← Back to modes</button>
-                                <h4 id="mode-config-title" class="mode-config-title"></h4>
-                            </div>
-
-                            <div id="mode-config-content" class="mode-config-content">
-                                <!-- Configuration UI will be dynamically inserted here -->
-                            </div>
-
-                            <!-- Proxy-Based Sub-Options (shown for proxy-based mode) -->
-                            <div id="proxy-based-options" class="proxy-based-options hidden">
-                                <div class="proxy-prerequisites">
-                                    <span class="prereq-icon">⚠️</span>
-                                    <div>
-                                        <strong>Prerequisites:</strong>
-                                        <ol>
-                                            <li>Proxy server running on localhost:8000</li>
-                                            <li>Start with: <code>npm start</code></li>
-                                        </ol>
-                                    </div>
-                                </div>
-
-                                <label class="proxy-mode-label">What do you want to connect to? <small style="color: #8e8ea6;">(Select one or more)</small></label>
-
-                                <div class="checkbox-card-group">
-                                    <div class="checkbox-card">
-                                        <input type="checkbox" name="proxy-target" value="ollama" id="proxy-ollama" />
-                                        <label for="proxy-ollama">
-                                            <div class="checkbox-card-header">
-                                                <span class="checkbox-icon">⌨️</span>
-                                                <strong>Local Ollama</strong>
-                                            </div>
-                                            <small>Free, private, runs on your machine</small>
-                                        </label>
-                                    </div>
-
-                                    <div class="checkbox-card">
-                                        <input type="checkbox" name="proxy-target" value="huggingface" id="proxy-huggingface" />
-                                        <label for="proxy-huggingface">
-                                            <div class="checkbox-card-header">
-                                                <span class="checkbox-icon">☺</span>
-                                                <strong>HuggingFace Models</strong>
-                                            </div>
-                                            <small>Open-source models via HuggingFace API</small>
-                                        </label>
-                                    </div>
-
-                                    <div class="checkbox-card">
-                                        <input type="checkbox" name="proxy-target" value="cloud" id="proxy-cloud" />
-                                        <label for="proxy-cloud">
-                                            <div class="checkbox-card-header">
-                                                <span class="checkbox-icon">☁️</span>
-                                                <strong>Cloud Models (via proxy)</strong>
-                                            </div>
-                                            <small>Gemini, GPT, Claude through your proxy</small>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <!-- Ollama Configuration (shown when ollama selected) -->
-                                <div id="ollama-config" class="proxy-target-config hidden">
-                                    <div class="config-field">
-                                        <label for="ollama-endpoint">Ollama Endpoint</label>
-                                        <input type="text" id="ollama-endpoint" value="http://localhost:11434" placeholder="http://localhost:11434" />
-                                    </div>
-                                    <div class="config-field">
-                                        <label for="ollama-model">Model Name</label>
-                                        <input type="text" id="ollama-model" placeholder="llama3:latest" />
-                                        <small>Available models: llama3:latest, gpt-oss:120b, etc.</small>
-                                    </div>
-                                </div>
-
-                                <!-- HuggingFace Configuration (shown when huggingface selected) -->
-                                <div id="huggingface-config" class="proxy-target-config hidden">
-                                    <div class="config-field">
-                                        <label for="huggingface-model">Model ID</label>
-                                        <input type="text" id="huggingface-model" placeholder="meta-llama/Llama-2-70b-chat-hf" />
-                                        <small>Examples: meta-llama/Llama-2-70b-chat-hf, mistralai/Mixtral-8x7B-Instruct-v0.1</small>
-                                    </div>
-                                    <div class="config-field">
-                                        <label for="huggingface-key">HuggingFace API Key</label>
-                                        <input type="password" id="huggingface-key" placeholder="Enter your HuggingFace API key..." />
-                                        <small>Get your free API key from <a href="https://huggingface.co/settings/tokens" target="_blank">huggingface.co/settings/tokens</a></small>
-                                    </div>
-                                </div>
-
-                                <!-- Cloud via Proxy Configuration (shown when cloud selected) -->
-                                <div id="cloud-proxy-config" class="proxy-target-config hidden">
-                                    <div class="config-field">
-                                        <label for="cloud-proxy-provider">Provider</label>
-                                        <select id="cloud-proxy-provider">
-                                            <option value="gemini">Gemini (Google)</option>
-                                            <option value="openai">GPT (OpenAI)</option>
-                                            <option value="anthropic">Claude (Anthropic)</option>
-                                        </select>
-                                    </div>
-                                    <div class="config-field">
-                                        <label for="cloud-proxy-key">API Key</label>
-                                        <input type="password" id="cloud-proxy-key" placeholder="Enter your API key..." />
-                                        <small>Your key will be sent through the proxy server</small>
-                                    </div>
-                                </div>
-
-                                <!-- Save configuration button (shown after selecting proxy target) -->
-                                <div id="proxy-save-section" class="proxy-save-section hidden">
-                                    <button type="button" id="save-proxy-config" class="save-config-btn">
-                                        Save & Continue →
-                                    </button>
-                                </div>
-
-                                <!-- Back to modes button -->
-                                <div class="proxy-back-button">
-                                    <button type="button" id="back-to-modes" class="back-btn">
-                                        ← Back to Mode Selection
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Hybrid Mode Options (shown for hybrid mode) -->
-                            <div id="hybrid-mode-options" class="proxy-based-options hidden">
-                                <div class="proxy-prerequisites" style="background: rgba(100, 150, 255, 0.1); border-left-color: #6496ff;">
-                                    <span class="prereq-icon">ℹ️</span>
-                                    <div>
-                                        <strong>How Hybrid Mode Works:</strong>
-                                        <p style="margin-top: 8px; color: #aaa; font-size: 13px;">
-                                            Hybrid mode automatically switches between local (Ollama) and cloud models based on task complexity.
-                                            <ul style="margin-top: 8px; padding-left: 20px;">
-                                                <li><strong>Simple tasks</strong> → Uses local Ollama (free, private)</li>
-                                                <li><strong>Complex tasks</strong> → Uses cloud model (more capable)</li>
-                                            </ul>
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div class="proxy-prerequisites">
-                                    <span class="prereq-icon">⚠️</span>
-                                    <div>
-                                        <strong>Prerequisites:</strong>
-                                        <ol>
-                                            <li>Proxy server running on localhost:8000 (<code>npm start</code>)</li>
-                                            <li>Ollama installed and running (<code>ollama serve</code>)</li>
-                                            <li>Cloud API key for complex tasks</li>
-                                        </ol>
-                                    </div>
-                                </div>
-
-                                <h4 style="margin: 20px 0 12px 0; font-size: 15px; color: #4ec9b0;">Configure Local Model (Ollama)</h4>
-                                <div class="config-field">
-                                    <label for="hybrid-ollama-endpoint">Ollama Endpoint</label>
-                                    <input type="text" id="hybrid-ollama-endpoint" value="http://localhost:11434" placeholder="http://localhost:11434" />
-                                </div>
-                                <div class="config-field">
-                                    <label for="hybrid-ollama-model">Local Model Name</label>
-                                    <input type="text" id="hybrid-ollama-model" placeholder="llama3:latest" value="llama3:latest" />
-                                    <small>Used for simple tasks like context curation</small>
-                                </div>
-
-                                <h4 style="margin: 20px 0 12px 0; font-size: 15px; color: #4ec9b0;">Configure Cloud Model</h4>
-                                <div class="config-field">
-                                    <label for="hybrid-cloud-provider">Cloud Provider</label>
-                                    <select id="hybrid-cloud-provider">
-                                        <option value="gemini">Gemini (Google)</option>
-                                        <option value="openai">GPT (OpenAI)</option>
-                                        <option value="anthropic">Claude (Anthropic)</option>
-                                    </select>
-                                </div>
-                                <div class="config-field">
-                                    <label for="hybrid-cloud-key">Cloud API Key</label>
-                                    <input type="password" id="hybrid-cloud-key" placeholder="Enter your API key..." />
-                                    <small>Used for complex tasks like code generation and planning</small>
-                                </div>
-
-                                <!-- Save configuration button -->
-                                <div class="proxy-save-section">
-                                    <button type="button" id="save-hybrid-config" class="save-config-btn">
-                                        Save & Continue →
-                                    </button>
-                                </div>
-
-                                <!-- Back to modes button -->
-                                <div class="proxy-back-button">
-                                    <button type="button" id="back-to-modes-hybrid" class="back-btn">
-                                        ← Back to Mode Selection
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Legacy model selection (hidden, kept for backward compatibility) -->
-                        <div id="legacy-model-selection" class="hidden">
-
-                        <!-- Model Selection -->
-                        <div class="model-selection-group">
-                            <label for="model-select" class="model-select-label">Select AI Model</label>
-                            <select id="model-select" class="model-select-dropdown">
-                                <optgroup label="Cloud Models (Require API Key)">
-                                    <option value="gemini-2.5-flash-lite" data-provider="gemini">Gemini 2.5 Flash-Lite (Fast & Cheap)</option>
-                                    <option value="gemini-2.5-flash" data-provider="gemini">Gemini 2.5 Flash (Balanced)</option>
-                                    <option value="gemini-2.5-pro" data-provider="gemini">Gemini 2.5 Pro (Most Powerful)</option>
-                                    <option value="gpt-5-mini-2025-08-07" data-provider="openai">GPT-5 Mini (Fast)</option>
-                                    <option value="gpt-5-2025-08-07" data-provider="openai">GPT-5 (Advanced)</option>
-                                    <option value="claude-haiku-4-5" data-provider="anthropic">Claude Haiku 4.5 (Fast & Cheap)</option>
-                                    <option value="claude-sonnet-4-5" data-provider="anthropic">Claude Sonnet 4.5 (Balanced)</option>
-                                    <option value="claude-opus-4-1" data-provider="anthropic">Claude Opus 4.1 (Most Powerful)</option>
-                                </optgroup>
-                                <optgroup label="Local Models (No API Key)">
-                                    <!-- Ollama models will be dynamically populated from your system -->
-                                    <option value="web-llm" data-provider="web">Web LLM (Browser-based)</option>
-                                    <option value="arena" data-provider="arena">Arena (Requires Upgrade)</option>
-                                </optgroup>
-                                <optgroup label="Advanced">
-                                    <option value="custom-proxy" data-provider="custom">Custom Proxy/Endpoint</option>
-                                </optgroup>
-                            </select>
-                            <small id="model-description" class="model-description">Choose a model from the list above</small>
-                        </div>
-
-                        <!-- API Key Section (shown conditionally) -->
-                        <div id="api-key-section" class="api-key-section hidden">
-                            <div class="api-key-input">
-                                <label for="api-key-input" id="api-key-label">API Key</label>
-                                <input type="password" id="api-key-input" placeholder="Enter your API key" />
-                                <small id="api-key-help">Your API key will be stored securely in your browser</small>
-                            </div>
-                        </div>
-
-                        <!-- Local Model Configuration (shown for Ollama) -->
-                        <div id="local-config-section" class="local-config-section hidden">
-                            <div class="api-key-input">
-                                <label for="local-endpoint">Ollama Endpoint</label>
-                                <input type="text" id="local-endpoint" placeholder="http://localhost:11434" value="http://localhost:11434" />
-                                <small>Make sure Ollama is running: <code>ollama serve</code></small>
-                            </div>
-                            <div class="api-key-input" id="custom-model-name-container" style="margin-top: 10px;">
-                                <label for="local-model">Model Name</label>
-                                <input type="text" id="local-model" placeholder="e.g., llama3:latest, gpt-oss:120b" />
-                                <small>The model name will be auto-filled when you select from the dropdown</small>
-                            </div>
-                        </div>
-
-                        <!-- Custom Proxy Configuration -->
-                        <div id="custom-proxy-section" class="custom-proxy-section hidden">
-                            <div class="api-key-input">
-                                <label for="custom-proxy-url">Custom Proxy URL</label>
-                                <input type="text" id="custom-proxy-url" placeholder="http://localhost:8000/api" />
-                                <small>Enter the full URL to your custom endpoint</small>
-                            </div>
-                            <div class="api-key-input" style="margin-top: 10px;">
-                                <label for="custom-api-key">API Key (Optional)</label>
-                                <input type="password" id="custom-api-key" placeholder="If your proxy requires authentication" />
-                            </div>
-                        </div>
-
-                        <!-- Arena Notice -->
-                        <div id="arena-notice" class="arena-notice hidden">
-                            <p>⚠ Arena requires the multi-model competitive testing upgrade to be loaded. Make sure to include it in your boot configuration.</p>
-                        </div>
-
-                        </div>
-                        <!-- End legacy model selection -->
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- End Settings Modal -->
 
         <!-- Provider Status (Read-Only) -->
             <div class="provider-status-bar">
                 <div class="provider-status-item">
-                    <span class="provider-status-icon" id="ollama-status-icon">■</span>
-                    <span class="provider-status-label">Ollama</span>
-                    <span class="provider-status-value" id="ollama-status-text">Checking...</span>
+                    <span class="provider-status-icon online" id="browser-cloud-icon">☁</span>
+                    <span class="provider-status-label">Browser → Cloud</span>
+                    <span class="provider-status-value online" id="browser-cloud-text">Ready</span>
                 </div>
                 <div class="provider-status-item">
-                    <span class="provider-status-icon" id="webgpu-status-icon">◆</span>
-                    <span class="provider-status-label">WebGPU</span>
-                    <span class="provider-status-value" id="webgpu-status-text">Checking...</span>
+                    <span class="provider-status-icon" id="proxy-cloud-icon">⇄</span>
+                    <span class="provider-status-label">Proxy → Cloud</span>
+                    <span class="provider-status-value" id="proxy-cloud-text">Checking...</span>
                 </div>
                 <div class="provider-status-item">
-                    <span class="provider-status-icon" id="proxy-status-icon">●</span>
-                    <span class="provider-status-label">Proxy</span>
-                    <span class="provider-status-value" id="proxy-status-text">Checking...</span>
+                    <span class="provider-status-icon" id="browser-local-icon">◆</span>
+                    <span class="provider-status-label">Browser → Local</span>
+                    <span class="provider-status-value" id="browser-local-text">Checking...</span>
+                </div>
+                <div class="provider-status-item">
+                    <span class="provider-status-icon" id="proxy-local-icon">■</span>
+                    <span class="provider-status-label">Proxy → Local</span>
+                    <span class="provider-status-value" id="proxy-local-text">Checking...</span>
                 </div>
             </div>
 
@@ -549,17 +133,12 @@
             </div>
         </div>
 
-        <!-- Legacy Detection Markers (hidden) -->
-        <div style="display: none;">
-            <div id="provider-status"></div>
-            <div id="provider-status-detail"></div>
-        </div>
-
         <!-- Goal Input at Top -->
         <div class="goal-container-top">
             <div class="goal-input-group">
                 <input type="text" id="goal-input" placeholder="► Select at least one model to continue" maxlength="500" disabled />
                 <button id="awaken-btn" class="btn primary" disabled>Awaken Agent</button>
+                <button id="clear-cache-btn" class="btn secondary" style="margin-left: 8px;" title="Clear VFS cache and reload (use if modules fail to load)">Clear Cache & Reload</button>
             </div>
             <!-- Example Goal Chips -->
             <div class="goal-example-chips">
@@ -573,25 +152,25 @@
         <div class="config-section">
             <h4 class="model-cards-title">REPLOID Module Set</h4>
             <div class="boot-mode-options">
-                <button class="boot-mode-btn" data-mode="headless" onclick="selectBootMode('headless')">
-                    <div class="boot-mode-label">◆ Headless</div>
-                    <div class="boot-mode-desc">31 modules — Pure functional, no UI (agent loop, VFS, tools, state management)</div>
-                </button>
-
-                <button class="boot-mode-btn" data-mode="minimal-rsi" onclick="selectBootMode('minimal-rsi')">
-                    <div class="boot-mode-label">★ Minimal RSI</div>
-                    <div class="boot-mode-desc">35 modules — Core RSI workflow with basic UI (Sentinel, Git VFS, verification, essential panels)</div>
-                </button>
-
-                <button class="boot-mode-btn selected recommended" data-mode="rsi-core" onclick="selectBootMode('rsi-core')">
+                <button class="boot-mode-btn selected recommended" data-mode="core" onclick="selectBootMode('core')">
                     <div class="boot-mode-badge">RECOMMENDED</div>
-                    <div class="boot-mode-label">☥ RSI Core</div>
-                    <div class="boot-mode-desc">46 modules — Full RSI with comprehensive UI (reflection, monitoring, all panels, metrics dashboard)</div>
+                    <div class="boot-mode-label">★ CORE</div>
+                    <div class="boot-mode-desc">64 modules — Complete RSI agent with full UI and MCP capabilities</div>
+                    <div class="boot-mode-details">Includes: VFS, Git, MCP protocol, all stable MCP servers, reflection, performance monitoring, model management, complete UI dashboard</div>
                 </button>
 
-                <button class="boot-mode-btn" data-mode="experimental" onclick="selectBootMode('experimental')">
-                    <div class="boot-mode-label">⛉ Experimental</div>
-                    <div class="boot-mode-desc">56 modules — All features: Pyodide, WebRTC, peer consensus, visualizers, analytics</div>
+                <button class="boot-mode-btn" data-mode="headless" onclick="selectBootMode('headless')">
+                    <div class="boot-mode-badge experimental-badge">EXPERIMENTAL</div>
+                    <div class="boot-mode-label">◆ HEADLESS</div>
+                    <div class="boot-mode-desc">44 modules — MCP API server with no UI for external clients</div>
+                    <div class="boot-mode-details">Includes: Core infrastructure, essential MCP servers (Tier 1 only), no UI modules. For CI/CD, APIs, and embedded systems.</div>
+                </button>
+
+                <button class="boot-mode-btn" data-mode="complete" onclick="selectBootMode('complete')">
+                    <div class="boot-mode-badge experimental-badge">EXPERIMENTAL</div>
+                    <div class="boot-mode-label">⛉ COMPLETE</div>
+                    <div class="boot-mode-desc">85 modules — All features including experimental capabilities</div>
+                    <div class="boot-mode-details">Includes: Everything from CORE + Pyodide Python runtime, WebRTC P2P swarm, peer consensus, goal modification, advanced tutorials</div>
                 </button>
             </div>
 
@@ -619,22 +198,14 @@
         <div id="directory-modal" class="modal hidden">
             <div class="modal-content directory-modal-content">
                 <div class="modal-header">
-                    <h3 id="directory-modal-title">Module & Blueprint Directory</h3>
+                    <h3 id="directory-modal-title">Module Directory</h3>
                     <button type="button" class="close-btn" onclick="window.closeDirectoryModal()">×</button>
                 </div>
                 <div class="modal-body directory-modal-body">
-                    <div class="directory-toolbar">
-                        <div class="directory-tabs">
-                            <button type="button" class="directory-tab active" data-category="modules">Modules</button>
-                            <button type="button" class="directory-tab" data-category="blueprints">Blueprints</button>
-                        </div>
-                        <input type="text" id="directory-search" class="directory-search" placeholder="Search..." aria-label="Search modules and blueprints" />
-                    </div>
-                    <div class="directory-filters" role="group" aria-label="Filter by preset">
-                        <button type="button" class="directory-filter active" data-filter="all">All Presets</button>
-                        <button type="button" class="directory-filter" data-filter="minimal">Minimal Core</button>
-                        <button type="button" class="directory-filter" data-filter="knowledge">Core + Knowledge</button>
-                        <button type="button" class="directory-filter" data-filter="full">Full Arsenal</button>
+                    <div class="directory-filters" role="group" aria-label="Select preset">
+                        <button type="button" class="directory-filter active" data-preset="core" onclick="switchModulePreset('core')">CORE</button>
+                        <button type="button" class="directory-filter" data-preset="headless" onclick="switchModulePreset('headless')">HEADLESS</button>
+                        <button type="button" class="directory-filter" data-preset="complete" onclick="switchModulePreset('complete')">COMPLETE</button>
                     </div>
                     <div class="directory-content" id="directory-content"></div>
                 </div>

@@ -6,13 +6,13 @@ const VerificationManager = {
   metadata: {
     id: 'VerificationManager',
     version: '1.0.0',
-    dependencies: ['Utils', 'StateManager'],
+    dependencies: ['Utils', 'Storage'],
     async: false,
     type: 'service'
   },
 
   factory: (deps) => {
-    const { Utils, StateManager } = deps;
+    const { Utils, Storage } = deps;
     const { logger } = Utils;
 
     let worker = null;
@@ -126,7 +126,7 @@ const VerificationManager = {
     // Create VFS snapshot for worker
     const createVFSSnapshot = async () => {
         const snapshot = {};
-        const allMetadata = await StateManager.getAllArtifactMetadata();
+        const allMetadata = await Storage.getAllArtifactMetadata();
 
         // Include only necessary files for verification
         for (const [path, meta] of Object.entries(allMetadata)) {
@@ -136,7 +136,7 @@ const VerificationManager = {
                 path.includes('test') ||
                 path.includes('spec')) {
 
-                const content = await StateManager.getArtifactContent(path);
+                const content = await Storage.getArtifactContent(path);
                 if (content) {
                     snapshot[path] = content;
                 }

@@ -1,0 +1,76 @@
+{
+  "root": "/home/clocksmith/deco/paws",
+  "tree": [
+    {
+      "path": "/home/clocksmith/deco/paws/reploid",
+      "name": "reploid",
+      "type": "directory",
+      "children": [
+        {
+          "path": "/home/clocksmith/deco/paws/reploid/boot.js",
+          "name": "boot.js",
+          "type": "file",
+          "size": 15420
+        },
+        {
+          "path": "/home/clocksmith/deco/paws/reploid/config.json",
+          "name": "config.json",
+          "type": "file",
+          "size": 2048
+        },
+        {
+          "path": "/home/clocksmith/deco/paws/reploid/upgrades",
+          "name": "upgrades",
+          "type": "directory",
+          "children": [
+            {
+              "path": "/home/clocksmith/deco/paws/reploid/upgrades/core",
+              "name": "core",
+              "type": "directory",
+              "children": [
+                {
+                  "path": "/home/clocksmith/deco/paws/reploid/upgrades/core/sentinel-fsm.js",
+                  "name": "sentinel-fsm.js",
+                  "type": "file",
+                  "size": 8192
+                },
+                {
+                  "path": "/home/clocksmith/deco/paws/reploid/upgrades/core/tool-runner.js",
+                  "name": "tool-runner.js",
+                  "type": "file",
+                  "size": 6144
+                }
+              ]
+            },
+            {
+              "path": "/home/clocksmith/deco/paws/reploid/upgrades/ui",
+              "name": "ui",
+              "type": "directory",
+              "children": [
+                {
+                  "path": "/home/clocksmith/deco/paws/reploid/upgrades/ui/sentinel-panel.js",
+                  "name": "sentinel-panel.js",
+                  "type": "file",
+                  "size": 12288
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/home/clocksmith/deco/paws/lens",
+      "name": "lens",
+      "type": "directory",
+      "children": [
+        {
+          "path": "/home/clocksmith/deco/paws/lens/SPEC.md",
+          "name": "SPEC.md",
+          "type": "file",
+          "size": 32768
+        }
+      ]
+    }
+  ]
+}

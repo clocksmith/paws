@@ -202,6 +202,59 @@ function setupEventListeners() {
         elements.awakenBtn.addEventListener('click', awakenAgent);
     }
 
+    // Clear Cache & Reload button
+    const clearCacheBtn = document.getElementById('clear-cache-btn');
+    if (clearCacheBtn) {
+        clearCacheBtn.addEventListener('click', async () => {
+            console.log('[Boot] Clear cache button clicked');
+
+            // Show confirmation dialog
+            const confirmed = confirm(
+                'This will clear all VFS data and reload the page.\n\n' +
+                'Use this if modules are failing to load due to cache issues.\n\n' +
+                'Continue?'
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+                // Clear IndexedDB databases
+                const databases = await window.indexedDB.databases();
+                console.log('[Boot] Found databases:', databases);
+
+                for (const db of databases) {
+                    console.log('[Boot] Deleting database:', db.name);
+                    await new Promise((resolve, reject) => {
+                        const request = window.indexedDB.deleteDatabase(db.name);
+                        request.onsuccess = resolve;
+                        request.onerror = reject;
+                        request.onblocked = () => {
+                            console.warn('[Boot] Delete blocked for:', db.name);
+                            resolve(); // Continue anyway
+                        };
+                    });
+                }
+
+                // Clear localStorage
+                localStorage.clear();
+
+                // Clear sessionStorage
+                sessionStorage.clear();
+
+                console.log('[Boot] VFS cache cleared successfully');
+
+                // Reload page with cache bypass
+                location.reload(true);
+
+            } catch (error) {
+                console.error('[Boot] Failed to clear cache:', error);
+                alert('Failed to clear cache: ' + error.message);
+            }
+        });
+    }
+
     // Global auto-approve toggle card (clickable card instead of separate toggle)
     const autoApproveCard = document.getElementById('auto-approve-card');
     const autoApproveToggle = document.getElementById('auto-approve-toggle');
@@ -532,8 +585,9 @@ async function awakenAgent() {
         return;
     }
 
-    // Immediately hide boot container
+    // Hide boot container immediately
     bootContainer.style.display = 'none';
+    console.log('[Boot] Boot container hidden');
 
     // Show loading overlay
     const loadingOverlay = document.createElement('div');
@@ -612,16 +666,22 @@ async function awakenAgent() {
             `;
     document.body.appendChild(loadingOverlay);
 
-    // Show app root immediately
+    // Show app root immediately with proper z-index layering
     appRoot.style.display = 'block';
     appRoot.style.opacity = '0';
+    appRoot.style.zIndex = '1';  // Ensure app-root appears above boot-container
+    console.log('[Boot] App root prepared (display: block, opacity: 0, z-index: 1)');
 
     // CRITICAL: Use requestAnimationFrame to ensure DOM updates before async work
     // This forces the browser to render the boot screen removal
     await new Promise(resolve => requestAnimationFrame(resolve));
 
     // Now remove the boot container from DOM after browser has painted
+    console.log('[Boot] About to remove boot-container. Parent node:', bootContainer.parentNode?.nodeName);
+    console.log('[Boot] Boot container children count:', bootContainer.childElementCount);
     bootContainer.remove();
+    console.log('[Boot] Boot container removed from DOM');
+    console.log('[Boot] Verifying removal - boot-container still exists?:', document.getElementById('boot-container') !== null);
 
     try {
         // ============================================================
@@ -643,7 +703,7 @@ async function awakenAgent() {
         logGenesisAction('Genesis cycle started', { goal });
 
         // Collect and save boot state to VFS for genesis cycle
-        const bootMode = localStorage.getItem('BOOT_MODE') || 'rsi-core';
+        const bootMode = localStorage.getItem('BOOT_MODE') || 'core';
         const consensusType = localStorage.getItem('CONSENSUS_TYPE') || 'arena';
         const selectedModels = getSelectedModels();
 
@@ -700,18 +760,23 @@ async function awakenAgent() {
         // First, fetch module manifest to know what to load
         const manifestResponse = await fetch('/module-manifest.json?t=' + Date.now());
         const manifest = await manifestResponse.json();
-        logGenesisAction('Fetched module manifest', { version: manifest.version, loadGroups: Object.keys(manifest.loadGroups).length });
+        logGenesisAction('Fetched module manifest', { version: manifest.version, presets: Object.keys(manifest.presets || {}).length });
 
         // Determine which modules to load based on boot mode
         let modulesToLoad = [];
         let presetName = bootMode;
 
-        // Map boot mode names to preset names (legacy compatibility)
+        // Map boot mode names to preset names
         const modeMapping = {
+            'core': 'core',
             'headless': 'headless',
-            'minimal': 'minimal-rsi',
-            'meta': 'rsi-core',
-            'experimental': 'experimental'
+            'complete': 'complete',
+            // Legacy compatibility
+            'minimal': 'core',
+            'minimal-rsi': 'core',
+            'meta': 'core',
+            'rsi-core': 'core',
+            'experimental': 'complete'
         };
 
         presetName = modeMapping[bootMode] || bootMode;
@@ -720,10 +785,10 @@ async function awakenAgent() {
         if (manifest.presets?.[presetName]) {
             modulesToLoad = manifest.presets[presetName];
         } else {
-            // Fallback to RSI core as default
-            console.warn(`[BootLoader] Unknown boot mode '${bootMode}', falling back to RSI Core`);
-            modulesToLoad = manifest.presets?.['rsi-core'] || [];
-            presetName = 'rsi-core';
+            // Fallback to CORE as default
+            console.warn(`[BootLoader] Unknown boot mode '${bootMode}', falling back to CORE`);
+            modulesToLoad = manifest.presets?.['core'] || [];
+            presetName = 'core';
         }
 
         logGenesisAction('Determined module preset', { preset: presetName, moduleCount: modulesToLoad.length });
@@ -767,10 +832,28 @@ async function awakenAgent() {
 
         // Helper to write file to VFS
         const writeToVFS = async (filepath, content) => {
-            const dir = filepath.substring(0, filepath.lastIndexOf('/'));
-            if (dir) {
-                await fs.promises.mkdir(dir, { recursive: true }).catch(() => {});
+            // Create all parent directories recursively
+            const parts = filepath.split('/').filter(p => p);
+            const dirs = [];
+
+            // Build directory paths (excluding filename)
+            for (let i = 0; i < parts.length - 1; i++) {
+                dirs.push('/' + parts.slice(0, i + 1).join('/'));
             }
+
+            // Create each directory in sequence
+            for (const dir of dirs) {
+                try {
+                    await fs.promises.mkdir(dir);
+                } catch (error) {
+                    // Directory might already exist, ignore EEXIST errors
+                    if (error.code !== 'EEXIST') {
+                        console.warn(`[VFS] mkdir warning for ${dir}:`, error.message);
+                    }
+                }
+            }
+
+            // Write the file
             await fs.promises.writeFile(filepath, content, 'utf8');
         };
 
@@ -869,10 +952,9 @@ async function awakenAgent() {
         // Create VFS interface for agent
         const vfs = {
             read: async (path) => {
-                console.log(`[VFS] Reading from IndexedDB: ${path}`);
+                // Reduced logging - only errors are logged
                 try {
                     const content = await fs.promises.readFile(path, 'utf8');
-                    console.log(`[VFS] Loaded: ${path} (${content.length} bytes)`);
                     return content;
                 } catch (error) {
                     console.error(`[VFS] Error reading ${path}:`, error);
@@ -954,6 +1036,7 @@ async function awakenAgent() {
                     if (loadingOverlay.parentNode) {
                         loadingOverlay.remove();
                         console.log('[Boot] Boot overlay removed');
+                        console.log('[Boot] Final check - boot-container still exists after overlay removal?:', document.getElementById('boot-container') !== null);
                     }
                     resolve();
                 }, 500);
@@ -963,11 +1046,11 @@ async function awakenAgent() {
             }
         });
 
-        // Hide the boot container now that loading is complete
-        // This automatically hides all children including goal-container-top and config-section
+        // Remove the boot container from DOM now that loading is complete
+        // This frees up memory and removes all children including goal-container-top and config-section
         if (bootContainer && bootContainer.parentNode) {
-            bootContainer.style.display = 'none';
-            console.log('[Boot] Boot container hidden');
+            bootContainer.remove();
+            console.log('[Boot] Boot container removed from DOM');
         }
 
         console.log('[Boot] Boot overlay removal complete - starting user cycle');
@@ -976,12 +1059,12 @@ async function awakenAgent() {
         if (agentSystem && agentSystem.goal && agentSystem.container) {
             console.log('[Boot] Starting user cycle with goal:', agentSystem.goal);
             try {
-                const SentinelFSM = await agentSystem.container.resolve('SentinelFSM');
-                if (SentinelFSM && SentinelFSM.startCycle) {
-                    await SentinelFSM.startCycle(agentSystem.goal);
+                const AgentCycle = await agentSystem.container.resolve('AgentCycleStructured');
+                if (AgentCycle && AgentCycle.executeStructuredCycle) {
+                    await AgentCycle.executeStructuredCycle(agentSystem.goal);
                     console.log('[Boot] User cycle started successfully');
                 } else {
-                    console.error('[Boot] SentinelFSM.startCycle not available');
+                    console.error('[Boot] AgentCycleStructured.executeStructuredCycle not available');
                 }
             } catch (cycleError) {
                 console.error('[Boot] Failed to start user cycle:', cycleError);
@@ -1060,69 +1143,120 @@ window.selectBootMode = function(mode) {
 };
 
 // Expose module directory functions globally
-window.showModuleDirectory = async function() {
+window.showModuleDirectory = async function(presetName = null) {
     const modal = document.getElementById('directory-modal');
     const content = document.getElementById('directory-content');
 
     if (!modal || !content) return;
 
     // Show loading state
-    content.innerHTML = '<div style="padding: 40px; text-align: center; color: #888;">Loading blueprints...</div>';
+    content.innerHTML = '<div style="padding: 40px; text-align: center; color: #888;">Loading modules...</div>';
     modal.classList.remove('hidden');
 
+    // If no preset specified, use current boot mode
+    if (!presetName) {
+        const bootMode = localStorage.getItem('BOOT_MODE') || 'core';
+        const modeMapping = {
+            'core': 'core',
+            'headless': 'headless',
+            'complete': 'complete',
+            'minimal': 'core',
+            'minimal-rsi': 'core',
+            'meta': 'core',
+            'rsi-core': 'core',
+            'experimental': 'complete'
+        };
+        presetName = modeMapping[bootMode] || bootMode;
+    }
+
     try {
-        // Fetch blueprints list from the server
-        const response = await fetch('/blueprints/', {
-            headers: { 'Accept': 'text/html' }
-        });
+        // Fetch module manifest (single source of truth)
+        const response = await fetch('/module-manifest.json?t=' + Date.now());
 
         if (!response.ok) {
-            throw new Error('Failed to load blueprints');
+            throw new Error('Failed to load module manifest');
         }
 
-        const html = await response.text();
+        const manifest = await response.json();
+        const modules = manifest.presets?.[presetName] || [];
 
-        // Parse the directory listing to extract blueprint names
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        const links = Array.from(doc.querySelectorAll('a')).filter(a => a.href.includes('.md'));
-
-        if (links.length === 0) {
-            content.innerHTML = '<div style="padding: 40px; text-align: center; color: #888;">No blueprints found</div>';
+        if (modules.length === 0) {
+            content.innerHTML = '<div style="padding: 40px; text-align: center; color: #888;">No modules found for this preset</div>';
             return;
         }
 
-        // Create blueprint list
-        let modulesHTML = '<div class="module-list">';
+        // Get description from manifest
+        const descriptions = {
+            'core': '64 modules — Complete RSI agent with full UI and in-browser MCP protocol servers',
+            'headless': '45 modules — In-browser MCP protocol server, no UI',
+            'complete': '85 modules — Everything including experimental in-browser MCP servers'
+        };
 
-        links.forEach((link, index) => {
-            const filename = link.textContent.trim();
-            const name = filename.replace(/^0x[0-9A-F]+-/, '').replace(/\.md$/, '').replace(/-/g, ' ');
+        // Create module list with proper categories
+        let modulesHTML = `
+            <div style="padding: 0;">
+                <div style="color: #888; margin-bottom: 20px; text-align: center; font-size: 14px;">
+                    ${descriptions[presetName] || `${modules.length} modules`}
+                </div>
+                <div class="module-list">
+        `;
+
+        modules.forEach((modulePath, index) => {
+            const filename = modulePath.split('/').pop();
+            const category = modulePath.includes('/mcp/servers/') ? 'MCP Server' :
+                            modulePath.includes('/mcp/') ? 'MCP Infrastructure' :
+                            modulePath.includes('/ui/') ? 'UI' :
+                            modulePath.includes('/lens/') ? 'Lens' :
+                            modulePath.includes('/personas/') ? 'Persona' :
+                            modulePath.includes('/utils/') ? 'Utility' :
+                            'Core';
+
+            const name = filename.replace(/\.js$/, '').replace(/\.ts$/, '').replace(/-/g, ' ');
             const capitalizedName = name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 
             modulesHTML += `
-                <div class="module-item">
-                    <div class="module-number">${String(index + 1).padStart(3, '0')}</div>
-                    <div class="module-info">
-                        <div class="module-name">${capitalizedName}</div>
-                        <div class="module-file">${filename}</div>
+                <div class="module-item" style="padding: 12px; border-bottom: 1px solid #333; display: flex; align-items: center;">
+                    <div style="color: #666; font-family: monospace; margin-right: 15px; min-width: 40px;">
+                        ${String(index + 1).padStart(3, '0')}
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="color: #fff; font-weight: 600; margin-bottom: 4px;">${capitalizedName}</div>
+                        <div style="color: #888; font-size: 11px; font-family: monospace;">${modulePath}</div>
+                    </div>
+                    <div style="color: #0ff; font-size: 11px; padding: 4px 8px; background: rgba(0,255,255,0.1); border-radius: 3px;">
+                        ${category}
                     </div>
                 </div>
             `;
         });
 
-        modulesHTML += '</div>';
+        modulesHTML += '</div></div>';
         content.innerHTML = modulesHTML;
 
     } catch (error) {
-        console.error('[Boot] Error loading blueprints:', error);
+        console.error('[Boot] Error loading modules:', error);
         content.innerHTML = `
             <div style="padding: 40px; text-align: center;">
-                <div style="color: #e74856; margin-bottom: 10px;">Failed to load blueprints</div>
+                <div style="color: #e74856; margin-bottom: 10px;">Failed to load modules</div>
                 <div style="color: #888; font-size: 12px;">${error.message}</div>
             </div>
         `;
     }
+};
+
+window.switchModulePreset = function(presetName) {
+    // Update active button
+    const filters = document.querySelectorAll('.directory-filter');
+    filters.forEach(btn => {
+        if (btn.dataset.preset === presetName) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    // Load modules for this preset
+    window.showModuleDirectory(presetName);
 };
 
 window.closeDirectoryModal = function() {

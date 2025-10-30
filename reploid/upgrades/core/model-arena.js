@@ -18,13 +18,13 @@ const ModelArena = {
   metadata: {
     id: 'ModelArena',
     version: '2.0.0',
-    dependencies: ['Utils', 'EventBus', 'StateManager', 'HybridLLMProvider', 'VerificationManager', 'DIContainer', 'Config', 'ModelRegistry?'],
+    dependencies: ['Utils', 'EventBus', 'Storage', 'HybridLLMProvider', 'VerificationManager', 'DIContainer', 'Config', 'ModelRegistry?'],
     async: true,
     type: 'rsi'
   },
 
   factory: (deps) => {
-    const { Utils, EventBus, StateManager, HybridLLMProvider, VerificationManager, DIContainer, Config, ModelRegistry } = deps;
+    const { Utils, EventBus, Storage, HybridLLMProvider, VerificationManager, DIContainer, Config, ModelRegistry } = deps;
     const { logger } = Utils;
 
     // Get all 6 verified cloud models from config (2 per provider)
@@ -565,7 +565,7 @@ SCORE:`;
         // Create VFS workspace snapshot
         logger.info('[Arena] Creating VFS workspace snapshot');
         _activeCompetition.phase = 'workspace_creation';
-        const workspace = await StateManager.api.createSnapshot?.() || {};
+        const workspace = await Storage.api.createSnapshot?.() || {};
 
         // Phase 0: Generate shared tests (if enabled)
         let sharedTests = null;

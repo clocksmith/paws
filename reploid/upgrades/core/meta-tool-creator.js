@@ -27,14 +27,14 @@ const MetaToolCreator = {
   metadata: {
     id: 'MetaToolCreator',
     version: '1.0.0',
-    dependencies: ['config', 'Storage', 'StateManager', 'Utils'],
+    dependencies: ['config', 'Storage', 'Utils'],
     async: false,
     type: 'service'
   },
 
   factory: (deps) => {
     // Validate dependencies
-    const { config, Storage, StateManager, Utils } = deps;
+    const { config, Storage, Utils } = deps;
     const { logger, Errors } = Utils;
     const { ToolError, ArtifactError } = Errors;
 
@@ -167,7 +167,7 @@ const MetaToolCreator = {
       // Create full nested structure for storage
       const toolDef = {
         id: name.toLowerCase().replace(/\s+/g, '_'),
-        created_cycle: StateManager.getState()?.totalCycles || 0,
+        created_cycle: Storage.getState()?.totalCycles || 0,
         created_reason: metadata.reason || "Created via Meta-Tool Creator",
         declaration: {
           name,
@@ -201,14 +201,14 @@ const MetaToolCreator = {
       dynamicTools.push(toolDef);
 
       // Save updated tools
-      const success = await StateManager.updateArtifact(
+      const success = await Storage.updateArtifact(
         dynamicToolsPath,
         JSON.stringify(dynamicTools, null, 2)
       );
 
       if (!success) {
         // Try creating if update failed
-        await StateManager.createArtifact(
+        await Storage.createArtifact(
           dynamicToolsPath,
           "json",
           JSON.stringify(dynamicTools, null, 2),
