@@ -89,7 +89,8 @@ async function initVFS() {
     // Check if all core modules exist (migration check)
     const requiredModules = [
       'vfs.js', 'llm-client.js', 'tool-runner.js', 'tool-writer.js',
-      'meta-tool-writer.js', 'agent-loop.js', 'substrate-loader.js', 'substrate-tools.js'
+      'meta-tool-writer.js', 'agent-loop.js', 'substrate-loader.js', 'substrate-tools.js',
+      'multi-model-coordinator.js'
     ];
 
     let needsMigration = false;
