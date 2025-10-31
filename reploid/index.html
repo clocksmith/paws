@@ -153,31 +153,31 @@
         <div class="config-section">
             <h4 class="model-cards-title">REPLOID Module Set</h4>
             <div class="boot-mode-options">
-                <button class="boot-mode-btn selected recommended" data-mode="core" onclick="selectBootMode('core')">
+                <button class="boot-mode-btn selected recommended" data-mode="single" onclick="selectBootMode('single')">
                     <div class="boot-mode-badge">RECOMMENDED</div>
-                    <div class="boot-mode-label">★ CORE</div>
-                    <div class="boot-mode-desc">64 modules — Complete RSI agent with full UI and MCP capabilities</div>
-                    <div class="boot-mode-details">Includes: VFS, Git, MCP protocol, all stable MCP servers, reflection, performance monitoring, model management, complete UI dashboard</div>
+                    <div class="boot-mode-label">★ SINGLE MODEL</div>
+                    <div class="boot-mode-desc">One model does all tasks sequentially</div>
+                    <div class="boot-mode-details">Best for: Most tasks, simple workflows, getting started. Fast and predictable.</div>
+                </button>
+
+                <button class="boot-mode-btn" data-mode="multi" onclick="selectBootMode('multi')">
+                    <div class="boot-mode-badge experimental-badge">EXPERIMENTAL</div>
+                    <div class="boot-mode-label">◆ MULTI-MODEL</div>
+                    <div class="boot-mode-desc">Multiple models work together with advanced coordination</div>
+                    <div class="boot-mode-details">Modes: Arena (models compete, best wins), Swarm (parallel execution, merge results), Consensus (models vote on decisions). Slower but more robust.</div>
                 </button>
 
                 <button class="boot-mode-btn" data-mode="headless" onclick="selectBootMode('headless')">
                     <div class="boot-mode-badge experimental-badge">EXPERIMENTAL</div>
-                    <div class="boot-mode-label">◆ HEADLESS</div>
-                    <div class="boot-mode-desc">44 modules — MCP API server with no UI for external clients</div>
-                    <div class="boot-mode-details">Includes: Core infrastructure, essential MCP servers (Tier 1 only), no UI modules. For CI/CD, APIs, and embedded systems.</div>
-                </button>
-
-                <button class="boot-mode-btn" data-mode="complete" onclick="selectBootMode('complete')">
-                    <div class="boot-mode-badge experimental-badge">EXPERIMENTAL</div>
-                    <div class="boot-mode-label">⛉ COMPLETE</div>
-                    <div class="boot-mode-desc">85 modules — All features including experimental capabilities</div>
-                    <div class="boot-mode-details">Includes: Everything from CORE + Pyodide Python runtime, WebRTC P2P swarm, peer consensus, goal modification, advanced tutorials</div>
+                    <div class="boot-mode-label">⚙ HEADLESS API</div>
+                    <div class="boot-mode-desc">No UI, exposes agent as API server</div>
+                    <div class="boot-mode-details">Best for: Integration with other apps, automation, CI/CD pipelines. Returns JSON responses over HTTP.</div>
                 </button>
             </div>
 
             <!-- Browse Modules Link -->
             <div class="browse-modules-link">
-                <a href="#" onclick="window.showModuleDirectory(); return false;">Browse all modules →</a>
+                <a href="#" onclick="window.openModuleBrowser(); return false;">Browse all modules →</a>
             </div>
         </div>
 
@@ -414,7 +414,39 @@
 
     <div id="app-root" style="display: none;"></div>
 
-            <script src="https://unpkg.com/@isomorphic-git/lightning-fs"></script>
+    <script>
+        // Boot mode selection
+        let selectedBootMode = 'single'; // Default
+
+        function selectBootMode(mode) {
+            selectedBootMode = mode;
+            console.log('[Boot] Selected mode:', mode);
+
+            // Update UI
+            document.querySelectorAll('.boot-mode-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.querySelector(`[data-mode="${mode}"]`).classList.add('selected');
+
+            // Store selection
+            localStorage.setItem('reploid_boot_mode', mode);
+        }
+
+        // Module browser
+        function openModuleBrowser() {
+            alert('Module browser coming soon!\n\nYou can manually configure modules by editing boot.js.\n\nCurrent mode: ' + selectedBootMode);
+        }
+
+        // Restore saved boot mode
+        window.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem('reploid_boot_mode');
+            if (saved) {
+                selectBootMode(saved);
+            }
+        });
+    </script>
+
+    <script src="https://unpkg.com/@isomorphic-git/lightning-fs"></script>
     <script src="https://unpkg.com/isomorphic-git"></script>
     <script type="module" src="https://unpkg.com/isomorphic-git/http/web/index.js"></script>
     <!-- Dev integrations loaded conditionally via boot.js -->

@@ -31,11 +31,9 @@ Command-line tools for AI-driven development workflows.
 
 ## REPLOID - Browser-Native Self-Improving Agent
 
-**R**ecursive **E**volutionary **P**rotocol **L**earning **O**rganism with **I**terative **D**evelopment via **DREAMER**
-→ **D**ynamic **R**ecursive **E**volution **A**gent **M**utating **E**ach **R**EPLOID
-→ REPLOID ↔ DREAMER ↔ ∞
+**R**ecursive **E**volution **P**rotocol for **L**evel-**O**ptimizing **I**ntelligence **D**evelopment
 
-**AI agent with RSI running entirely in your browser.**
+AI agent with RSI running entirely in your browser.
 
 ### What It Does
 

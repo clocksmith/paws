@@ -1,44 +1,15 @@
 # REPLOID
 
-**Browser-Native Self-Improving AI Agent**
+**Recursive Evolution Protocol for Level-Optimizing Intelligence Development**
 
-REPLOID is an AI agent that runs entirely in your browser with Recursive Self-Improvement (RSI) capabilities. The agent can create new tools at runtime, modify its own code, and evolve its capabilities without touching the filesystem.
+A browser-native AI agent with self-improvement capabilities. REPLOID runs entirely in your browser, creating new tools at runtime and modifying its own code to evolve its capabilities.
 
----
+**RSI Levels:**
+- **Level 1**: Creates new tools at runtime
+- **Level 2**: Improves its tool creation mechanism
+- **Level 2+**: Modifies any core module (agent-loop, tool-runner, etc.)
 
-## What It Does
-
-REPLOID achieves **Level 2 RSI** (meta-improvement):
-
-- **Level 1**: Agent creates NEW tools at runtime (tool generation)
-- **Level 2**: Agent improves its tool creation mechanism itself (meta-recursion)
-- **Level 2+**: Agent modifies ANY of its core modules (agent-loop, tool-runner, etc.)
-
-All improvements persist in IndexedDB. The original source files remain unchanged as the "genesis" state.
-
----
-
-## Quick Start
-
-```bash
-# 1. Install dependencies
-pnpm install
-
-# 2. Start server (for proxy-based API calls and Ollama)
-pnpm start
-# Server runs on http://localhost:8000
-
-# 3. Open browser
-# Navigate to http://localhost:8000
-```
-
-On the boot screen:
-1. **Configure model(s)** - Add at least one LLM (Gemini, Claude, GPT, Ollama, or WebLLM)
-2. **Enter a goal** - Try one of the example chips:
-   - "Create tools to make tools to make tools"
-   - "Analyze your own inefficiency patterns and improve yourself"
-   - "Build a self-modifying code generation system"
-3. **Click "Awaken Agent"** - Watch the agent work
+All improvements persist in IndexedDB while original source files remain unchanged as the "genesis" state.
 
 ---
 
@@ -46,54 +17,15 @@ On the boot screen:
 
 ```mermaid
 graph TB
-    subgraph Browser["Browser Runtime"]
-        subgraph Substrate["Substrate Layer"]
-            Dashboard["Dashboard UI"]
-            Widgets["Dynamic Widgets"]
-        end
-
-        subgraph Core["Core Modules (8 files)"]
-            AgentLoop["agent-loop.js<br/>Cognitive Cycle"]
-            ToolRunner["tool-runner.js<br/>Tool Execution"]
-            ToolWriter["tool-writer.js<br/>Tool Creation"]
-            MetaWriter["meta-tool-writer.js<br/>Meta-Improvement"]
-            SubstrateLoader["substrate-loader.js<br/>Code Injection"]
-            LLMClient["llm-client.js<br/>Multi-Provider API"]
-            VFS["vfs.js<br/>Virtual Filesystem"]
-            SubstrateTools["substrate-tools.js<br/>10 Substrate Tools"]
-        end
-
-        subgraph Storage["IndexedDB (VFS)"]
-            CoreEvolved["/core/*.js<br/>Evolved Modules"]
-            ToolsDir["/tools/*.js<br/>Agent-Created Tools"]
-            WidgetsDir["/widgets/*.js<br/>UI Components"]
-        end
-    end
-
-    subgraph Disk["Disk (Genesis)"]
-        GenesisSrc["/core/*.js<br/>Original Source"]
-    end
-
-    AgentLoop --> ToolRunner
-    AgentLoop --> LLMClient
-    ToolRunner --> ToolWriter
-    ToolRunner --> MetaWriter
-    ToolRunner --> SubstrateTools
-    SubstrateTools --> SubstrateLoader
-    SubstrateLoader --> Substrate
-
-    VFS --> Storage
-
-    GenesisSrc -.First Boot.-> CoreEvolved
-    CoreEvolved --> Core
-    ToolsDir --> ToolRunner
-
-    style Storage fill:#1a1a1a
-    style Core fill:#0a2f2f
-    style Substrate fill:#2f0a2f
+    Agent[Agent Loop] --> LLM[LLM Client]
+    Agent --> Tools[Tool Runner]
+    Tools --> VFS[Virtual Filesystem<br/>IndexedDB]
+    VFS --> Evolved[Evolved Code]
+    VFS --> Created[Created Tools]
+    Genesis[Genesis State<br/>Disk] -.First Boot.-> VFS
 ```
 
-**RSI Process:** Agent reads its code from VFS → analyzes inefficiencies → generates improvements → writes back to VFS → hot-reloads via blob URLs → becomes better version of itself.
+**How it works:** Agent reads code from VFS → analyzes & improves → writes back to VFS → hot-reloads → becomes better.
 
 ---
 
@@ -162,90 +94,37 @@ The agent starts with these CRUD-organized tools:
 
 ---
 
-## Example: Tool Creation Flow
+## Examples
 
-**User Goal:** "Create a tool that adds two numbers"
+### 1. Tool Creation (Level 1 RSI)
+**Goal:** "Create a tool that adds two numbers"
 
-```
-1. Agent Loop → LLM: "How do I create an add_numbers tool?"
+The agent might:
+1. Use LLM to generate tool code: `create_tool('add_numbers', code)`
+2. Tool Writer validates syntax and saves to `/tools/add_numbers.js` in VFS
+3. Tool is loaded via blob URL and registered with Tool Runner
+4. Execute the new tool: `add_numbers({a: 5, b: 3})` → Result: 8
+5. Tool is now available for future use
 
-2. LLM Response:
-   TOOL_CALL: create_tool
-   ARGS: {
-     "name": "add_numbers",
-     "code": "export default async function add_numbers(args) { return args.a + args.b; }"
-   }
+### 2. Meta-Improvement (Level 2 RSI)
+**Goal:** "Analyze your tool creation process and optimize it"
 
-3. Agent Loop → Tool Runner → Tool Writer:
-   - Validates syntax ✓
-   - Saves to /tools/add_numbers.js in VFS
-   - Loads via blob URL
-   - Registers with Tool Runner
+The agent might:
+1. Read current tool-writer: `read_file('/core/tool-writer.js')`
+2. Analyze code and identify bottleneck (e.g., "Validation is slow")
+3. Generate improved version with AST caching
+4. Improve itself: `improve_tool_writer(optimizedCode)`
+5. Module backs up, hot-reloads, and future tool creations are faster
 
-4. Agent Loop → Tool Runner → add_numbers:
-   execute('add_numbers', {a: 5, b: 3})
-   → Result: 8
-
-5. Agent Loop → LLM: "Tool created successfully, result is 8"
-```
-
----
-
-## Example: Meta-Improvement Flow
-
-**User Goal:** "Analyze your tool creation process and optimize it"
-
-```
-1. Agent reads current tool-writer:
-   read_file('/core/tool-writer.js')
-
-2. Agent analyzes code, identifies bottleneck:
-   "Validation is slow, can optimize with AST caching"
-
-3. Agent generates improved version with caching
-
-4. Agent improves itself:
-   improve_tool_writer(optimizedCode)
-
-   → Backs up current version
-   → Writes new version to VFS
-   → Hot-reloads module
-   → Re-registers create_tool
-
-5. Future tool creations are now faster
-```
-
----
-
-## Example Goals
-
-### 1. Recursive Tool Generation
-**Goal:** "Create tools to make tools to make tools"
-
-The agent creates:
-- `tool_generator` - Generates tool code from descriptions
-- `meta_tool_generator` - Generates tools that generate tools
-- `tool_optimizer` - Improves existing tool performance
-
-### 2. Self-Optimization
-**Goal:** "Analyze your own inefficiency patterns and improve yourself"
-
-The agent:
-1. Profiles its execution (reads agent-loop.js)
-2. Identifies bottlenecks (too many LLM calls?)
-3. Generates optimized agent-loop.js
-4. Uses `improve_core_module('agent-loop', newCode)`
-5. Reloads with improvements
-
-### 3. Code Generation System
+### 3. Recursive Self-Improvement (Level 2+)
 **Goal:** "Build a self-modifying code generation system"
 
-The agent:
-1. Creates `code_generator` tool
-2. Creates `code_analyzer` tool
-3. Creates `code_optimizer` tool
-4. Uses these tools to improve itself
-5. Iterates: generates → analyzes → optimizes → repeat
+The agent might:
+1. Create `code_generator` tool for generating new code
+2. Create `code_analyzer` tool for profiling execution
+3. Create `code_optimizer` tool for improving performance
+4. Use `improve_core_module('agent-loop', newCode)` to enhance its own cognitive loop
+5. Iterate: generates → analyzes → optimizes → improves itself → repeat
 
 ---
 
@@ -269,55 +148,6 @@ On boot screen:
 5. Add up to 4 models
 
 The agent can use multiple models (consensus mode, fallback, etc.)
-
----
-
-## Development
-
-### Project Structure
-
-- **Core modules**: `/core/*.js` - ES6 modules with factory pattern
-- **Boot screen**: `/boot/*.js` - Model selection and configuration
-- **Server**: `/server/proxy.js` - Express server for proxy connections
-- **Genesis state**: Core modules on disk are read-only reference
-
-### Adding a New Core Module
-
-1. Create `/core/new-module.js`:
-```javascript
-const NewModule = {
-  metadata: { name: 'NewModule', version: '1.0.0' },
-  factory: (deps) => {
-    return {
-      // your API here
-    };
-  }
-};
-export default NewModule;
-```
-
-2. Update `boot.js` to load it during Genesis
-
-3. Clear cache and reload to test
-
-### Hot-Reloading Modules
-
-The agent can hot-reload modules at runtime:
-```javascript
-// 1. Read new code
-const newCode = generateImprovedCode();
-
-// 2. Write to VFS
-await vfs.write('/core/module.js', newCode);
-
-// 3. Create blob URL and import
-const blob = new Blob([newCode], { type: 'text/javascript' });
-const url = URL.createObjectURL(blob);
-const module = await import(url);
-URL.revokeObjectURL(url);
-
-// 4. Replace in DI container / re-register
-```
 
 ---
 
@@ -404,15 +234,3 @@ This is analogous to:
 
 MIT
 
----
-
-## Contributing
-
-REPLOID is designed to be extended by the agent itself. Try goals like:
-
-- "Add streaming support to llm-client.js"
-- "Implement multi-model consensus in agent-loop.js"
-- "Create a tool to visualize your execution trace"
-- "Add caching to tool-runner.js to speed up repeated calls"
-
-The agent should be able to implement these improvements autonomously.
