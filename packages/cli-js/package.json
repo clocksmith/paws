@@ -1,6 +1,6 @@
 {
-  "name": "@paws/cli",
-  "version": "3.0.0",
+  "name": "@paws/cli-js",
+  "version": "0.8.0",
   "description": "PAWS CLI - Context bundler and change applier (TypeScript)",
   "main": "dist/cats.js",
   "types": "dist/cats.d.ts",
@@ -31,6 +31,7 @@
     "chalk": "^4.1.2",
     "cli-table3": "^0.6.5",
     "commander": "^11.1.0",
+    "diff": "^5.1.0",
     "glob": "^10.3.10",
     "ignore": "^5.3.0",
     "inquirer": "^8.2.5",

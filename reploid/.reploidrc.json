@@ -1,6 +1,0 @@
-{
-  "_comment": "REPLOID User Overrides - Only includes settings different from config.json defaults",
-  "ui": {
-    "showAdvancedLogs": true
-  }
-}

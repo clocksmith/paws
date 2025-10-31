@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "paws-cli"
-version = "3.0.0"
+version = "0.8.0"
 description = "PAWS Python CLI - Context bundler (cats) and change applier (dogs)"
 readme = "README.md"
 requires-python = ">=3.8"

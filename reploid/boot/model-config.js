@@ -55,6 +55,9 @@ export async function initModelConfig() {
     // Load saved models
     loadSavedModels();
 
+    // Auto-populate default models if none configured
+    autoPopulateDefaultModels();
+
     // Setup event listeners
     setupEventListeners();
 
@@ -148,6 +151,12 @@ function setupEventListeners() {
         modelSelect.addEventListener('change', onModelChange);
     }
 
+    // Connection type change
+    const connectionTypeSelect = document.getElementById('connection-type-select');
+    if (connectionTypeSelect) {
+        connectionTypeSelect.addEventListener('change', onConnectionTypeChange);
+    }
+
     // Consensus strategy
     const consensusSelect = document.getElementById('consensus-strategy');
     if (consensusSelect) {
@@ -197,10 +206,12 @@ function populateProviderSelect() {
         options.push('<option value="webllm">WebLLM (Browser)</option>');
     }
 
-    // Add cloud providers (always available)
-    options.push('<option value="gemini">Gemini (Google)</option>');
-    options.push('<option value="openai">OpenAI</option>');
-    options.push('<option value="anthropic">Anthropic</option>');
+    // Add cloud providers via proxy (if proxy is online)
+    if (availableProviders.proxy.online) {
+        options.push('<option value="gemini">Gemini (Proxy/Cloud)</option>');
+        options.push('<option value="openai">OpenAI (Proxy/Cloud)</option>');
+        options.push('<option value="anthropic">Anthropic (Proxy/Cloud)</option>');
+    }
 
     providerSelect.innerHTML = options.join('');
 }
@@ -211,35 +222,37 @@ function onProviderChange(e) {
     const modelSelectGroup = document.getElementById('model-select-group');
     const modelSelect = document.getElementById('model-select-dropdown');
     const apiKeyGroup = document.getElementById('api-key-group');
-    const hostTypeGroup = document.getElementById('host-type-group');
-    const hostTypeDisplay = document.getElementById('host-type-display');
+    const connectionTypeGroup = document.getElementById('connection-type-group');
+    const connectionTypeSelect = document.getElementById('connection-type-select');
     const saveBtn = document.getElementById('save-model-btn');
 
     // Reset
     modelSelectGroup.classList.add('hidden');
     apiKeyGroup.classList.add('hidden');
-    hostTypeGroup.classList.add('hidden');
+    connectionTypeGroup.classList.add('hidden');
     saveBtn.disabled = true;
 
     if (!provider) return;
 
     // Populate models based on provider
     const models = [];
-    let hostType = '';
-    let requiresKey = false;
+    const connectionOptions = [];
 
     if (provider === 'ollama') {
         models.push(...availableProviders.ollama.models);
-        hostType = 'Ollama Proxy';
-        requiresKey = false;
+        // Ollama only supports proxy-local
+        connectionOptions.push({ value: 'proxy-local', label: 'Proxy → Local (Ollama)' });
     } else if (provider === 'webllm') {
         models.push(...availableProviders.webgpu.models);
-        hostType = 'WebGPU (Browser)';
-        requiresKey = false;
+        // WebLLM only supports browser-local
+        connectionOptions.push({ value: 'browser-local', label: 'Browser → Local (WebGPU)' });
     } else if (cloudProviders[provider]) {
         models.push(...cloudProviders[provider].models);
-        hostType = 'Cloud (Browser)';
-        requiresKey = true;
+        // Cloud providers can use proxy-cloud (if proxy online) OR browser-cloud (with API key)
+        if (availableProviders.proxy.online) {
+            connectionOptions.push({ value: 'proxy-cloud', label: 'Proxy → Cloud (uses .env key)' });
+        }
+        connectionOptions.push({ value: 'browser-cloud', label: 'Browser → Cloud (enter API key)' });
     }
 
     // Show model select
@@ -247,35 +260,57 @@ function onProviderChange(e) {
     modelSelect.innerHTML = '<option value="">Select model...</option>' +
         models.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
 
-    // Show API key field if required
-    if (requiresKey) {
+    // Show connection type selector
+    connectionTypeGroup.classList.remove('hidden');
+    connectionTypeSelect.innerHTML = '<option value="">Select connection type...</option>' +
+        connectionOptions.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('');
+}
+
+// Handle connection type change
+function onConnectionTypeChange(e) {
+    const connectionType = e.target.value;
+    const provider = document.getElementById('provider-select').value;
+    const apiKeyGroup = document.getElementById('api-key-group');
+
+    // Show/hide API key based on connection type
+    if (connectionType === 'browser-cloud') {
+        // Browser-cloud requires API key
         apiKeyGroup.classList.remove('hidden');
         // Pre-fill API key if exists
         const savedKey = localStorage.getItem(`${provider.toUpperCase()}_API_KEY`);
         if (savedKey) {
             document.getElementById('model-api-key').value = savedKey;
         }
+    } else {
+        // proxy-cloud, proxy-local, browser-local don't need API key entry
+        apiKeyGroup.classList.add('hidden');
+        document.getElementById('model-api-key').value = '';
     }
 
-    // Show host type
-    hostTypeGroup.classList.remove('hidden');
-    hostTypeDisplay.textContent = hostType;
+    // Validate form
+    validateForm();
 }
 
 // Handle model selection change
 function onModelChange(e) {
+    validateForm();
+}
+
+// Validate the form and enable/disable save button
+function validateForm() {
     const saveBtn = document.getElementById('save-model-btn');
     const provider = document.getElementById('provider-select').value;
-    const modelId = e.target.value;
+    const modelId = document.getElementById('model-select-dropdown').value;
+    const connectionType = document.getElementById('connection-type-select').value;
 
-    if (!provider || !modelId) {
+    // All fields required
+    if (!provider || !modelId || !connectionType) {
         saveBtn.disabled = true;
         return;
     }
 
-    // Check if API key is required
-    const providerConfig = cloudProviders[provider];
-    if (providerConfig && providerConfig.requiresKey) {
+    // If browser-cloud, API key is required
+    if (connectionType === 'browser-cloud') {
         const apiKey = document.getElementById('model-api-key').value.trim();
         saveBtn.disabled = !apiKey;
     } else {
@@ -288,28 +323,31 @@ function saveModel() {
     const provider = document.getElementById('provider-select').value;
     const modelId = document.getElementById('model-select-dropdown').value;
     const modelName = document.getElementById('model-select-dropdown').selectedOptions[0]?.text;
+    const connectionType = document.getElementById('connection-type-select').value;
     const apiKey = document.getElementById('model-api-key').value.trim();
     const editingIndex = document.getElementById('save-model-btn').dataset.editingIndex;
 
-    if (!provider || !modelId) {
-        alert('Please select a provider and model');
+    if (!provider || !modelId || !connectionType) {
+        alert('Please select a provider, model, and connection type');
         return;
     }
 
-    // Determine host type
-    let hostType = 'browser-cloud';
-    let queryMethod = 'browser';
-    if (provider === 'ollama') {
-        hostType = 'proxy-local';
-        queryMethod = 'proxy';
-    } else if (provider === 'webllm') {
-        hostType = 'browser-local';
-        queryMethod = 'browser';
+    // Determine query method based on connection type
+    const queryMethod = connectionType.startsWith('proxy-') ? 'proxy' : 'browser';
+
+    // Save API key if provided (browser-cloud only)
+    if (apiKey && connectionType === 'browser-cloud') {
+        localStorage.setItem(`${provider.toUpperCase()}_API_KEY`, apiKey);
     }
 
-    // Save API key if provided
-    if (apiKey) {
-        localStorage.setItem(`${provider.toUpperCase()}_API_KEY`, apiKey);
+    // Determine key source
+    let keySource = 'none';
+    let keyId = null;
+    if (connectionType === 'browser-cloud') {
+        keySource = 'localStorage';
+        keyId = `${provider.toUpperCase()}_API_KEY`;
+    } else if (connectionType === 'proxy-cloud') {
+        keySource = 'proxy-env';
     }
 
     // Create model config
@@ -317,10 +355,10 @@ function saveModel() {
         id: modelId,
         name: modelName,
         provider: provider,
-        hostType: hostType,
+        hostType: connectionType,
         queryMethod: queryMethod,
-        keySource: apiKey ? 'localStorage' : 'none',
-        keyId: apiKey ? `${provider.toUpperCase()}_API_KEY` : null
+        keySource: keySource,
+        keyId: keyId
     };
 
     // Add or update
@@ -354,10 +392,11 @@ function closeInlineForm() {
 function resetInlineForm() {
     document.getElementById('provider-select').value = '';
     document.getElementById('model-select-dropdown').innerHTML = '<option value="">Select model...</option>';
+    document.getElementById('connection-type-select').innerHTML = '<option value="">Select connection type...</option>';
     document.getElementById('model-api-key').value = '';
     document.getElementById('model-select-group').classList.add('hidden');
+    document.getElementById('connection-type-group').classList.add('hidden');
     document.getElementById('api-key-group').classList.add('hidden');
-    document.getElementById('host-type-group').classList.add('hidden');
     document.getElementById('save-model-btn').disabled = true;
 }
 
@@ -368,7 +407,8 @@ function populateEditForm(model) {
 
     setTimeout(() => {
         document.getElementById('model-select-dropdown').value = model.id;
-        onModelChange({ target: { value: model.id } });
+        document.getElementById('connection-type-select').value = model.hostType;
+        onConnectionTypeChange({ target: { value: model.hostType } });
     }, 100);
 }
 
@@ -565,6 +605,74 @@ function loadSavedModels() {
     } catch (error) {
         console.error('[ModelConfig] Failed to load saved models:', error);
     }
+}
+
+// Auto-populate default models on boot if none configured
+function autoPopulateDefaultModels() {
+    // Only auto-populate if no models are currently selected
+    if (selectedModels.length > 0) {
+        console.log('[ModelConfig] Models already configured, skipping auto-population');
+        return;
+    }
+
+    console.log('[ModelConfig] No models configured, checking for defaults...');
+
+    // Priority 1: Ollama with powerful models (gpt-oss:120b, etc.)
+    if (availableProviders.ollama.online && availableProviders.ollama.models.length > 0) {
+        // Look for powerful models first (120b, 70b, etc.)
+        const powerfulModel = availableProviders.ollama.models.find(m =>
+            m.id.includes('120b') || m.id.includes('70b') || m.id.includes('gpt-oss')
+        );
+
+        if (powerfulModel) {
+            const defaultModel = {
+                id: powerfulModel.id,
+                name: powerfulModel.name,
+                provider: 'ollama',
+                hostType: 'proxy-local',
+                queryMethod: 'proxy',
+                keySource: 'none'
+            };
+            selectedModels.push(defaultModel);
+            saveToStorage();
+            console.log('[ModelConfig] Auto-added Ollama default model:', defaultModel);
+            return;
+        }
+
+        // If no powerful model, use first available Ollama model
+        const firstModel = availableProviders.ollama.models[0];
+        const defaultModel = {
+            id: firstModel.id,
+            name: firstModel.name,
+            provider: 'ollama',
+            hostType: 'proxy-local',
+            queryMethod: 'proxy',
+            keySource: 'none'
+        };
+        selectedModels.push(defaultModel);
+        saveToStorage();
+        console.log('[ModelConfig] Auto-added Ollama default model:', defaultModel);
+        return;
+    }
+
+    // Priority 2: Cloud proxy (if proxy is online with API keys)
+    // Note: We assume proxy has keys if it's online, but ideally we'd check /api/health for key status
+    if (availableProviders.proxy.online) {
+        const defaultModel = {
+            id: 'gemini-2.5-flash',
+            name: 'Flash',
+            provider: 'gemini',
+            hostType: 'proxy-cloud',
+            queryMethod: 'proxy',
+            keySource: 'proxy-env'
+        };
+        selectedModels.push(defaultModel);
+        saveToStorage();
+        console.log('[ModelConfig] Auto-added cloud proxy default model:', defaultModel);
+        return;
+    }
+
+    console.log('[ModelConfig] No default models available (Ollama offline, proxy offline)');
 }
 
 // Export functions

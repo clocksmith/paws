@@ -1,19 +1,20 @@
 # REPLOID
 
-**Browser-Native AI Agent with MCP and Lens Architecture**
+**Browser-Native Self-Improving AI Agent**
 
-REPLOID is a browser-based AI agent environment exposing capabilities via Model Context Protocol (MCP) with Lens widget UI. Backend proxy optional. Runs in-browser using IndexedDB and Web Workers.
+REPLOID is an AI agent that runs entirely in your browser with Recursive Self-Improvement (RSI) capabilities. The agent can create new tools at runtime, modify its own code, and evolve its capabilities without touching the filesystem.
 
 ---
 
-## Core Philosophy
+## What It Does
 
-**Modular agent architecture with human oversight via approval workflows.**
+REPLOID achieves **Level 2 RSI** (meta-improvement):
 
-1. **MCP Servers** - Expose agent capabilities as tools/resources/prompts via JSON-RPC 2.0
-2. **Lens Widgets** - TypeScript web components for human oversight UI
-3. **Multi-Model Mixing** - Combine Gemini, Claude, GPT-4, local models
-4. **Browser-Native** - Client-side using VFS (LightningFS + isomorphic-git)
+- **Level 1**: Agent creates NEW tools at runtime (tool generation)
+- **Level 2**: Agent improves its tool creation mechanism itself (meta-recursion)
+- **Level 2+**: Agent modifies ANY of its core modules (agent-loop, tool-runner, etc.)
+
+All improvements persist in IndexedDB. The original source files remain unchanged as the "genesis" state.
 
 ---
 
@@ -21,232 +22,405 @@ REPLOID is a browser-based AI agent environment exposing capabilities via Model 
 
 ```bash
 # 1. Install dependencies
-cd reploid
 pnpm install
 
-# 2. Start the proxy server (handles LLM API calls)
-pnpm start  # http://localhost:8000
+# 2. Start server (for proxy-based API calls and Ollama)
+pnpm start
+# Server runs on http://localhost:8000
 
 # 3. Open browser
-# Navigate to http://localhost:8080
+# Navigate to http://localhost:8000
+```
 
-# 4. Select boot preset
-# Choose "CORE" (recommended)
+On the boot screen:
+1. **Configure model(s)** - Add at least one LLM (Gemini, Claude, GPT, Ollama, or WebLLM)
+2. **Enter a goal** - Try one of the example chips:
+   - "Create tools to make tools to make tools"
+   - "Analyze your own inefficiency patterns and improve yourself"
+   - "Build a self-modifying code generation system"
+3. **Click "Awaken Agent"** - Watch the agent work
 
-# 5. Enter a goal
-"Show me what MCP servers are available"
+---
 
-# 6. Watch the agent work
-# - Loads modules from VFS
-# - Agent uses MCP tools via approval workflows
-# - Streaming responses in real-time
+## Architecture
+
+### Core Modules (7 files, ~2,500 lines)
+
+```
+/core/
+├── vfs.js              (~200 lines)  Virtual filesystem (IndexedDB)
+├── llm-client.js       (~200 lines)  Multi-provider LLM interface
+├── tool-runner.js      (~300 lines)  Tool execution engine
+├── tool-writer.js      (~250 lines)  Creates new tools at runtime
+├── meta-tool-writer.js (~200 lines)  Improves tool-writer itself
+├── agent-loop.js       (~400 lines)  Main cognitive cycle
+└── utils.js            (existing)    Helper functions
+```
+
+### Boot Process
+
+1. **First Boot (Genesis)**:
+   - Copy `/core/*.js` from disk → IndexedDB
+   - This is the "genesis" state (factory reset point)
+
+2. **Subsequent Boots (Resume)**:
+   - Load evolved code from IndexedDB
+   - Agent continues with any improvements it made
+
+3. **Clear Cache Button**:
+   - Deletes IndexedDB, reloads genesis state from disk
+   - Factory reset for the agent
+
+### How RSI Works
+
+```
+Genesis (Disk)          Runtime (IndexedDB)         Evolution
+─────────────────       ───────────────────         ─────────
+/core/tool-writer.js -> /core/tool-writer.js   ->  v1 (optimized)
+                        (living code)               v2 (cached)
+                                                    v3 (faster validation)
+```
+
+The agent reads its own code from VFS, generates improvements, writes them back, and hot-reloads via blob URLs.
+
+---
+
+## Connection Types
+
+REPLOID supports 4 ways to connect to LLMs:
+
+### 1. Browser → Cloud (Direct)
+- Browser makes API calls directly to provider
+- Requires: User's API key (stored in localStorage)
+- Use for: Gemini, OpenAI, Anthropic
+
+### 2. Proxy → Cloud
+- Server proxy makes API calls using .env keys
+- Requires: Server running, .env configured
+- Use for: Hiding API keys, rate limiting
+
+### 3. Browser → Local (WebGPU)
+- Browser runs LLM via WebLLM (WebGPU)
+- Requires: GPU-capable browser (Chrome/Edge)
+- Use for: Offline, privacy, small models (1-3B params)
+
+### 4. Proxy → Local (Ollama)
+- Server proxy forwards to local Ollama
+- Requires: Ollama installed and running
+- Use for: Large local models (7B-120B params)
+
+---
+
+## Built-in Tools
+
+The agent starts with these tools:
+
+**VFS Operations:**
+- `read_file(path)` - Read from virtual filesystem
+- `write_file(path, content)` - Write to VFS
+- `list_files(path)` - List directory contents
+- `delete_file(path)` - Delete file
+
+**Tool Creation (Level 1 RSI):**
+- `create_tool(name, code)` - Create new tool at runtime
+- `update_tool(name, code)` - Modify existing tool
+- `delete_tool(name)` - Remove tool
+- `list_tools()` - See all tools
+- `get_tool_source(name)` - Read tool source code
+
+**Meta-Improvement (Level 2 RSI):**
+- `improve_tool_writer(code)` - Improve the tool creation mechanism
+- `improve_core_module(module, code)` - Improve ANY core module
+- `rollback_tool_writer()` - Undo last improvement
+
+**Introspection:**
+- Agent can read its own source: `read_file('/core/agent-loop.js')`
+- Agent can list all modules: `list_files('/core/')`
+
+---
+
+## Example: Tool Creation Flow
+
+**User Goal:** "Create a tool that adds two numbers"
+
+```
+1. Agent Loop → LLM: "How do I create an add_numbers tool?"
+
+2. LLM Response:
+   TOOL_CALL: create_tool
+   ARGS: {
+     "name": "add_numbers",
+     "code": "export default async function add_numbers(args) { return args.a + args.b; }"
+   }
+
+3. Agent Loop → Tool Runner → Tool Writer:
+   - Validates syntax ✓
+   - Saves to /tools/add_numbers.js in VFS
+   - Loads via blob URL
+   - Registers with Tool Runner
+
+4. Agent Loop → Tool Runner → add_numbers:
+   execute('add_numbers', {a: 5, b: 3})
+   → Result: 8
+
+5. Agent Loop → LLM: "Tool created successfully, result is 8"
 ```
 
 ---
 
-## How It Works
+## Example: Meta-Improvement Flow
 
-**Boot process (Genesis Cycle 0):**
+**User Goal:** "Analyze your tool creation process and optimize it"
 
-1. **Boot Screen** - Select preset (CORE/HEADLESS/COMPLETE) and enter goal
-2. **Download Modules** - Load from `/upgrades/` directory, save to VFS (IndexedDB via LightningFS)
-3. **Initialize VFS** - Mount isomorphic-git, load module-manifest.json
-4. **Load Modules** - DI Container resolves dependencies, MCP servers register tools/resources/prompts
-5. **Mount Lens Widgets** - TypeScript UI components connect to MCP servers for approval workflows
-6. **Execute Goal** - Agent runs cognitive loop, uses MCP tools, Lens provides oversight
+```
+1. Agent reads current tool-writer:
+   read_file('/core/tool-writer.js')
 
----
+2. Agent analyzes code, identifies bottleneck:
+   "Validation is slow, can optimize with AST caching"
 
-## Boot Presets
+3. Agent generates improved version with caching
 
-REPLOID offers 3 module presets:
+4. Agent improves itself:
+   improve_tool_writer(optimizedCode)
 
-### CORE (64 modules) **← RECOMMENDED**
-**Complete RSI agent with full UI and in-browser MCP protocol servers**
+   → Backs up current version
+   → Writes new version to VFS
+   → Hot-reloads module
+   → Re-registers create_tool
 
-Includes:
-- **Core Infrastructure** (25 modules) - Agent cognitive loop, VFS (LightningFS + isomorphic-git), DI container
-- **MCP Infrastructure** (5 modules) - Protocol implementation, JSON-RPC 2.0 transport
-- **MCP Servers** (24 Tier 1-3 servers) - In-browser protocol servers exposing tools/resources/prompts
-- **UI Modules** (6 modules) - Dashboard, status panels, notifications
-- **Personas & Utils** (3 modules) - Code refactorer persona, diff generator
-
-**Best for:** Production use, interactive development, full agent capabilities
+5. Future tool creations are now faster
+```
 
 ---
 
-### HEADLESS (45 modules)
-**In-browser MCP protocol server, no UI**
+## File Structure
 
-Includes only:
-- Core infrastructure + MCP infrastructure
-- Agent cycle logic
-- Tier 1 MCP servers (essential capabilities only)
-- No Lens widgets, no UI modules
+```
+/reploid/
+├── index.html              Boot screen (model selector, goal input)
+├── boot.js                 Bootstrap loader (~250 lines)
+├── .env                    API keys for proxy
+├── server/
+│   └── proxy.js            Express server for proxy connections
+├── core/                   Core modules (genesis state on disk)
+│   ├── vfs.js
+│   ├── llm-client.js
+│   ├── tool-runner.js
+│   ├── tool-writer.js
+│   ├── meta-tool-writer.js
+│   └── agent-loop.js
+├── boot/
+│   ├── model-config.js     Model selection UI
+│   ├── api.js              Provider detection
+│   └── style.css           Boot screen styles
+└── ui/
+    └── chat.js             Chat interface
 
-**Best for:** CI/CD, APIs, embedded systems, server-side deployments
+IndexedDB (runtime state):
+  /core/                    Evolved versions of core modules
+  /tools/                   Agent-created tools
+  /data/                    Agent memory/history
+```
 
 ---
 
-### COMPLETE (85 modules) **EXPERIMENTAL**
-**Everything including experimental in-browser MCP servers**
+## Example Goals
 
-Everything in CORE, plus:
-- **9 Experimental MCP Servers** (Tier 4) - Advanced capabilities
-- **Python Runtime** - Pyodide WebAssembly execution
-- **WebRTC P2P** - Browser-to-browser agent coordination
-- **Advanced Features** - Goal modification, peer consensus, tutorials
+### 1. Recursive Tool Generation
+**Goal:** "Create tools to make tools to make tools"
 
-**Best for:** Research, experimentation, bleeding-edge features
+The agent creates:
+- `tool_generator` - Generates tool code from descriptions
+- `meta_tool_generator` - Generates tools that generate tools
+- `tool_optimizer` - Improves existing tool performance
 
----
+### 2. Self-Optimization
+**Goal:** "Analyze your own inefficiency patterns and improve yourself"
 
-## Key Features
+The agent:
+1. Profiles its execution (reads agent-loop.js)
+2. Identifies bottlenecks (too many LLM calls?)
+3. Generates optimized agent-loop.js
+4. Uses `improve_core_module('agent-loop', newCode)`
+5. Reloads with improvements
 
-### 77 Modular Upgrades
+### 3. Code Generation System
+**Goal:** "Build a self-modifying code generation system"
 
-**Module Organization:**
-- **Core** (62 modules) - Agent logic, MCP servers, tools, LLM providers, VFS
-- **UI** (16 modules) - Panels, visualizers, dashboards, notifications, Lens widgets
-- **Archived** (11 modules) - Unused/experimental features
-
-MCP server architecture with Lens widget dashboards for approval workflows and real-time monitoring.
-
-Each module is self-contained with:
-- DI container pattern for dependency injection
-- Web Component widget for visualization
-- Blueprint document explaining design decisions
-- Unit tests for reliability
-
-### Virtual File System (VFS)
-
-Browser-native storage using IndexedDB:
-- Stores all modules, blueprints, and state
-- Persists across sessions
-- Supports import/export
-- Git-like checkpoint system
-
-### Multi-Model Mixing
-
-Use multiple LLMs in a single workflow - mix Gemini for speed, Claude for reasoning, GPT-4 for code, or local models for privacy.
-
-**Supported Providers:**
-- ☁️ Cloud: Gemini, Claude (Anthropic), GPT-5 (OpenAI)
-- 🖥️ Local: Ollama (via proxy), WebGPU (in-browser)
-
-### Meta-Tool Creation
-
-Agents can create new tools for themselves dynamically. Tools are registered in the runtime and immediately available for use.
-
-### Recursive Self-Improvement (RSI)
-
-Agent can modify its own code with safety:
-
-**Safety Guardrails:**
-1. **Checkpoints** - Git-like snapshots before changes
-2. **Test Verification** - Changes must pass tests
-3. **Human Approval** - All modifications require confirmation
-4. **Automatic Rollback** - Revert on test failure
-5. **Blueprint Compliance** - Changes must follow design patterns
-
-### Web Component Widgets
-
-Every module has a visual dashboard with real-time status monitoring, interactive controls, scoped styles (Shadow DOM), and event-driven updates.
-
-### Blueprint System
-
-67+ architectural blueprints guide development with design patterns, implementation strategies, trade-off analysis, code examples, and test requirements.
+The agent:
+1. Creates `code_generator` tool
+2. Creates `code_analyzer` tool
+3. Creates `code_optimizer` tool
+4. Uses these tools to improve itself
+5. Iterates: generates → analyzes → optimizes → repeat
 
 ---
 
 ## Configuration
 
-Edit `config.json` or use the boot UI to:
-- Select boot mode (headless/minimal-rsi/rsi-core/experimental)
-- Configure LLM providers (API keys, endpoints)
-- Set model preferences
-- Adjust module loading
-- Configure permissions
-
-**Module Manifest (`module-manifest.json`):**
-- Defines 4 presets with specific module lists
-- Controls load order via dependency groups
-- Maps module paths to IDs
-
----
-
-## Testing
+### .env File (for server proxy)
 
 ```bash
-# Run unit tests
-pnpm test
-
-# Run with coverage
-pnpm run test:coverage
-
-# Run end-to-end tests
-pnpm run test:e2e
-
-# Run specific test
-pnpm test tests/unit/tool-runner.test.js
+GEMINI_API_KEY=your_key_here
+ANTHROPIC_API_KEY=your_key_here
+OPENAI_API_KEY=your_key_here
 ```
 
-**Test Pattern:**
-Every module has a corresponding unit test:
-- `upgrades/core/tool-runner.js` → `tests/unit/tool-runner.test.js`
-- Tests cover API methods, error handling, edge cases
-- Widgets tested separately with DOM mocking
+### Model Configuration (in browser)
+
+On boot screen:
+1. Click "+ Add Model"
+2. Select provider (Gemini, Claude, OpenAI, Ollama, WebLLM)
+3. Choose connection type (browser-cloud, proxy-cloud, browser-local, proxy-local)
+4. Enter API key if browser-cloud
+5. Add up to 4 models
+
+The agent can use multiple models (consensus mode, fallback, etc.)
 
 ---
 
-## Advanced Features
+## Development
 
-### Python Runtime (Pyodide)
-Execute Python code via WebAssembly (experimental preset).
+### Project Structure
 
-### Local LLM (WebGPU)
-Run models entirely in browser (experimental preset).
+- **Core modules**: `/core/*.js` - ES6 modules with factory pattern
+- **Boot screen**: `/boot/*.js` - Model selection and configuration
+- **Server**: `/server/proxy.js` - Express server for proxy connections
+- **Genesis state**: Core modules on disk are read-only reference
 
-### WebRTC P2P Swarm
-Browser-to-browser agent coordination (experimental preset).
+### Adding a New Core Module
+
+1. Create `/core/new-module.js`:
+```javascript
+const NewModule = {
+  metadata: { name: 'NewModule', version: '1.0.0' },
+  factory: (deps) => {
+    return {
+      // your API here
+    };
+  }
+};
+export default NewModule;
+```
+
+2. Update `boot.js` to load it during Genesis
+
+3. Clear cache and reload to test
+
+### Hot-Reloading Modules
+
+The agent can hot-reload modules at runtime:
+```javascript
+// 1. Read new code
+const newCode = generateImprovedCode();
+
+// 2. Write to VFS
+await vfs.write('/core/module.js', newCode);
+
+// 3. Create blob URL and import
+const blob = new Blob([newCode], { type: 'text/javascript' });
+const url = URL.createObjectURL(blob);
+const module = await import(url);
+URL.revokeObjectURL(url);
+
+// 4. Replace in DI container / re-register
+```
 
 ---
 
-## Relationship to PAWS Monorepo
+## Technical Details
 
-REPLOID is part of the PAWS monorepo but is a **standalone project**.
+### VFS Implementation
+- **Storage**: IndexedDB (via simple-vfs.js)
+- **Not Git-based**: Removed LightningFS + isomorphic-git (too heavy)
+- **Operations**: read, write, list, delete, snapshot, restore
+- **Persistence**: Survives page refreshes
+- **Reset**: "Clear Cache" button wipes IndexedDB
 
-**Shared with PAWS:**
-- Philosophy (multi-agent, human-in-loop, context engineering)
-- Some utilities (personas, system prompts)
+### Module Loading
+- **Genesis**: Fetch from disk → write to VFS
+- **Runtime**: Read from VFS → create blob URL → import as ES module
+- **Hot-reload**: Replace blob URL, re-initialize factory
+- **No eval()**: Uses native ES module imports via blob URLs
 
-**Not shared:**
-- Runtime (browser vs CLI)
-- Storage (VFS/IndexedDB vs filesystem)
-- Primary use case (self-improvement vs multi-agent competition)
+### Agent Loop
+- **System prompt**: Includes list of all tools and RSI capabilities
+- **Tool calling format**: `TOOL_CALL: name` + `ARGS: {...}`
+- **Context management**: Conversation history with tool results
+- **Termination**: Agent responds with `DONE: ...`
 
-**See:** [../README.md](../README.md) for monorepo overview
+### Security
+- **Sandboxing**: Tool code validated before execution
+- **No arbitrary code**: Tool Writer checks syntax and structure
+- **Rollback**: Failed improvements automatically rolled back
+- **Backups**: All improvements saved with timestamps
 
 ---
 
-## FAQ
+## Limitations
 
-**Q: Which boot mode should I start with?**
-A: **RSI-Core** (46 modules). It has the full UI and core RSI features without overwhelming complexity.
+- **Browser-only**: No Node.js backend required (except optional proxy)
+- **Storage limits**: IndexedDB typically 50MB-unlimited depending on browser
+- **WebLLM models**: Limited to 1-3B params due to VRAM constraints
+- **Streaming**: Not yet implemented (planned)
+- **Multi-model consensus**: Basic implementation, can be improved by agent
 
-**Q: Is this actually running in the browser?**
-A: Yes! 100% browser-native. No backend server required (except optional proxy for LLM API calls).
+---
 
-**Q: Can agents modify their own code?**
-A: Yes.
+## Troubleshooting
 
-**Q: How does this differ from Claude Code?**
-A: Claude Code is a CLI tool. REPLOID runs in browser with VFS, can modify itself, supports multi-model mixing, and has P2P swarm capabilities.
+### Boot fails with module errors
+- Click "Clear Cache" button
+- Check browser console for errors
+- Verify all files in `/core/` exist
 
-**Q: Can I use this offline?**
-A: Yes! VFS/modules work offline, but cloud LLM queries need network (unless using local WebGPU models or Ollama).
+### Agent doesn't respond
+- Check model is selected and configured
+- Verify API key is correct (browser console)
+- Check network tab for failed requests
 
+### VFS is empty after genesis
+- Check browser console for fetch errors
+- Verify `/core/*.js` files exist on disk
+
+### Tool creation fails
+- Check tool code syntax
+- Must be: `export default async function name(args) { ... }`
+- Check browser console for validation errors
+
+---
+
+## Philosophy
+
+REPLOID is an experiment in **substrate-independent RSI**:
+
+- The agent's "brain" is just data in IndexedDB
+- The agent can modify this data (its own code)
+- The original source code (genesis) is the evolutionary starting point
+- Every agent instance can evolve differently
+
+This is analogous to:
+- **DNA** = source code on disk (genesis)
+- **Organism** = runtime state in IndexedDB (evolved)
+- **Mutations** = agent self-modifications
+- **Fitness** = agent-measured improvements (faster, better, etc.)
+
+---
 
 ## License
 
 MIT
+
+---
+
+## Contributing
+
+REPLOID is designed to be extended by the agent itself. Try goals like:
+
+- "Add streaming support to llm-client.js"
+- "Implement multi-model consensus in agent-loop.js"
+- "Create a tool to visualize your execution trace"
+- "Add caching to tool-runner.js to speed up repeated calls"
+
+The agent should be able to implement these improvements autonomously.

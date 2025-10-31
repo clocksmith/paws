@@ -1,6 +1,5 @@
 __pycache__
 node_modules
-mwp/node_modules
 .paws/
 dist/
 .env

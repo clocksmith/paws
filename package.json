@@ -1,6 +1,6 @@
 {
   "name": "paws",
-  "version": "5.0.0",
+  "version": "0.9.0",
   "description": "PAWS (Prepare Artifacts With SWAP) - Multi-agent AI development toolkit with CLI and browser interface (REPLOID)",
   "private": true,
   "type": "commonjs",

@@ -1,1277 +1,273 @@
-// New boot script for persona-based onboarding
-import { state, elements } from './boot/state.js';
-import { loadStoredKeys } from './boot/config.js';
-import { checkAPIStatus } from './boot/api.js';
-import { closeHelpPopover } from './boot/ui.js';
+// REPLOID Bootstrap - Genesis Cycle & Agent Initialization
 import { initModelConfig, hasModelsConfigured, getSelectedModels } from './boot/model-config.js';
 
-// Load development integrations if enabled
-async function loadDevIntegrations() {
-    const developmentMode = localStorage.getItem('DEVELOPMENT_MODE') === 'true';
+console.log('[Boot] REPLOID starting...');
 
-    if (developmentMode) {
-        console.log('[Boot] Development mode enabled - loading dev integrations');
+// Global reference to agent and modules
+window.REPLOID = {
+  vfs: null,
+  llmClient: null,
+  toolRunner: null,
+  toolWriter: null,
+  metaToolWriter: null,
+  agentLoop: null,
+  chatUI: null
+};
 
-        const loadScript = (src) => {
-            return new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = src;
-                script.onload = () => {
-                    console.log(`[Boot] Loaded: ${src}`);
-                    resolve();
-                };
-                script.onerror = (error) => {
-                    console.warn(`[Boot] Failed to load ${src}:`, error);
-                    resolve(); // Don't block boot on dev script failures
-                };
-                document.head.appendChild(script);
-            });
-        };
+// Genesis: Copy core modules from disk to IndexedDB on first boot
+async function genesisInit() {
+  console.log('[Genesis] First boot detected - copying core modules to VFS...');
 
-        // Load console monitor and live reload
-        await Promise.all([
-            loadScript('integrations/claude-code/workflows/console-monitor.js'),
-            loadScript('integrations/claude-code/workflows/live-reload.js')
-        ]);
-    } else {
-        console.log('[Boot] Development mode disabled - skipping dev integrations');
+  const coreModules = [
+    'vfs.js',
+    'llm-client.js',
+    'tool-runner.js',
+    'tool-writer.js',
+    'meta-tool-writer.js',
+    'agent-loop.js'
+  ];
+
+  const utils = window.REPLOID.vfs;
+
+  for (const filename of coreModules) {
+    const response = await fetch(`/core/${filename}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch /core/${filename}: ${response.statusText}`);
     }
+
+    const code = await response.text();
+    await utils.write(`/core/${filename}`, code);
+    console.log(`[Genesis] Copied: /core/${filename}`);
+  }
+
+  // Create /tools/ directory
+  await utils.write('/tools/.gitkeep', '');
+
+  console.log('[Genesis] Genesis complete - core modules seeded in VFS');
 }
 
-// Detect if proxy server is available
-async function detectProxyServer() {
-    try {
-        const response = await fetch('http://localhost:8000/api/health', {
-            method: 'GET',
-            signal: AbortSignal.timeout(2000)
-        });
-        return response.ok;
-    } catch (error) {
-        console.log('[Boot] Proxy server not detected:', error.message);
-        return false;
-    }
+// Load a module from VFS via blob URL
+async function loadModuleFromVFS(path) {
+  const code = await window.REPLOID.vfs.read(path);
+  const blob = new Blob([code], { type: 'text/javascript' });
+  const url = URL.createObjectURL(blob);
+
+  try {
+    const module = await import(/* webpackIgnore: true */ url);
+    return module.default;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
-// This is the main entry point for the application.
-async function main() {
-    // Load development integrations if enabled
-    await loadDevIntegrations();
+// Initialize VFS (Simple VFS from disk, not from IndexedDB yet)
+async function initVFS() {
+  console.log('[Boot] Loading VFS module...');
 
-    // Initial setup
-    loadStoredKeys();
-    await checkAPIStatus();
+  // Load simple-vfs directly from file system (this bootstraps everything)
+  const vfsModule = await import('./core/vfs.js');
+  const VFSFactory = vfsModule.default.factory;
 
-    // Check proxy server availability
-    const proxyAvailable = await detectProxyServer();
-    state.proxyAvailable = proxyAvailable;
-    console.log('[Boot] Proxy server available:', proxyAvailable);
+  // Initialize VFS
+  const vfs = VFSFactory({ logger: console });
+  window.REPLOID.vfs = vfs;
 
-    // Show/hide proxy warning banner
-    const proxyWarning = document.getElementById('proxy-warning');
-    if (proxyWarning) {
-        if (!proxyAvailable) {
-            proxyWarning.classList.remove('hidden');
-        } else {
-            proxyWarning.classList.add('hidden');
-        }
-    }
+  // Check if this is first boot (no files in VFS)
+  const isFirstBoot = await vfs.isEmpty();
 
-    // Initialize new model configuration UI
-    console.log('[Boot] Initializing model configuration UI...');
-    await initModelConfig();
+  if (isFirstBoot) {
+    await genesisInit();
+  } else {
+    console.log('[Boot] Resuming from evolved state in VFS');
+  }
 
-    // Load stored mode or set default (kept for backwards compatibility)
-    const storedMode = localStorage.getItem('DEPLOYMENT_MODE');
-    if (storedMode) {
-        state.selectedMode = storedMode;
-    } else {
-        // Default to cloud mode if we have a provider available
-        if (state.detectedEnv.hasServer && state.detectedEnv.providers && state.detectedEnv.providers.length > 0) {
-            const defaultMode = 'cloud';
-            localStorage.setItem('DEPLOYMENT_MODE', defaultMode);
-            state.selectedMode = defaultMode;
-        }
-    }
-
-    // Setup event listeners
-    setupEventListeners();
+  return vfs;
 }
 
-function setupEventListeners() {
-    // Config button and modal (if using legacy modal UI)
-    if (elements.configBtn && elements.configModal) {
-        elements.configBtn.addEventListener('click', () => {
-            elements.configModal.classList.toggle('hidden');
-        });
-    }
-    if (elements.closeModal && elements.configModal) {
-        elements.closeModal.addEventListener('click', () => elements.configModal.classList.add('hidden'));
-    }
-
-    // Mode card selection - click to select and close
-    document.querySelectorAll('.mode-card').forEach(card => {
-        card.addEventListener('click', (e) => {
-            // Don't trigger if disabled
-            if (card.classList.contains('disabled')) {
-                return;
-            }
-
-            const modeName = card.dataset.mode;
-            console.log('[Boot] Mode selected:', modeName);
-
-            // Special handling for proxy-based mode - show sub-options
-            if (modeName === 'proxy-based') {
-                // Hide mode cards section
-                const modeCardsContainer = document.querySelector('.mode-cards');
-                if (modeCardsContainer) {
-                    modeCardsContainer.style.display = 'none';
-                }
-
-                // Show proxy-based options
-                const proxyOptions = document.getElementById('proxy-based-options');
-                if (proxyOptions) {
-                    proxyOptions.classList.remove('hidden');
-                }
-
-                // Update UI to show selected state
-                document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
-                card.classList.add('selected');
-
-                return; // Don't close modal or save mode yet
-            }
-
-            // Special handling for hybrid mode - show configuration
-            if (modeName === 'hybrid') {
-                // Hide mode cards section
-                const modeCardsContainer = document.querySelector('.mode-cards');
-                if (modeCardsContainer) {
-                    modeCardsContainer.style.display = 'none';
-                }
-
-                // Show hybrid mode options
-                const hybridOptions = document.getElementById('hybrid-mode-options');
-                if (hybridOptions) {
-                    hybridOptions.classList.remove('hidden');
-                }
-
-                // Update UI to show selected state
-                document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
-                card.classList.add('selected');
-
-                return; // Don't close modal or save mode yet
-            }
-
-            // Save the selected mode
-            localStorage.setItem('DEPLOYMENT_MODE', modeName);
-            state.selectedMode = modeName;
-
-            // Update the current configuration display
-            updateCurrentModeDisplay(modeName);
-
-            // Close the modal
-            if (elements.configModal) {
-                elements.configModal.classList.add('hidden');
-            }
-
-            // Update UI to show selected state
-            document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
-            card.classList.add('selected');
-        });
-    });
-
-    if (elements.helpPopoverClose) {
-        elements.helpPopoverClose.addEventListener('click', closeHelpPopover);
-    }
-
-    document.addEventListener('click', (e) => {
-        if (state.activePopover && !elements.helpPopover.contains(e.target) && !state.activePopover.anchorEl.contains(e.target)) {
-            closeHelpPopover();
-        }
-    });
-
-    // Goal input and Awaken Agent button
-    if (elements.goalInput && elements.awakenBtn) {
-        // Enable/disable button based on goal input AND model configuration
-        elements.goalInput.addEventListener('input', (e) => {
-            const hasGoal = e.target.value.trim().length > 0;
-            const hasModels = hasModelsConfigured();
-            elements.awakenBtn.disabled = !(hasGoal && hasModels);
-        });
-
-        // Handle Awaken Agent button click
-        elements.awakenBtn.addEventListener('click', awakenAgent);
-    }
-
-    // Clear Cache & Reload button
-    const clearCacheBtn = document.getElementById('clear-cache-btn');
-    if (clearCacheBtn) {
-        clearCacheBtn.addEventListener('click', async () => {
-            console.log('[Boot] Clear cache button clicked');
-
-            // Show confirmation dialog
-            const confirmed = confirm(
-                'This will clear all VFS data and reload the page.\n\n' +
-                'Use this if modules are failing to load due to cache issues.\n\n' +
-                'Continue?'
-            );
-
-            if (!confirmed) {
-                return;
-            }
-
-            try {
-                // Clear IndexedDB databases
-                const databases = await window.indexedDB.databases();
-                console.log('[Boot] Found databases:', databases);
-
-                for (const db of databases) {
-                    console.log('[Boot] Deleting database:', db.name);
-                    await new Promise((resolve, reject) => {
-                        const request = window.indexedDB.deleteDatabase(db.name);
-                        request.onsuccess = resolve;
-                        request.onerror = reject;
-                        request.onblocked = () => {
-                            console.warn('[Boot] Delete blocked for:', db.name);
-                            resolve(); // Continue anyway
-                        };
-                    });
-                }
-
-                // Clear localStorage
-                localStorage.clear();
-
-                // Clear sessionStorage
-                sessionStorage.clear();
-
-                console.log('[Boot] VFS cache cleared successfully');
-
-                // Reload page with cache bypass
-                location.reload(true);
-
-            } catch (error) {
-                console.error('[Boot] Failed to clear cache:', error);
-                alert('Failed to clear cache: ' + error.message);
-            }
-        });
-    }
-
-    // Global auto-approve toggle card (clickable card instead of separate toggle)
-    const autoApproveCard = document.getElementById('auto-approve-card');
-    const autoApproveToggle = document.getElementById('auto-approve-toggle');
-    if (autoApproveCard && autoApproveToggle) {
-        // Load saved state
-        const globalAutoApprove = localStorage.getItem('GLOBAL_AUTO_APPROVE') === 'true';
-        autoApproveToggle.checked = globalAutoApprove;
-        autoApproveCard.setAttribute('data-enabled', globalAutoApprove);
-
-        // Show info if enabled
-        const autoApproveInfo = document.getElementById('auto-approve-info');
-        if (autoApproveInfo) {
-            autoApproveInfo.classList.toggle('hidden', !globalAutoApprove);
-        }
-
-        // Handle card click (toggle on/off)
-        autoApproveCard.addEventListener('click', (e) => {
-            const currentState = autoApproveToggle.checked;
-            const newState = !currentState;
-
-            autoApproveToggle.checked = newState;
-            autoApproveCard.setAttribute('data-enabled', newState);
-            localStorage.setItem('GLOBAL_AUTO_APPROVE', newState);
-
-            // Update config.json in memory (will be persisted on next save)
-            if (typeof globalThis.config !== 'undefined') {
-                if (!globalThis.config.curatorMode) {
-                    globalThis.config.curatorMode = {};
-                }
-                globalThis.config.curatorMode.enabled = newState;
-                globalThis.config.curatorMode.autoApproveContext = newState;
-            }
-
-            // Show/hide info message with animation
-            if (autoApproveInfo) {
-                autoApproveInfo.classList.toggle('hidden', !newState);
-            }
-
-            console.log('[Boot] Global auto-approve:', newState);
-        });
-    }
-
-    // Proxy-based mode checkbox handlers (multi-select support)
-    const proxyOllamaCheckbox = document.getElementById('proxy-ollama');
-    const proxyHuggingFaceCheckbox = document.getElementById('proxy-huggingface');
-    const proxyCloudCheckbox = document.getElementById('proxy-cloud');
-
-    // Helper function to update save button visibility
-    function updateProxySaveButton() {
-        const saveSection = document.getElementById('proxy-save-section');
-        const anyChecked = proxyOllamaCheckbox?.checked ||
-                          proxyHuggingFaceCheckbox?.checked ||
-                          proxyCloudCheckbox?.checked;
-
-        if (saveSection) {
-            if (anyChecked) {
-                saveSection.classList.remove('hidden');
-            } else {
-                saveSection.classList.add('hidden');
-            }
-        }
-    }
-
-    if (proxyOllamaCheckbox) {
-        proxyOllamaCheckbox.addEventListener('change', (e) => {
-            const ollamaConfig = document.getElementById('ollama-config');
-
-            if (e.target.checked) {
-                if (ollamaConfig) ollamaConfig.classList.remove('hidden');
-                console.log('[Boot] Ollama enabled');
-            } else {
-                if (ollamaConfig) ollamaConfig.classList.add('hidden');
-                console.log('[Boot] Ollama disabled');
-            }
-
-            updateProxySaveButton();
-        });
-    }
-
-    if (proxyHuggingFaceCheckbox) {
-        proxyHuggingFaceCheckbox.addEventListener('change', (e) => {
-            const huggingfaceConfig = document.getElementById('huggingface-config');
-
-            if (e.target.checked) {
-                if (huggingfaceConfig) huggingfaceConfig.classList.remove('hidden');
-                console.log('[Boot] HuggingFace enabled');
-            } else {
-                if (huggingfaceConfig) huggingfaceConfig.classList.add('hidden');
-                console.log('[Boot] HuggingFace disabled');
-            }
-
-            updateProxySaveButton();
-        });
-    }
-
-    if (proxyCloudCheckbox) {
-        proxyCloudCheckbox.addEventListener('change', (e) => {
-            const cloudConfig = document.getElementById('cloud-proxy-config');
-
-            if (e.target.checked) {
-                if (cloudConfig) cloudConfig.classList.remove('hidden');
-                console.log('[Boot] Cloud via proxy enabled');
-            } else {
-                if (cloudConfig) cloudConfig.classList.add('hidden');
-                console.log('[Boot] Cloud via proxy disabled');
-            }
-
-            updateProxySaveButton();
-        });
-    }
-
-    // Save proxy configuration button
-    const saveProxyConfigBtn = document.getElementById('save-proxy-config');
-    if (saveProxyConfigBtn) {
-        saveProxyConfigBtn.addEventListener('click', () => {
-            const multiModelConfig = {
-                models: []
-            };
-
-            // Collect Ollama configuration if selected
-            if (proxyOllamaCheckbox?.checked) {
-                const ollamaEndpoint = document.getElementById('ollama-endpoint')?.value || 'http://localhost:11434';
-                const ollamaModel = document.getElementById('ollama-model')?.value;
-
-                multiModelConfig.models.push({
-                    type: 'ollama',
-                    endpoint: ollamaEndpoint,
-                    model: ollamaModel,
-                    enabled: true
-                });
-            }
-
-            // Collect HuggingFace configuration if selected
-            if (proxyHuggingFaceCheckbox?.checked) {
-                const hfModel = document.getElementById('huggingface-model')?.value;
-                const hfKey = document.getElementById('huggingface-key')?.value;
-
-                multiModelConfig.models.push({
-                    type: 'huggingface',
-                    model: hfModel,
-                    apiKey: hfKey,
-                    enabled: true
-                });
-            }
-
-            // Collect Cloud configuration if selected
-            if (proxyCloudCheckbox?.checked) {
-                const cloudProvider = document.getElementById('cloud-proxy-provider')?.value;
-                const cloudKey = document.getElementById('cloud-proxy-key')?.value;
-
-                multiModelConfig.models.push({
-                    type: 'cloud-proxy',
-                    provider: cloudProvider,
-                    apiKey: cloudKey,
-                    enabled: true
-                });
-            }
-
-            // Save multi-model configuration to localStorage
-            localStorage.setItem('MULTI_MODEL_CONFIG', JSON.stringify(multiModelConfig));
-            localStorage.setItem('DEPLOYMENT_MODE', 'proxy-based');
-            state.selectedMode = 'proxy-based';
-
-            console.log('[Boot] Multi-model configuration saved:', multiModelConfig);
-
-            // Update display
-            updateCurrentModeDisplay('proxy-based');
-
-            // Close modal
-            if (elements.configModal) {
-                elements.configModal.classList.add('hidden');
-            }
-        });
-    }
-
-    // Back to modes button (if it exists in proxy-based options)
-    const backToModesBtn = document.getElementById('back-to-modes');
-    if (backToModesBtn) {
-        backToModesBtn.addEventListener('click', () => {
-            // Hide proxy-based options
-            const proxyOptions = document.getElementById('proxy-based-options');
-            if (proxyOptions) {
-                proxyOptions.classList.add('hidden');
-            }
-
-            // Show mode cards again
-            const modeCardsContainer = document.querySelector('.mode-cards');
-            if (modeCardsContainer) {
-                modeCardsContainer.style.display = '';
-            }
-        });
-    }
-
-    // Save hybrid configuration button
-    const saveHybridConfigBtn = document.getElementById('save-hybrid-config');
-    if (saveHybridConfigBtn) {
-        saveHybridConfigBtn.addEventListener('click', () => {
-            const hybridConfig = {
-                local: {
-                    endpoint: document.getElementById('hybrid-ollama-endpoint')?.value || 'http://localhost:11434',
-                    model: document.getElementById('hybrid-ollama-model')?.value || 'llama3:latest'
-                },
-                cloud: {
-                    provider: document.getElementById('hybrid-cloud-provider')?.value || 'gemini',
-                    apiKey: document.getElementById('hybrid-cloud-key')?.value || ''
-                }
-            };
-
-            // Validate that cloud API key is provided
-            if (!hybridConfig.cloud.apiKey) {
-                alert('Please enter a Cloud API key for complex tasks.');
-                return;
-            }
-
-            // Save hybrid configuration to localStorage
-            localStorage.setItem('HYBRID_CONFIG', JSON.stringify(hybridConfig));
-            localStorage.setItem('DEPLOYMENT_MODE', 'hybrid');
-            state.selectedMode = 'hybrid';
-
-            console.log('[Boot] Hybrid configuration saved:', hybridConfig);
-
-            // Update display
-            updateCurrentModeDisplay('hybrid');
-
-            // Close modal
-            if (elements.configModal) {
-                elements.configModal.classList.add('hidden');
-            }
-        });
-    }
-
-    // Back to modes button (hybrid)
-    const backToModesHybridBtn = document.getElementById('back-to-modes-hybrid');
-    if (backToModesHybridBtn) {
-        backToModesHybridBtn.addEventListener('click', () => {
-            // Hide hybrid mode options
-            const hybridOptions = document.getElementById('hybrid-mode-options');
-            if (hybridOptions) {
-                hybridOptions.classList.add('hidden');
-            }
-
-            // Show mode cards again
-            const modeCardsContainer = document.querySelector('.mode-cards');
-            if (modeCardsContainer) {
-                modeCardsContainer.style.display = '';
-            }
-        });
-    }
+// Initialize all core modules
+async function initCoreModules() {
+  console.log('[Boot] Initializing core modules from VFS...');
+
+  const vfs = window.REPLOID.vfs;
+
+  // Load LLMClient
+  const LLMClientModule = await loadModuleFromVFS('/core/llm-client.js');
+  const llmClient = LLMClientModule.factory({});
+  window.REPLOID.llmClient = llmClient;
+  console.log('[Boot] LLMClient initialized');
+
+  // Load ToolWriter (needs VFS)
+  const ToolWriterModule = await loadModuleFromVFS('/core/tool-writer.js');
+  const toolWriter = ToolWriterModule.factory({ vfs, toolRunner: null }); // toolRunner set later
+  window.REPLOID.toolWriter = toolWriter;
+  console.log('[Boot] ToolWriter initialized');
+
+  // Load MetaToolWriter (needs VFS)
+  const MetaToolWriterModule = await loadModuleFromVFS('/core/meta-tool-writer.js');
+  const metaToolWriter = MetaToolWriterModule.factory({ vfs, toolRunner: null }); // toolRunner set later
+  window.REPLOID.metaToolWriter = metaToolWriter;
+  console.log('[Boot] MetaToolWriter initialized');
+
+  // Load ToolRunner (needs VFS, ToolWriter, MetaToolWriter)
+  const ToolRunnerModule = await loadModuleFromVFS('/core/tool-runner.js');
+  const toolRunner = ToolRunnerModule.factory({ vfs, toolWriter, metaToolWriter });
+  window.REPLOID.toolRunner = toolRunner;
+  console.log('[Boot] ToolRunner initialized');
+
+  // Update ToolWriter and MetaToolWriter with ToolRunner reference
+  window.REPLOID.toolWriter.toolRunner = toolRunner;
+  window.REPLOID.metaToolWriter.toolRunner = toolRunner;
+
+  // Load dynamic tools from VFS (/tools/*)
+  await loadDynamicTools(vfs, toolRunner);
+
+  // Load AgentLoop (needs LLMClient, ToolRunner, VFS)
+  const AgentLoopModule = await loadModuleFromVFS('/core/agent-loop.js');
+  const agentLoop = AgentLoopModule.factory({ llmClient, toolRunner, vfs });
+  window.REPLOID.agentLoop = agentLoop;
+  console.log('[Boot] AgentLoop initialized');
+
+  console.log('[Boot] All core modules initialized successfully');
 }
 
-function updateCurrentModeDisplay(modeName) {
-    const modeInfo = {
-        'cloud-direct': { icon: '▲', title: 'Cloud Models (Browser)' },
-        cloud: { icon: '▲', title: 'Cloud Provider' },
-        'proxy-based': { icon: '■', title: 'Local & Private (Proxy)' },
-        local: { icon: '■', title: 'Local (Ollama)' },
-        'web-llm': { icon: '◆', title: 'Browser-Only (WebLLM)' },
-        hybrid: { icon: '◐', title: 'Hybrid (Auto)' },
-        multi: { icon: '◈', title: 'High Availability' },
-        custom: { icon: '⬢', title: 'Custom Endpoint' }
-    };
+// Load dynamic tools from /tools/ directory
+async function loadDynamicTools(vfs, toolRunner) {
+  console.log('[Boot] Loading dynamic tools from VFS...');
 
-    const info = modeInfo[modeName];
-    if (info) {
-        const iconElement = document.getElementById('current-mode-icon');
-        const statusElement = elements.providerStatus;
+  try {
+    const toolFiles = await vfs.list('/tools/');
 
-        if (iconElement) iconElement.textContent = info.icon;
-        if (statusElement) statusElement.textContent = info.title;
+    for (const file of toolFiles) {
+      if (file.endsWith('.js') && !file.includes('.backup')) {
+        const toolName = file.replace('.js', '').replace('/tools/', '');
+        console.log(`[Boot] Loading dynamic tool: ${toolName}`);
+
+        try {
+          const code = await vfs.read(file);
+          const blob = new Blob([code], { type: 'text/javascript' });
+          const url = URL.createObjectURL(blob);
+
+          const module = await import(/* webpackIgnore: true */ url);
+          URL.revokeObjectURL(url);
+
+          if (module.default && typeof module.default === 'function') {
+            toolRunner.register(toolName, module.default);
+            console.log(`[Boot] Registered dynamic tool: ${toolName}`);
+          }
+        } catch (error) {
+          console.error(`[Boot] Failed to load tool ${toolName}:`, error);
+        }
+      }
     }
+  } catch (error) {
+    console.log('[Boot] No dynamic tools found (first boot?)');
+  }
 }
 
-async function awakenAgent() {
-    console.log('[Boot] awakenAgent() called');
-    const goal = elements.goalInput?.value?.trim();
-    console.log('[Boot] Goal from input:', goal);
+// Initialize Chat UI
+async function initChatUI() {
+  const ChatUIModule = await import('./ui/chat.js');
+  const chatUI = ChatUIModule.default.init(window.REPLOID.agentLoop);
+  window.REPLOID.chatUI = chatUI;
+  console.log('[Boot] Chat UI initialized');
+  return chatUI;
+}
 
-    if (!goal) {
-        console.warn('[Boot] No goal specified');
-        // Show visible user message
-        const bootContainer = document.getElementById('boot-container');
-        if (bootContainer) {
-            // Create or get existing message container
-            let messageContainer = document.getElementById('boot-warning-message');
-            if (!messageContainer) {
-                messageContainer = document.createElement('div');
-                messageContainer.id = 'boot-warning-message';
-                messageContainer.className = 'error-message';
-                messageContainer.style.cssText = 'margin: 20px auto; max-width: 600px; text-align: center;';
+// Main boot sequence
+async function boot() {
+  try {
+    // Initialize model selector (existing boot screen)
+    initModelConfig();
 
-                // Insert at the top of boot container
-                const firstChild = bootContainer.firstElementChild;
-                if (firstChild) {
-                    bootContainer.insertBefore(messageContainer, firstChild);
-                } else {
-                    bootContainer.appendChild(messageContainer);
-                }
-            }
-
-            messageContainer.innerHTML = `
-                <strong>⚠️ Goal Required</strong>
-                <p>Please enter a goal for your agent before awakening. The goal defines what your agent will work on.</p>
-            `;
-            messageContainer.classList.remove('hidden');
-
-            // Auto-hide after 5 seconds
-            setTimeout(() => {
-                messageContainer.classList.add('hidden');
-            }, 5000);
-        }
-        return;
-    }
-
-    console.log('[Boot] Awakening agent with goal:', goal);
-
-    // Check if we have a valid configuration
-    if (!state.detectedEnv.hasServer && !state.detectedEnv.hasWebGPU) {
-        alert('No AI provider available. Please configure Cloud Provider (with API key) or enable Web LLM mode.');
-        return;
-    }
-
-    // First, immediately handle UI transition before any async work
+    // Set up Awaken Agent button
+    const awakenBtn = document.getElementById('awaken-btn');
     const bootContainer = document.getElementById('boot-container');
-    const appRoot = document.getElementById('app-root');
+    const chatContainer = document.getElementById('chat-container');
+    const goalInput = document.getElementById('goal-input');
 
-    if (!bootContainer || !appRoot) {
-        console.error('[Boot] Missing boot-container or app-root elements');
+    awakenBtn.addEventListener('click', async () => {
+      if (!hasModelsConfigured()) {
+        alert('Please configure at least one model before awakening the agent');
         return;
-    }
-
-    // Hide boot container immediately
-    bootContainer.style.display = 'none';
-    console.log('[Boot] Boot container hidden');
-
-    // Show loading overlay
-    const loadingOverlay = document.createElement('div');
-    loadingOverlay.id = 'boot-transition-overlay';
-    loadingOverlay.innerHTML = `
-                <style>
-                    #boot-transition-overlay {
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        width: 100%;
-                        height: 100%;
-                        background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: center;
-                        align-items: center;
-                        z-index: 10000;
-                        animation: fadeIn 0.3s ease-in;
-                    }
-                    #boot-transition-overlay .loading-content {
-                        text-align: center;
-                    }
-                    #boot-transition-overlay h2 {
-                        color: #00ffff;
-                        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-                        font-size: 2em;
-                        margin: 0 0 20px 0;
-                        animation: shimmer 2s linear infinite;
-                        background: linear-gradient(90deg, #00ffff, #ffd700, #00ffff);
-                        background-size: 200% auto;
-                        -webkit-background-clip: text;
-                        -webkit-text-fill-color: transparent;
-                        background-clip: text;
-                    }
-                    #boot-transition-overlay .goal-text {
-                        color: #e0e0e0;
-                        font-size: 1.1em;
-                        margin-bottom: 30px;
-                        max-width: 600px;
-                    }
-                    #boot-transition-overlay .spinner {
-                        width: 60px;
-                        height: 60px;
-                        border: 4px solid rgba(0, 255, 255, 0.1);
-                        border-top: 4px solid #00ffff;
-                        border-radius: 50%;
-                        animation: spin 1s linear infinite;
-                        margin: 0 auto;
-                    }
-                    @keyframes fadeIn {
-                        from { opacity: 0; }
-                        to { opacity: 1; }
-                    }
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                    @keyframes shimmer {
-                        0% { background-position: 0% center; }
-                        100% { background-position: 200% center; }
-                    }
-                    .fade-out {
-                        animation: fadeOut 0.5s ease-out forwards;
-                    }
-                    @keyframes fadeOut {
-                        from { opacity: 1; }
-                        to { opacity: 0; }
-                    }
-                </style>
-                <div class="loading-content">
-                    <h2>REPLOID Awakening</h2>
-                    <div class="goal-text">${goal}</div>
-                    <div class="spinner"></div>
-                </div>
-            `;
-    document.body.appendChild(loadingOverlay);
-
-    // Show app root immediately with proper z-index layering
-    appRoot.style.display = 'block';
-    appRoot.style.opacity = '0';
-    appRoot.style.zIndex = '1';  // Ensure app-root appears above boot-container
-    console.log('[Boot] App root prepared (display: block, opacity: 0, z-index: 1)');
-
-    // CRITICAL: Use requestAnimationFrame to ensure DOM updates before async work
-    // This forces the browser to render the boot screen removal
-    await new Promise(resolve => requestAnimationFrame(resolve));
-
-    // Now remove the boot container from DOM after browser has painted
-    console.log('[Boot] About to remove boot-container. Parent node:', bootContainer.parentNode?.nodeName);
-    console.log('[Boot] Boot container children count:', bootContainer.childElementCount);
-    bootContainer.remove();
-    console.log('[Boot] Boot container removed from DOM');
-    console.log('[Boot] Verifying removal - boot-container still exists?:', document.getElementById('boot-container') !== null);
-
-    try {
-        // ============================================================
-        // GENESIS CYCLE (Cycle 0): Bootstrap and System Initialization
-        // ============================================================
-        const genesisStartTime = Date.now();
-        const genesisActions = [];
-
-        const logGenesisAction = (action, details = {}) => {
-            const actionEntry = {
-                action,
-                timestamp: Date.now() - genesisStartTime,
-                ...details
-            };
-            genesisActions.push(actionEntry);
-            console.log(`[Genesis] ${action}`, details);
-        };
-
-        logGenesisAction('Genesis cycle started', { goal });
-
-        // Collect and save boot state to VFS for genesis cycle
-        const bootMode = localStorage.getItem('BOOT_MODE') || 'core';
-        const consensusType = localStorage.getItem('CONSENSUS_TYPE') || 'arena';
-        const selectedModels = getSelectedModels();
-
-        logGenesisAction('Collected boot configuration', { bootMode, consensusType, modelCount: selectedModels.length });
-
-        const genesisBootState = {
-            timestamp: new Date().toISOString(),
-            goal: goal,
-            bootMode: bootMode,
-            consensusType: consensusType,
-            selectedModels: selectedModels,
-            deploymentMode: state.selectedMode || 'cloud',
-            environment: {
-                hasProxy: state.proxyAvailable,
-                hasWebGPU: state.detectedEnv.hasWebGPU,
-                hasServer: state.detectedEnv.hasServer
-            }
-        };
-
-        logGenesisAction('Prepared genesis boot state');
-
-        // Save to VFS via proxy endpoint
-        if (state.proxyAvailable) {
-            try {
-                logGenesisAction('Saving boot state to VFS via proxy');
-                const vfsResponse = await fetch('http://localhost:8000/api/vfs/backup', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        '/system/genesis-boot-config.json': JSON.stringify(genesisBootState, null, 2)
-                    })
-                });
-
-                if (vfsResponse.ok) {
-                    console.log('[Boot] Genesis boot state saved to VFS successfully');
-                } else {
-                    console.warn('[Boot] Failed to save genesis boot state to VFS:', await vfsResponse.text());
-                }
-            } catch (vfsError) {
-                console.warn('[Boot] Could not save to VFS (proxy unavailable):', vfsError.message);
-            }
-        } else {
-            console.warn('[Boot] Proxy unavailable, boot state not persisted to VFS');
-        }
-
-        // ============================================================
-        // BOOT LOADER: Load all modules into VFS based on boot mode
-        // ============================================================
-
-        logGenesisAction('Starting boot loader - initializing VFS');
-
-        // First, fetch module manifest to know what to load
-        const manifestResponse = await fetch('/module-manifest.json?t=' + Date.now());
-        const manifest = await manifestResponse.json();
-        logGenesisAction('Fetched module manifest', { version: manifest.version, presets: Object.keys(manifest.presets || {}).length });
-
-        // Determine which modules to load based on boot mode
-        let modulesToLoad = [];
-        let presetName = bootMode;
-
-        // Map boot mode names to preset names
-        const modeMapping = {
-            'core': 'core',
-            'headless': 'headless',
-            'complete': 'complete',
-            // Legacy compatibility
-            'minimal': 'core',
-            'minimal-rsi': 'core',
-            'meta': 'core',
-            'rsi-core': 'core',
-            'experimental': 'complete'
-        };
-
-        presetName = modeMapping[bootMode] || bootMode;
-
-        // Try to load the preset
-        if (manifest.presets?.[presetName]) {
-            modulesToLoad = manifest.presets[presetName];
-        } else {
-            // Fallback to CORE as default
-            console.warn(`[BootLoader] Unknown boot mode '${bootMode}', falling back to CORE`);
-            modulesToLoad = manifest.presets?.['core'] || [];
-            presetName = 'core';
-        }
-
-        logGenesisAction('Determined module preset', { preset: presetName, moduleCount: modulesToLoad.length });
-
-        // Fetch config.json (needed for agent)
-        const configResponse = await fetch('/config.json?t=' + Date.now());
-        const configContent = await configResponse.text();
-        logGenesisAction('Fetched config.json');
-
-        // ALWAYS fetch app-logic.js (bootstrap script, not a module)
-        const appLogicResponse = await fetch('/upgrades/core/app-logic.js?t=' + Date.now());
-        const appLogicContent = await appLogicResponse.text();
-        logGenesisAction('Fetched app-logic.js');
-
-        // Fetch all module files from server IN PARALLEL
-        logGenesisAction('Fetching modules from server', { count: modulesToLoad.length });
-        const modulePromises = modulesToLoad.map(async (modulePath) => {
-            try {
-                const response = await fetch(modulePath + '?t=' + Date.now());
-                if (!response.ok) {
-                    console.warn(`[BootLoader] Failed to fetch ${modulePath}:`, response.statusText);
-                    return null;
-                }
-                const content = await response.text();
-                return { path: modulePath, content };
-            } catch (error) {
-                console.error(`[BootLoader] Error fetching ${modulePath}:`, error);
-                return null;
-            }
-        });
-
-        const moduleResults = await Promise.all(modulePromises);
-        const loadedModules = moduleResults.filter(m => m !== null);
-        logGenesisAction('Fetched all modules', { successCount: loadedModules.length, failedCount: modulesToLoad.length - loadedModules.length });
-
-        // Initialize GitVFS (IndexedDB-backed Git filesystem)
-        logGenesisAction('Initializing VFS (LightningFS + Git)');
-        const LightningFS = window.LightningFS;
-        const fs = new LightningFS('reploid-vfs');
-        const git = window.git;
-
-        // Helper to write file to VFS
-        const writeToVFS = async (filepath, content) => {
-            // Create all parent directories recursively
-            const parts = filepath.split('/').filter(p => p);
-            const dirs = [];
-
-            // Build directory paths (excluding filename)
-            for (let i = 0; i < parts.length - 1; i++) {
-                dirs.push('/' + parts.slice(0, i + 1).join('/'));
-            }
-
-            // Create each directory in sequence
-            for (const dir of dirs) {
-                try {
-                    await fs.promises.mkdir(dir);
-                } catch (error) {
-                    // Directory might already exist, ignore EEXIST errors
-                    if (error.code !== 'EEXIST') {
-                        console.warn(`[VFS] mkdir warning for ${dir}:`, error.message);
-                    }
-                }
-            }
-
-            // Write the file
-            await fs.promises.writeFile(filepath, content, 'utf8');
-        };
-
-        // Initialize git repo if needed
-        try {
-            await git.init({ fs, dir: '/' });
-        } catch (error) {
-            // Repo might already exist
-        }
-
-        // Write all modules to VFS
-        logGenesisAction('Writing modules to VFS', { count: loadedModules.length + 3 });
-        await writeToVFS('/config.json', configContent);
-        await writeToVFS('/module-manifest.json', JSON.stringify(manifest, null, 2));
-        await writeToVFS('/upgrades/core/app-logic.js', appLogicContent);
-
-        for (const module of loadedModules) {
-            await writeToVFS(module.path, module.content);
-        }
-
-        logGenesisAction('All modules written to VFS');
-
-        // Commit to git
-        try {
-            await git.add({ fs, dir: '/', filepath: '.' });
-            await git.commit({
-                fs,
-                dir: '/',
-                message: `Genesis Cycle 0: Loaded ${loadedModules.length} modules (${presetName} preset)`,
-                author: {
-                    name: 'REPLOID Genesis',
-                    email: 'genesis@reploid.local'
-                }
-            });
-            logGenesisAction('Created genesis commit in Git VFS');
-        } catch (error) {
-            console.warn('[BootLoader] Git commit failed (non-fatal):', error);
-            logGenesisAction('Git commit failed (continuing anyway)', { error: error.message });
-        }
-
-        // ============================================================
-        // GENESIS CYCLE: Initialize StateManager with module metadata
-        // ============================================================
-        logGenesisAction('Preparing StateManager genesis state');
-
-        const artifactMetadata = {};
-
-        // Register config.json
-        artifactMetadata['/config.json'] = {
-            id: '/config.json',
-            type: 'json',
-            description: 'REPLOID configuration'
-        };
-
-        // Register module manifest
-        artifactMetadata['/module-manifest.json'] = {
-            id: '/module-manifest.json',
-            type: 'json',
-            description: 'Module manifest with load groups and presets'
-        };
-
-        // Register app-logic.js
-        artifactMetadata['/upgrades/core/app-logic.js'] = {
-            id: '/upgrades/core/app-logic.js',
-            type: 'code',
-            description: 'Core agent logic bootstrap module'
-        };
-
-        // Register all loaded modules
-        for (const module of loadedModules) {
-            const moduleId = module.path.replace('/upgrades/', '').replace('.js', '');
-            artifactMetadata[module.path] = {
-                id: module.path,
-                type: 'code',
-                description: `REPLOID module: ${moduleId}`
-            };
-        }
-
-        // Create initial state for StateManager
-        const genesisState = {
-            totalCycles: 0,
-            artifactMetadata: artifactMetadata,
-            currentGoal: {
-                seed: goal,
-                cumulative: goal,
-                stack: [],
-                latestType: "Boot"
-            },
-            apiKey: ""
-        };
-
-        // Save genesis state to VFS at /.state (where StateManager reads it)
-        await fs.promises.writeFile('/.state', JSON.stringify(genesisState, null, 2), 'utf8');
-        logGenesisAction('Genesis state saved to VFS', { artifactCount: Object.keys(artifactMetadata).length });
-
-        // Create VFS interface for agent
-        const vfs = {
-            read: async (path) => {
-                // Reduced logging - only errors are logged
-                try {
-                    const content = await fs.promises.readFile(path, 'utf8');
-                    return content;
-                } catch (error) {
-                    console.error(`[VFS] Error reading ${path}:`, error);
-                    throw error;
-                }
-            },
-            write: async (path, content) => {
-                await writeToVFS(path, content);
-            },
-            fs, // Expose filesystem for advanced operations
-            git // Expose git for version control
-        };
-
-        logGenesisAction('VFS interface created');
-
-        // Load app-logic.js from VFS
-        const appLogicCode = await vfs.read('/upgrades/core/app-logic.js');
-        logGenesisAction('Loaded app-logic.js from VFS', { size: appLogicCode.length });
-
-        // Execute app-logic.js to get the CoreLogicModule function
-        const CoreLogicModule = new Function(appLogicCode + '\nreturn CoreLogicModule;')();
-        logGenesisAction('Executed app-logic.js - CoreLogicModule ready');
-
-        // Prepare initial configuration
-        const initialConfig = {
-            goal: goal,
-            mode: state.selectedMode || 'cloud',
-            bootMode: presetName,  // Pass mapped preset name (e.g., 'minimal-rsi' not 'minimal')
-            persona: {
-                id: 'code_refactorer'  // Default persona
-            }
-        };
-
-        logGenesisAction('Prepared initial configuration', { persona: initialConfig.persona.id, bootMode: initialConfig.bootMode });
-
-        // Initialize the agent system
-        const agentSystem = await CoreLogicModule(initialConfig, vfs);
-
-        logGenesisAction('Agent system initialized successfully');
-
-        // ============================================================
-        // GENESIS CYCLE COMPLETE: Save summary to VFS
-        // ============================================================
-        const genesisEndTime = Date.now();
-        const genesisDuration = genesisEndTime - genesisStartTime;
-
-        const genesisCycleSummary = {
-            cycleNumber: 0,
-            type: 'GENESIS',
-            status: 'COMPLETED',
-            startTime: new Date(genesisStartTime).toISOString(),
-            endTime: new Date(genesisEndTime).toISOString(),
-            durationMs: genesisDuration,
-            goal: goal,
-            bootMode: presetName,
-            modulesLoaded: loadedModules.length,
-            actions: genesisActions,
-            summary: `Genesis cycle completed in ${(genesisDuration / 1000).toFixed(2)}s. Loaded ${loadedModules.length} modules (${presetName} preset), initialized VFS, and prepared agent system.`
-        };
-
-        // Save genesis cycle to VFS
-        await writeToVFS('/.state-genesis.json', JSON.stringify(genesisCycleSummary, null, 2));
-        logGenesisAction('Saved genesis cycle summary to VFS', { duration: genesisDuration });
-
-        console.log(`[Genesis] Cycle 0 complete in ${genesisDuration}ms`);
-        console.log(`[Genesis] Total actions: ${genesisActions.length}`);
-
-        // Genesis bootstrap runs synchronously inside CoreLogicModule,
-        // so it's already complete at this point. Transition to main app.
-        console.log('[Boot] Genesis bootstrap complete - removing boot overlay...');
-        appRoot.style.transition = 'opacity 0.5s ease-in';
-        appRoot.style.opacity = '1';
-
-        // Fade out and remove loading overlay - WAIT for it to complete
-        await new Promise((resolve) => {
-            if (loadingOverlay && loadingOverlay.parentNode) {
-                loadingOverlay.classList.add('fade-out');
-                setTimeout(() => {
-                    if (loadingOverlay.parentNode) {
-                        loadingOverlay.remove();
-                        console.log('[Boot] Boot overlay removed');
-                        console.log('[Boot] Final check - boot-container still exists after overlay removal?:', document.getElementById('boot-container') !== null);
-                    }
-                    resolve();
-                }, 500);
-            } else {
-                console.warn('[Boot] Loading overlay not found or already removed');
-                resolve();
-            }
-        });
-
-        // Remove the boot container from DOM now that loading is complete
-        // This frees up memory and removes all children including goal-container-top and config-section
-        if (bootContainer && bootContainer.parentNode) {
-            bootContainer.remove();
-            console.log('[Boot] Boot container removed from DOM');
-        }
-
-        console.log('[Boot] Boot overlay removal complete - starting user cycle');
-
-        // NOW start the user cycle after boot screen is fully removed
-        if (agentSystem && agentSystem.goal && agentSystem.container) {
-            console.log('[Boot] Starting user cycle with goal:', agentSystem.goal);
-            try {
-                const AgentCycle = await agentSystem.container.resolve('AgentCycleStructured');
-                if (AgentCycle && AgentCycle.executeStructuredCycle) {
-                    await AgentCycle.executeStructuredCycle(agentSystem.goal);
-                    console.log('[Boot] User cycle started successfully');
-                } else {
-                    console.error('[Boot] AgentCycleStructured.executeStructuredCycle not available');
-                }
-            } catch (cycleError) {
-                console.error('[Boot] Failed to start user cycle:', cycleError);
-            }
-        } else {
-            console.log('[Boot] No goal provided, agent remains in IDLE state');
-        }
-
-    } catch (error) {
-        console.error('[Boot] Failed to awaken agent:', error);
-
-        // Hide loading overlay and show error screen
-        const loadingOverlay = document.getElementById('boot-transition-overlay');
-        if (loadingOverlay) {
-            loadingOverlay.remove();
-        }
-
-        const appRoot = document.getElementById('app-root');
-        if (appRoot) {
-            appRoot.style.display = 'flex';
-            appRoot.style.alignItems = 'center';
-            appRoot.style.justifyContent = 'center';
-            appRoot.style.minHeight = '100vh';
-            appRoot.style.padding = '20px';
-            appRoot.innerHTML = `
-                <div style="max-width: 800px; width: 100%; padding: 40px; background: rgba(255, 107, 107, 0.1); border: 2px solid #ff6b6b; border-radius: 12px; box-shadow: 0 8px 32px rgba(255, 107, 107, 0.2);">
-                    <div style="text-align: center;">
-                        <h1 style="color: #ff6b6b; margin: 0 0 10px 0; font-size: 2.5em;">⚠️ Boot Failed</h1>
-                        <p style="color: #d0d0d0; font-size: 1.2em; margin: 0 0 30px 0;">Agent initialization encountered an error</p>
-                    </div>
-
-                    <div style="background: rgba(0,0,0,0.4); padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ff6b6b;">
-                        <h3 style="color: #ff6b6b; margin: 0 0 10px 0; font-size: 1.1em;">Error Message:</h3>
-                        <p style="color: #fff; margin: 0; font-family: 'Monaco', 'Courier New', monospace;">${error.message}</p>
-                    </div>
-
-                    <details style="margin-bottom: 30px;">
-                        <summary style="color: #4ec9b0; cursor: pointer; padding: 10px; background: rgba(78, 201, 176, 0.1); border-radius: 4px; user-select: none;">
-                            📋 View Stack Trace
-                        </summary>
-                        <pre style="margin-top: 10px; padding: 20px; background: rgba(0,0,0,0.6); border-radius: 4px; color: #d0d0d0; overflow-x: auto; font-size: 0.85em; border: 1px solid #333;">${error.stack || 'No stack trace available'}</pre>
-                    </details>
-
-                    <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-                        <button onclick="location.reload()" style="padding: 12px 24px; background: linear-gradient(135deg, #4ec9b0, #2ea78c); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 1em; font-weight: 600; box-shadow: 0 4px 12px rgba(78, 201, 176, 0.3); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                            🔄 Reload and Retry
-                        </button>
-                        <button onclick="localStorage.clear(); location.reload()" style="padding: 12px 24px; background: linear-gradient(135deg, #ff6b6b, #ee5555); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 1em; font-weight: 600; box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                            🗑️ Clear Cache & Reset
-                        </button>
-                    </div>
-
-                    <div style="margin-top: 30px; padding: 15px; background: rgba(78, 201, 176, 0.05); border-radius: 6px; border-left: 3px solid #4ec9b0;">
-                        <p style="color: #4ec9b0; margin: 0; font-size: 0.9em;">
-                            💡 <strong>Tip:</strong> Check the browser console (F12) for detailed logs. If the problem persists, try clearing your browser cache or using a different boot mode.
-                        </p>
-                    </div>
-                </div>
-            `;
-        }
-    }
+      }
+
+      const goal = goalInput.value.trim();
+      if (!goal) {
+        alert('Please enter a goal for the agent');
+        return;
+      }
+
+      console.log('[Boot] Awakening agent with goal:', goal);
+
+      // Hide boot screen, show chat
+      bootContainer.style.display = 'none';
+      chatContainer.style.display = 'flex';
+
+      // Get selected models
+      const models = getSelectedModels();
+      if (models.length === 0) {
+        alert('No models selected');
+        return;
+      }
+
+      // Use first model for now (multi-model support later)
+      window.REPLOID.agentLoop.setModel(models[0]);
+
+      // Start agent
+      try {
+        await window.REPLOID.agentLoop.run(goal);
+      } catch (error) {
+        console.error('[Boot] Agent error:', error);
+        alert(`Agent error: ${error.message}`);
+      }
+    });
+
+    // Clear Cache button
+    const clearCacheBtn = document.getElementById('clear-cache-btn');
+    clearCacheBtn.addEventListener('click', async () => {
+      if (confirm('Clear VFS cache and reload? This will reset to genesis state.')) {
+        await window.REPLOID.vfs.clear();
+        location.reload();
+      }
+    });
+
+    console.log('[Boot] Boot screen ready');
+
+  } catch (error) {
+    console.error('[Boot] Fatal error:', error);
+    alert(`Boot error: ${error.message}`);
+  }
 }
 
-// Legacy openConfigModal function removed - now using inline model picker
+// Start bootstrap sequence
+(async () => {
+  try {
+    // 1. Initialize VFS and check for Genesis
+    await initVFS();
 
-// Expose selectBootMode globally for inline onclick handlers
-window.selectBootMode = function(mode) {
-    console.log('[Boot] Boot mode selected:', mode);
-    localStorage.setItem('BOOT_MODE', mode);
+    // 2. Initialize all core modules from VFS
+    await initCoreModules();
 
-    // Update visual selection
-    document.querySelectorAll('.boot-mode-btn').forEach(btn => {
-        btn.classList.remove('selected');
-    });
-    document.querySelector(`[data-mode="${mode}"]`)?.classList.add('selected');
-};
+    // 3. Initialize Chat UI
+    await initChatUI();
 
-// Expose module directory functions globally
-window.showModuleDirectory = async function(presetName = null) {
-    const modal = document.getElementById('directory-modal');
-    const content = document.getElementById('directory-content');
+    // 4. Setup boot screen handlers
+    await boot();
 
-    if (!modal || !content) return;
+    console.log('[Boot] REPLOID ready');
 
-    // Show loading state
-    content.innerHTML = '<div style="padding: 40px; text-align: center; color: #888;">Loading modules...</div>';
-    modal.classList.remove('hidden');
-
-    // If no preset specified, use current boot mode
-    if (!presetName) {
-        const bootMode = localStorage.getItem('BOOT_MODE') || 'core';
-        const modeMapping = {
-            'core': 'core',
-            'headless': 'headless',
-            'complete': 'complete',
-            'minimal': 'core',
-            'minimal-rsi': 'core',
-            'meta': 'core',
-            'rsi-core': 'core',
-            'experimental': 'complete'
-        };
-        presetName = modeMapping[bootMode] || bootMode;
-    }
-
-    try {
-        // Fetch module manifest (single source of truth)
-        const response = await fetch('/module-manifest.json?t=' + Date.now());
-
-        if (!response.ok) {
-            throw new Error('Failed to load module manifest');
-        }
-
-        const manifest = await response.json();
-        const modules = manifest.presets?.[presetName] || [];
-
-        if (modules.length === 0) {
-            content.innerHTML = '<div style="padding: 40px; text-align: center; color: #888;">No modules found for this preset</div>';
-            return;
-        }
-
-        // Get description from manifest
-        const descriptions = {
-            'core': '64 modules — Complete RSI agent with full UI and in-browser MCP protocol servers',
-            'headless': '45 modules — In-browser MCP protocol server, no UI',
-            'complete': '85 modules — Everything including experimental in-browser MCP servers'
-        };
-
-        // Create module list with proper categories
-        let modulesHTML = `
-            <div style="padding: 0;">
-                <div style="color: #888; margin-bottom: 20px; text-align: center; font-size: 14px;">
-                    ${descriptions[presetName] || `${modules.length} modules`}
-                </div>
-                <div class="module-list">
-        `;
-
-        modules.forEach((modulePath, index) => {
-            const filename = modulePath.split('/').pop();
-            const category = modulePath.includes('/mcp/servers/') ? 'MCP Server' :
-                            modulePath.includes('/mcp/') ? 'MCP Infrastructure' :
-                            modulePath.includes('/ui/') ? 'UI' :
-                            modulePath.includes('/lens/') ? 'Lens' :
-                            modulePath.includes('/personas/') ? 'Persona' :
-                            modulePath.includes('/utils/') ? 'Utility' :
-                            'Core';
-
-            const name = filename.replace(/\.js$/, '').replace(/\.ts$/, '').replace(/-/g, ' ');
-            const capitalizedName = name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-
-            modulesHTML += `
-                <div class="module-item" style="padding: 12px; border-bottom: 1px solid #333; display: flex; align-items: center;">
-                    <div style="color: #666; font-family: monospace; margin-right: 15px; min-width: 40px;">
-                        ${String(index + 1).padStart(3, '0')}
-                    </div>
-                    <div style="flex: 1;">
-                        <div style="color: #fff; font-weight: 600; margin-bottom: 4px;">${capitalizedName}</div>
-                        <div style="color: #888; font-size: 11px; font-family: monospace;">${modulePath}</div>
-                    </div>
-                    <div style="color: #0ff; font-size: 11px; padding: 4px 8px; background: rgba(0,255,255,0.1); border-radius: 3px;">
-                        ${category}
-                    </div>
-                </div>
-            `;
-        });
-
-        modulesHTML += '</div></div>';
-        content.innerHTML = modulesHTML;
-
-    } catch (error) {
-        console.error('[Boot] Error loading modules:', error);
-        content.innerHTML = `
-            <div style="padding: 40px; text-align: center;">
-                <div style="color: #e74856; margin-bottom: 10px;">Failed to load modules</div>
-                <div style="color: #888; font-size: 12px;">${error.message}</div>
-            </div>
-        `;
-    }
-};
-
-window.switchModulePreset = function(presetName) {
-    // Update active button
-    const filters = document.querySelectorAll('.directory-filter');
-    filters.forEach(btn => {
-        if (btn.dataset.preset === presetName) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
-    });
-
-    // Load modules for this preset
-    window.showModuleDirectory(presetName);
-};
-
-window.closeDirectoryModal = function() {
-    const modal = document.getElementById('directory-modal');
-    if (modal) {
-        modal.classList.add('hidden');
-    }
-};
-
-window.closeInfoCard = function() {
-    const overlay = document.getElementById('info-overlay');
-    if (overlay) {
-        overlay.classList.add('hidden');
-    }
-};
-
-// Start the application
-main();
+  } catch (error) {
+    console.error('[Boot] Bootstrap failed:', error);
+    document.body.innerHTML = `
+      <div style="padding: 40px; text-align: center; font-family: monospace;">
+        <h1>Boot Failed</h1>
+        <pre style="text-align: left; background: #f5f5f5; padding: 20px; border-radius: 8px;">
+${error.stack}
+        </pre>
+        <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; font-size: 16px;">
+          Reload
+        </button>
+      </div>
+    `;
+  }
+})();
