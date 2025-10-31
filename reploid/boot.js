@@ -13,7 +13,8 @@ window.REPLOID = {
   agentLoop: null,
   agentLog: null, // Renamed from chatUI
   codeViewer: null,
-  substrateLoader: null
+  substrateLoader: null,
+  multiModelCoordinator: null
 };
 
 // Genesis: Copy core modules from disk to IndexedDB on first boot
@@ -28,7 +29,8 @@ async function genesisInit() {
     'meta-tool-writer.js',
     'agent-loop.js',
     'substrate-loader.js',
-    'substrate-tools.js'
+    'substrate-tools.js',
+    'multi-model-coordinator.js'
   ];
 
   const utils = window.REPLOID.vfs;
@@ -163,6 +165,12 @@ async function initCoreModules() {
   const SubstrateToolsModule = await loadModuleFromVFS('/core/substrate-tools.js');
   SubstrateToolsModule.registerTools(toolRunner, substrateLoader);
   console.log('[Boot] Substrate tools registered');
+
+  // Load MultiModelCoordinator (needs LLMClient, ToolRunner, VFS)
+  const MultiModelModule = await loadModuleFromVFS('/core/multi-model-coordinator.js');
+  const multiModelCoordinator = MultiModelModule.factory({ llmClient, toolRunner, vfs });
+  window.REPLOID.multiModelCoordinator = multiModelCoordinator;
+  console.log('[Boot] MultiModelCoordinator initialized');
 
   console.log('[Boot] All core modules initialized successfully');
 }

@@ -1,6 +1,8 @@
 # REPLOID
 
-**Recursive Evolution Protocol for Level-Optimizing Intelligence Development**
+**R**ecursive **E**volution **P**rotocol **L**oop **O**ptimizing **I**ntelligent **DREAMER**
+(**D**ynamic **R**ecursive **E**ngine **A**dapting **M**odules **E**volving **R**EPLOID)
+→ REPLOID ↔ DREAMER ↔ ∞
 
 A browser-native AI agent with self-improvement capabilities. REPLOID runs entirely in your browser, creating new tools at runtime and modifying its own code to evolve its capabilities.
 
@@ -26,6 +28,33 @@ graph TB
 ```
 
 **How it works:** Agent reads code from VFS → analyzes & improves → writes back to VFS → hot-reloads → becomes better.
+
+---
+
+## Core Modules
+
+REPLOID consists of 11 core modules that can all be modified by the agent at runtime:
+
+**Cognitive Layer:**
+- `agent-loop.js` - Main cognitive cycle and decision-making
+- `llm-client.js` - Multi-provider LLM communication
+- `multi-model-coordinator.js` - Orchestrates multiple models
+- `workflow-manager.js` - Manages complex multi-step workflows
+
+**Tool Layer:**
+- `tool-runner.js` - Executes tools and manages tool registry
+- `tool-writer.js` - Creates and validates new tools (Level 1 RSI)
+- `meta-tool-writer.js` - Improves core modules (Level 2+ RSI)
+
+**Substrate Layer:**
+- `substrate-loader.js` - Hot-loads evolved code as living modules
+- `substrate-tools.js` - Provides 10 substrate manipulation tools
+
+**Foundation:**
+- `vfs.js` - Virtual filesystem (IndexedDB)
+- `utils.js` - Shared utilities
+
+All modules use a factory pattern and can be read, modified, and hot-reloaded by the agent using `improve_core_module()`.
 
 ---
 
