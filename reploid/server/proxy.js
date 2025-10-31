@@ -57,6 +57,11 @@ console.log(`   🖥️  Local models at: ${LOCAL_MODEL_ENDPOINT}`);
 let ollamaProcess = null;
 let ollamaStatus = 'unknown';
 
+// GPU monitoring process management
+let gpuMonitorProcess = null;
+const GPU_LOG_DIR = path.join(__dirname, 'logs');
+const GPU_MONITOR_INTERVAL = 60000; // 60 seconds
+
 async function checkOllamaRunning() {
   try {
     const fetch = (await import('node-fetch')).default;
@@ -138,9 +143,103 @@ async function initializeOllama() {
   }
 }
 
+// GPU monitoring functions
+async function getGPUInfo() {
+  const gpuInfo = {
+    timestamp: new Date().toISOString(),
+    ollama: {
+      status: ollamaStatus,
+      endpoint: LOCAL_MODEL_ENDPOINT
+    }
+  };
+
+  // Try to get ROCm GPU info
+  try {
+    const { stdout: rocmOutput } = await execPromise('rocm-smi --showmeminfo vram --json 2>/dev/null || rocm-smi --json 2>/dev/null || echo "{}"');
+    gpuInfo.rocm = JSON.parse(rocmOutput || '{}');
+  } catch (rocmError) {
+    gpuInfo.rocm = { available: false };
+  }
+
+  // Get recent Ollama GPU events from logs
+  try {
+    const { stdout: ollamaLogs } = await execPromise('journalctl -u ollama --since "5 minutes ago" --no-pager 2>/dev/null | grep -iE "GPU|hang|memory|error" | tail -10 || echo ""');
+    gpuInfo.recentEvents = ollamaLogs.split('\n').filter(line => line.trim());
+  } catch (logError) {
+    gpuInfo.recentEvents = [];
+  }
+
+  return gpuInfo;
+}
+
+async function logGPUStatus() {
+  try {
+    // Ensure log directory exists
+    if (!fs.existsSync(GPU_LOG_DIR)) {
+      fs.mkdirSync(GPU_LOG_DIR, { recursive: true });
+    }
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const logFile = path.join(GPU_LOG_DIR, `gpu-monitor-${timestamp}.log`);
+
+    const gpuInfo = await getGPUInfo();
+    const logContent = `=== GPU Status at ${gpuInfo.timestamp} ===\n${JSON.stringify(gpuInfo, null, 2)}\n\n`;
+
+    fs.appendFileSync(logFile, logContent);
+
+    // Clean up old log files (keep last 100)
+    const logFiles = fs.readdirSync(GPU_LOG_DIR)
+      .filter(f => f.startsWith('gpu-monitor-'))
+      .sort()
+      .reverse();
+
+    if (logFiles.length > 100) {
+      logFiles.slice(100).forEach(f => {
+        try {
+          fs.unlinkSync(path.join(GPU_LOG_DIR, f));
+        } catch (err) {
+          // Ignore errors
+        }
+      });
+    }
+
+    console.log(`[GPU Monitor] Logged status to ${path.basename(logFile)}`);
+  } catch (error) {
+    console.error('[GPU Monitor] Failed to log GPU status:', error.message);
+  }
+}
+
+function startGPUMonitoring() {
+  if (gpuMonitorProcess) {
+    console.log('[GPU Monitor] Already running');
+    return;
+  }
+
+  console.log('[GPU Monitor] Starting GPU monitoring...');
+
+  // Log immediately
+  logGPUStatus();
+
+  // Then log every 60 seconds
+  gpuMonitorProcess = setInterval(logGPUStatus, GPU_MONITOR_INTERVAL);
+
+  console.log(`[GPU Monitor] Monitoring started (interval: ${GPU_MONITOR_INTERVAL / 1000}s)`);
+}
+
+function stopGPUMonitoring() {
+  if (gpuMonitorProcess) {
+    clearInterval(gpuMonitorProcess);
+    gpuMonitorProcess = null;
+    console.log('[GPU Monitor] Stopped');
+  }
+}
+
 // Initialize Ollama and check status periodically
 initializeOllama();
 setInterval(updateOllamaStatus, 10000); // Check every 10 seconds
+
+// Start GPU monitoring
+startGPUMonitoring();
 
 // Middleware to parse JSON bodies
 app.use(express.json({ limit: '10mb' }));
@@ -240,8 +339,13 @@ app.post('/api/gemini/*', async (req, res) => {
 
 // Proxy endpoint for local models (Ollama, LM Studio, etc.)
 app.post('/api/local/*', async (req, res) => {
+  const requestId = Math.random().toString(36).substring(7);
   const localPath = req.params[0];
   const localUrl = `${LOCAL_MODEL_ENDPOINT}/${localPath}`;
+
+  console.log(`[API Local ${requestId}] Incoming request to path: ${localPath}`);
+  console.log(`[API Local ${requestId}] Proxying to: ${localUrl}`);
+  console.log(`[API Local ${requestId}] Request body:`, JSON.stringify(req.body, null, 2).substring(0, 500));
 
   try {
     const fetch = (await import('node-fetch')).default;
@@ -253,32 +357,38 @@ app.post('/api/local/*', async (req, res) => {
       body: JSON.stringify(req.body)
     });
 
+    console.log(`[API Local ${requestId}] Response status: ${response.status}`);
     const responseText = await response.text();
+    console.log(`[API Local ${requestId}] Response (first 500 chars):`, responseText.substring(0, 500));
 
     try {
       const data = JSON.parse(responseText);
 
       if (!response.ok) {
-        console.error('Local model error:', data);
+        console.error(`[API Local ${requestId}] ERROR: Local model error:`, data);
         return res.status(response.status).json(data);
       }
 
+      console.log(`[API Local ${requestId}] SUCCESS: Returning response`);
       res.json(data);
     } catch (parseError) {
-      console.error('Failed to parse response:', responseText);
+      console.error(`[API Local ${requestId}] ERROR: Failed to parse response:`, responseText);
       res.status(response.status || 500).json({
         error: 'Invalid response from local model',
         status: response.status,
         statusText: response.statusText,
-        details: responseText.substring(0, 500)
+        details: responseText.substring(0, 500),
+        requestId: requestId
       });
     }
   } catch (error) {
-    console.error('Local model proxy error:', error);
+    console.error(`[API Local ${requestId}] ERROR: Proxy error:`, error);
+    console.error(`[API Local ${requestId}] Stack trace:`, error.stack);
     res.status(500).json({
       error: 'Failed to proxy request to local model',
       details: error.message,
-      endpoint: localUrl
+      endpoint: localUrl,
+      requestId: requestId
     });
   }
 });
@@ -437,6 +547,218 @@ app.post('/api/huggingface/models/:model(*)', async (req, res) => {
   }
 });
 
+// Unified chat endpoint (routes to appropriate provider)
+app.post('/api/chat', async (req, res) => {
+  const requestId = Math.random().toString(36).substring(7);
+  console.log(`[API Chat ${requestId}] Incoming request from ${req.headers['user-agent']?.substring(0, 50) || 'unknown'}`);
+  console.log(`[API Chat ${requestId}] Request body:`, JSON.stringify(req.body, null, 2).substring(0, 500));
+
+  try {
+    const { provider, model, messages } = req.body;
+
+    if (!provider || !model || !messages) {
+      console.log(`[API Chat ${requestId}] ERROR: Missing required fields`);
+      return res.status(400).json({
+        error: 'Missing required fields: provider, model, messages'
+      });
+    }
+
+    console.log(`[API Chat ${requestId}] Routing to provider: ${provider}, model: ${model}`);
+    const fetch = (await import('node-fetch')).default;
+    let response, data;
+
+    switch (provider) {
+      case 'gemini':
+        console.log(`[API Chat ${requestId}] Handling Gemini request`);
+        if (!GEMINI_API_KEY) {
+          console.log(`[API Chat ${requestId}] ERROR: Gemini API key not configured`);
+          return res.status(500).json({ error: 'Gemini API key not configured' });
+        }
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+        console.log(`[API Chat ${requestId}] Calling Gemini API: ${geminiUrl.split('?')[0]}`);
+        response = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: messages.map(m => ({
+              role: m.role === 'assistant' ? 'model' : 'user',
+              parts: [{ text: m.content }]
+            }))
+          })
+        });
+        data = await response.json();
+        console.log(`[API Chat ${requestId}] Gemini response status: ${response.status}`);
+        if (!response.ok) {
+          console.log(`[API Chat ${requestId}] ERROR: Gemini API error:`, data);
+          return res.status(response.status).json(data);
+        }
+        console.log(`[API Chat ${requestId}] SUCCESS: Returning Gemini response`);
+        return res.json({
+          content: data.candidates[0].content.parts[0].text,
+          usage: data.usageMetadata
+        });
+
+      case 'openai':
+        console.log(`[API Chat ${requestId}] Handling OpenAI request`);
+        if (!OPENAI_API_KEY) {
+          console.log(`[API Chat ${requestId}] ERROR: OpenAI API key not configured`);
+          return res.status(500).json({ error: 'OpenAI API key not configured' });
+        }
+        console.log(`[API Chat ${requestId}] Calling OpenAI API`);
+        response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${OPENAI_API_KEY}`
+          },
+          body: JSON.stringify({ model, messages })
+        });
+        data = await response.json();
+        console.log(`[API Chat ${requestId}] OpenAI response status: ${response.status}`);
+        if (!response.ok) {
+          console.log(`[API Chat ${requestId}] ERROR: OpenAI API error:`, data);
+          return res.status(response.status).json(data);
+        }
+        console.log(`[API Chat ${requestId}] SUCCESS: Returning OpenAI response`);
+        return res.json({
+          content: data.choices[0].message.content,
+          usage: data.usage
+        });
+
+      case 'anthropic':
+        console.log(`[API Chat ${requestId}] Handling Anthropic request`);
+        if (!ANTHROPIC_API_KEY) {
+          console.log(`[API Chat ${requestId}] ERROR: Anthropic API key not configured`);
+          return res.status(500).json({ error: 'Anthropic API key not configured' });
+        }
+        console.log(`[API Chat ${requestId}] Calling Anthropic API`);
+        response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            max_tokens: 4096
+          })
+        });
+        data = await response.json();
+        console.log(`[API Chat ${requestId}] Anthropic response status: ${response.status}`);
+        if (!response.ok) {
+          console.log(`[API Chat ${requestId}] ERROR: Anthropic API error:`, data);
+          return res.status(response.status).json(data);
+        }
+        console.log(`[API Chat ${requestId}] SUCCESS: Returning Anthropic response`);
+        return res.json({
+          content: data.content[0].text,
+          usage: data.usage
+        });
+
+      case 'ollama':
+        console.log(`[API Chat ${requestId}] Handling Ollama request`);
+        const ollamaUrl = `${LOCAL_MODEL_ENDPOINT}/api/chat`;
+        console.log(`[API Chat ${requestId}] Calling Ollama at: ${ollamaUrl} with model: ${model}`);
+        console.log(`[API Chat ${requestId}] Ollama request payload:`, JSON.stringify({ model, messages: messages.length + ' messages', stream: true }));
+
+        try {
+          // Use a longer timeout for Ollama (large models can take time)
+          const controller = new AbortController();
+          const timeout = setTimeout(() => {
+            controller.abort();
+            console.log(`[API Chat ${requestId}] ERROR: Ollama request timed out after 120 seconds`);
+          }, 120000); // 120 second timeout for large models
+
+          try {
+            response = await fetch(ollamaUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model, messages, stream: true }),
+              signal: controller.signal
+            });
+            clearTimeout(timeout);
+          } catch (fetchError) {
+            clearTimeout(timeout);
+            if (fetchError.name === 'AbortError') {
+              throw new Error(`Ollama request timed out after 120 seconds. Large models like ${model} may take longer than expected. Try a smaller model or check Ollama server logs.`);
+            }
+            throw fetchError;
+          }
+
+          console.log(`[API Chat ${requestId}] Ollama response status: ${response.status}`);
+
+          if (!response.ok) {
+            const responseText = await response.text();
+            try {
+              data = JSON.parse(responseText);
+            } catch {
+              data = { error: responseText };
+            }
+            console.log(`[API Chat ${requestId}] ERROR: Ollama API error:`, data);
+            // Add more helpful error messages
+            if (response.status === 404) {
+              data.helpfulMessage = `Model '${model}' not found in Ollama. Run 'ollama pull ${model}' to download it, or check 'ollama list' for available models.`;
+            } else if (response.status === 503) {
+              data.helpfulMessage = `Ollama service unavailable. Make sure Ollama is running at ${LOCAL_MODEL_ENDPOINT}`;
+            }
+            return res.status(response.status).json(data);
+          }
+
+          // Stream the response
+          res.setHeader('Content-Type', 'text/event-stream');
+          res.setHeader('Cache-Control', 'no-cache');
+          res.setHeader('Connection', 'keep-alive');
+
+          const reader = response.body;
+          let buffer = '';
+
+          for await (const chunk of reader) {
+            buffer += chunk.toString();
+            const lines = buffer.split('\n');
+            buffer = lines.pop(); // Keep incomplete line in buffer
+
+            for (const line of lines) {
+              if (line.trim()) {
+                try {
+                  const parsed = JSON.parse(line);
+                  // Forward the chunk to client
+                  res.write(`data: ${line}\n\n`);
+
+                  if (parsed.done) {
+                    console.log(`[API Chat ${requestId}] Stream completed`);
+                    res.end();
+                    return;
+                  }
+                } catch (e) {
+                  console.error(`[API Chat ${requestId}] Failed to parse chunk:`, line);
+                }
+              }
+            }
+          }
+
+          res.end();
+        } catch (ollamaError) {
+          console.log(`[API Chat ${requestId}] ERROR: Ollama request failed:`, ollamaError.message);
+          throw ollamaError;
+        }
+
+      default:
+        console.log(`[API Chat ${requestId}] ERROR: Unsupported provider: ${provider}`);
+        return res.status(400).json({ error: `Unsupported provider: ${provider}` });
+    }
+  } catch (error) {
+    console.error(`[API Chat ${requestId}] EXCEPTION:`, error);
+    console.error(`[API Chat ${requestId}] Stack trace:`, error.stack);
+    res.status(500).json({
+      error: 'Failed to process chat request',
+      details: error.message,
+      requestId: requestId
+    });
+  }
+});
+
 // Endpoint to check if proxy is available (for client detection)
 app.get('/api/proxy-status', (req, res) => {
   res.json({
@@ -483,6 +805,57 @@ app.get('/api/ollama/models', async (req, res) => {
     res.status(503).json({
       error: 'Failed to connect to Ollama',
       models: []
+    });
+  }
+});
+
+// GPU monitoring endpoint
+app.get('/api/gpu/status', async (req, res) => {
+  try {
+    const gpuInfo = await getGPUInfo();
+    gpuInfo.monitoring = {
+      enabled: !!gpuMonitorProcess,
+      interval: GPU_MONITOR_INTERVAL / 1000,
+      logDirectory: GPU_LOG_DIR
+    };
+    res.json(gpuInfo);
+  } catch (error) {
+    console.error('Failed to fetch GPU status:', error.message);
+    res.status(500).json({
+      error: 'Failed to fetch GPU status',
+      details: error.message
+    });
+  }
+});
+
+// GPU monitoring logs endpoint
+app.get('/api/gpu/logs', (req, res) => {
+  try {
+    if (!fs.existsSync(GPU_LOG_DIR)) {
+      return res.json({ logs: [] });
+    }
+
+    const logFiles = fs.readdirSync(GPU_LOG_DIR)
+      .filter(f => f.startsWith('gpu-monitor-'))
+      .sort()
+      .reverse()
+      .slice(0, 10); // Last 10 log files
+
+    const logs = logFiles.map(filename => {
+      const content = fs.readFileSync(path.join(GPU_LOG_DIR, filename), 'utf8');
+      return {
+        filename,
+        content,
+        timestamp: filename.replace('gpu-monitor-', '').replace('.log', '')
+      };
+    });
+
+    res.json({ logs });
+  } catch (error) {
+    console.error('Failed to read GPU logs:', error.message);
+    res.status(500).json({
+      error: 'Failed to read GPU logs',
+      details: error.message
     });
   }
 });
@@ -643,6 +1016,8 @@ server.listen(PORT, () => {
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully...');
 
+  stopGPUMonitoring();
+
   if (ollamaProcess) {
     console.log('[Ollama] Stopping managed Ollama process...');
     ollamaProcess.kill();
@@ -660,6 +1035,8 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   console.log('\nSIGINT received, shutting down gracefully...');
+
+  stopGPUMonitoring();
 
   if (ollamaProcess) {
     console.log('[Ollama] Stopping managed Ollama process...');

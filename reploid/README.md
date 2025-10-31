@@ -44,44 +44,56 @@ On the boot screen:
 
 ## Architecture
 
-### Core Modules (7 files, ~2,500 lines)
+```mermaid
+graph TB
+    subgraph Browser["Browser Runtime"]
+        subgraph Substrate["Substrate Layer"]
+            Dashboard["Dashboard UI"]
+            Widgets["Dynamic Widgets"]
+        end
 
+        subgraph Core["Core Modules (8 files)"]
+            AgentLoop["agent-loop.js<br/>Cognitive Cycle"]
+            ToolRunner["tool-runner.js<br/>Tool Execution"]
+            ToolWriter["tool-writer.js<br/>Tool Creation"]
+            MetaWriter["meta-tool-writer.js<br/>Meta-Improvement"]
+            SubstrateLoader["substrate-loader.js<br/>Code Injection"]
+            LLMClient["llm-client.js<br/>Multi-Provider API"]
+            VFS["vfs.js<br/>Virtual Filesystem"]
+            SubstrateTools["substrate-tools.js<br/>10 Substrate Tools"]
+        end
+
+        subgraph Storage["IndexedDB (VFS)"]
+            CoreEvolved["/core/*.js<br/>Evolved Modules"]
+            ToolsDir["/tools/*.js<br/>Agent-Created Tools"]
+            WidgetsDir["/widgets/*.js<br/>UI Components"]
+        end
+    end
+
+    subgraph Disk["Disk (Genesis)"]
+        GenesisSrc["/core/*.js<br/>Original Source"]
+    end
+
+    AgentLoop --> ToolRunner
+    AgentLoop --> LLMClient
+    ToolRunner --> ToolWriter
+    ToolRunner --> MetaWriter
+    ToolRunner --> SubstrateTools
+    SubstrateTools --> SubstrateLoader
+    SubstrateLoader --> Substrate
+
+    VFS --> Storage
+
+    GenesisSrc -.First Boot.-> CoreEvolved
+    CoreEvolved --> Core
+    ToolsDir --> ToolRunner
+
+    style Storage fill:#1a1a1a
+    style Core fill:#0a2f2f
+    style Substrate fill:#2f0a2f
 ```
-/core/
-├── vfs.js              (~200 lines)  Virtual filesystem (IndexedDB)
-├── llm-client.js       (~200 lines)  Multi-provider LLM interface
-├── tool-runner.js      (~300 lines)  Tool execution engine
-├── tool-writer.js      (~250 lines)  Creates new tools at runtime
-├── meta-tool-writer.js (~200 lines)  Improves tool-writer itself
-├── agent-loop.js       (~400 lines)  Main cognitive cycle
-└── utils.js            (existing)    Helper functions
-```
 
-### Boot Process
-
-1. **First Boot (Genesis)**:
-   - Copy `/core/*.js` from disk → IndexedDB
-   - This is the "genesis" state (factory reset point)
-
-2. **Subsequent Boots (Resume)**:
-   - Load evolved code from IndexedDB
-   - Agent continues with any improvements it made
-
-3. **Clear Cache Button**:
-   - Deletes IndexedDB, reloads genesis state from disk
-   - Factory reset for the agent
-
-### How RSI Works
-
-```
-Genesis (Disk)          Runtime (IndexedDB)         Evolution
-─────────────────       ───────────────────         ─────────
-/core/tool-writer.js -> /core/tool-writer.js   ->  v1 (optimized)
-                        (living code)               v2 (cached)
-                                                    v3 (faster validation)
-```
-
-The agent reads its own code from VFS, generates improvements, writes them back, and hot-reloads via blob URLs.
+**RSI Process:** Agent reads its code from VFS → analyzes inefficiencies → generates improvements → writes back to VFS → hot-reloads via blob URLs → becomes better version of itself.
 
 ---
 
@@ -111,31 +123,42 @@ REPLOID supports 4 ways to connect to LLMs:
 
 ---
 
-## Built-in Tools
+## Built-in Tools (24 total)
 
-The agent starts with these tools:
+The agent starts with these CRUD-organized tools:
 
-**VFS Operations:**
-- `read_file(path)` - Read from virtual filesystem
-- `write_file(path, content)` - Write to VFS
-- `list_files(path)` - List directory contents
+**VFS Operations (5 tools):**
+- `read_file(path)` - Read file contents
+- `write_file(path, content)` - Create or overwrite file
+- `update_file(path, content)` - Update existing file (creates backup)
 - `delete_file(path)` - Delete file
+- `list_files(path)` - List directory contents
 
-**Tool Creation (Level 1 RSI):**
+**Tool Creation - Level 1 RSI (5 tools):**
+- `read_tool(name)` - Read tool source code
 - `create_tool(name, code)` - Create new tool at runtime
-- `update_tool(name, code)` - Modify existing tool
-- `delete_tool(name)` - Remove tool
-- `list_tools()` - See all tools
-- `get_tool_source(name)` - Read tool source code
+- `update_tool(name, code)` - Update existing tool (creates backup)
+- `delete_tool(name)` - Delete dynamic tool
+- `list_tools()` - List all tools
 
-**Meta-Improvement (Level 2 RSI):**
-- `improve_tool_writer(code)` - Improve the tool creation mechanism
+**Meta-Improvement - Level 2 RSI (3 tools):**
+- `improve_tool_writer(code)` - Improve the ToolWriter mechanism
 - `improve_core_module(module, code)` - Improve ANY core module
 - `rollback_tool_writer()` - Undo last improvement
 
-**Introspection:**
-- Agent can read its own source: `read_file('/core/agent-loop.js')`
-- Agent can list all modules: `list_files('/core/')`
+**Substrate Manipulation - Level 3 RSI (10 tools):**
+- `load_module(path)` - Import and execute module from VFS
+- `load_widget(path, containerId)` - Mount widget in dashboard
+- `create_widget(name, html, css, js)` - Create simple DOM widget
+- `create_web_component(name, html, css, js)` - Create Web Component with Shadow DOM
+- `execute_substrate_code(code)` - Execute arbitrary code in substrate
+- `inject_tool(name, code)` - Fast tool injection (bypasses validation)
+- `reload_module(path)` - Hot-reload a module
+- `unload_module(path)` - Remove module/widget
+- `list_loaded_modules()` - List active substrate components
+- `load_iframe(path, containerId)` - Load code in sandboxed iframe
+
+**Note:** `get_tool_source(name)` is aliased to `read_tool(name)` for backward compatibility.
 
 ---
 
@@ -190,37 +213,6 @@ The agent starts with these tools:
    → Re-registers create_tool
 
 5. Future tool creations are now faster
-```
-
----
-
-## File Structure
-
-```
-/reploid/
-├── index.html              Boot screen (model selector, goal input)
-├── boot.js                 Bootstrap loader (~250 lines)
-├── .env                    API keys for proxy
-├── server/
-│   └── proxy.js            Express server for proxy connections
-├── core/                   Core modules (genesis state on disk)
-│   ├── vfs.js
-│   ├── llm-client.js
-│   ├── tool-runner.js
-│   ├── tool-writer.js
-│   ├── meta-tool-writer.js
-│   └── agent-loop.js
-├── boot/
-│   ├── model-config.js     Model selection UI
-│   ├── api.js              Provider detection
-│   └── style.css           Boot screen styles
-└── ui/
-    └── chat.js             Chat interface
-
-IndexedDB (runtime state):
-  /core/                    Evolved versions of core modules
-  /tools/                   Agent-created tools
-  /data/                    Agent memory/history
 ```
 
 ---

@@ -10,6 +10,7 @@ const LLMClient = {
   factory: (deps) => {
     const PROXY_URL = 'http://localhost:8000';
     let webllmEngine = null;
+    let currentAbortController = null; // Track active request for cancellation
 
     // Provider API endpoints
     const PROVIDER_ENDPOINTS = {
@@ -120,8 +121,11 @@ const LLMClient = {
       throw new Error(`Unsupported provider: ${provider}`);
     };
 
-    // Call proxy-cloud or proxy-local (via server proxy)
-    const callProxy = async (messages, modelConfig) => {
+    // Call proxy-cloud or proxy-local (via server proxy) with streaming
+    const callProxy = async (messages, modelConfig, onStreamUpdate) => {
+      // Create abort controller for this request
+      currentAbortController = new AbortController();
+
       const response = await fetch(`${PROXY_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -129,18 +133,130 @@ const LLMClient = {
           provider: modelConfig.provider,
           model: modelConfig.id,
           messages
-        })
+        }),
+        signal: currentAbortController.signal
       });
 
       if (!response.ok) {
         throw new Error(`Proxy error: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
-      return {
-        content: data.response || data.content,
-        usage: data.usage
-      };
+      // Check if response is streaming (SSE)
+      const contentType = response.headers.get('content-type');
+      console.log('[LLMClient] Response content-type:', contentType);
+      if (contentType && contentType.includes('text/event-stream')) {
+        console.log('[LLMClient] Streaming response detected, processing...');
+        // Handle streaming response
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let fullContent = '';
+        let tokenCount = 0;
+        let tokensInCurrentWindow = 0; // Track tokens in last second for rate calculation
+        let lastWindowTime = null;
+        const requestStartTime = Date.now();
+        let firstTokenTime = null;
+
+        // Helper to estimate token count from text
+        const estimateTokens = (text) => {
+          if (!text || text.trim().length === 0) return 0;
+          // Rough estimation: ~0.7 words per token (i.e., 1 token ≈ 0.7 words)
+          // So tokens = words / 0.7 = words * 1.43
+          const words = text.split(/\s+/).filter(w => w.length > 0).length;
+          return Math.ceil(words / 0.7);
+        };
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); // Keep incomplete line
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const dataStr = line.substring(6);
+              try {
+                const data = JSON.parse(dataStr);
+
+                // Handle both thinking and content tokens
+                if (data.message && (data.message.content || data.message.thinking)) {
+                  const now = Date.now();
+
+                  // Record first token time (for either thinking or content)
+                  if (firstTokenTime === null) {
+                    firstTokenTime = now;
+                    lastWindowTime = now;
+                  }
+
+                  // Accumulate content (thinking doesn't get added to final content)
+                  const previousContentLength = fullContent.length;
+                  if (data.message.content) {
+                    fullContent += data.message.content;
+                  }
+
+                  // Calculate new tokens in this chunk
+                  const previousTokenCount = tokenCount;
+                  tokenCount = estimateTokens(fullContent);
+                  const newTokensInChunk = tokenCount - previousTokenCount;
+
+                  // Track tokens in current window for rate calculation
+                  tokensInCurrentWindow += newTokensInChunk;
+
+                  // Reset window every second
+                  const timeSinceLastWindow = (now - lastWindowTime) / 1000;
+                  if (timeSinceLastWindow >= 1.0) {
+                    lastWindowTime = now;
+                    tokensInCurrentWindow = newTokensInChunk; // Reset to current chunk
+                  }
+
+                  const ttft = ((firstTokenTime - requestStartTime) / 1000).toFixed(2);
+                  const streamingElapsed = (now - firstTokenTime) / 1000;
+                  // Use windowed rate for more accurate tok/s, fallback to average if window too small
+                  const windowedRate = timeSinceLastWindow > 0 ? (tokensInCurrentWindow / timeSinceLastWindow) : 0;
+                  const averageRate = streamingElapsed > 0 ? (tokenCount / streamingElapsed) : 0;
+                  const streamingRate = (windowedRate > 0 ? windowedRate : averageRate).toFixed(2);
+                  const totalElapsed = ((now - requestStartTime) / 1000).toFixed(1);
+
+                  // Call update callback for any token activity
+                  if (onStreamUpdate) {
+                    onStreamUpdate({
+                      content: fullContent,
+                      tokens: tokenCount,
+                      ttft: ttft,
+                      tokensPerSecond: streamingRate,
+                      elapsedSeconds: totalElapsed
+                    });
+                  }
+                }
+
+                if (data.done) {
+                  console.log(`[LLMClient] Stream complete. Total content length: ${fullContent.length}, tokens: ${tokenCount}`);
+                  return {
+                    content: fullContent,
+                    usage: { tokens: tokenCount }
+                  };
+                }
+              } catch (e) {
+                console.error('[LLMClient] Failed to parse SSE data:', dataStr);
+              }
+            }
+          }
+        }
+
+        return {
+          content: fullContent,
+          usage: { tokens: tokenCount }
+        };
+      } else {
+        // Non-streaming response (fallback for other providers)
+        const data = await response.json();
+        return {
+          content: data.response || data.content,
+          usage: data.usage
+        };
+      }
     };
 
     // Call browser-local (WebLLM)
@@ -163,7 +279,7 @@ const LLMClient = {
     };
 
     // Main chat interface
-    const chat = async (messages, modelConfig) => {
+    const chat = async (messages, modelConfig, onStreamUpdate) => {
       console.log(`[LLMClient] Calling ${modelConfig.hostType} - ${modelConfig.provider}/${modelConfig.id}`);
 
       try {
@@ -176,7 +292,7 @@ const LLMClient = {
 
           case 'proxy-cloud':
           case 'proxy-local':
-            result = await callProxy(messages, modelConfig);
+            result = await callProxy(messages, modelConfig, onStreamUpdate);
             break;
 
           case 'browser-local':
@@ -205,9 +321,19 @@ const LLMClient = {
       return result;
     };
 
+    // Abort ongoing request
+    const abort = () => {
+      if (currentAbortController) {
+        console.log('[LLMClient] Aborting request');
+        currentAbortController.abort();
+        currentAbortController = null;
+      }
+    };
+
     return {
       chat,
-      stream
+      stream,
+      abort
     };
   }
 };

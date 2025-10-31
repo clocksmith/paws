@@ -14,37 +14,45 @@ MCP Lens provides **analytical-level understanding** of Model Context Protocol s
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────┐
-│           Dashboard Application                 │
-│         (MCP Lens Host - Client-side)           │
-│                                                 │
-│  ┌──────────────────────────────────────────┐  │
-│  │  MCP Lens Widgets (Web Components)       │  │
-│  │  • GitHub Widget                         │  │
-│  │  • Slack Widget                          │  │
-│  │  • Filesystem Widget                     │  │
-│  └──────────────────┬───────────────────────┘  │
-│                     │                           │
-│  ┌──────────────────▼───────────────────────┐  │
-│  │  MCPBridge (Standard MCP Client)         │  │
-│  │  • Speaks standard MCP JSON-RPC          │  │
-│  │  • No protocol modifications             │  │
-│  └──────────────────┬───────────────────────┘  │
-└────────────────────┼────────────────────────────┘
-                     │ Standard MCP Protocol
-                     │ (JSON-RPC over stdio/HTTP)
-                     ▼
-┌─────────────────────────────────────────────────┐
-│         Standard MCP Servers                    │
-│    (No MCP Lens knowledge required)             │
-│  • GitHub MCP Server                            │
-│  • Slack MCP Server                             │
-│  • Any MCP-compliant server                     │
-└─────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph Dashboard["Dashboard Application (Client-Side)"]
+        subgraph Widgets["MCP Lens Widgets"]
+            GitHubWidget["GitHub Widget"]
+            SlackWidget["Slack Widget"]
+            FSWidget["Filesystem Widget"]
+        end
+
+        subgraph Core["MCP Lens Core"]
+            EventBus["EventBus<br/>Event-driven observability"]
+            MCPBridge["MCPBridge<br/>Standard MCP JSON-RPC Client"]
+            Config["Configuration<br/>User confirmations"]
+        end
+    end
+
+    subgraph Servers["MCP Servers (Standard Protocol)"]
+        GitHubServer["GitHub MCP Server"]
+        SlackServer["Slack MCP Server"]
+        OtherServers["Any MCP-Compliant Server"]
+    end
+
+    GitHubWidget --> EventBus
+    SlackWidget --> EventBus
+    FSWidget --> EventBus
+
+    EventBus --> MCPBridge
+    MCPBridge --> Config
+
+    MCPBridge -->|"JSON-RPC<br/>(stdio/HTTP)"| GitHubServer
+    MCPBridge -->|"JSON-RPC<br/>(stdio/HTTP)"| SlackServer
+    MCPBridge -->|"JSON-RPC<br/>(stdio/HTTP)"| OtherServers
+
+    style Dashboard fill:#0a2f2f
+    style Servers fill:#1a1a1a
+    style Core fill:#2f0a0a
 ```
 
-**Key Point:** MCP servers don't know about MCP Lens. They use standard MCP protocol. MCP Lens widgets are purely client-side components that visualize and analyze MCP interactions.
+**Key:** MCP servers don't know about MCP Lens. Widgets are purely client-side components that visualize and analyze standard MCP interactions.
 
 ## Quick Start
 
@@ -311,15 +319,6 @@ The MCP observability ecosystem has three distinct layers. MCP Lens uniquely occ
 - Browse file system resources
 - File operations with user approval
 - Real-time file change subscriptions
-
-## Documentation
-
-- **[SPEC.md](./SPEC.md)** - Complete protocol specification
-- **[POSITIONING.md](./POSITIONING.md)** - Strategic positioning & competitive analysis
-- **[schema.ts](./schema.ts)** - TypeScript schema reference
-- **[examples/](./examples/)** - Example widget implementations
-- **[demos/](./demos/)** - Working demo with real MCP servers
-- **[packages/](./packages/)** - Core packages and widgets
 
 ## License
 

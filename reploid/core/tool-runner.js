@@ -89,17 +89,9 @@ const ToolRunner = {
         return await metaToolWriter.improveCoreModule(args.module, args.code);
       },
 
-      // Introspection tools
-      list_tools: async (args) => {
-        const toolList = Array.from(tools.keys()).map(name => ({
-          name,
-          type: builtInTools[name] ? 'built-in' : 'dynamic'
-        }));
-        return { tools: toolList, count: toolList.length };
-      },
-
-      get_tool_source: async (args) => {
-        if (!args.name) throw new Error('get_tool_source requires "name" argument');
+      // Tool introspection (CRUD Read + List)
+      read_tool: async (args) => {
+        if (!args.name) throw new Error('read_tool requires "name" argument');
 
         // Built-in tools don't have source in VFS
         if (builtInTools[args.name]) {
@@ -109,6 +101,50 @@ const ToolRunner = {
         // Dynamic tools have source in /tools/
         const source = await vfs.read(`/tools/${args.name}.js`);
         return { name: args.name, type: 'dynamic', source };
+      },
+
+      list_tools: async (args) => {
+        const toolList = Array.from(tools.keys()).map(name => ({
+          name,
+          type: builtInTools[name] ? 'built-in' : 'dynamic'
+        }));
+        return { tools: toolList, count: toolList.length };
+      },
+
+      // Alias for backward compatibility
+      get_tool_source: async (args) => {
+        return await builtInTools.read_tool(args);
+      },
+
+      // VFS update operation (fails if file doesn't exist)
+      update_file: async (args) => {
+        if (!args.path || args.content === undefined) {
+          throw new Error('update_file requires "path" and "content" arguments');
+        }
+
+        // Check if file exists first
+        try {
+          await vfs.read(args.path);
+        } catch (error) {
+          throw new Error(`Cannot update non-existent file: ${args.path}. Use write_file to create it.`);
+        }
+
+        // Create backup before update
+        const timestamp = Date.now();
+        const backupPath = `${args.path}.backup-${timestamp}`;
+        const oldContent = await vfs.read(args.path);
+        await vfs.write(backupPath, oldContent);
+
+        // Write new content
+        console.log(`[Tool:update_file] Updating: ${args.path} (backup: ${backupPath})`);
+        await vfs.write(args.path, args.content);
+
+        return {
+          success: true,
+          path: args.path,
+          bytes: args.content.length,
+          backup: backupPath
+        };
       }
     };
 
@@ -159,9 +195,21 @@ const ToolRunner = {
       return tools.has(name);
     };
 
+    // Register a built-in tool (used by substrate-tools and other core modules)
+    const registerBuiltIn = (name, fn) => {
+      console.log(`[ToolRunner] Registering built-in tool: ${name}`);
+      builtInTools[name] = fn;
+      tools.set(name, fn);
+    };
+
+    // Alias for consistency (used by dynamic tool creation)
+    const call = execute;
+
     return {
       execute,
+      call,
       register,
+      registerBuiltIn,
       unregister,
       list,
       has

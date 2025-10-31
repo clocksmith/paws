@@ -11,7 +11,9 @@ window.REPLOID = {
   toolWriter: null,
   metaToolWriter: null,
   agentLoop: null,
-  chatUI: null
+  agentLog: null, // Renamed from chatUI
+  codeViewer: null,
+  substrateLoader: null
 };
 
 // Genesis: Copy core modules from disk to IndexedDB on first boot
@@ -24,7 +26,9 @@ async function genesisInit() {
     'tool-runner.js',
     'tool-writer.js',
     'meta-tool-writer.js',
-    'agent-loop.js'
+    'agent-loop.js',
+    'substrate-loader.js',
+    'substrate-tools.js'
   ];
 
   const utils = window.REPLOID.vfs;
@@ -79,6 +83,28 @@ async function initVFS() {
     await genesisInit();
   } else {
     console.log('[Boot] Resuming from evolved state in VFS');
+
+    // Check if all core modules exist (migration check)
+    const requiredModules = [
+      'vfs.js', 'llm-client.js', 'tool-runner.js', 'tool-writer.js',
+      'meta-tool-writer.js', 'agent-loop.js', 'substrate-loader.js', 'substrate-tools.js'
+    ];
+
+    let needsMigration = false;
+    for (const module of requiredModules) {
+      try {
+        await vfs.read(`/core/${module}`);
+      } catch (e) {
+        console.log(`[Boot] Missing module: /core/${module} - triggering migration`);
+        needsMigration = true;
+        break;
+      }
+    }
+
+    if (needsMigration) {
+      console.log('[Boot] Migrating VFS to latest version...');
+      await genesisInit();
+    }
   }
 
   return vfs;
@@ -127,6 +153,17 @@ async function initCoreModules() {
   window.REPLOID.agentLoop = agentLoop;
   console.log('[Boot] AgentLoop initialized');
 
+  // Load SubstrateLoader (needs VFS, ToolRunner)
+  const SubstrateLoaderModule = await loadModuleFromVFS('/core/substrate-loader.js');
+  const substrateLoader = SubstrateLoaderModule.factory({ vfs, toolRunner });
+  window.REPLOID.substrateLoader = substrateLoader;
+  console.log('[Boot] SubstrateLoader initialized');
+
+  // Register substrate manipulation tools
+  const SubstrateToolsModule = await loadModuleFromVFS('/core/substrate-tools.js');
+  SubstrateToolsModule.registerTools(toolRunner, substrateLoader);
+  console.log('[Boot] Substrate tools registered');
+
   console.log('[Boot] All core modules initialized successfully');
 }
 
@@ -164,13 +201,26 @@ async function loadDynamicTools(vfs, toolRunner) {
   }
 }
 
-// Initialize Chat UI
-async function initChatUI() {
-  const ChatUIModule = await import('./ui/chat.js');
-  const chatUI = ChatUIModule.default.init(window.REPLOID.agentLoop);
-  window.REPLOID.chatUI = chatUI;
-  console.log('[Boot] Chat UI initialized');
-  return chatUI;
+// Initialize Agent Log UI (formerly "Chat UI")
+async function initAgentLog() {
+  const AgentLogModule = await import('./ui/chat.js');
+  const agentLog = AgentLogModule.default.init(window.REPLOID.agentLoop);
+  window.REPLOID.agentLog = agentLog;
+  console.log('[Boot] Agent Log initialized');
+  return agentLog;
+}
+
+// Initialize Code Viewer
+async function initCodeViewer() {
+  const CodeViewerModule = await import('./ui/code-viewer.js');
+  const codeViewer = CodeViewerModule.default.init(
+    window.REPLOID.vfs,
+    window.REPLOID.toolRunner,
+    window.REPLOID.agentLoop
+  );
+  window.REPLOID.codeViewer = codeViewer;
+  console.log('[Boot] Code Viewer initialized');
+  return codeViewer;
 }
 
 // Main boot sequence
@@ -182,7 +232,7 @@ async function boot() {
     // Set up Awaken Agent button
     const awakenBtn = document.getElementById('awaken-btn');
     const bootContainer = document.getElementById('boot-container');
-    const chatContainer = document.getElementById('chat-container');
+    const agentContainer = document.getElementById('agent-container');
     const goalInput = document.getElementById('goal-input');
 
     awakenBtn.addEventListener('click', async () => {
@@ -199,9 +249,18 @@ async function boot() {
 
       console.log('[Boot] Awakening agent with goal:', goal);
 
-      // Hide boot screen, show chat
+      // Hide boot screen (use display:none instead of remove() to prevent race conditions)
       bootContainer.style.display = 'none';
-      chatContainer.style.display = 'flex';
+      agentContainer.style.display = 'flex';
+      agentContainer.style.width = '100vw';
+      agentContainer.style.height = '100vh';
+
+      // Ensure body doesn't have any padding/margin that would show boot screen
+      document.body.style.margin = '0';
+      document.body.style.padding = '0';
+      document.body.style.overflow = 'hidden';
+
+      console.log('[Boot] Boot screen hidden, agent monitor displayed');
 
       // Get selected models
       const models = getSelectedModels();
@@ -227,7 +286,8 @@ async function boot() {
     clearCacheBtn.addEventListener('click', async () => {
       if (confirm('Clear VFS cache and reload? This will reset to genesis state.')) {
         await window.REPLOID.vfs.clear();
-        location.reload();
+        // Hard reload to bypass all caches including blob URLs
+        location.reload(true);
       }
     });
 
@@ -248,10 +308,13 @@ async function boot() {
     // 2. Initialize all core modules from VFS
     await initCoreModules();
 
-    // 3. Initialize Chat UI
-    await initChatUI();
+    // 3. Initialize Agent Log UI
+    await initAgentLog();
 
-    // 4. Setup boot screen handlers
+    // 4. Initialize Code Viewer
+    await initCodeViewer();
+
+    // 5. Setup boot screen handlers
     await boot();
 
     console.log('[Boot] REPLOID ready');

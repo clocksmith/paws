@@ -25,6 +25,7 @@ Thumbs.db
 # Log files
 console.log
 *.log
+server/logs/
 
 # Test coverage
 coverage/

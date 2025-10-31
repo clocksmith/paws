@@ -53,6 +53,11 @@ body {
   max-width: 900px;
   text-align: center;
   box-sizing: border-box;
+  min-height: 100vh;
+  padding: 20px;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
 }
 
 .boot-header {
@@ -1460,22 +1465,25 @@ body {
 
 .boot-mode-options {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 15px;
+  justify-content: center;
 }
 
 .boot-mode-btn {
   background: rgba(40, 40, 40, 0.4);
   border: 2px solid var(--color-border);
   border-radius: 0;
-  padding: 20px 50px 20px 20px;
+  padding: 20px;
   cursor: pointer;
   transition: all 0.3s ease;
-  text-align: left;
+  text-align: center;
   color: var(--color-text-primary);
   font-family: var(--font-family);
   position: relative;
   overflow: hidden;
+  flex: 1;
+  min-width: 0;
 }
 
 .boot-mode-btn:hover {
@@ -1492,10 +1500,10 @@ body {
 .boot-mode-btn.selected::after {
   content: '✓';
   position: absolute;
-  top: 15px;
-  right: 20px;
+  top: 10px;
+  right: 10px;
   color: var(--color-primary);
-  font-size: 1.5em;
+  font-size: 1.3em;
   font-weight: bold;
 }
 

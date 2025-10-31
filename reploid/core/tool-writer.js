@@ -7,12 +7,19 @@ const ToolWriter = {
   },
 
   factory: (deps) => {
-    const { vfs, toolRunner } = deps;
+    const { vfs } = deps;
+    let toolRunner = deps.toolRunner; // Will be set later via setToolRunner or direct assignment
 
     // Validate tool code syntax
     const validateSyntax = (code) => {
+      // Skip syntax check for ES module code (export statements)
+      // The browser will validate when we try to import the blob URL
+      if (code.includes('export')) {
+        return { valid: true };
+      }
+
       try {
-        // Create a temporary function to check syntax
+        // Create a temporary function to check syntax for non-module code
         new Function(code);
         return { valid: true };
       } catch (error) {
@@ -42,7 +49,7 @@ const ToolWriter = {
       }
 
       // Check if tool already exists
-      if (toolRunner.has(name)) {
+      if (toolRunner && toolRunner.has(name)) {
         throw new Error(`Tool already exists: ${name}. Use update_tool to modify it.`);
       }
 
@@ -76,7 +83,9 @@ const ToolWriter = {
         }
 
         // Register tool
-        toolRunner.register(name, module.default);
+        if (toolRunner) {
+          toolRunner.register(name, module.default);
+        }
 
         console.log(`[ToolWriter] Tool registered: ${name}`);
 
@@ -99,7 +108,7 @@ const ToolWriter = {
       console.log(`[ToolWriter] Updating tool: ${name}`);
 
       // Check if tool exists
-      if (!toolRunner.has(name)) {
+      if (!toolRunner || !toolRunner.has(name)) {
         throw new Error(`Tool not found: ${name}. Use create_tool to create it.`);
       }
 
@@ -134,7 +143,9 @@ const ToolWriter = {
 
       // Unregister old version and load new version
       try {
-        toolRunner.unregister(name);
+        if (toolRunner) {
+          toolRunner.unregister(name);
+        }
 
         const blob = new Blob([code], { type: 'text/javascript' });
         const url = URL.createObjectURL(blob);
@@ -147,7 +158,9 @@ const ToolWriter = {
         }
 
         // Register updated tool
-        toolRunner.register(name, module.default);
+        if (toolRunner) {
+          toolRunner.register(name, module.default);
+        }
 
         console.log(`[ToolWriter] Tool updated: ${name}`);
 
@@ -166,7 +179,9 @@ const ToolWriter = {
         const url = URL.createObjectURL(blob);
         const module = await import(/* webpackIgnore: true */ url);
         URL.revokeObjectURL(url);
-        toolRunner.register(name, module.default);
+        if (toolRunner) {
+          toolRunner.register(name, module.default);
+        }
 
         throw new Error(`Failed to update tool (rolled back): ${error.message}`);
       }
@@ -177,7 +192,7 @@ const ToolWriter = {
       console.log(`[ToolWriter] Deleting tool: ${name}`);
 
       // Check if tool exists
-      if (!toolRunner.has(name)) {
+      if (!toolRunner || !toolRunner.has(name)) {
         throw new Error(`Tool not found: ${name}`);
       }
 
@@ -190,7 +205,9 @@ const ToolWriter = {
       }
 
       // Unregister tool
-      toolRunner.unregister(name);
+      if (toolRunner) {
+        toolRunner.unregister(name);
+      }
 
       // Delete from VFS
       await vfs.delete(toolPath);
