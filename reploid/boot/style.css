@@ -1477,7 +1477,7 @@ body {
   padding: 20px;
   cursor: pointer;
   transition: all 0.3s ease;
-  text-align: center;
+  text-align: left;
   color: var(--color-text-primary);
   font-family: var(--font-family);
   position: relative;
@@ -1522,6 +1522,7 @@ body {
   margin-bottom: 8px;
   line-height: 1.5;
   font-weight: 600;
+  text-align: left;
 }
 
 .boot-mode-details {
