@@ -219,7 +219,7 @@ The agent can use multiple models (consensus mode, fallback, etc.)
 
 ## Philosophy
 
-REPLOID is an experiment in [**substrate-independent](https://www.edge.org/response-detail/27126) RSI**:
+REPLOID is an experiment in [**substrate-independent**](https://www.edge.org/response-detail/27126) **RSI**:
 
 - The agent's "brain" is just data in IndexedDB
 - The agent can modify this data (its own code)
