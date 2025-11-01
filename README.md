@@ -1,16 +1,17 @@
 # PAWS
 
-AI development tools for practical multi-agent workflows and recursive self-improvement. PAWS CLI orchestrates competitive code generation across multiple LLMs with automated testing. REPLOID is a browser-native agent that evolves its own code at runtime. MCP Lens provides protocol-semantic analysis for understanding tool interactions beyond simple metrics.
+AI development tools for practical multi-agent workflows and RSI (Recursive Self-Improvement). 
 
-For experiments with local models and multi-model mixing, see [gamma](https://github.com/clocksmith/gamma).
+**P**repare **A**rtifacts **W**ith **S**WAP (**S**treamlined **W**rite **A**fter **P**AWS) → PAWS → SWAP → PAWS → SWAP → ∞
 
 ---
 
 ## Projects
 
 Three operationally independent tools, unified by recursive improvement:
+
 - **[REPLOID](reploid/README.md)** - Browser-native agent that evolves by modifying its own runtime code
-- **[PAWS CLI](packages/cli-js/README.md)** - Orchestrates competitive code generation by pitting multiple LLMs against each other
+- **[PAWS CLI](packages/cli-py/README.md)** - Orchestrates competitive code generation by pitting multiple LLMs against each other
 - **[MCP Lens](lens/README.md)** - Analyzes protocol interactions to reveal patterns beyond surface metrics
 
 ---
@@ -21,7 +22,11 @@ Three operationally independent tools, unified by recursive improvement:
 (**D**ynamic **R**ecursive **E**ngine **A**dapting **M**odules **E**volving **R**EPLOID)
 → REPLOID ↔ DREAMER ↔ ∞
 
-Browser-native agent with 3 RSI levels: creates tools, improves its tool-creation mechanism, and modifies its own core modules. Supports 24 built-in tools and multiple LLM providers.
+Browser-native agent with 3 RSI levels:
+
+1. creates tools
+2. improves its tool-creation mechanism
+3. modifies its own core modules.
 
 → [Full REPLOID Documentation](reploid/README.md)
 
