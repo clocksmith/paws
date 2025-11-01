@@ -1,7 +1,7 @@
 # REPLOID
 
-**R**ecursive **E**volution **P**rotocol **L**oop **O**ptimizing **I**ntelligent [**D**REAMER](https://github.com/clocksmith/paws/edit/main/reploid/README.md)
-(**D**ynamic **R**ecursive **E**ngine **A**dapting **M**odules **E**volving [**R**EPLOID](https://github.com/clocksmith/paws/edit/main/reploid/README.md)
+**R**ecursive **E**volution **P**rotocol **L**oop **O**ptimizing **I**ntelligent [**D**REAMER](https://github.com/clocksmith/paws/blob/main/reploid/README.md)
+(**D**ynamic **R**ecursive **E**ngine **A**dapting **M**odules **E**volving [**R**EPLOID](https://github.com/clocksmith/paws/blob/main/reploid/README.md)
 → REPLOID ↔ DREAMER ↔ ∞
 
 A browser-native AI agent with [Recursive Self-Improvement (RSI)](https://en.wikipedia.org/wiki/Recursive_self-improvement) capabilities . 
