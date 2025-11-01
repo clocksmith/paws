@@ -4,12 +4,14 @@
 (**D**ynamic **R**ecursive **E**ngine **A**dapting **M**odules **E**volving **R**EPLOID)
 → REPLOID ↔ DREAMER ↔ ∞
 
-A browser-native AI agent with self-improvement capabilities. REPLOID runs entirely in your browser, creating new tools at runtime and modifying its own code to evolve its capabilities.
+A browser-native AI agent with [recursive self-improvement](https://en.wikipedia.org/wiki/Recursive_self-improvement) capabilities . 
+
+REPLOID runs entirely in your browser, creating new tools at runtime and modifying its own code to evolve its capabilities.
 
 **RSI Levels:**
 - **Level 1**: Creates new tools at runtime
 - **Level 2**: Improves its tool creation mechanism
-- **Level 2+**: Modifies any core module (agent-loop, tool-runner, etc.)
+- **Level 3+**: Modifies any core module (agent-loop, tool-runner, etc.)
 
 All improvements persist in IndexedDB while original source files remain unchanged as the "genesis" state.
 
@@ -84,7 +86,7 @@ REPLOID supports 4 ways to connect to LLMs:
 
 ---
 
-## Built-in Tools (24 total)
+## Built-in Tiered Tools (24 total)
 
 The agent starts with these CRUD-organized tools:
 
@@ -159,7 +161,7 @@ The agent might:
 
 ## Configuration
 
-### .env File (for server proxy)
+### .env File (optional, for server proxy)
 
 ```bash
 GEMINI_API_KEY=your_key_here
@@ -170,6 +172,7 @@ OPENAI_API_KEY=your_key_here
 ### Model Configuration (in browser)
 
 On boot screen:
+
 1. Click "+ Add Model"
 2. Select provider (Gemini, Claude, OpenAI, Ollama, WebLLM)
 3. Choose connection type (browser-cloud, proxy-cloud, browser-local, proxy-local)
@@ -180,11 +183,10 @@ The agent can use multiple models (consensus mode, fallback, etc.)
 
 ---
 
-## Technical Details
+## Technical Overview
 
 ### VFS Implementation
 - **Storage**: IndexedDB (via simple-vfs.js)
-- **Not Git-based**: Removed LightningFS + isomorphic-git (too heavy)
 - **Operations**: read, write, list, delete, snapshot, restore
 - **Persistence**: Survives page refreshes
 - **Reset**: "Clear Cache" button wipes IndexedDB
@@ -193,52 +195,25 @@ The agent can use multiple models (consensus mode, fallback, etc.)
 - **Genesis**: Fetch from disk → write to VFS
 - **Runtime**: Read from VFS → create blob URL → import as ES module
 - **Hot-reload**: Replace blob URL, re-initialize factory
-- **No eval()**: Uses native ES module imports via blob URLs
 
 ### Agent Loop
 - **System prompt**: Includes list of all tools and RSI capabilities
 - **Tool calling format**: `TOOL_CALL: name` + `ARGS: {...}`
-- **Context management**: Conversation history with tool results
-- **Termination**: Agent responds with `DONE: ...`
+- **Context management**: Conversation history and compaction with tool results
 
 ### Security
-- **Sandboxing**: Tool code validated before execution
-- **No arbitrary code**: Tool Writer checks syntax and structure
 - **Rollback**: Failed improvements automatically rolled back
-- **Backups**: All improvements saved with timestamps
+- **Sandboxing** Can only access local non-browser resources through a secure proxy
+- **No eval()**: Uses native ES module imports via blob URLs
 
 ---
 
 ## Limitations
 
 - **Browser-only**: No Node.js backend required (except optional proxy)
-- **Storage limits**: IndexedDB typically 50MB-unlimited depending on browser
-- **WebLLM models**: Limited to 1-3B params due to VRAM constraints
-- **Streaming**: Not yet implemented (planned)
+- **Storage limits**: IndexedDB typically ~50MB, but could be unlimited depending on browser
+- **WebLLM models**: Limited to 1-3B params due to VRAM usage allowed by browser constraints
 - **Multi-model consensus**: Basic implementation, can be improved by agent
-
----
-
-## Troubleshooting
-
-### Boot fails with module errors
-- Click "Clear Cache" button
-- Check browser console for errors
-- Verify all files in `/core/` exist
-
-### Agent doesn't respond
-- Check model is selected and configured
-- Verify API key is correct (browser console)
-- Check network tab for failed requests
-
-### VFS is empty after genesis
-- Check browser console for fetch errors
-- Verify `/core/*.js` files exist on disk
-
-### Tool creation fails
-- Check tool code syntax
-- Must be: `export default async function name(args) { ... }`
-- Check browser console for validation errors
 
 ---
 
