@@ -4,7 +4,7 @@
 (**D**ynamic **R**ecursive **E**ngine **A**dapting **M**odules **E**volving **R**EPLOID)
 → REPLOID ↔ DREAMER ↔ ∞
 
-A browser-native AI agent with [recursive self-improvement](https://en.wikipedia.org/wiki/Recursive_self-improvement) capabilities . 
+A browser-native AI agent with [Recursive Self-Improvement (RSI)](https://en.wikipedia.org/wiki/Recursive_self-improvement) capabilities . 
 
 REPLOID runs entirely in your browser, creating new tools at runtime and modifying its own code to evolve its capabilities.
 
@@ -219,7 +219,7 @@ The agent can use multiple models (consensus mode, fallback, etc.)
 
 ## Philosophy
 
-REPLOID is an experiment in **substrate-independent RSI**:
+REPLOID is an experiment in [**substrate-independent](https://www.edge.org/response-detail/27126) RSI**:
 
 - The agent's "brain" is just data in IndexedDB
 - The agent can modify this data (its own code)
