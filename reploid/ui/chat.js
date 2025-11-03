@@ -72,6 +72,21 @@ const ChatUI = {
       }
     });
 
+    // Export State button
+    const exportBtn = document.getElementById('export-btn');
+    if (exportBtn) {
+      exportBtn.addEventListener('click', async () => {
+        try {
+          addMessage({ type: 'system', content: 'Exporting REPLOID state...' });
+          await window.downloadREPLOID(`reploid-export-${Date.now()}.json`);
+          addMessage({ type: 'system', content: 'Export complete - downloaded JSON file' });
+        } catch (error) {
+          console.error('Export failed:', error);
+          addMessage({ type: 'error', content: `Export failed: ${error.message}` });
+        }
+      });
+    }
+
     // Store reference to last thinking message for updates
     let lastThinkingMessage = null;
 

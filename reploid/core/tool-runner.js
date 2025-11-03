@@ -153,6 +153,13 @@ const ToolRunner = {
       tools.set(name, fn);
     }
 
+    // Make execute available globally so tools can call other tools
+    if (typeof globalThis !== 'undefined') {
+      globalThis.executeTool = async (name, args) => {
+        return await execute(name, args);
+      };
+    }
+
     // Public API
     const execute = async (name, args = {}) => {
       if (!tools.has(name)) {

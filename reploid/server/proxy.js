@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import { spawn, exec } from 'child_process';
 import { promisify } from 'util';
 import SignalingServer from './signaling-server.js';
+import AgentBridge from './agent-bridge.js';
 
 const execPromise = promisify(exec);
 
@@ -955,6 +956,19 @@ app.get('/api/signaling/stats', (req, res) => {
 });
 // --- End WebRTC Signaling Endpoints ---
 
+// --- Agent Bridge Endpoints ---
+let agentBridge = null;
+
+// Get Agent Bridge stats
+app.get('/api/agent-bridge/stats', (req, res) => {
+  if (!agentBridge) {
+    return res.status(503).json({ error: 'Agent Bridge not initialized' });
+  }
+
+  res.json(agentBridge.getStats());
+});
+// --- End Agent Bridge Endpoints ---
+
 // Serve static files from the project root
 app.use(express.static(path.join(__dirname, '..')));
 
@@ -985,6 +999,27 @@ try {
   console.log('✅ WebRTC signaling server initialized');
 } catch (error) {
   console.error('⚠️  Failed to initialize signaling server:', error.message);
+}
+
+// Initialize Agent Bridge
+try {
+  agentBridge = new AgentBridge(server, {
+    path: '/agent-bridge',
+    heartbeatInterval: 30000,
+    agentTimeout: 120000
+  });
+
+  agentBridge.on('agent-joined', ({ agentId, name }) => {
+    console.log(`[Proxy] Agent joined: ${name} (${agentId})`);
+  });
+
+  agentBridge.on('agent-left', ({ agentId }) => {
+    console.log(`[Proxy] Agent left: ${agentId}`);
+  });
+
+  console.log('✅ Agent Bridge initialized');
+} catch (error) {
+  console.error('⚠️  Failed to initialize Agent Bridge:', error.message);
 }
 
 // Start server
@@ -1027,6 +1062,10 @@ process.on('SIGTERM', () => {
     signalingServer.close();
   }
 
+  if (agentBridge) {
+    agentBridge.close();
+  }
+
   server.close(() => {
     console.log('Server closed');
     process.exit(0);
@@ -1045,6 +1084,10 @@ process.on('SIGINT', () => {
 
   if (signalingServer) {
     signalingServer.close();
+  }
+
+  if (agentBridge) {
+    agentBridge.close();
   }
 
   server.close(() => {

@@ -69,9 +69,14 @@ export async function initModelConfig() {
 
 // Check availability of local services
 async function checkAvailability() {
+    // Use the same origin as the current page, or fallback to localhost for local dev
+    const proxyUrl = window.location.origin.includes('file://')
+        ? 'http://localhost:8000'
+        : window.location.origin;
+
     // Check Ollama
     try {
-        const response = await fetch('http://localhost:8000/api/ollama/models', {
+        const response = await fetch(`${proxyUrl}/api/ollama/models`, {
             signal: AbortSignal.timeout(3000)
         });
         if (response.ok) {
@@ -98,7 +103,7 @@ async function checkAvailability() {
 
     // Check Proxy
     try {
-        const response = await fetch('http://localhost:8000/api/health', {
+        const response = await fetch(`${proxyUrl}/api/health`, {
             signal: AbortSignal.timeout(3000)
         });
         availableProviders.proxy.online = response.ok;

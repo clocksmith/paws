@@ -7,7 +7,10 @@ const MetaToolWriter = {
   },
 
   factory: (deps) => {
-    const { vfs, toolRunner } = deps;
+    const { vfs } = deps;
+    const state = {
+      toolRunner: deps.toolRunner // For future use
+    };
 
     // History of improvements for rollback
     const improvementHistory = [];
@@ -241,7 +244,8 @@ const MetaToolWriter = {
       improveCoreModule,
       rollback,
       getHistory,
-      diffWithGenesis
+      diffWithGenesis,
+      state // Expose state for external toolRunner assignment
     };
   }
 };

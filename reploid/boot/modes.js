@@ -3,6 +3,11 @@ import { state, elements } from './state.js';
 import { closeHelpPopover, openHelpPopover, showBootMessage, closeConfigModal } from './ui.js';
 import { checkAPIStatus } from './api.js';
 
+// Use the same origin as the current page, or fallback to localhost for local dev
+const PROXY_BASE_URL = window.location.origin.includes('file://')
+    ? 'http://localhost:8000'
+    : window.location.origin;
+
 // Cloud model configuration - loaded from config.json
 let CLOUD_MODELS = {
     geminiModelFast: 'gemini-2.5-flash-lite',
@@ -139,13 +144,13 @@ export async function detectEnvironment() {
     };
 
     try {
-        const response = await fetch('http://localhost:8000/api/health');
+        const response = await fetch(`${PROXY_BASE_URL}/api/health`);
         env.hasServer = response.ok;
     } catch {}
 
     if (env.hasServer) {
         try {
-            const response = await fetch('http://localhost:8000/api/ollama/models');
+            const response = await fetch(`${PROXY_BASE_URL}/api/ollama/models`);
             if (response.ok) {
                 const data = await response.json();
                 env.hasOllama = true;

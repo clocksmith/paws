@@ -1,7 +1,10 @@
 // API status checking and model population
 import { state, elements } from './state.js';
 
-const PROXY_BASE_URL = 'http://localhost:8000';
+// Use the same origin as the current page, or fallback to localhost for local dev
+const PROXY_BASE_URL = window.location.origin.includes('file://')
+    ? 'http://localhost:8000'
+    : window.location.origin;
 
 // ModelRegistry integration - discovery of available models
 export async function discoverAvailableModels() {

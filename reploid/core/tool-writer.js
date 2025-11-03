@@ -8,7 +8,9 @@ const ToolWriter = {
 
   factory: (deps) => {
     const { vfs } = deps;
-    let toolRunner = deps.toolRunner; // Will be set later via setToolRunner or direct assignment
+    const state = {
+      toolRunner: deps.toolRunner // Will be set later via direct assignment to state.toolRunner
+    };
 
     // Validate tool code syntax
     const validateSyntax = (code) => {
@@ -49,7 +51,7 @@ const ToolWriter = {
       }
 
       // Check if tool already exists
-      if (toolRunner && toolRunner.has(name)) {
+      if (state.toolRunner && state.toolRunner.has(name)) {
         throw new Error(`Tool already exists: ${name}. Use update_tool to modify it.`);
       }
 
@@ -70,9 +72,11 @@ const ToolWriter = {
       await vfs.write(toolPath, code);
       console.log(`[ToolWriter] Saved to VFS: ${toolPath}`);
 
-      // Load tool via blob URL and register
+      // Load tool via blob URL and register (with cache-busting via code comment)
       try {
-        const blob = new Blob([code], { type: 'text/javascript' });
+        // Add timestamp comment to bust module cache
+        const cacheBustedCode = `// Tool: ${name}, created at ${Date.now()}\n${code}`;
+        const blob = new Blob([cacheBustedCode], { type: 'text/javascript' });
         const url = URL.createObjectURL(blob);
 
         const module = await import(/* webpackIgnore: true */ url);
@@ -83,8 +87,8 @@ const ToolWriter = {
         }
 
         // Register tool
-        if (toolRunner) {
-          toolRunner.register(name, module.default);
+        if (state.toolRunner) {
+          state.toolRunner.register(name, module.default);
         }
 
         console.log(`[ToolWriter] Tool registered: ${name}`);
@@ -108,7 +112,7 @@ const ToolWriter = {
       console.log(`[ToolWriter] Updating tool: ${name}`);
 
       // Check if tool exists
-      if (!toolRunner || !toolRunner.has(name)) {
+      if (!state.toolRunner || !state.toolRunner.has(name)) {
         throw new Error(`Tool not found: ${name}. Use create_tool to create it.`);
       }
 
@@ -141,13 +145,15 @@ const ToolWriter = {
       // Update tool in VFS
       await vfs.write(toolPath, code);
 
-      // Unregister old version and load new version
+      // Unregister old version and load new version (with cache-busting via code comment)
       try {
-        if (toolRunner) {
-          toolRunner.unregister(name);
+        if (state.toolRunner) {
+          state.toolRunner.unregister(name);
         }
 
-        const blob = new Blob([code], { type: 'text/javascript' });
+        // Add timestamp comment to bust module cache
+        const cacheBustedCode = `// Tool: ${name}, updated at ${Date.now()}\n${code}`;
+        const blob = new Blob([cacheBustedCode], { type: 'text/javascript' });
         const url = URL.createObjectURL(blob);
 
         const module = await import(/* webpackIgnore: true */ url);
@@ -158,8 +164,8 @@ const ToolWriter = {
         }
 
         // Register updated tool
-        if (toolRunner) {
-          toolRunner.register(name, module.default);
+        if (state.toolRunner) {
+          state.toolRunner.register(name, module.default);
         }
 
         console.log(`[ToolWriter] Tool updated: ${name}`);
@@ -179,8 +185,8 @@ const ToolWriter = {
         const url = URL.createObjectURL(blob);
         const module = await import(/* webpackIgnore: true */ url);
         URL.revokeObjectURL(url);
-        if (toolRunner) {
-          toolRunner.register(name, module.default);
+        if (state.toolRunner) {
+          state.toolRunner.register(name, module.default);
         }
 
         throw new Error(`Failed to update tool (rolled back): ${error.message}`);
@@ -192,7 +198,7 @@ const ToolWriter = {
       console.log(`[ToolWriter] Deleting tool: ${name}`);
 
       // Check if tool exists
-      if (!toolRunner || !toolRunner.has(name)) {
+      if (!state.toolRunner || !state.toolRunner.has(name)) {
         throw new Error(`Tool not found: ${name}`);
       }
 
@@ -205,8 +211,8 @@ const ToolWriter = {
       }
 
       // Unregister tool
-      if (toolRunner) {
-        toolRunner.unregister(name);
+      if (state.toolRunner) {
+        state.toolRunner.unregister(name);
       }
 
       // Delete from VFS
@@ -224,7 +230,8 @@ const ToolWriter = {
     return {
       createTool,
       updateTool,
-      deleteTool
+      deleteTool,
+      state // Expose state for external toolRunner assignment
     };
   }
 };

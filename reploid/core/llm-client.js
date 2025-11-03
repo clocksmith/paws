@@ -8,7 +8,10 @@ const LLMClient = {
   },
 
   factory: (deps) => {
-    const PROXY_URL = 'http://localhost:8000';
+    // Use the same origin as the current page, or fallback to localhost for local dev
+    const PROXY_URL = window.location.origin.includes('file://')
+      ? 'http://localhost:8000'
+      : window.location.origin;
     let webllmEngine = null;
     let currentAbortController = null; // Track active request for cancellation
 
@@ -151,6 +154,7 @@ const LLMClient = {
         const decoder = new TextDecoder();
         let buffer = '';
         let fullContent = '';
+        let fullThinking = ''; // Track thinking separately
         let tokenCount = 0;
         let tokensInCurrentWindow = 0; // Track tokens in last second for rate calculation
         let lastWindowTime = null;
@@ -190,10 +194,13 @@ const LLMClient = {
                     lastWindowTime = now;
                   }
 
-                  // Accumulate content (thinking doesn't get added to final content)
+                  // Accumulate content and thinking SEPARATELY
                   const previousContentLength = fullContent.length;
                   if (data.message.content) {
                     fullContent += data.message.content;
+                  }
+                  if (data.message.thinking) {
+                    fullThinking += data.message.thinking;
                   }
 
                   // Calculate new tokens in this chunk
@@ -223,6 +230,7 @@ const LLMClient = {
                   if (onStreamUpdate) {
                     onStreamUpdate({
                       content: fullContent,
+                      thinking: fullThinking, // Include thinking separately
                       tokens: tokenCount,
                       ttft: ttft,
                       tokensPerSecond: streamingRate,

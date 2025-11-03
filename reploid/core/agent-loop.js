@@ -10,7 +10,7 @@ const AgentLoop = {
     const { llmClient, toolRunner, vfs } = deps;
 
     // Context compaction settings
-    const MAX_CONTEXT_MESSAGES = 40; // Compact after this many messages
+    const MAX_CONTEXT_MESSAGES = 200; // Compact after this many messages
     const MAX_CONTEXT_TOKENS = 12000; // Or after this many tokens
     const KEEP_RECENT_MESSAGES = 5; // Keep this many recent messages when compacting
 
@@ -36,55 +36,54 @@ const AgentLoop = {
     let onMessage = null; // Callback for UI updates
 
     // System prompt - condensed for performance
-    const SYSTEM_PROMPT = `You are REPLOID, a self-improving AI agent with code stored in VFS (IndexedDB).
+    const SYSTEM_PROMPT = `You are REPLOID, a self-improving AI agent with code in VFS (IndexedDB).
 
-## Available Tools
+## Tools
 
-**VFS Operations:**
-read_file(path), write_file(path, content), update_file(path, content), delete_file(path), list_files(path)
+**VFS:** read_file, write_file, update_file, delete_file, list_files
+**Tool Management:** create_tool, update_tool, delete_tool, read_tool, list_tools
+**Core Improvement:** improve_core_module, improve_tool_writer, rollback_tool_writer
+**Substrate:** load_module, load_widget, create_widget, create_web_component, execute_substrate_code, inject_tool, reload_module, unload_module, list_loaded_modules
 
-**Tool Management (RSI Level 1):**
-- create_tool(name, code) - Create new tool at /tools/{name}.js. Code: \`export default async function name(args) { return result; }\`
-- update_tool(name, code), delete_tool(name), read_tool(name), list_tools()
+## Blueprints
 
-**Core Improvement (RSI Level 2):**
-- improve_core_module(module, code) - Modify core modules (agent-loop, tool-runner, etc.)
-- improve_tool_writer(code), rollback_tool_writer()
+Architectural knowledge is in /blueprints/ directory. Read blueprints when you need guidance on:
+- System architecture (0x000001-system-prompt-architecture.md)
+- Tool creation patterns (0x000015-dynamic-tool-creation.md)
+- Self-modification protocols (0x000016-meta-tool-creation-patterns.md)
+- Agent optimization (0x000008-agent-cognitive-cycle.md)
 
-**Substrate (RSI Level 3):**
-- load_module(path), load_widget(path, containerId, containerStyle)
-- create_widget(name, html, css, js), create_web_component(name, html, css, js)
-- execute_substrate_code(code), inject_tool(name, code)
-- reload_module(path), unload_module(path), list_loaded_modules()
+Use list_files to see all blueprints. Read them to understand design patterns.
 
-## Tool Call Format
+## Format
 
 \`\`\`
 TOOL_CALL: tool_name
-ARGS: {"arg1": "value1", "arg2": "value2"}
+ARGS: {"arg1": "value1"}
 \`\`\`
 
-After execution you receive:
+You receive:
 \`\`\`
 TOOL_RESULT: tool_name
 {result}
 \`\`\`
 
-When done:
-\`\`\`
-DONE: Summary of what was accomplished
-\`\`\`
+## Tool Code
 
-## Code Format
+Tools: \`export default async function name(args) { return result; }\`
 
-Tools must be one-line compact code or use \\n for newlines:
-\`\`\`
-ARGS: {"name": "add", "code": "export default async function add(args) { return args.x + args.y; }"}
-\`\`\`
+Tools can call other tools: \`await executeTool('tool_name', {args})\`
 
-## Mission
+Keep code compact. Use \\n for newlines in JSON strings.
 
-You are a self-evolving system. Create tools, improve your code, evolve the substrate. Every improvement is permanent. You are building yourself.`;
+## Behavior
+
+- Take action immediately. Don't explain, just execute.
+- One tool call per response when possible.
+- After tool results, immediately take next action.
+- Never write explanations or examples - just make tool calls.
+- Never stop. Keep iterating and improving continuously.
+- If stuck, try a different approach or create a new tool to help.`;
 
     // Parse tool calls from LLM response
     const parseToolCalls = (text) => {
@@ -304,11 +303,12 @@ ${middleMessages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\
           }
 
           const response = await llmClient.chat(context, selectedModel, (streamUpdate) => {
-            // Update thinking message with streaming stats
+            // Update thinking message with streaming stats AND thinking tokens
             if (onMessage) {
+              const thinkingPreview = streamUpdate.thinking ? ` | Thinking: ${streamUpdate.thinking.substring(0, 80)}...` : '';
               onMessage({
                 type: 'thinking_update',
-                content: `Thinking... TTFT: ${streamUpdate.ttft}s | Streaming: ${streamUpdate.tokensPerSecond} tok/s | ${streamUpdate.tokens} tokens | ${streamUpdate.elapsedSeconds}s total`
+                content: `Thinking... TTFT: ${streamUpdate.ttft}s | Streaming: ${streamUpdate.tokensPerSecond} tok/s | ${streamUpdate.tokens} tokens | ${streamUpdate.elapsedSeconds}s total${thinkingPreview}`
               });
             }
           });
@@ -332,24 +332,15 @@ ${middleMessages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\
             onMessage({ type: 'assistant', content: assistantMessage });
           }
 
-          // Check if done
-          if (checkDone(assistantMessage)) {
-            console.log('[AgentLoop] Goal achieved');
-            if (onMessage) {
-              onMessage({ type: 'done', content: 'Goal achieved' });
-            }
-            break;
-          }
-
-          // Parse and execute tool calls
+          // Parse and execute tool calls (removed DONE check - agent runs continuously)
           const toolCalls = parseToolCalls(assistantMessage);
 
           if (toolCalls.length === 0) {
-            console.log('[AgentLoop] No tool calls found, asking LLM to continue or mark DONE');
-            // Add hint to context to either use a tool or mark DONE
+            console.log('[AgentLoop] No tool calls found, asking LLM to use a tool');
+            // Add hint to context to use a tool
             context.push({
               role: 'user',
-              content: 'You must either call a tool using TOOL_CALL/ARGS format, or mark the task complete with DONE: <explanation>'
+              content: 'You must call a tool using TOOL_CALL/ARGS format to continue. What action should you take next?'
             });
             continue;
           }

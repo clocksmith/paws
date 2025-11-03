@@ -139,43 +139,41 @@
             <div class="goal-input-group">
                 <input type="text" id="goal-input" placeholder="► Select at least one model to continue" maxlength="500" disabled />
                 <button id="awaken-btn" class="btn primary" disabled style="font-size: 18px; padding: 14px 28px; font-weight: 600; box-shadow: 0 4px 12px rgba(0, 255, 255, 0.3);">Awaken Agent</button>
+                <button id="import-state-btn" class="btn" style="margin-left: 8px; font-size: 12px; padding: 8px 12px; opacity: 0.6; background: transparent; border: 1px solid rgba(100, 200, 255, 0.3);" title="Import REPLOID state from exported JSON file">Import State</button>
                 <button id="clear-cache-btn" class="btn" style="margin-left: 8px; font-size: 12px; padding: 8px 12px; opacity: 0.6; background: transparent; border: 1px solid rgba(255, 255, 255, 0.2);" title="Clear VFS cache and reload (use if modules fail to load)">Clear Cache</button>
+                <input type="file" id="import-file-input" accept=".json" style="display: none;" />
             </div>
             <!-- Example Goal Chips -->
             <div class="goal-example-chips">
-                <button class="goal-chip" onclick="document.getElementById('goal-input').value='Create tools to make tools to make tools'">Create tools to make tools to make tools</button>
+                <button class="goal-chip" onclick="document.getElementById('goal-input').value='Create tools to create tools to evolve your process'">Create tools to create tools to evolve your process</button>
                 <button class="goal-chip" onclick="document.getElementById('goal-input').value='Analyze your own inefficiency patterns and improve yourself'">Analyze your own inefficiency patterns and improve yourself</button>
                 <button class="goal-chip" onclick="document.getElementById('goal-input').value='Build a self-modifying code generation system'">Build a self-modifying code generation system</button>
             </div>
         </div>
 
-        <!-- Boot Mode Selection -->
+        <!-- Genesis Level Selection -->
         <div class="config-section">
-            <h4 class="model-cards-title">REPLOID Module Set</h4>
+            <h4 class="model-cards-title">Genesis Level</h4>
             <div class="boot-mode-options">
-                <button class="boot-mode-btn selected recommended" data-mode="single" onclick="selectBootMode('single')">
+                <button class="boot-mode-btn selected recommended" data-genesis="full" onclick="selectGenesisLevel('full')">
                     <div class="boot-mode-badge">RECOMMENDED</div>
-                    <div class="boot-mode-label">★ SINGLE MODEL</div>
-                    <div class="boot-mode-desc">One model does all tasks sequentially</div>
+                    <div class="boot-mode-label">FULL SUBSTRATE</div>
+                    <div class="boot-mode-desc">All infrastructure + 10 key blueprints - Guided self-improvement</div>
                 </button>
 
-                <button class="boot-mode-btn" data-mode="multi" onclick="selectBootMode('multi')">
+                <button class="boot-mode-btn" data-genesis="minimal" onclick="selectGenesisLevel('minimal')">
                     <div class="boot-mode-badge experimental-badge">EXPERIMENTAL</div>
-                    <div class="boot-mode-label">◆ MULTI-MODEL</div>
-                    <div class="boot-mode-desc">Multiple models work together with advanced coordination</div>
+                    <div class="boot-mode-label">MINIMAL AXIOMS</div>
+                    <div class="boot-mode-desc">Minimal code + 3 essential blueprints - Must build tool system</div>
                 </button>
 
-                <button class="boot-mode-btn" data-mode="headless" onclick="selectBootMode('headless')">
+                <button class="boot-mode-btn" data-genesis="tabula" onclick="selectGenesisLevel('tabula')">
                     <div class="boot-mode-badge experimental-badge">EXPERIMENTAL</div>
-                    <div class="boot-mode-label">⚙ HEADLESS API</div>
-                    <div class="boot-mode-desc">No UI, exposes agent as API server</div>
+                    <div class="boot-mode-label">TABULA RASA</div>
+                    <div class="boot-mode-desc">5 core modules + zero blueprints - Learn through friction</div>
                 </button>
             </div>
 
-            <!-- Browse Modules Link -->
-            <div class="browse-modules-link">
-                <a href="#" onclick="window.openModuleBrowser(); return false;">Browse all modules →</a>
-            </div>
         </div>
 
         <!-- Info Overlay -->
@@ -271,7 +269,8 @@
             </div>
             <div>
                 <button id="pause-btn" style="margin-right: 10px; padding: 8px 16px; background: #333; color: #fff; border: 1px solid #555; cursor: pointer;">Pause</button>
-                <button id="stop-btn" style="padding: 8px 16px; background: #c00; color: #fff; border: 1px solid #f00; cursor: pointer;">Stop</button>
+                <button id="stop-btn" style="margin-right: 10px; padding: 8px 16px; background: #c00; color: #fff; border: 1px solid #f00; cursor: pointer;">Stop</button>
+                <button id="export-btn" style="padding: 8px 16px; background: #0a5; color: #fff; border: 1px solid #0c7; cursor: pointer;" title="Export entire REPLOID state (VFS, context, tools)">Export State</button>
             </div>
         </div>
 
@@ -448,5 +447,38 @@
     <script type="module" src="https://unpkg.com/isomorphic-git/http/web/index.js"></script>
     <!-- Dev integrations loaded conditionally via boot.js -->
     <script type="module" src="boot.js"></script>
+    <!-- Export state tool -->
+    <script type="module" src="export-state.js"></script>
 </body>
 </html>
+
+<script>
+// Genesis level selection
+let selectedGenesisLevel = 'full';
+
+function selectGenesisLevel(level) {
+  selectedGenesisLevel = level;
+  
+  // Update UI
+  document.querySelectorAll('[data-genesis]').forEach(btn => {
+    btn.classList.remove('selected');
+  });
+  document.querySelector(`[data-genesis="${level}"]`).classList.add('selected');
+  
+  // Store selection
+  localStorage.setItem('REPLOID_GENESIS_LEVEL', level);
+  
+  console.log(`[Config] Genesis level set to: ${level}`);
+}
+
+// Restore saved genesis level on load
+window.addEventListener('DOMContentLoaded', () => {
+  const savedLevel = localStorage.getItem('REPLOID_GENESIS_LEVEL');
+  if (savedLevel && ['full', 'minimal', 'tabula'].includes(savedLevel)) {
+    selectGenesisLevel(savedLevel);
+  }
+});
+
+// Expose genesis level for boot.js
+window.getGenesisLevel = () => selectedGenesisLevel;
+</script>
