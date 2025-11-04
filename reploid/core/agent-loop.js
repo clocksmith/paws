@@ -35,6 +35,11 @@ const AgentLoop = {
     let selectedModel = null;
     let onMessage = null; // Callback for UI updates
 
+    // Iteration tracking for visualization
+    let currentIteration = 0;
+    let iterationHistory = []; // Array of {iteration, startTime, duration, toolsCalled, tokensUsed}
+    let totalToolCalls = 0;
+
     // System prompt - condensed for performance
     const SYSTEM_PROMPT = `You are REPLOID, a self-improving AI agent with code in VFS (IndexedDB).
 
@@ -263,6 +268,11 @@ ${middleMessages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\
       isRunning = true;
       isPaused = false;
 
+      // Reset iteration tracking
+      currentIteration = 0;
+      iterationHistory = [];
+      totalToolCalls = 0;
+
       // Initialize context with system prompt and user goal
       context = [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -285,6 +295,9 @@ ${middleMessages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\
           }
 
           iterationCount++;
+          currentIteration = iterationCount;
+          const iterationStartTime = Date.now();
+          let iterationToolCount = 0;
           console.log(`[AgentLoop] Iteration ${iterationCount}`);
 
           // Check context size and compact if needed
@@ -348,6 +361,8 @@ ${middleMessages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\
           // Execute each tool call
           for (const call of toolCalls) {
             console.log(`[AgentLoop] Executing tool: ${call.name}`, call.args);
+            iterationToolCount++;
+            totalToolCalls++;
 
             if (onMessage) {
               onMessage({ type: 'tool', content: `Executing: ${call.name}` });
@@ -379,6 +394,21 @@ ${middleMessages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\
                 onMessage({ type: 'tool_error', content: errorMsg });
               }
             }
+          }
+
+          // Record iteration metrics
+          const iterationDuration = Date.now() - iterationStartTime;
+          const iterationTokens = estimateContextTokens(context);
+          iterationHistory.push({
+            iteration: iterationCount,
+            startTime: iterationStartTime,
+            duration: iterationDuration,
+            toolsCalled: iterationToolCount,
+            tokensUsed: iterationTokens
+          });
+          // Keep only last 20 iterations
+          if (iterationHistory.length > 20) {
+            iterationHistory.shift();
           }
 
           // Check if context needs compaction after tool execution
@@ -472,7 +502,15 @@ ${middleMessages.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\
         isPaused,
         contextLength: context.length,
         contextTokens: estimateContextTokens(context),
-        model: selectedModel ? `${selectedModel.provider}/${selectedModel.id}` : null
+        model: selectedModel ? `${selectedModel.provider}/${selectedModel.id}` : null,
+        // New metrics for visualization
+        currentIteration,
+        maxIterations: 50,
+        iterationHistory: iterationHistory.slice(), // Return copy
+        totalToolCalls,
+        averageIterationTime: iterationHistory.length > 0
+          ? iterationHistory.reduce((sum, i) => sum + i.duration, 0) / iterationHistory.length
+          : 0
       };
     };
 

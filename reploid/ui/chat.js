@@ -10,6 +10,17 @@ const ChatUI = {
     const contextMessagesSpan = document.getElementById('context-messages');
     const contextTokensSpan = document.getElementById('context-tokens');
 
+    // New visualization elements
+    const contextProgressBar = document.getElementById('context-progress-fill');
+    const iterationCounter = document.getElementById('iteration-counter');
+    const iterationText = document.getElementById('iteration-text');
+    const iterationProgressBar = document.getElementById('iteration-progress-fill');
+    const streamingMetrics = document.getElementById('streaming-metrics');
+    const metricsTTFT = document.getElementById('metrics-ttft');
+    const metricsTokenSec = document.getElementById('metrics-tokensec');
+    const metricsTokens = document.getElementById('metrics-tokens');
+    const metricsElapsed = document.getElementById('metrics-elapsed');
+
     // Setup message callback
     agentLoop.setMessageCallback((message) => {
       addMessage(message);
@@ -38,6 +49,36 @@ const ChatUI = {
           contextTokensSpan.style.color = '#fa0'; // Orange warning
         } else {
           contextTokensSpan.style.color = '#888';
+        }
+      }
+
+      // Update context progress bar
+      if (contextProgressBar) {
+        const MAX_CONTEXT_TOKENS = 12000; // Should match agent-loop.js
+        const percentage = Math.min((status.contextTokens / MAX_CONTEXT_TOKENS) * 100, 100);
+        contextProgressBar.style.width = `${percentage}%`;
+
+        // Color code: green → yellow → red
+        if (percentage > 80) {
+          contextProgressBar.style.background = '#f00'; // Red
+        } else if (percentage > 60) {
+          contextProgressBar.style.background = '#fa0'; // Orange
+        } else {
+          contextProgressBar.style.background = '#0f0'; // Green
+        }
+      }
+
+      // Update iteration counter
+      if (status.currentIteration !== undefined && status.currentIteration > 0) {
+        if (iterationCounter) {
+          iterationCounter.style.display = 'block';
+        }
+        if (iterationText) {
+          iterationText.textContent = `Iteration ${status.currentIteration}/${status.maxIterations}`;
+        }
+        if (iterationProgressBar) {
+          const percentage = (status.currentIteration / status.maxIterations) * 100;
+          iterationProgressBar.style.width = `${percentage}%`;
         }
       }
     };
@@ -99,8 +140,38 @@ const ChatUI = {
           if (contentDiv) {
             contentDiv.textContent = message.content;
           }
+
+          // Update streaming metrics display
+          // Parse metrics from message content like "TTFT: 0.34s | Streaming: 42 tok/s | 120 tokens | 2.8s total"
+          const contentText = message.content;
+          const ttftMatch = contentText.match(/TTFT:\s*([^\s]+)/);
+          const tokSecMatch = contentText.match(/Streaming:\s*([^\s]+)\s*tok\/s/);
+          const tokensMatch = contentText.match(/(\d+)\s*tokens/);
+          const elapsedMatch = contentText.match(/([^\s]+)s\s*total/);
+
+          if (streamingMetrics && (ttftMatch || tokSecMatch || tokensMatch || elapsedMatch)) {
+            streamingMetrics.style.display = 'block';
+            if (metricsTTFT && ttftMatch) {
+              metricsTTFT.textContent = `TTFT: ${ttftMatch[1]}`;
+            }
+            if (metricsTokenSec && tokSecMatch) {
+              metricsTokenSec.textContent = `${tokSecMatch[1]} tok/s`;
+            }
+            if (metricsTokens && tokensMatch) {
+              metricsTokens.textContent = `${tokensMatch[1]} tokens`;
+            }
+            if (metricsElapsed && elapsedMatch) {
+              metricsElapsed.textContent = `${elapsedMatch[1]}s`;
+            }
+          }
+
           return lastThinkingMessage;
         }
+      }
+
+      // Hide streaming metrics when not thinking
+      if (message.type === 'assistant' && streamingMetrics) {
+        streamingMetrics.style.display = 'none';
       }
 
       const msgDiv = document.createElement('div');

@@ -191,11 +191,43 @@ const CodeViewer = {
       const toolsList = await toolRunner.call('list_tools', {});
       const tools = toolsList.tools || [];
 
+      // Get tool statistics
+      let toolStats = null;
+      try {
+        if (toolRunner.getToolStats) {
+          toolStats = toolRunner.getToolStats();
+        }
+      } catch (e) {
+        // Tool stats may not be available yet
+      }
+
       let html = '<div style="font-size: 12px;">';
       html += '<div style="margin-bottom: 15px; padding: 10px; background: #1a1a1a; border: 1px solid #333; border-radius: 3px;">';
       html += '<div style="color: #0ff; font-weight: bold; margin-bottom: 8px;">Registered Tools</div>';
       html += `<div style="color: #888; font-size: 11px;">${tools.length} tool(s)</div>`;
       html += '</div>';
+
+      // Add tool statistics panel if available
+      if (toolStats && toolStats.stats && toolStats.stats.length > 0) {
+        html += '<div style="margin-bottom: 15px; padding: 10px; background: #0a0a0a; border: 1px solid #0f0; border-radius: 3px;">';
+        html += '<div style="color: #0f0; font-weight: bold; margin-bottom: 8px; font-size: 11px;">📊 Tool Usage Statistics</div>';
+
+        // Show top 5 most used tools
+        const topTools = toolStats.stats.slice(0, 5);
+        topTools.forEach((stat, index) => {
+          html += `<div style="padding: 4px 0; border-bottom: ${index < topTools.length - 1 ? '1px solid #222' : 'none'};">`;
+          html += `  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">`;
+          html += `    <span style="color: #0ff; font-size: 10px;">${stat.name}</span>`;
+          html += `    <span style="color: #888; font-size: 9px;">${stat.count} calls</span>`;
+          html += `  </div>`;
+          html += `  <div style="display: flex; justify-content: space-between; font-size: 9px; color: #666;">`;
+          html += `    <span>Avg: ${stat.averageTime}ms</span>`;
+          html += `    <span>Success: ${stat.successRate}%</span>`;
+          html += `  </div>`;
+          html += `</div>`;
+        });
+        html += '</div>';
+      }
 
       if (tools.length === 0) {
         html += '<div style="color: #888; padding: 20px; text-align: center;">No tools created yet</div>';

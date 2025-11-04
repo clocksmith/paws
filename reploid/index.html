@@ -260,11 +260,26 @@
     <div id="agent-container" style="display: none; flex-direction: column; height: 100vh; background: #0a0a0a; color: #e0e0e0; font-family: 'Courier New', monospace;">
         <!-- Header -->
         <div style="padding: 20px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 20px;">
+            <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
                 <h2 style="margin: 0; font-size: 21.6px; color: #0ff; padding-right: 4px;">REPLOID - Agent Status Monitor</h2>
                 <div id="context-stats" style="font-size: 12px; color: #888; font-family: monospace;">
                     <span id="context-messages">0 msgs</span> |
                     <span id="context-tokens">0 tokens</span>
+                    <div id="context-progress-bar" style="width: 100px; height: 4px; background: #222; margin-top: 4px; border-radius: 2px; overflow: hidden;">
+                        <div id="context-progress-fill" style="height: 100%; width: 0%; background: #0f0; transition: width 0.3s, background 0.3s;"></div>
+                    </div>
+                </div>
+                <div id="iteration-counter" style="font-size: 12px; color: #888; font-family: monospace; display: none;">
+                    <span id="iteration-text">Iteration 0/50</span>
+                    <div style="width: 80px; height: 4px; background: #222; margin-top: 4px; border-radius: 2px; overflow: hidden;">
+                        <div id="iteration-progress-fill" style="height: 100%; width: 0%; background: #0ff; transition: width 0.3s;"></div>
+                    </div>
+                </div>
+                <div id="streaming-metrics" style="font-size: 11px; color: #666; font-family: monospace; display: none;">
+                    <span id="metrics-ttft">TTFT: --</span> |
+                    <span id="metrics-tokensec">-- tok/s</span> |
+                    <span id="metrics-tokens">-- tokens</span> |
+                    <span id="metrics-elapsed">--s</span>
                 </div>
             </div>
             <div>

@@ -12,6 +12,10 @@ const ToolRunner = {
     // Tool registry (Map of name -> function)
     const tools = new Map();
 
+    // Execution tracking for visualization
+    const executionHistory = []; // {tool, timestamp, duration, success, args}
+    const toolStats = {}; // {toolName: {count, totalTime, successCount, failureCount}}
+
     // Built-in tools (registered at initialization)
     const builtInTools = {
       // VFS operations
@@ -153,12 +157,40 @@ const ToolRunner = {
       tools.set(name, fn);
     }
 
-    // Make execute available globally so tools can call other tools
-    if (typeof globalThis !== 'undefined') {
-      globalThis.executeTool = async (name, args) => {
-        return await execute(name, args);
+    // Track tool execution
+    const trackExecution = (name, duration, success, args, resultOrError) => {
+      const execution = {
+        tool: name,
+        timestamp: Date.now(),
+        duration,
+        success,
+        args: Object.keys(args).length > 0 ? Object.keys(args) : []
       };
-    }
+
+      executionHistory.push(execution);
+      // Keep only last 100 executions
+      if (executionHistory.length > 100) {
+        executionHistory.shift();
+      }
+
+      // Update tool statistics
+      if (!toolStats[name]) {
+        toolStats[name] = {
+          count: 0,
+          totalTime: 0,
+          successCount: 0,
+          failureCount: 0
+        };
+      }
+      const stats = toolStats[name];
+      stats.count++;
+      stats.totalTime += duration;
+      if (success) {
+        stats.successCount++;
+      } else {
+        stats.failureCount++;
+      }
+    };
 
     // Public API
     const execute = async (name, args = {}) => {
@@ -166,14 +198,26 @@ const ToolRunner = {
         throw new Error(`Tool not found: ${name}. Available tools: ${Array.from(tools.keys()).join(', ')}`);
       }
 
+      const startTime = Date.now();
       try {
         const result = await tools.get(name)(args);
+        const duration = Date.now() - startTime;
+        trackExecution(name, duration, true, args, result);
         return result;
       } catch (error) {
+        const duration = Date.now() - startTime;
+        trackExecution(name, duration, false, args, error);
         console.error(`[ToolRunner] Error executing ${name}:`, error);
         throw error;
       }
     };
+
+    // Make execute available globally so tools can call other tools
+    if (typeof globalThis !== 'undefined') {
+      globalThis.executeTool = async (name, args) => {
+        return await execute(name, args);
+      };
+    }
 
     const register = (name, fn) => {
       if (builtInTools[name]) {
@@ -212,6 +256,26 @@ const ToolRunner = {
     // Alias for consistency (used by dynamic tool creation)
     const call = execute;
 
+    // Get tool statistics for visualization
+    const getToolStats = () => {
+      return {
+        history: executionHistory.slice(), // Return copy
+        stats: Object.keys(toolStats).map(toolName => ({
+          name: toolName,
+          count: toolStats[toolName].count,
+          totalTime: toolStats[toolName].totalTime,
+          averageTime: toolStats[toolName].count > 0
+            ? (toolStats[toolName].totalTime / toolStats[toolName].count).toFixed(2)
+            : 0,
+          successCount: toolStats[toolName].successCount,
+          failureCount: toolStats[toolName].failureCount,
+          successRate: toolStats[toolName].count > 0
+            ? ((toolStats[toolName].successCount / toolStats[toolName].count) * 100).toFixed(1)
+            : 0
+        })).sort((a, b) => b.count - a.count) // Sort by most used
+      };
+    };
+
     return {
       execute,
       call,
@@ -219,7 +283,8 @@ const ToolRunner = {
       registerBuiltIn,
       unregister,
       list,
-      has
+      has,
+      getToolStats
     };
   }
 };

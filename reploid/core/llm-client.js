@@ -15,6 +15,10 @@ const LLMClient = {
     let webllmEngine = null;
     let currentAbortController = null; // Track active request for cancellation
 
+    // Metrics storage for visualization
+    let lastStreamingMetrics = null;
+    let modelPerformanceHistory = {}; // Track per-model statistics
+
     // Provider API endpoints
     const PROVIDER_ENDPOINTS = {
       gemini: 'https://generativelanguage.googleapis.com/v1beta/models/',
@@ -241,6 +245,39 @@ const LLMClient = {
 
                 if (data.done) {
                   console.log(`[LLMClient] Stream complete. Total content length: ${fullContent.length}, tokens: ${tokenCount}`);
+
+                  // Store metrics for visualization
+                  const totalElapsed = (Date.now() - requestStartTime) / 1000;
+                  const ttft = firstTokenTime ? ((firstTokenTime - requestStartTime) / 1000) : 0;
+                  const tokensPerSec = totalElapsed > 0 ? (tokenCount / totalElapsed) : 0;
+
+                  lastStreamingMetrics = {
+                    ttft: ttft.toFixed(2),
+                    tokensPerSecond: tokensPerSec.toFixed(2),
+                    totalTokens: tokenCount,
+                    totalElapsed: totalElapsed.toFixed(1),
+                    timestamp: Date.now(),
+                    model: `${modelConfig.provider}/${modelConfig.id}`
+                  };
+
+                  // Update model performance history
+                  const modelKey = `${modelConfig.provider}/${modelConfig.id}`;
+                  if (!modelPerformanceHistory[modelKey]) {
+                    modelPerformanceHistory[modelKey] = {
+                      calls: 0,
+                      totalTokens: 0,
+                      totalTime: 0,
+                      totalTTFT: 0,
+                      successCount: 0
+                    };
+                  }
+                  const history = modelPerformanceHistory[modelKey];
+                  history.calls++;
+                  history.totalTokens += tokenCount;
+                  history.totalTime += totalElapsed;
+                  history.totalTTFT += ttft;
+                  history.successCount++;
+
                   return {
                     content: fullContent,
                     usage: { tokens: tokenCount }
@@ -338,10 +375,27 @@ const LLMClient = {
       }
     };
 
+    // Get streaming metrics for visualization
+    const getMetrics = () => {
+      return {
+        lastStream: lastStreamingMetrics,
+        modelHistory: Object.keys(modelPerformanceHistory).map(modelKey => ({
+          model: modelKey,
+          calls: modelPerformanceHistory[modelKey].calls,
+          totalTokens: modelPerformanceHistory[modelKey].totalTokens,
+          averageTokensPerCall: (modelPerformanceHistory[modelKey].totalTokens / modelPerformanceHistory[modelKey].calls).toFixed(0),
+          averageTime: (modelPerformanceHistory[modelKey].totalTime / modelPerformanceHistory[modelKey].calls).toFixed(2),
+          averageTTFT: (modelPerformanceHistory[modelKey].totalTTFT / modelPerformanceHistory[modelKey].calls).toFixed(2),
+          successRate: ((modelPerformanceHistory[modelKey].successCount / modelPerformanceHistory[modelKey].calls) * 100).toFixed(1)
+        }))
+      };
+    };
+
     return {
       chat,
       stream,
-      abort
+      abort,
+      getMetrics
     };
   }
 };
