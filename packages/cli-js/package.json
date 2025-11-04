@@ -12,7 +12,8 @@
     "paws-arena": "./dist/bin/paws-arena.js",
     "paws-swarm": "./dist/bin/paws-swarm.js",
     "paws-context-optimizer": "./dist/bin/paws-context-optimizer.js",
-    "paws-benchmark": "./dist/bin/paws-benchmark.js"
+    "paws-benchmark": "./dist/bin/paws-benchmark.js",
+    "paws-config": "./dist/bin/paws-config.js"
   },
   "scripts": {
     "build": "tsc",
