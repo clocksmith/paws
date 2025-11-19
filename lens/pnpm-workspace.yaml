@@ -1,6 +1,0 @@
-packages:
-  - 'packages/*'
-  - 'packages/widgets/*'
-  - 'packages/tools/*'
-  - 'packages/examples/*'
-  - 'demos/*'
