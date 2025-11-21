@@ -51,7 +51,7 @@ const CodeViewer = {
 
         <div style="padding: 15px; border-top: 1px solid #333; display: flex; gap: 8px;">
           <button id="export-code-btn" style="flex: 1; padding: 10px; background: #1a5f1a; color: #0f0; border: 1px solid #0f0; cursor: pointer; border-radius: 3px; font-size: 12px; font-weight: bold;" disabled>↓ Export</button>
-          <button id="load-code-btn" style="flex: 1; padding: 10px; background: #1a1a5f; color: #88f; border: 1px solid #88f; cursor: pointer; border-radius: 3px; font-size: 12px; font-weight: bold;" disabled>⟳ Load to Agent</button>
+          <button id="load-code-btn" style="flex: 1; padding: 10px; background: #1a1a5f; color: #88f; border: 1px solid #88f; cursor: pointer; border-radius: 3px; font-size: 12px; font-weight: bold;" disabled>♺ Load to Agent</button>
         </div>
       `;
 
@@ -64,7 +64,7 @@ const CodeViewer = {
     toggleBtn.addEventListener('click', () => {
       isOpen = !isOpen;
       container.style.transform = isOpen ? 'translateX(0)' : 'translateX(100%)';
-      toggleBtn.textContent = isOpen ? '▶' : '◀';
+      toggleBtn.textContent = isOpen ? '☇' : '◀';
     });
 
     // View tabs
@@ -468,7 +468,7 @@ const CodeViewer = {
       open: () => {
         isOpen = true;
         container.style.transform = 'translateX(0)';
-        toggleBtn.textContent = '▶';
+        toggleBtn.textContent = '☇';
       },
       close: () => {
         isOpen = false;

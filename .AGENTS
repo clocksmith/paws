@@ -1,0 +1,40 @@
+# Agent Instructions for paws
+
+## Critical Rules
+
+1. **NO EMOJIS** - Read `EMOJI.md` for approved Unicode symbols
+2. **Read before writing** - Always read existing files before modifying
+3. **Minimal changes** - Edit existing files, don't create unnecessary new ones
+
+## Style Guidelines
+
+- Use Unicode symbols from `EMOJI.md` for all visual indicators
+- Use markdown checkboxes `[x]` and `[ ]` instead of emoji checkboxes
+- Keep code clean and well-documented
+- Follow existing patterns in the codebase
+
+## Before Starting
+
+1. Read `EMOJI.md` for symbol reference
+2. Read `README.md` to understand project structure
+3. Check for existing style guides or conventions
+
+## Code Quality
+
+- Write clear, self-documenting code
+- Add comments for complex logic
+- Keep functions small and focused
+- Handle errors gracefully
+- Use consistent naming conventions
+
+## Documentation
+
+- Update docs when changing functionality
+- No emojis in documentation
+- Use approved Unicode symbols for lists and status indicators
+
+## PAWS-Specific
+
+- CATS bundles use markers, not emojis in content
+- System prompts in `packages/core/sys/`
+- Personas in `packages/core/personas/`

@@ -8,9 +8,21 @@ Shared resources for PAWS - personas, system prompts, and configuration files.
 
 ## Contents
 
-- **`personas/`** - AI persona definitions for different roles (Architect, Voice of Code, etc.)
-- **`sys/`** - System prompts for AI interactions
+- **`sys/`** - System prompts that define LLM operational modes
+  - `sys_a.md` - Default mode (full content, plan-then-execute)
+  - `sys_d.md` - Delta mode (surgical line-based changes)
+  - `sys_r.md` - RSI mode (self-modification with RSI-Link markers)
+
+- **`personas/`** - AI persona definitions that layer on top of system prompts
+  - `sys_c1.md`, `sys_c2.md` - Code-focused (Streamer, TDD)
+  - `sys_h1.md` - `sys_h5.md` - Hyper personas (progressive complexity)
+  - `sys_x1.md` - XYZ-Prime (10-minds architecture)
+  - `sys_z1.md`, `sys_z2.md` - Ten Minds protocols
+  - `p_*.md` - Task-specific (documentation, scaffold, refactor)
+
 - **`configs/`** - Shared configuration files
+
+See `personas/README.md` for detailed persona documentation.
 
 ## Usage
 
@@ -29,8 +41,7 @@ console.log(getConfigsPath());   // /path/to/packages/core/configs
 This package uses `exports` field in package.json to expose:
 
 - `@paws/core` - Helper functions (Node.js only)
-- `@paws/core/personas/*` - Direct access to persona files
-- `@paws/core/sys/*` - Direct access to system prompts
+- `@paws/core/personas/*` - Direct access to persona/system prompt files
 - `@paws/core/configs/*` - Direct access to config files
 
 ## License
