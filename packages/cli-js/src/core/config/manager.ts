@@ -241,12 +241,13 @@ export class ConfigManager {
     } else if (fileData.profiles && !selectedProfile) {
       // No profile specified, use root config
       const { profiles, defaultProfile, ...rootConfig } = fileData;
-      config = rootConfig;
+      config = rootConfig as PawsConfig;
     } else if (selectedProfile && !fileData.profiles?.[selectedProfile]) {
       throw ErrorCatalog.config.profileNotFound(selectedProfile);
     } else {
-      // Use entire file as config
-      config = fileData;
+      // Use entire file as config (strip non-config properties)
+      const { profiles, defaultProfile, ...rootConfig } = fileData;
+      config = rootConfig as PawsConfig;
     }
 
     return { config, profile: selectedProfile };

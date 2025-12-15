@@ -2,7 +2,7 @@
  * Base error class for all PAWS errors
  * Provides consistent error handling with codes, context, and recovery suggestions
  */
-export abstract class PawsError extends Error {
+export class PawsError extends Error {
   /** Unique error code (e.g., PAWS-001) */
   public readonly code: string;
 

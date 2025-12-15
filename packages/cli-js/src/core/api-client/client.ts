@@ -53,9 +53,9 @@ export class APIClient {
    */
   async request<T>(request: Omit<APIRequest<T>, 'id'>): Promise<APIResponse<T>> {
     const fullRequest: APIRequest<T> = {
+      ...request,
       id: uuidv4(),
       provider: this.provider,
-      ...request,
     };
 
     if (this.enableQueue) {

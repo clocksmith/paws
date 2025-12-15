@@ -13,7 +13,8 @@
     "paws-swarm": "./dist/bin/paws-swarm.js",
     "paws-context-optimizer": "./dist/bin/paws-context-optimizer.js",
     "paws-benchmark": "./dist/bin/paws-benchmark.js",
-    "paws-config": "./dist/bin/paws-config.js"
+    "paws-config": "./dist/bin/paws-config.js",
+    "catscan-converter": "./dist/bin/catscan-converter.js"
   },
   "scripts": {
     "build": "tsc",
@@ -23,6 +24,7 @@
     "test": "npm run build && mocha -r ts-node/register 'test/**/*.ts'",
     "test:cats": "npm run build && mocha -r ts-node/register 'test/cats/**/*.ts'",
     "test:dogs": "npm run build && mocha -r ts-node/register 'test/dogs/**/*.ts'",
+    "test:catscan": "npm run build && mocha -r ts-node/register 'test/catscan/**/*.ts'",
     "test:integration": "npm run build && mocha -r ts-node/register 'test/integration/**/*.ts'"
   },
   "dependencies": {
