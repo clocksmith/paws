@@ -34,3 +34,10 @@ paws-dogs --help   # DOGS applier
 - do not say "~30 min", "~2 hr", "multi-day", "quick", "long-running" as size proxies for engineering work
 - describe what the work IS — the file to change, the function to add, the schema field to extend, the named blocker to fix — not how long it should take
 - if scope must be conveyed, list the concrete deltas (lines/files/symbols touched) instead of a duration
+
+## Pick the real fix
+
+- when you find a correctness bug, the default is to fix it, not to relabel it
+- do not use effort or scope framing ("non-trivial", "real engineering effort", "worth its own thread", "we'll address later") as cover for choosing a lesser fix
+- do not propose "mark experimental", "add a TODO", or "rewrite the misleading comment" as a substitute for the actual engineering work when the underlying behavior is wrong
+- if scope genuinely must be split, describe the concrete deltas and ask the user which path to take, do not pre-decide a smaller version
