@@ -28,6 +28,14 @@ paws-cats --help   # CATS bundler
 paws-dogs --help   # DOGS applier
 ```
 
+## Intent-First Operations
+
+- Treat PAWS intent as bundle/apply correctness for CATS, DOGS, prompts, and personas.
+- If the user asks whether output is trustworthy, inspect the generated bundle, applier behavior, persona/system prompt source, and tests before changing docs.
+- Do not modify upstream CATSCAN contracts or persona intent unless the user explicitly asks for that semantic change.
+- When a CLI behavior is questioned, show the exact command, input artifact, output artifact, and failure or pass condition.
+- Keep prompt/persona edits separate from bundler/applier mechanics unless the user bridges them.
+
 ## No time estimates
 
 - never estimate work in hours, days, weeks, or any other time unit, in code, comments, commit messages, status updates, receipts, or chat replies
