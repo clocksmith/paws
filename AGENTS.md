@@ -36,12 +36,12 @@ paws-dogs --help   # DOGS applier
 - When a CLI behavior is questioned, show the exact command, input artifact, output artifact, and failure or pass condition.
 - Keep prompt/persona edits separate from bundler/applier mechanics unless the user bridges them.
 
-## No time estimates
+## No speculative engineering timelines
 
-- never estimate work in hours, days, weeks, or any other time unit, in code, comments, commit messages, status updates, receipts, or chat replies
-- do not say "~30 min", "~2 hr", "multi-day", "quick", "long-running" as size proxies for engineering work
-- describe what the work IS — the file to change, the function to add, the schema field to extend, the named blocker to fix — not how long it should take
-- if scope must be conveyed, list the concrete deltas (lines/files/symbols touched) instead of a duration
+- Do not predict how long a coding, software-engineering, product-implementation, refactor, migration, launch, or similar work item will take. Avoid speculative delivery statements such as "1-2 weeks", "four months", or "a quick fix".
+- Describe planned work through concrete deltas, dependencies, risks, and validation instead of calendar duration.
+- This restriction does not apply to factual status for an already-running command, script, benchmark, training run, skill, deployment, or algorithm. You may report elapsed time, measured runtime, progress, and a grounded ETA when the active process exposes enough evidence.
+- Do not invent an ETA for an active process. If it does not expose one, report its current phase, latest output, and whether it is still making progress.
 
 ## Pick the real fix
 
