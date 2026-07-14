@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paws Debug"
+  short_description: "Trace and fix Paws project failures"
+  default_prompt: "Use $paws-debug to reproduce, trace, and fix this failure in Paws."
