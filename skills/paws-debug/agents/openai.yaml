@@ -1,4 +1,4 @@
 interface:
   display_name: "Paws Debug"
-  short_description: "Trace and fix Paws project failures"
-  default_prompt: "Use $paws-debug to reproduce, trace, and fix this failure in Paws."
+  short_description: "Diagnose a named Paws failure"
+  default_prompt: "Use $paws-debug to reproduce and diagnose this failure in Paws; repair it only if requested."

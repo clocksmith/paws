@@ -1,4 +1,0 @@
-interface:
-  display_name: "Paws Development"
-  short_description: "Build and validate Paws project changes"
-  default_prompt: "Use $paws-development to implement and validate this change in Paws."

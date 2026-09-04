@@ -28,6 +28,13 @@ paws-cats --help   # CATS bundler
 paws-dogs --help   # DOGS applier
 ```
 
+### Validation
+
+- Preserve stable bundle identifiers, ordering, and round-trip behavior.
+- For behavior shared by JavaScript and Python CLIs, run the same fixture through both.
+- Use the package's declared test scripts, including CLI-specific suites when present.
+- Inspect generated bundles for unintended prompt or persona changes.
+
 ## Intent-First Operations
 
 - Treat PAWS intent as bundle/apply correctness for CATS, DOGS, prompts, and personas.
