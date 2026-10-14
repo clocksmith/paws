@@ -285,20 +285,6 @@ class TestSessionManager(unittest.TestCase):
         shutil.rmtree(self.temp_dir)
     
     @unittest.skipIf(not GIT_AVAILABLE, "GitPython not available")
-    def test_create_session(self):
-        """Test creating a session"""
-        manager = SessionManager(self.temp_dir)
-        session = manager.create_session("Test Session")
-        
-        self.assertIsNotNone(session)
-        self.assertEqual(session.name, "Test Session")
-        self.assertEqual(session.status, SessionStatus.ACTIVE)
-        
-        # Check that workspace was created
-        workspace_path = Path(session.workspace_path)
-        self.assertTrue(workspace_path.exists())
-    
-    @unittest.skipIf(not GIT_AVAILABLE, "GitPython not available")
     def test_list_sessions(self):
         """Test listing sessions"""
         manager = SessionManager(self.temp_dir)

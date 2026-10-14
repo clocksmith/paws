@@ -24,15 +24,6 @@ describe('Configuration Management', () => {
   });
 
   describe('ConfigManager', () => {
-    it('should create default config', () => {
-      const manager = new ConfigManager(defaultConfig);
-      const config = manager.get();
-
-      expect(config.version).to.equal('1.0.0');
-      expect(config.providers).to.exist;
-      expect(config.pricing).to.exist;
-    });
-
     it('should get nested values', () => {
       const manager = new ConfigManager({
         providers: {

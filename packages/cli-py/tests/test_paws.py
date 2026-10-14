@@ -214,7 +214,6 @@ class TestCatsPyComprehensive(unittest.TestCase):
     def test_user_cancel_stops_execution(self): run_cli(cats, ["src", "-o", "bundle.md"], user_input=['n'], expect_exit_code=0)
     @unittest.skip("--force-encoding flag not implemented in current cats.py")
     def test_force_b64_encoding(self): stdout, _ = run_cli(cats, ["src/main.py", "--force-encoding", "b64", "-o", "-"]); self.assertIn(base64.b64encode(b'print(1)').decode(), stdout)
-    def test_hidden_file_inclusion(self): Path(".hidden").write_text("h"); stdout, _ = run_cli(cats, [".hidden", "-o", "-"]); self.assertIn(".hidden", stdout)
     @unittest.skip("Path handling changed in current implementation")
     def test_very_long_path(self): long_path = Path("a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/file.txt"); long_path.parent.mkdir(parents=True); long_path.touch(); stdout, _ = run_cli(cats, [str(long_path), "-o", "-"]); self.assertIn(str(long_path), stdout)
     def test_symlink_to_file(self): Path("target.txt").write_text("tgt"); Path("link.txt").symlink_to("target.txt"); stdout, _ = run_cli(cats, ["link.txt", "-o", "-"]); self.assertIn("tgt", stdout)

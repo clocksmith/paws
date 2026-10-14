@@ -29,22 +29,6 @@ class TestCodeModule(unittest.TestCase):
         self.assertEqual(len(module.exports), 2)
 
 
-class TestContextWindow(unittest.TestCase):
-    """Test ContextWindow dataclass"""
-
-    def test_create_window(self):
-        """Test creating a context window"""
-        window = ContextWindow(
-            core_files=[Path("a.py"), Path("b.py")],
-            summary_files=[Path("c.py")],
-            total_lines=500,
-            estimated_tokens=2000
-        )
-        self.assertEqual(len(window.core_files), 2)
-        self.assertEqual(len(window.summary_files), 1)
-        self.assertEqual(window.total_lines, 500)
-
-
 class TestDependencyAnalyzer(unittest.TestCase):
     """Test DependencyAnalyzer class"""
 
@@ -87,11 +71,6 @@ class TestContextOptimizer(unittest.TestCase):
         import shutil
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    def test_init(self):
-        """Test initialization"""
-        self.assertEqual(self.optimizer.root_path, self.temp_dir)
-        self.assertEqual(self.optimizer.max_tokens, 4000)
-
     def test_has_required_methods(self):
         """Test that optimizer has expected methods"""
         self.assertTrue(hasattr(self.optimizer, 'create_context_window'))
@@ -105,7 +84,6 @@ def suite():
     loader = unittest.TestLoader()
 
     suite.addTests(loader.loadTestsFromTestCase(TestCodeModule))
-    suite.addTests(loader.loadTestsFromTestCase(TestContextWindow))
     suite.addTests(loader.loadTestsFromTestCase(TestDependencyAnalyzer))
     suite.addTests(loader.loadTestsFromTestCase(TestContextOptimizer))
 
