@@ -167,6 +167,9 @@ class TestSessionManager(unittest.TestCase):
 
         # Initialize git repo
         self.repo = Repo.init(self.test_dir)
+        with self.repo.config_writer() as config:
+            config.set_value("user", "name", "Test")
+            config.set_value("user", "email", "test@test.com")
 
         # Create initial commit
         test_file = self.test_dir / "test.txt"
@@ -420,6 +423,9 @@ class TestSessionCLI(unittest.TestCase):
 
         # Initialize git repo
         self.repo = Repo.init(self.test_dir)
+        with self.repo.config_writer() as config:
+            config.set_value("user", "name", "Test")
+            config.set_value("user", "email", "test@test.com")
         test_file = self.test_dir / "test.txt"
         test_file.write_text("initial content")
         # Use relative path to avoid macOS symlink issues
@@ -473,6 +479,9 @@ class TestSessionEdgeCases(unittest.TestCase):
         os.chdir(self.test_dir)
 
         self.repo = Repo.init(self.test_dir)
+        with self.repo.config_writer() as config:
+            config.set_value("user", "name", "Test")
+            config.set_value("user", "email", "test@test.com")
         test_file = self.test_dir / "test.txt"
         test_file.write_text("initial")
         # Use relative path to avoid macOS symlink issues
