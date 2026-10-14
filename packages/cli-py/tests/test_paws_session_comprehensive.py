@@ -918,7 +918,7 @@ class TestSessionCLICommands(unittest.TestCase):
         os.chdir(self.test_dir)
 
         # Initialize git
-        subprocess.run(["git", "init"], check=True, capture_output=True)
+        subprocess.run(["git", "init", "-b", "main"], check=True, capture_output=True)
         subprocess.run(["git", "config", "user.email", "test@test.com"], check=True, capture_output=True)
         subprocess.run(["git", "config", "user.name", "Test"], check=True, capture_output=True)
 

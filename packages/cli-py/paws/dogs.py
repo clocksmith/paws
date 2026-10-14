@@ -11,6 +11,8 @@ Extracts files from PAWS bundles with support for:
 - PAWS_CMD support for AI-driven workflows
 """
 
+from __future__ import annotations
+
 import sys
 import os
 import argparse
