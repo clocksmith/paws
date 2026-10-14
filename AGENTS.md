@@ -4,32 +4,23 @@
 
 ## Git workflow: direct to main
 
-- Work and commit directly on the owning repository's `main` branch, then push
-  directly to its existing `origin/main` remote branch.
-- Do not create feature/task branches, branch-backed worktrees, or GitHub pull
-  requests. Do not use a branch/PR workflow unless the user explicitly requests it.
-- If the checkout is on another branch, preserve its work and move the task to
-  `main` safely; never discard changes to switch branches.
-- Stage only task-related changes, run the applicable checks, and integrate remote
-  updates without overwriting unrelated work. Never force-push `main`.
+- Commit on the owning repo's `main` and push to `origin/main`. No feature
+  branches, branch-backed worktrees, or PRs unless the user asks for them.
+- On another branch, preserve its work and move the task to `main` safely;
+  never discard changes to switch. Never force-push `main`.
+- Stage only task-related changes; integrate remote updates without
+  overwriting unrelated work.
 - Report the pushed commit or the concrete blocker. A local commit is not a push.
 
 ### Before Starting
-- Read `README.md` for overview
-- Read `packages/cli-js/README.md` for full CLI docs
-- Read `EMOJI.md` for approved Unicode symbols
-- Check `packages/core/sys/` for system prompts
-- Check `packages/core/personas/` for personas
+- Read `README.md` (overview) and `packages/cli-js/README.md` (full CLI docs)
 
 ### Key Paths
-- `packages/core/` - Core library and prompts
+- `packages/core/` - Core library and prompts: `sys/` (`sys_a.md`, `sys_d.md`, `sys_r.md`), `personas/`
 - `packages/cli-js/` - JavaScript CLI implementation
-- System prompts: `sys_a.md`, `sys_d.md`, `sys_r.md`
 
 ### Guardrails
 - Enforce `EMOJI.md`; use only approved Unicode symbols, no emojis
-- Do not modify upstream CATSCAN contracts
-- Test bundle generation and application before commits
 - Maintain compatibility with existing personas
 
 ### Development
@@ -43,8 +34,9 @@ paws-dogs --help   # DOGS applier
 ### Validation
 
 - Preserve stable bundle identifiers, ordering, and round-trip behavior.
+- When CATS bundler or DOGS applier code changes, round-trip a fixture through it;
+  targeted suites are `test:cats` and `test:dogs` in `packages/cli-js`.
 - For behavior shared by JavaScript and Python CLIs, run the same fixture through both.
-- Use the package's declared test scripts, including CLI-specific suites when present.
 - Inspect generated bundles for unintended prompt or persona changes.
 
 ## Development verification
@@ -56,6 +48,9 @@ paws-dogs --help   # DOGS applier
   GPU/model campaigns, benchmarks, or full release qualification. Run them when
   explicitly requested or when a named correctness question cannot be answered by
   focused checks; state that reason before starting.
+- Config-contract, mirror, drift, and freshness checks run only when the change
+  edits what they check. Don't add tests that just restate another file or pin
+  config literals. Time-box long processes.
 - Once relevant checks pass, continue. Repeat or broaden verification only after
   another relevant change, a failure, or a concrete unresolved concern.
 - For documentation-only edits, inspect the diff and changed links. Do not run
@@ -77,14 +72,17 @@ paws-dogs --help   # DOGS applier
 
 ## No speculative engineering timelines
 
-- Do not predict how long a coding, software-engineering, product-implementation, refactor, migration, launch, or similar work item will take. Avoid speculative delivery statements such as "1-2 weeks", "four months", or "a quick fix".
-- Describe planned work through concrete deltas, dependencies, risks, and validation instead of calendar duration.
-- This restriction does not apply to factual status for an already-running command, script, benchmark, training run, skill, deployment, or algorithm. You may report elapsed time, measured runtime, progress, and a grounded ETA when the active process exposes enough evidence.
-- Do not invent an ETA for an active process. If it does not expose one, report its current phase, latest output, and whether it is still making progress.
+- Never predict how long engineering work will take ("1-2 weeks", "a quick
+  fix"). Describe concrete deltas, dependencies, risks, and validation instead.
+- For an already-running process, report measured elapsed time, progress, or a
+  grounded ETA only when the process exposes one; otherwise report its phase,
+  latest output, and whether it is still progressing.
 
 ## Pick the real fix
 
-- when you find a correctness bug, the default is to fix it, not to relabel it
-- do not use effort or scope framing ("non-trivial", "real engineering effort", "worth its own thread", "we'll address later") as cover for choosing a lesser fix
-- do not propose "mark experimental", "add a TODO", or "rewrite the misleading comment" as a substitute for the actual engineering work when the underlying behavior is wrong
-- if scope genuinely must be split, describe the concrete deltas and ask the user which path to take, do not pre-decide a smaller version
+- Fix correctness bugs; don't relabel them. Effort or scope framing
+  ("non-trivial", "worth its own thread", "later") is no reason for a lesser fix.
+- "Mark experimental", "add a TODO", or "reword the misleading comment" does not
+  substitute for fixing wrong behavior.
+- If scope must be split, list the concrete deltas and ask the user which path
+  to take; don't pre-decide a smaller version.
