@@ -722,7 +722,7 @@ def main():
     )
     parser.add_argument(
         "--config",
-        default="py/arena_config.json",
+        default="packages/core/configs/arena_config.json",
         help="Path to competitor config file"
     )
     parser.add_argument(

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Comprehensive tests for paws_paxos.py
-Tests CompetitorConfig, CompetitionResult, LLMClient, and PaxosOrchestrator
+Comprehensive tests for paws_arena.py
+Tests CompetitorConfig, CompetitionResult, LLMClient, and ArenaOrchestrator
 """
 
 import unittest
@@ -16,9 +16,9 @@ from unittest.mock import patch, Mock, MagicMock
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import paws.paxos
-from paws.paxos import (
-    CompetitorConfig, CompetitionResult, LLMClient, PaxosOrchestrator
+import paws.arena
+from paws.arena import (
+    CompetitorConfig, CompetitionResult, LLMClient, ArenaOrchestrator
 )
 
 
@@ -136,7 +136,7 @@ class TestLLMClient(unittest.TestCase):
             api_key="test_key"
         )
 
-        with patch('paws.paxos.GEMINI_AVAILABLE', False):
+        with patch('paws.arena.GEMINI_AVAILABLE', False):
             with self.assertRaises(ImportError) as cm:
                 client = LLMClient(config)
 
@@ -151,7 +151,7 @@ class TestLLMClient(unittest.TestCase):
             api_key="test_key"
         )
 
-        with patch('paws.paxos.CLAUDE_AVAILABLE', False):
+        with patch('paws.arena.CLAUDE_AVAILABLE', False):
             with self.assertRaises(ImportError) as cm:
                 client = LLMClient(config)
 
@@ -166,7 +166,7 @@ class TestLLMClient(unittest.TestCase):
             api_key="test_key"
         )
 
-        with patch('paws.paxos.OPENAI_AVAILABLE', False):
+        with patch('paws.arena.OPENAI_AVAILABLE', False):
             with self.assertRaises(ImportError) as cm:
                 client = LLMClient(config)
 
@@ -181,8 +181,8 @@ class TestLLMClient(unittest.TestCase):
         )
 
         with patch.dict('os.environ', {'GEMINI_API_KEY': 'env_key'}):
-            with patch('paws.paxos.GEMINI_AVAILABLE', True):
-                with patch('paws.paxos.genai') as mock_genai:
+            with patch('paws.arena.GEMINI_AVAILABLE', True):
+                with patch('paws.arena.genai') as mock_genai:
                     mock_genai.GenerativeModel.return_value = Mock()
 
                     client = LLMClient(config)
@@ -199,8 +199,8 @@ class TestLLMClient(unittest.TestCase):
             api_key="test_key"
         )
 
-        with patch('paws.paxos.GEMINI_AVAILABLE', True):
-            with patch('paws.paxos.genai') as mock_genai:
+        with patch('paws.arena.GEMINI_AVAILABLE', True):
+            with patch('paws.arena.genai') as mock_genai:
                 # Mock Gemini response
                 mock_response = Mock()
                 mock_response.text = "Test response from Gemini"
@@ -218,11 +218,11 @@ class TestLLMClient(unittest.TestCase):
                 mock_model.generate_content.assert_called_once()
 
 
-class TestPaxosOrchestrator(unittest.TestCase):
-    """Test PaxosOrchestrator class"""
+class TestArenaOrchestrator(unittest.TestCase):
+    """Test ArenaOrchestrator class"""
 
     def setUp(self):
-        self.test_dir = Path(tempfile.mkdtemp(prefix="paxos_test_"))
+        self.test_dir = Path(tempfile.mkdtemp(prefix="arena_test_"))
 
         # Create test context bundle
         self.context_file = self.test_dir / "context.md"
@@ -235,8 +235,8 @@ This is test context for the orchestrator
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
     def test_orchestrator_initialization(self):
-        """Test PaxosOrchestrator initialization (lines 160-170)"""
-        orchestrator = PaxosOrchestrator(
+        """Test ArenaOrchestrator initialization (lines 160-170)"""
+        orchestrator = ArenaOrchestrator(
             task="Implement feature X",
             context_bundle=str(self.context_file),
             verify_cmd="pytest",
@@ -249,8 +249,8 @@ This is test context for the orchestrator
         self.assertIn("Test Context Bundle", orchestrator.context_content)
 
     def test_orchestrator_without_verify_cmd(self):
-        """Test PaxosOrchestrator without verification command"""
-        orchestrator = PaxosOrchestrator(
+        """Test ArenaOrchestrator without verification command"""
+        orchestrator = ArenaOrchestrator(
             task="Test task",
             context_bundle=str(self.context_file),
             verify_cmd=None,
@@ -279,7 +279,7 @@ This is test context for the orchestrator
         }
         config_file.write_text(json.dumps(config_data))
 
-        orchestrator = PaxosOrchestrator(
+        orchestrator = ArenaOrchestrator(
             task="Test",
             context_bundle=str(self.context_file),
             verify_cmd=None,
@@ -298,7 +298,7 @@ This is test context for the orchestrator
         config_file = self.test_dir / "empty.json"
         config_file.write_text('{"competitors": []}')
 
-        orchestrator = PaxosOrchestrator(
+        orchestrator = ArenaOrchestrator(
             task="Test",
             context_bundle=str(self.context_file),
             verify_cmd=None,
@@ -310,11 +310,11 @@ This is test context for the orchestrator
         self.assertEqual(len(competitors), 0)
 
 
-class TestPaxosRunCompetitor(unittest.TestCase):
+class TestArenaRunCompetitor(unittest.TestCase):
     """Test run_competitor method (lines 235-290)"""
 
     def setUp(self):
-        self.test_dir = Path(tempfile.mkdtemp(prefix="paxos_competitor_"))
+        self.test_dir = Path(tempfile.mkdtemp(prefix="arena_competitor_"))
         self.context_file = self.test_dir / "context.md"
         self.context_file.write_text("# Test context")
 
@@ -323,7 +323,7 @@ class TestPaxosRunCompetitor(unittest.TestCase):
 
     def test_run_competitor_success_with_verification(self):
         """Test successful competitor run with verification (lines 237-283)"""
-        orchestrator = PaxosOrchestrator(
+        orchestrator = ArenaOrchestrator(
             task="Test task",
             context_bundle=str(self.context_file),
             verify_cmd="echo VERIFICATION PASSED",
@@ -338,7 +338,7 @@ class TestPaxosRunCompetitor(unittest.TestCase):
         )
 
         # Mock LLMClient
-        with patch('paws.paxos.LLMClient') as mock_llm:
+        with patch('paws.arena.LLMClient') as mock_llm:
             mock_client = Mock()
             mock_client.generate.return_value = ("Solution code", 100)
             mock_llm.return_value = mock_client
@@ -356,7 +356,7 @@ class TestPaxosRunCompetitor(unittest.TestCase):
 
     def test_run_competitor_verification_failed(self):
         """Test competitor run with failed verification (lines 265-268)"""
-        orchestrator = PaxosOrchestrator(
+        orchestrator = ArenaOrchestrator(
             task="Test task",
             context_bundle=str(self.context_file),
             verify_cmd="pytest",
@@ -371,7 +371,7 @@ class TestPaxosRunCompetitor(unittest.TestCase):
         )
 
         # Mock LLMClient
-        with patch('paws.paxos.LLMClient') as mock_llm:
+        with patch('paws.arena.LLMClient') as mock_llm:
             mock_client = Mock()
             mock_client.generate.return_value = ("Solution code", 100)
             mock_llm.return_value = mock_client
@@ -386,7 +386,7 @@ class TestPaxosRunCompetitor(unittest.TestCase):
 
     def test_run_competitor_no_verification(self):
         """Test competitor run without verification (lines 269-271)"""
-        orchestrator = PaxosOrchestrator(
+        orchestrator = ArenaOrchestrator(
             task="Test task",
             context_bundle=str(self.context_file),
             verify_cmd=None,
@@ -401,7 +401,7 @@ class TestPaxosRunCompetitor(unittest.TestCase):
         )
 
         # Mock LLMClient
-        with patch('paws.paxos.LLMClient') as mock_llm:
+        with patch('paws.arena.LLMClient') as mock_llm:
             mock_client = Mock()
             mock_client.generate.return_value = ("Solution code", 100)
             mock_llm.return_value = mock_client
@@ -415,7 +415,7 @@ class TestPaxosRunCompetitor(unittest.TestCase):
 
     def test_run_competitor_exception(self):
         """Test competitor run with exception (lines 285-290)"""
-        orchestrator = PaxosOrchestrator(
+        orchestrator = ArenaOrchestrator(
             task="Test task",
             context_bundle=str(self.context_file),
             verify_cmd=None,
@@ -430,7 +430,7 @@ class TestPaxosRunCompetitor(unittest.TestCase):
         )
 
         # Mock LLMClient to raise exception
-        with patch('paws.paxos.LLMClient') as mock_llm:
+        with patch('paws.arena.LLMClient') as mock_llm:
             mock_llm.side_effect = Exception("API error")
 
             with patch('sys.stdout', new=MagicMock()):
@@ -441,11 +441,11 @@ class TestPaxosRunCompetitor(unittest.TestCase):
         self.assertIn("API error", result.error_message)
 
 
-class TestPaxosVerification(unittest.TestCase):
+class TestArenaVerification(unittest.TestCase):
     """Test verify_solution method (lines 302-373)"""
 
     def setUp(self):
-        self.test_dir = Path(tempfile.mkdtemp(prefix="paxos_verify_"))
+        self.test_dir = Path(tempfile.mkdtemp(prefix="arena_verify_"))
         self.context_file = self.test_dir / "context.md"
         self.context_file.write_text("# Test context")
 
@@ -454,7 +454,7 @@ class TestPaxosVerification(unittest.TestCase):
 
     def test_verify_solution_worktree_creation_failed(self):
         """Test verification when worktree creation fails (lines 317-318)"""
-        orchestrator = PaxosOrchestrator(
+        orchestrator = ArenaOrchestrator(
             task="Test task",
             context_bundle=str(self.context_file),
             verify_cmd="pytest",
@@ -479,11 +479,11 @@ class TestPaxosVerification(unittest.TestCase):
         self.assertIn("worktree", output.lower())
 
 
-class TestPaxosRunCompetition(unittest.TestCase):
+class TestArenaRunCompetition(unittest.TestCase):
     """Test run_competition method (lines 375-397)"""
 
     def setUp(self):
-        self.test_dir = Path(tempfile.mkdtemp(prefix="paxos_comp_"))
+        self.test_dir = Path(tempfile.mkdtemp(prefix="arena_comp_"))
         self.context_file = self.test_dir / "context.md"
         self.context_file.write_text("# Test context")
 
@@ -492,7 +492,7 @@ class TestPaxosRunCompetition(unittest.TestCase):
 
     def test_run_competition_sequential(self):
         """Test sequential competition execution (lines 391-395)"""
-        orchestrator = PaxosOrchestrator(
+        orchestrator = ArenaOrchestrator(
             task="Test task",
             context_bundle=str(self.context_file),
             verify_cmd=None,
@@ -521,7 +521,7 @@ class TestPaxosRunCompetition(unittest.TestCase):
 
     def test_run_competition_parallel(self):
         """Test parallel competition execution (lines 380-390)"""
-        orchestrator = PaxosOrchestrator(
+        orchestrator = ArenaOrchestrator(
             task="Test task",
             context_bundle=str(self.context_file),
             verify_cmd=None,
@@ -547,7 +547,7 @@ class TestPaxosRunCompetition(unittest.TestCase):
 
     def test_run_competition_single_competitor_parallel(self):
         """Test parallel with single competitor (line 380 check)"""
-        orchestrator = PaxosOrchestrator(
+        orchestrator = ArenaOrchestrator(
             task="Test task",
             context_bundle=str(self.context_file),
             verify_cmd=None,
@@ -570,11 +570,11 @@ class TestPaxosRunCompetition(unittest.TestCase):
         self.assertEqual(len(results), 1)
 
 
-class TestPaxosGenerateReport(unittest.TestCase):
+class TestArenaGenerateReport(unittest.TestCase):
     """Test generate_report method (lines 399-446)"""
 
     def setUp(self):
-        self.test_dir = Path(tempfile.mkdtemp(prefix="paxos_report_"))
+        self.test_dir = Path(tempfile.mkdtemp(prefix="arena_report_"))
         self.context_file = self.test_dir / "context.md"
         self.context_file.write_text("# Test context")
 
@@ -583,7 +583,7 @@ class TestPaxosGenerateReport(unittest.TestCase):
 
     def test_generate_report_all_pass(self):
         """Test report generation with all passing (lines 432, 437-446)"""
-        orchestrator = PaxosOrchestrator(
+        orchestrator = ArenaOrchestrator(
             task="Test task",
             context_bundle=str(self.context_file),
             verify_cmd=None,
@@ -617,7 +617,7 @@ class TestPaxosGenerateReport(unittest.TestCase):
 
     def test_generate_report_all_fail(self):
         """Test report generation with no passing (lines 432-436)"""
-        orchestrator = PaxosOrchestrator(
+        orchestrator = ArenaOrchestrator(
             task="Test task",
             context_bundle=str(self.context_file),
             verify_cmd="pytest",
@@ -652,7 +652,7 @@ class TestPaxosGenerateReport(unittest.TestCase):
 
     def test_generate_report_mixed_results(self):
         """Test report with mixed pass/fail/error (lines 405-429)"""
-        orchestrator = PaxosOrchestrator(
+        orchestrator = ArenaOrchestrator(
             task="Test task",
             context_bundle=str(self.context_file),
             verify_cmd="pytest",
@@ -694,11 +694,11 @@ class TestPaxosGenerateReport(unittest.TestCase):
         self.assertEqual(exit_code, 0)
 
 
-class TestPaxosEdgeCases(unittest.TestCase):
+class TestArenaEdgeCases(unittest.TestCase):
     """Test edge cases"""
 
     def setUp(self):
-        self.test_dir = Path(tempfile.mkdtemp(prefix="paxos_edge_"))
+        self.test_dir = Path(tempfile.mkdtemp(prefix="arena_edge_"))
 
     def tearDown(self):
         shutil.rmtree(self.test_dir, ignore_errors=True)
@@ -708,7 +708,7 @@ class TestPaxosEdgeCases(unittest.TestCase):
         context_file = self.test_dir / "empty.md"
         context_file.write_text("")
 
-        orchestrator = PaxosOrchestrator(
+        orchestrator = ArenaOrchestrator(
             task="Test",
             context_bundle=str(context_file),
             verify_cmd=None,
@@ -741,11 +741,11 @@ class TestPaxosEdgeCases(unittest.TestCase):
         self.assertEqual(result.token_count, 0)
 
 
-class TestPaxosProviderInference(unittest.TestCase):
+class TestArenaProviderInference(unittest.TestCase):
     """Test provider inference and prompt building"""
 
     def setUp(self):
-        self.test_dir = Path(tempfile.mkdtemp(prefix="paxos_provider_"))
+        self.test_dir = Path(tempfile.mkdtemp(prefix="arena_provider_"))
 
         # Create test context file
         self.context_file = self.test_dir / "context.md"
@@ -767,7 +767,7 @@ class TestPaxosProviderInference(unittest.TestCase):
         }
         config_file.write_text(json.dumps(config_data))
 
-        orchestrator = PaxosOrchestrator(
+        orchestrator = ArenaOrchestrator(
             task="Test",
             context_bundle=str(self.context_file),
             verify_cmd=None,
@@ -791,7 +791,7 @@ class TestPaxosProviderInference(unittest.TestCase):
         }
         config_file.write_text(json.dumps(config_data))
 
-        orchestrator = PaxosOrchestrator(
+        orchestrator = ArenaOrchestrator(
             task="Test",
             context_bundle=str(self.context_file),
             verify_cmd=None,
@@ -815,7 +815,7 @@ class TestPaxosProviderInference(unittest.TestCase):
         }
         config_file.write_text(json.dumps(config_data))
 
-        orchestrator = PaxosOrchestrator(
+        orchestrator = ArenaOrchestrator(
             task="Test",
             context_bundle=str(self.context_file),
             verify_cmd=None,
@@ -839,7 +839,7 @@ class TestPaxosProviderInference(unittest.TestCase):
         }
         config_file.write_text(json.dumps(config_data))
 
-        orchestrator = PaxosOrchestrator(
+        orchestrator = ArenaOrchestrator(
             task="Test",
             context_bundle=str(self.context_file),
             verify_cmd=None,
@@ -863,7 +863,7 @@ class TestPaxosProviderInference(unittest.TestCase):
         }
         config_file.write_text(json.dumps(config_data))
 
-        orchestrator = PaxosOrchestrator(
+        orchestrator = ArenaOrchestrator(
             task="Test",
             context_bundle=str(self.context_file),
             verify_cmd=None,
@@ -880,7 +880,7 @@ class TestPaxosProviderInference(unittest.TestCase):
         persona_file = self.test_dir / "persona.md"
         persona_file.write_text("You are a helpful assistant.")
 
-        orchestrator = PaxosOrchestrator(
+        orchestrator = ArenaOrchestrator(
             task="Write a function",
             context_bundle=str(self.context_file),
             verify_cmd=None,
@@ -903,11 +903,11 @@ class TestPaxosProviderInference(unittest.TestCase):
         self.assertIn("Test Context", prompt)
 
 
-class TestPaxosMain(unittest.TestCase):
+class TestArenaMain(unittest.TestCase):
     """Test main() CLI function"""
 
     def setUp(self):
-        self.test_dir = Path(tempfile.mkdtemp(prefix="paxos_main_"))
+        self.test_dir = Path(tempfile.mkdtemp(prefix="arena_main_"))
 
         # Create test context file
         self.context_file = self.test_dir / "context.md"
@@ -941,7 +941,7 @@ class TestPaxosMain(unittest.TestCase):
     def test_main_with_all_arguments(self):
         """Test main() with all command-line arguments (lines 484-507)"""
         test_args = [
-            'paws_paxos.py',
+            'paws_arena.py',
             'Test task description',
             str(self.context_file),
             '--verify-cmd', 'pytest',
@@ -951,17 +951,17 @@ class TestPaxosMain(unittest.TestCase):
         ]
 
         with patch('sys.argv', test_args):
-            with patch.object(PaxosOrchestrator, 'run_competition', return_value=[]):
-                with patch.object(PaxosOrchestrator, 'generate_report', return_value=0):
+            with patch.object(ArenaOrchestrator, 'run_competition', return_value=[]):
+                with patch.object(ArenaOrchestrator, 'generate_report', return_value=0):
                     with patch('sys.stdout', new=MagicMock()):
-                        result = paws.paxos.main()
+                        result = paws.arena.main()
 
         self.assertEqual(result, 0)
 
     def test_main_with_interactive_task_prompt(self):
         """Test main() with interactive task prompt (lines 487-489)"""
         test_args = [
-            'paws_paxos.py',
+            'paws_arena.py',
             '--config', str(self.config_file)
         ]
 
@@ -972,10 +972,10 @@ class TestPaxosMain(unittest.TestCase):
                     str(self.context_file),
                     "pytest"
                 ]
-                with patch.object(PaxosOrchestrator, 'run_competition', return_value=[]):
-                    with patch.object(PaxosOrchestrator, 'generate_report', return_value=0):
+                with patch.object(ArenaOrchestrator, 'run_competition', return_value=[]):
+                    with patch.object(ArenaOrchestrator, 'generate_report', return_value=0):
                         with patch('sys.stdout', new=MagicMock()):
-                            result = paws.paxos.main()
+                            result = paws.arena.main()
 
         self.assertEqual(result, 0)
         # Should have prompted for task, context, and verify command
@@ -984,7 +984,7 @@ class TestPaxosMain(unittest.TestCase):
     def test_main_with_interactive_context_prompt(self):
         """Test main() with interactive context prompt (lines 491-493)"""
         test_args = [
-            'paws_paxos.py',
+            'paws_arena.py',
             'Test task',
             '--config', str(self.config_file)
         ]
@@ -995,10 +995,10 @@ class TestPaxosMain(unittest.TestCase):
                     str(self.context_file),
                     "pytest"
                 ]
-                with patch.object(PaxosOrchestrator, 'run_competition', return_value=[]):
-                    with patch.object(PaxosOrchestrator, 'generate_report', return_value=0):
+                with patch.object(ArenaOrchestrator, 'run_competition', return_value=[]):
+                    with patch.object(ArenaOrchestrator, 'generate_report', return_value=0):
                         with patch('sys.stdout', new=MagicMock()):
-                            result = paws.paxos.main()
+                            result = paws.arena.main()
 
         self.assertEqual(result, 0)
         # Should have prompted for context and verify command
@@ -1007,7 +1007,7 @@ class TestPaxosMain(unittest.TestCase):
     def test_main_with_empty_verify_command(self):
         """Test main() with empty verify command (lines 495-499)"""
         test_args = [
-            'paws_paxos.py',
+            'paws_arena.py',
             'Test task',
             str(self.context_file),
             '--config', str(self.config_file)
@@ -1017,17 +1017,17 @@ class TestPaxosMain(unittest.TestCase):
             with patch('builtins.input') as mock_input:
                 # Return empty string for verify command
                 mock_input.return_value = "   "
-                with patch.object(PaxosOrchestrator, 'run_competition', return_value=[]):
-                    with patch.object(PaxosOrchestrator, 'generate_report', return_value=0):
+                with patch.object(ArenaOrchestrator, 'run_competition', return_value=[]):
+                    with patch.object(ArenaOrchestrator, 'generate_report', return_value=0):
                         with patch('sys.stdout', new=MagicMock()):
-                            result = paws.paxos.main()
+                            result = paws.arena.main()
 
         self.assertEqual(result, 0)
 
     def test_main_config_file_not_found(self):
         """Test main() with missing config file (lines 512-531)"""
         test_args = [
-            'paws_paxos.py',
+            'paws_arena.py',
             'Test task',
             str(self.context_file),
             '--config', str(self.test_dir / "nonexistent.json")
@@ -1036,7 +1036,7 @@ class TestPaxosMain(unittest.TestCase):
         with patch('sys.argv', test_args):
             with patch('builtins.input', return_value=""):
                 with patch('sys.stdout', new=MagicMock()):
-                    result = paws.paxos.main()
+                    result = paws.arena.main()
 
         # Should return error code
         self.assertEqual(result, 1)
@@ -1044,7 +1044,7 @@ class TestPaxosMain(unittest.TestCase):
     def test_main_runs_competition_parallel(self):
         """Test main() runs competition in parallel (lines 533-542)"""
         test_args = [
-            'paws_paxos.py',
+            'paws_arena.py',
             'Test task',
             str(self.context_file),
             '--config', str(self.config_file)
@@ -1067,10 +1067,10 @@ class TestPaxosMain(unittest.TestCase):
 
         with patch('sys.argv', test_args):
             with patch('builtins.input', return_value=""):
-                with patch.object(PaxosOrchestrator, 'run_competition', return_value=mock_results) as mock_run:
-                    with patch.object(PaxosOrchestrator, 'generate_report', return_value=0):
+                with patch.object(ArenaOrchestrator, 'run_competition', return_value=mock_results) as mock_run:
+                    with patch.object(ArenaOrchestrator, 'generate_report', return_value=0):
                         with patch('sys.stdout', new=MagicMock()):
-                            result = paws.paxos.main()
+                            result = paws.arena.main()
 
         # Should have called run_competition with parallel=True (default)
         self.assertTrue(mock_run.called)
@@ -1081,7 +1081,7 @@ class TestPaxosMain(unittest.TestCase):
     def test_main_runs_competition_sequential(self):
         """Test main() runs competition sequentially (lines 538-542)"""
         test_args = [
-            'paws_paxos.py',
+            'paws_arena.py',
             'Test task',
             str(self.context_file),
             '--config', str(self.config_file),
@@ -1090,10 +1090,10 @@ class TestPaxosMain(unittest.TestCase):
 
         with patch('sys.argv', test_args):
             with patch('builtins.input', return_value=""):
-                with patch.object(PaxosOrchestrator, 'run_competition', return_value=[]) as mock_run:
-                    with patch.object(PaxosOrchestrator, 'generate_report', return_value=0):
+                with patch.object(ArenaOrchestrator, 'run_competition', return_value=[]) as mock_run:
+                    with patch.object(ArenaOrchestrator, 'generate_report', return_value=0):
                         with patch('sys.stdout', new=MagicMock()):
-                            result = paws.paxos.main()
+                            result = paws.arena.main()
 
         # Should have called run_competition with parallel=False
         self.assertTrue(mock_run.called)

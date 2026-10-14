@@ -22,7 +22,7 @@ from paws.swarm import (
     TaskDecomposition,
     SwarmOrchestrator
 )
-from paws.paxos import CompetitorConfig
+from paws.arena import CompetitorConfig
 
 
 class TestTaskDecomposition(unittest.TestCase):

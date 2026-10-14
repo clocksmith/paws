@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 from dataclasses import dataclass, asdict
 from typing import List, Dict, Any
-from paws.paxos import PaxosOrchestrator, CompetitorConfig
+from paws.arena import ArenaOrchestrator, CompetitorConfig
 
 
 @dataclass
@@ -71,8 +71,8 @@ class PerformanceBenchmark:
         """Run a single benchmark test"""
         print(f"\n☇ Running benchmark: {task[:60]}...")
 
-        # Use Paxos orchestrator to run competition
-        orchestrator = PaxosOrchestrator(
+        # Use Arena orchestrator to run competition
+        orchestrator = ArenaOrchestrator(
             task=task,
             context_bundle=context_bundle,
             verify_cmd=verify_cmd,
@@ -280,7 +280,7 @@ def main():
 
     parser.add_argument(
         "--config",
-        default="paxos_config.json",
+        default="packages/core/configs/arena_config.json",
         help="Path to competitor config file"
     )
     parser.add_argument(
@@ -319,7 +319,7 @@ def main():
     with open(args.config, 'r') as f:
         config_data = json.load(f)
 
-    from paws.paxos import CompetitorConfig
+    from paws.arena import CompetitorConfig
     competitors = []
     for comp in config_data.get("competitors", []):
         provider = comp.get("provider", "gemini")

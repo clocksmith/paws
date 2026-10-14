@@ -3,7 +3,7 @@
 """
 PAWS Swarm - Swarm Intelligence Coordinator
 
-Unlike Paxos (competitive), Swarm enables agents to collaborate:
+Unlike Arena (competitive), Swarm enables agents to collaborate:
 - Hierarchical task decomposition
 - Real-time agent communication
 - Multi-round consensus voting
@@ -20,8 +20,8 @@ from typing import List, Optional, Dict, Any
 from enum import Enum
 
 
-# Import from paws.paxos
-from paws.paxos import LLMClient, CompetitorConfig
+# Import from paws.arena
+from paws.arena import LLMClient, CompetitorConfig
 
 
 class AgentRole(Enum):
@@ -417,7 +417,7 @@ def main():
 
     parser.add_argument("task", nargs='?', help="Task description")
     parser.add_argument("context_bundle", nargs='?', help="Context bundle path")
-    parser.add_argument("--config", default="paxos_config.json", help="Agent config file")
+    parser.add_argument("--config", default="packages/core/configs/arena_config.json", help="Agent config file")
     parser.add_argument("--output-dir", default="workspace/swarm", help="Output directory")
     parser.add_argument("--rounds", type=int, default=3, help="Max collaboration rounds")
 

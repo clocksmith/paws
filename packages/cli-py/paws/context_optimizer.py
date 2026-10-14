@@ -343,7 +343,7 @@ def main():
 
     print(f"\n☉ Context optimization complete!")
     print(f"Use this optimized bundle with:")
-    print(f"  paws-paxos \"{task}\" {output_path} --verify-cmd \"pytest\"")
+    print(f"  paws-arena \"{task}\" {output_path} --verify-cmd \"pytest\"")
 
     return 0
 

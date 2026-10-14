@@ -20,7 +20,7 @@ import paws.swarm
 from paws.swarm import (
     AgentRole, SwarmAgent, SwarmMessage, TaskDecomposition, SwarmOrchestrator
 )
-from paws.paxos import CompetitorConfig
+from paws.arena import CompetitorConfig
 
 
 class TestAgentRole(unittest.TestCase):

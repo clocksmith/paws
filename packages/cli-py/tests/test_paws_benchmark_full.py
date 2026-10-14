@@ -21,7 +21,7 @@ import paws.benchmark
 from paws.benchmark import (
     BenchmarkMetrics, BenchmarkSuite, PerformanceBenchmark
 )
-from paws.paxos import CompetitorConfig, CompetitionResult
+from paws.arena import CompetitorConfig, CompetitionResult
 
 
 class TestBenchmarkMetrics(unittest.TestCase):
@@ -163,8 +163,8 @@ class TestPerformanceBenchmark(unittest.TestCase):
             api_key="test_key"
         )
 
-        # Mock PaxosOrchestrator
-        with patch('paws.benchmark.PaxosOrchestrator') as mock_paxos:
+        # Mock ArenaOrchestrator
+        with patch('paws.benchmark.ArenaOrchestrator') as mock_arena:
             # Mock competition results
             mock_result = CompetitionResult(
                 name="Test Agent",
@@ -178,7 +178,7 @@ class TestPerformanceBenchmark(unittest.TestCase):
 
             mock_orchestrator = Mock()
             mock_orchestrator.run_competition.return_value = [mock_result]
-            mock_paxos.return_value = mock_orchestrator
+            mock_arena.return_value = mock_orchestrator
 
             # Run benchmark
             metrics = self.benchmark.run_benchmark(
@@ -209,7 +209,7 @@ class TestPerformanceBenchmark(unittest.TestCase):
             api_key="test_key"
         )
 
-        with patch('paws.benchmark.PaxosOrchestrator') as mock_paxos:
+        with patch('paws.benchmark.ArenaOrchestrator') as mock_arena:
             mock_result = CompetitionResult(
                 name="Test Agent",
                 model_id="gemini-pro",
@@ -222,7 +222,7 @@ class TestPerformanceBenchmark(unittest.TestCase):
 
             mock_orchestrator = Mock()
             mock_orchestrator.run_competition.return_value = [mock_result]
-            mock_paxos.return_value = mock_orchestrator
+            mock_arena.return_value = mock_orchestrator
 
             metrics = self.benchmark.run_benchmark(
                 competitors=[competitor],
@@ -248,7 +248,7 @@ class TestPerformanceBenchmark(unittest.TestCase):
             api_key="test_key"
         )
 
-        with patch('paws.benchmark.PaxosOrchestrator') as mock_paxos:
+        with patch('paws.benchmark.ArenaOrchestrator') as mock_arena:
             mock_result = CompetitionResult(
                 name="Test Agent",
                 model_id="gemini-pro",
@@ -262,7 +262,7 @@ class TestPerformanceBenchmark(unittest.TestCase):
 
             mock_orchestrator = Mock()
             mock_orchestrator.run_competition.return_value = [mock_result]
-            mock_paxos.return_value = mock_orchestrator
+            mock_arena.return_value = mock_orchestrator
 
             metrics = self.benchmark.run_benchmark(
                 competitors=[competitor],
@@ -308,7 +308,7 @@ class TestPerformanceBenchmark(unittest.TestCase):
             api_key="test_key"
         )
 
-        with patch('paws.benchmark.PaxosOrchestrator') as mock_paxos:
+        with patch('paws.benchmark.ArenaOrchestrator') as mock_arena:
             mock_result = CompetitionResult(
                 name="Test Agent",
                 model_id="gemini-pro",
@@ -320,7 +320,7 @@ class TestPerformanceBenchmark(unittest.TestCase):
 
             mock_orchestrator = Mock()
             mock_orchestrator.run_competition.return_value = [mock_result]
-            mock_paxos.return_value = mock_orchestrator
+            mock_arena.return_value = mock_orchestrator
 
             # Run benchmark suite
             results = self.benchmark.run_benchmark_suite(suite, [competitor])
@@ -601,8 +601,8 @@ class TestBenchmarkMain(unittest.TestCase):
             ]
         }))
 
-        # Mock PaxosOrchestrator
-        with patch('paws.benchmark.PaxosOrchestrator') as mock_paxos:
+        # Mock ArenaOrchestrator
+        with patch('paws.benchmark.ArenaOrchestrator') as mock_arena:
             mock_result = CompetitionResult(
                 name="Test Agent",
                 model_id="gemini-pro",
@@ -614,7 +614,7 @@ class TestBenchmarkMain(unittest.TestCase):
 
             mock_orchestrator = Mock()
             mock_orchestrator.run_competition.return_value = [mock_result]
-            mock_paxos.return_value = mock_orchestrator
+            mock_arena.return_value = mock_orchestrator
 
             # Mock sys.argv
             test_args = [
@@ -654,8 +654,8 @@ class TestBenchmarkMain(unittest.TestCase):
         context_file = self.test_dir / "context.md"
         context_file.write_text("# Test context")
 
-        # Mock PaxosOrchestrator
-        with patch('paws.benchmark.PaxosOrchestrator') as mock_paxos:
+        # Mock ArenaOrchestrator
+        with patch('paws.benchmark.ArenaOrchestrator') as mock_arena:
             mock_result = CompetitionResult(
                 name="Test Agent",
                 model_id="gemini-pro",
@@ -667,7 +667,7 @@ class TestBenchmarkMain(unittest.TestCase):
 
             mock_orchestrator = Mock()
             mock_orchestrator.run_competition.return_value = [mock_result]
-            mock_paxos.return_value = mock_orchestrator
+            mock_arena.return_value = mock_orchestrator
 
             # Mock sys.argv
             test_args = [

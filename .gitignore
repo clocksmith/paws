@@ -4,3 +4,6 @@ node_modules
 dist/
 .env
 .DS_Store
+
+# Python build metadata
+*.egg-info/
