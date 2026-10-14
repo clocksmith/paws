@@ -616,7 +616,9 @@ class TestDocVerification(unittest.TestCase):
 
     def test_verify_docs_sync_warning(self):
         """Test that modifying README without CATSCAN generates warning"""
-        config = {"output_dir": ".", "apply_delta_from": None, "verify_docs": True}
+        output_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, output_dir, ignore_errors=True)
+        config = {"output_dir": output_dir, "apply_delta_from": None, "verify_docs": True}
         processor = BundleProcessor(config)
 
         changeset = ChangeSet()
